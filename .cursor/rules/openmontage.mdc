@@ -1,0 +1,14 @@
+---
+description: OpenMontage project rules
+globs: ["**/*"]
+alwaysApply: true
+---
+
+# OpenMontage
+
+AI-orchestrated video production platform. See `CURSOR.md` for full context.
+
+- All tools implement the ToolContract from `tools/base_tool.py`
+- Pipeline: idea -> script -> scene_plan -> assets -> edit -> compose -> publish
+- Canonical schemas in `schemas/artifacts/`
+- Agent guide and contract in `AGENT_GUIDE.md`

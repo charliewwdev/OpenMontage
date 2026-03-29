@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Test/IDE
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.trae/
+.idea/
+.vscode/
+
+# Pipeline outputs (regenerable — never commit large media)
+output/
+pipeline/
+tests/qa/output/
+
+# Environment
+.env
+.env.local
+*.env
+
+# Local agent config (user-specific)
+.claude/memory/
+.claude/settings.local.json
+
+# Agent skills lock (local install tracking)
+skills-lock.json
+
+# Generated images (logo drafts — final logo lives in assets/)
+logo_*.png
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node (for remotion-composer/)
+node_modules/

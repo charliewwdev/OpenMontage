@@ -1,0 +1,7 @@
+# OpenMontage - Windsurf Rules
+
+OpenMontage is an AI-orchestrated video production platform.
+
+See `AGENT_GUIDE.md` for the complete operating guide and agent contract, and `PROJECT_CONTEXT.md` for architecture and conventions.
+
+Key patterns: ToolContract (`tools/base_tool.py`), pipeline manifests (`pipeline_defs/`), canonical artifact schemas (`schemas/artifacts/`).

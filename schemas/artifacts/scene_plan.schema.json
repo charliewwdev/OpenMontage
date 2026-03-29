@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openmontage/artifacts/scene_plan",
+  "title": "Scene Plan",
+  "description": "Ordered scene list produced by the Scene Planner agent.",
+  "type": "object",
+  "required": ["version", "scenes"],
+  "properties": {
+    "version": { "type": "string", "const": "1.0" },
+    "style_playbook": { "type": "string", "description": "Name of the active style playbook" },
+    "scenes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "type", "description", "start_seconds", "end_seconds"],
+        "properties": {
+          "id": { "type": "string" },
+          "type": {
+            "type": "string",
+            "enum": ["talking_head", "broll", "animation", "diagram", "text_card", "transition", "generated", "screen_recording"]
+          },
+          "description": { "type": "string" },
+          "start_seconds": { "type": "number", "minimum": 0 },
+          "end_seconds": { "type": "number", "minimum": 0 },
+          "script_section_id": { "type": "string" },
+          "framing": { "type": "string" },
+          "movement": { "type": "string" },
+          "transition_in": { "type": "string" },
+          "transition_out": { "type": "string" },
+          "overlay_notes": { "type": "string" },
+          "required_assets": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": { "type": "string" },
+                "description": { "type": "string" },
+                "source": { "type": "string", "enum": ["generate", "source", "provided", "record"] }
+              },
+              "required": ["type", "description", "source"]
+            }
+          }
+        },
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "metadata": { "type": "object" }
+  },
+  "additionalProperties": false
+}

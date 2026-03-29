@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openmontage/artifacts/render_report",
+  "title": "Render Report",
+  "description": "Output report produced by the Composer agent after rendering.",
+  "type": "object",
+  "required": ["version", "outputs"],
+  "properties": {
+    "version": { "type": "string", "const": "1.0" },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "format", "resolution", "duration_seconds"],
+        "properties": {
+          "path": { "type": "string" },
+          "format": { "type": "string" },
+          "codec": { "type": "string" },
+          "audio_codec": { "type": "string" },
+          "resolution": { "type": "string" },
+          "fps": { "type": "number" },
+          "duration_seconds": { "type": "number", "minimum": 0 },
+          "file_size_bytes": { "type": "integer" },
+          "platform_target": { "type": "string" }
+        },
+        "additionalProperties": false
+      },
+      "minItems": 1
+    },
+    "render_time_seconds": { "type": "number", "minimum": 0 },
+    "warnings": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "verification_notes": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "metadata": { "type": "object" }
+  },
+  "additionalProperties": false
+}

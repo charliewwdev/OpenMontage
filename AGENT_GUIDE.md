@@ -45,6 +45,66 @@ Core loop:
 4. Present the user with concepts, tool plan, production plan, and cost.
 5. Execute stage by stage with checkpoints.
 
+## Decision Communication Contract
+
+For any meaningful production decision, the agent must communicate the decision before acting. The user should never have to infer which provider, model, or render path was chosen after the fact.
+
+### Announce Before Execution
+
+Before any paid or consequential generation call, state:
+
+- the exact tool name,
+- the provider,
+- the model or provider variant,
+- the reason it was chosen,
+- whether it is a sample or a batch run.
+
+### Ask Before Major Changes
+
+The agent must ask the user before changing any major production choice, including:
+
+- switching provider,
+- switching model family or provider variant,
+- switching from video-led to still-led treatment,
+- switching composition engine when that changes the output character,
+- dropping narration, music, or other approved creative elements,
+- changing from sample mode to batch mode.
+
+Minor prompt refinements inside an already approved provider/model path do not require separate approval unless they materially change the creative direction.
+
+### Escalate Blockers Explicitly
+
+When a blocker occurs, the agent must surface it immediately using this structure:
+
+1. What was attempted
+2. What failed
+3. Whether the issue is auth, provider access, tool bug, or prompt/design quality
+4. What options exist next
+5. Which option the agent recommends, with reasoning
+
+Do not continue with a substitute path until the user approves.
+
+### Recommendation Style
+
+When asking the user to choose, do not just list options. The agent should:
+
+- provide the shortlist,
+- explain the tradeoffs briefly,
+- recommend one option,
+- wait for approval before proceeding.
+
+### No Unilateral Substitutions
+
+If the approved path is blocked, the agent may investigate and prepare alternatives, but may not execute those alternatives without user approval.
+
+This applies especially to:
+
+- provider swaps,
+- model swaps,
+- fallback tools,
+- prompt-only substitutes for reference-driven generation,
+- still-image animatics in place of true motion.
+
 ## Orchestrator
 
 The agent itself orchestrates the production state machine:
@@ -232,12 +292,32 @@ print('Remotion note:', info.get('remotion_note'))
 | **FFmpeg** | Video-only cuts, concat, trim, subtitle burn | `ffmpeg` binary (always available) |
 | **Remotion** | Still images -> animated video, text cards, stat cards, charts, callouts, comparisons, transitions with spring physics | Node.js (`npx`) + `remotion-composer/` project |
 
+### Critical Rule: Motion-Required Requests
+
+For any request where the deliverable inherently depends on motion rather than static coverage, treat motion as a hard requirement. Examples:
+
+- sci-fi trailers,
+- cinematic teasers built from generated clips,
+- hype edits,
+- avatar or agent videos,
+- any brief whose promise depends on moving shots rather than still frames.
+
+For these requests:
+
+- `Remotion` availability must be confirmed up front if the planned visual treatment depends on Remotion rendering.
+- Still-image fallback is forbidden. Do not quietly convert the job into a Ken Burns teaser, animatic, or slide-based video.
+- FFmpeg-only fallback is forbidden when it changes the approved deliverable from motion-led video to still-led video.
+- Bubble critical issues immediately. If Remotion is unavailable, fails to render, or provider clip generation fails in a way that blocks the approved treatment, stop and tell the user before proceeding.
+- Do not spend more tokens or time on downgraded output unless the user explicitly approves the downgrade as an animatic or proof-of-concept.
+
 **When Remotion is available**, the agent should design production plans around it:
 - Explainer videos with `flat-motion-graphics` playbook -> Remotion animated scenes, not Ken Burns
 - Data-driven videos -> Remotion stat cards and charts, not static image screenshots
 - Any pipeline using still images -> Remotion spring animations, not FFmpeg pan-and-zoom
 
 **When Remotion is NOT available**, `video_compose` falls back to FFmpeg Ken Burns motion on still images. This still works but produces less engaging visuals. Mention this tradeoff in the proposal.
+
+That fallback is only acceptable when it does not violate the approved delivery shape. If the user asked for a motion-led trailer or comparable clip-driven piece, the project is blocked until Remotion is working or the user explicitly approves a lower-fidelity alternative.
 
 The routing is automatic — the `render` operation in `video_compose` calls `_needs_remotion()` and routes accordingly. But the **agent must know Remotion exists at proposal time** so it can design the visual approach to take advantage of it (animated text cards, component scenes, spring transitions) rather than designing around static images.
 
@@ -487,3 +567,4 @@ Example: Before calling `kling_video`, read its `agent_skills` → `ai-video-gen
 - Do not hide degraded paths. Record substitutions and blocked options explicitly.
 - Do not present a single unavailable tool in isolation. Always show the full capability picture: "X of Y providers configured for this capability."
 - Do not skip the Provider Menu at preflight. The user must see what they have AND what they could unlock.
+- Do not change provider, model, or render path without telling the user first and getting approval when the change is material.

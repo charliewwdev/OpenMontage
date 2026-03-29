@@ -26,6 +26,12 @@ Start with:
 
 These are the primary materials. Everything else is support.
 
+If `brief.metadata.motion_required = true`, actual moving footage or generated video clips are mandatory. In that case:
+
+- stills may be used only as reference material or backing elements inside a larger motion composition,
+- stills may not replace the planned motion shots,
+- a still-image teaser is not an acceptable fallback unless the user explicitly approves an animatic.
+
 ### 1b. Sample Preview (Prevents Wasted Spend)
 
 Before batch-generating support assets, produce one sample of each expensive generated type and show the user:
@@ -33,7 +39,19 @@ Before batch-generating support assets, produce one sample of each expensive gen
 1. **Generated insert sample** (if using `image_selector` or `video_selector`): Generate one representative visual. Confirm it complements the source footage before batching.
 2. **Music sample** (if using `music_gen`): Generate a short clip. Confirm mood and energy match the beat plan.
 
+If `motion_required = true`, the representative visual must be a video clip sample, not a still image sample.
+
 If rejected, adjust parameters and retry (max 3 iterations). Do not batch until approved.
+
+Before the sample is generated, tell the user exactly which generation path will be used:
+
+- tool,
+- provider,
+- model or variant,
+- generation mode,
+- why it was selected.
+
+If that path fails, stop and ask before trying a different provider, model, or generation mode.
 
 ### 2. Generate Support Assets Only Where Needed
 
@@ -43,6 +61,8 @@ Optional generated assets should fill clear gaps:
 - concept-led inserts,
 - texture or atmosphere cards,
 - simple textural motion backgrounds.
+
+For motion-required jobs, use `video_selector` first for generated shots. `image_selector` may support look development, concept frames, or embedded design layers, but it does not satisfy the motion requirement by itself.
 
 ### 3. Prepare A Real Audio Plan
 
@@ -70,9 +90,12 @@ Recommended metadata keys:
 - generated inserts are limited and purposeful,
 - audio plan matches the beat map,
 - every referenced file exists.
+- if motion is required, the asset set contains actual video clips for the motion-led beats.
 
 ## Common Pitfalls
 
 - Generating extra shots before proving the source edit works.
 - Treating music as a single loop instead of a beat-aware element.
 - Forgetting rights or provenance notes for supplied assets.
+- Quietly downgrading from video clips to still images because one provider or renderer failed.
+- Quietly switching providers or models after the user approved a generation path.

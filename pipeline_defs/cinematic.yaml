@@ -44,6 +44,7 @@ stages:
     human_approval_default: true
     review_focus:
       - Source mode and emotional arc are clear
+      - Motion-required delivery is explicitly identified when applicable
       - Delivery shape is realistic for available footage and assets
       - Cinematic treatment is justified rather than decorative
     success_criteria:
@@ -121,6 +122,7 @@ stages:
     human_approval_default: false
     review_focus:
       - Source selects and support assets are clearly separated
+      - Motion-required beats use actual video clips rather than still-image substitutes
       - Music and ambience plan matches the beat map
       - Optional generated inserts stay limited and justified
     success_criteria:
@@ -175,6 +177,7 @@ stages:
     human_approval_default: false
     review_focus:
       - Output mood matches intended pacing and grade
+      - Motion-required delivery was preserved without silent fallback
       - Audio dynamics are controlled and intelligible
       - Letterbox or frame treatment improves rather than harms the output
     success_criteria:

@@ -15,6 +15,15 @@ Render the cinematic piece with careful attention to grade, audio dynamics, and 
 
 ## Process
 
+### 0. Check Hard Requirements Before Rendering
+
+If the approved brief or scene plan makes motion a hard requirement, verify that the render path still preserves that promise.
+
+- If Remotion is required and unavailable or failing, stop and bubble the issue to the user immediately.
+- Do not switch to an FFmpeg-only still-image fallback for a motion-led trailer, teaser, or agent video.
+- Do not convert the piece into an animatic unless the user explicitly approves that downgrade.
+- If the render engine changes materially, tell the user before rendering and explain why.
+
 ### 1. Use Frame Treatment Deliberately
 
 Only use letterbox, 24fps intent, or heavy grading if they help the piece. Do not apply them because the pipeline name says cinematic.
@@ -51,3 +60,4 @@ Recommended metadata keys:
 - Flattening the audio so the piece loses dynamics.
 - Applying letterbox to footage that needs every pixel.
 - Letting grading or sharpening damage faces or text.
+- Silently swapping a blocked Remotion render for a lower-fidelity still-image export.

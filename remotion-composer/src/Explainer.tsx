@@ -93,6 +93,7 @@ interface AudioConfig {
 }
 
 export interface ExplainerProps {
+  [key: string]: unknown;
   cuts: Cut[];
   overlays?: Overlay[];
   captions?: WordCaption[];

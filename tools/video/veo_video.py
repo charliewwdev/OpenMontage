@@ -1,11 +1,15 @@
-"""Google Veo 3 video generation via fal.ai API.
+"""Google Veo 3.1 video generation via fal.ai API.
 
-State-of-the-art video generation with native audio/dialogue synthesis.
+Supports text-to-video, image-to-video, reference-to-video, and first/last-frame
+interpolation so agents can preserve visual consistency instead of relying only on
+raw text prompts.
 """
 
 from __future__ import annotations
 
 import os
+import mimetypes
+import base64
 import time
 from pathlib import Path
 from typing import Any
@@ -37,15 +41,17 @@ class VeoVideo(BaseTool):
 
     dependencies = []
     install_instructions = (
-        "Set FAL_KEY to your fal.ai API key.\n"
+        "Set FAL_KEY or FAL_AI_API_KEY to your fal.ai API key.\n"
         "  Get one at https://fal.ai/dashboard/keys"
     )
     agent_skills = ["ai-video-gen"]
 
-    capabilities = ["text_to_video", "image_to_video"]
+    capabilities = ["text_to_video", "image_to_video", "reference_to_video", "first_last_frame_to_video"]
     supports = {
         "text_to_video": True,
         "image_to_video": True,
+        "reference_to_video": True,
+        "first_last_frame_to_video": True,
         "native_audio": True,
         "dialogue_generation": True,
         "ambient_sound": True,
@@ -65,18 +71,18 @@ class VeoVideo(BaseTool):
             "prompt": {"type": "string"},
             "operation": {
                 "type": "string",
-                "enum": ["text_to_video", "image_to_video"],
+                "enum": ["text_to_video", "image_to_video", "reference_to_video", "first_last_frame_to_video"],
                 "default": "text_to_video",
             },
             "model_variant": {
                 "type": "string",
                 "enum": ["veo3", "veo3/fast", "veo3.1", "veo3.1/fast"],
-                "default": "veo3",
+                "default": "veo3.1",
             },
             "duration": {
                 "type": "string",
-                "enum": ["5", "8"],
-                "default": "8",
+                "enum": ["4s", "6s", "8s"],
+                "default": "8s",
                 "description": "Duration in seconds",
             },
             "aspect_ratio": {
@@ -89,7 +95,35 @@ class VeoVideo(BaseTool):
                 "default": True,
                 "description": "Whether to generate synchronized audio",
             },
+            "resolution": {
+                "type": "string",
+                "enum": ["720p", "1080p", "4k"],
+                "default": "1080p",
+            },
+            "negative_prompt": {"type": "string"},
+            "seed": {"type": "integer"},
+            "auto_fix": {"type": "boolean", "default": True},
+            "safety_tolerance": {
+                "type": "string",
+                "enum": ["1", "2", "3", "4", "5", "6"],
+                "default": "4",
+            },
             "image_url": {"type": "string", "description": "Reference image URL for image_to_video"},
+            "image_path": {"type": "string", "description": "Local reference image path for image_to_video"},
+            "reference_image_urls": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Reference image URLs for reference_to_video",
+            },
+            "reference_image_paths": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Local reference image paths for reference_to_video",
+            },
+            "first_frame_url": {"type": "string"},
+            "first_frame_path": {"type": "string"},
+            "last_frame_url": {"type": "string"},
+            "last_frame_path": {"type": "string"},
             "output_path": {"type": "string"},
         },
     }
@@ -114,49 +148,136 @@ class VeoVideo(BaseTool):
         return ToolStatus.UNAVAILABLE
 
     def estimate_cost(self, inputs: dict[str, Any]) -> float:
-        variant = inputs.get("model_variant", "veo3")
-        duration = int(inputs.get("duration", "8"))
+        variant = inputs.get("model_variant", "veo3.1")
+        duration_text = str(inputs.get("duration", "8s")).replace("s", "")
+        duration = int(duration_text)
+        resolution = inputs.get("resolution", "1080p")
+        generate_audio = bool(inputs.get("generate_audio", True))
+
         if "fast" in variant:
-            per_second = 0.12
+            base_per_second = 0.10
+            audio_per_second = 0.20
         else:
-            per_second = 0.30
-        return per_second * duration
+            if resolution == "4k":
+                base_per_second = 0.40
+                audio_per_second = 0.60
+            else:
+                base_per_second = 0.20
+                audio_per_second = 0.40
+
+        return (audio_per_second if generate_audio else base_per_second) * duration
 
     def estimate_runtime(self, inputs: dict[str, Any]) -> float:
-        variant = inputs.get("model_variant", "veo3")
+        variant = inputs.get("model_variant", "veo3.1")
         if "fast" in variant:
             return 45.0
         return 120.0
+
+    @staticmethod
+    def _file_to_data_uri(path_str: str) -> str:
+        path = Path(path_str)
+        if not path.exists():
+            raise FileNotFoundError(f"Input file not found: {path}")
+        mime_type, _ = mimetypes.guess_type(path.name)
+        if not mime_type:
+            mime_type = "application/octet-stream"
+        encoded = base64.b64encode(path.read_bytes()).decode("ascii")
+        return f"data:{mime_type};base64,{encoded}"
+
+    def _normalize_file_input(self, url_value: str | None, path_value: str | None) -> str | None:
+        if url_value:
+            return url_value
+        if path_value:
+            return self._file_to_data_uri(path_value)
+        return None
 
     def execute(self, inputs: dict[str, Any]) -> ToolResult:
         api_key = self._get_api_key()
         if not api_key:
             return ToolResult(
                 success=False,
-                error="FAL_KEY not set. " + self.install_instructions,
+                error="FAL_KEY / FAL_AI_API_KEY not set. " + self.install_instructions,
             )
 
         import requests
 
         start = time.time()
         operation = inputs.get("operation", "text_to_video")
-        variant = inputs.get("model_variant", "veo3")
+        variant = inputs.get("model_variant", "veo3.1")
+        duration = inputs.get("duration", "8s")
+
+        # Current fal Veo 3.1 image-guided endpoints only accept 8-second clips.
+        if variant == "veo3.1" and operation in {"reference_to_video", "first_last_frame_to_video"} and duration != "8s":
+            return ToolResult(
+                success=False,
+                error=(
+                    f"{operation} with {variant} currently requires duration='8s' on fal.ai; "
+                    f"received duration='{duration}'"
+                ),
+            )
 
         # Build fal.ai model path
-        if operation == "image_to_video":
-            model_path = f"{variant}/image-to-video"
-        else:
-            model_path = variant  # text-to-video is the default endpoint
+        operation_map = {
+            "text_to_video": variant,
+            "image_to_video": f"{variant}/image-to-video",
+            "reference_to_video": f"{variant}/reference-to-video",
+            "first_last_frame_to_video": f"{variant}/first-last-frame-to-video",
+        }
+        model_path = operation_map[operation]
 
         payload: dict[str, Any] = {"prompt": inputs["prompt"]}
         if inputs.get("duration"):
             payload["duration"] = inputs["duration"]
         if inputs.get("aspect_ratio"):
             payload["aspect_ratio"] = inputs["aspect_ratio"]
+        if inputs.get("resolution"):
+            payload["resolution"] = inputs["resolution"]
         if inputs.get("generate_audio") is not None:
             payload["generate_audio"] = inputs["generate_audio"]
-        if operation == "image_to_video" and inputs.get("image_url"):
-            payload["image_url"] = inputs["image_url"]
+        if inputs.get("negative_prompt"):
+            payload["negative_prompt"] = inputs["negative_prompt"]
+        if inputs.get("seed") is not None:
+            payload["seed"] = inputs["seed"]
+        if inputs.get("auto_fix") is not None:
+            payload["auto_fix"] = inputs["auto_fix"]
+        if inputs.get("safety_tolerance"):
+            payload["safety_tolerance"] = inputs["safety_tolerance"]
+
+        if operation == "image_to_video":
+            image_value = self._normalize_file_input(inputs.get("image_url"), inputs.get("image_path"))
+            if not image_value:
+                return ToolResult(
+                    success=False,
+                    error="image_to_video requires image_url or image_path",
+                )
+            payload["image_url"] = image_value
+
+        if operation == "reference_to_video":
+            image_urls = list(inputs.get("reference_image_urls") or [])
+            image_paths = list(inputs.get("reference_image_paths") or [])
+            normalized = list(image_urls)
+            normalized.extend(self._file_to_data_uri(path) for path in image_paths)
+            if not normalized:
+                return ToolResult(
+                    success=False,
+                    error="reference_to_video requires reference_image_urls or reference_image_paths",
+                )
+            payload["image_urls"] = normalized
+
+        if operation == "first_last_frame_to_video":
+            first_frame = self._normalize_file_input(
+                inputs.get("first_frame_url"), inputs.get("first_frame_path")
+            )
+            last_frame = self._normalize_file_input(
+                inputs.get("last_frame_url"), inputs.get("last_frame_path")
+            )
+            if not first_frame or not last_frame:
+                return ToolResult(
+                    success=False,
+                    error="first_last_frame_to_video requires first_frame_url/path and last_frame_url/path",
+                )
+            payload["first_frame_url"] = first_frame
+            payload["last_frame_url"] = last_frame
 
         headers = {
             "Authorization": f"Key {api_key}",
@@ -192,7 +313,12 @@ class VeoVideo(BaseTool):
 
             # Fetch result
             result_resp = requests.get(response_url, headers=headers, timeout=30)
-            result_resp.raise_for_status()
+            if not result_resp.ok:
+                detail = result_resp.text[:1000]
+                return ToolResult(
+                    success=False,
+                    error=f"Veo video generation result fetch failed ({result_resp.status_code}): {detail}",
+                )
             data = result_resp.json()
 
             video_url = data["video"]["url"]
@@ -214,6 +340,7 @@ class VeoVideo(BaseTool):
                 "prompt": inputs["prompt"],
                 "output": str(output_path),
                 "has_audio": inputs.get("generate_audio", True),
+                "operation": operation,
             },
             artifacts=[str(output_path)],
             cost_usd=self.estimate_cost(inputs),

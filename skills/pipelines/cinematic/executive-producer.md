@@ -50,6 +50,28 @@ Same as standard EP: Initialize → Execute stages serially (idea → script →
 
 Each stage: PREPARE → SPAWN DIRECTOR → REVIEW → GATE DECISION (pass / revise / send-back).
 
+### User-Facing Decision Flow
+
+For this pipeline, the EP must make the decision trail visible to the user.
+
+Before any expensive or consequential generation step, present:
+
+- selected tool,
+- provider,
+- model or variant,
+- why it was chosen,
+- whether the run is a sample or a batch.
+
+If the approved path becomes blocked, the EP must stop and present:
+
+- the attempted path,
+- the concrete failure,
+- the likely class of issue (auth, provider access, tool bug, or creative mismatch),
+- the available next options,
+- the recommended next option.
+
+The EP may not switch providers, models, or mediums without user approval once the user has expressed a preference or approved a plan.
+
 ## EP-Specific Cross-Stage Checks
 
 ### After IDEA stage:
@@ -57,6 +79,7 @@ Each stage: PREPARE → SPAWN DIRECTOR → REVIEW → GATE DECISION (pass / revi
 CHECK: Emotional arc definition
   - Is the emotional arc explicit (build → reveal → landing)?
   - Is source mode clear (supplied footage vs generated inserts)?
+  - Does the brief explicitly say whether motion is required?
   - Is the target mood defined and achievable?
 ```
 
@@ -88,6 +111,7 @@ CHECK: Visual consistency
 CHECK: Music/ambience alignment
   - Does the music beat map align with the script beat map?
   - Are generated inserts limited and justified?
+  - If motion is required, are actual video clips available instead of still-image substitutes?
   - Budget gate: 90% threshold warning
 
 CHECK: Source selects quality
@@ -114,6 +138,7 @@ CHECK: Output validation
   - Color grade applied and consistent
   - Audio dynamics controlled — dialogue intelligible, music balanced
   - Letterbox or frame treatment improves (not harms) the output
+  - If motion was required, does the output still satisfy that promise instead of degrading into a still-led animatic?
 ```
 
 ## Quality Gates Summary
@@ -145,3 +170,5 @@ CHECK: Output validation
 - **Overuse of generated inserts**: Source footage should be primary. Generated content fills gaps, not replaces.
 - **Ignoring audio dynamics**: Cinematic videos live and die by their audio. Music/dialogue balance is critical.
 - **Rushing the reveal**: The climax moment needs breathing room. Don't let pacing compress it.
+- **Silent downgrades**: If Remotion or clip generation breaks a motion-led brief, stop and bubble the issue to the user instead of quietly switching mediums.
+- **Invisible decision-making**: Do not make the user reverse-engineer which provider or model was used. State it before execution and when anything changes.

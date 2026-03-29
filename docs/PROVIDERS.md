@@ -380,6 +380,49 @@ Google TTS offers 700+ voices across 50+ languages. Voice names follow the patte
 
 These providers run entirely on your machine. No network, no API key, no cost. Some require a GPU.
 
+### Remotion — Programmatic Video Composition
+
+> **React-based video rendering.** Turns still images into animated video with spring physics, animated text cards, stat cards, charts, and transitions. **This is the key fallback when no video generation providers are configured** — the agent generates images and Remotion animates them into professional-looking video.
+
+**Tool:** `video_compose` (with `operation="render"` — auto-routes to Remotion when needed)
+**Runtime:** CPU (Node.js required)
+**Env var:** None
+
+#### Setup
+
+```bash
+# Included in make setup, or install manually:
+cd remotion-composer && npm install && cd ..
+```
+
+Requires **Node.js 18+** and `npx`. The `remotion-composer/` project is included in the repo.
+
+#### What Remotion Renders
+
+| Component | What it produces |
+|-----------|-----------------|
+| **TextCard** | Animated title/body text with spring physics entrance |
+| **StatCard** | Animated statistics with count-up animations |
+| **ProgressBar** | Animated progress indicators |
+| **CalloutBox** | Highlighted callout panels with icon animations |
+| **ComparisonCard** | Side-by-side comparison layouts |
+| **BarChart / LineChart / PieChart** | Animated data visualizations |
+| **KPIGrid** | Multi-metric dashboard cards |
+| **Image scenes** | Still images with spring-animated motion (replaces Ken Burns) |
+
+#### When Does Remotion Activate?
+
+The `video_compose` tool's `render` operation auto-detects when Remotion is needed:
+- Cuts contain still images (`.png`, `.jpg`, etc.)
+- Cuts have `type` set to `text_card`, `stat_card`, `chart`, etc.
+- Cuts specify `animation` or `transition_in`/`transition_out`
+
+If Remotion is not installed, compositions fall back to FFmpeg Ken Burns pan-and-zoom — functional but less engaging.
+
+**Cost:** Free. Always local.
+
+---
+
 ### Piper TTS — Offline Text-to-Speech
 
 > **Completely free, fully offline TTS.** No network required. Good quality for drafts and budget-constrained projects.
@@ -551,7 +594,10 @@ How many providers cover each capability:
 ## FAQ
 
 **Q: What's the absolute minimum I need to produce a video?**
-A: FFmpeg (free, local). That's it. With just FFmpeg you can compose, stitch, trim, mix audio, and add subtitles. Add Piper TTS for free narration and Pexels/Pixabay for free stock footage.
+A: FFmpeg + Node.js (both free, local). FFmpeg handles video assembly, audio mixing, and subtitles. With Node.js, Remotion renders still images into animated video — so even without any video generation API, the agent generates images and Remotion turns them into professional-looking video with spring animations, text cards, and transitions. Add Piper TTS for free narration and Pexels/Pixabay for free stock footage.
+
+**Q: I don't have any video generation providers. Can I still make videos?**
+A: Yes. The agent generates still images (via any image provider — even free stock from Pexels/Pixabay) and Remotion composes them into animated video with spring physics transitions, text cards, stat cards, and charts. This is the default path for explainer and animation pipelines when no video gen is configured.
 
 **Q: What's the cheapest way to get AI-generated images and video?**
 A: fal.ai (`FAL_KEY`). One key unlocks FLUX images at ~$0.03/image and multiple video providers. No subscription — pay only for what you generate.

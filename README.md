@@ -108,11 +108,11 @@ Edit your own talking-head footage. Generate a fully animated explainer from scr
 | **Talking Head** | SadTalker / MuseTalk avatar animation |
 | **Lip Sync** | Wav2Lip audio-driven lip synchronization |
 
-### Composition Engine
-| Engine | What It Does |
-|--------|-------------|
-| **FFmpeg** | Core video assembly, encoding, subtitle burn |
-| **Remotion** | React-based programmatic video — animated text cards, stat cards, charts, spring physics transitions |
+### Composition & Rendering
+| Engine | Type | What It Does |
+|--------|------|-------------|
+| **Remotion** | Local (Node.js) | React-based programmatic video — animated text cards, stat cards, charts, spring physics transitions, image-to-video with motion. **When no video generation providers are configured, the agent generates still images and Remotion turns them into fully animated video.** |
+| **FFmpeg** | Local | Core video assembly, encoding, subtitle burn, audio muxing, color grading |
 
 ---
 

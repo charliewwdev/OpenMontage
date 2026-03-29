@@ -13,10 +13,10 @@ No video editing experience required. No complex UI to learn. Just describe your
 Works with **Claude Code, Cursor, Copilot, Windsurf, Codex** — any AI coding assistant that can read files and run code.
 
 <p align="center">
-  <img src="assets/showcase.jpg" alt="Nature's Source Code — an AI-produced explainer video" width="100%">
+  <img src="assets/showcase.jpg" alt="MERIDIAN — an AI-produced cinematic trailer" width="100%">
 </p>
 
-> **"Nature's Source Code"** — a cinematic explainer produced from a single prompt. The agent researched the topic across dozens of sources, wrote the script, generated every visual, composed narration and music, added word-by-word captions, and rendered the final video. Total human input: one sentence and a few approvals.
+> **"MERIDIAN"** — a cinematic sci-fi trailer produced from a single prompt. Six AI-generated video clips, dramatic voiceover, crossfade transitions, and a title card — composed into a 30-second trailer. Total human input: one sentence.
 >
 > OpenMontage produces videos in **less than 10 minutes** with minimal interaction — describe your vision, approve the creative direction, and get a finished production.
 

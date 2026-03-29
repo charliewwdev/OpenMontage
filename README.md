@@ -13,7 +13,7 @@ No video editing experience required. No complex UI to learn. Just describe your
 Works with **Claude Code, Cursor, Copilot, Windsurf, Codex** — any AI coding assistant that can read files and run code.
 
 <p align="center">
-  <img src="assets/showcase.jpg" alt="MERIDIAN — an AI-produced cinematic trailer" width="100%">
+  <img src="assets/showcase.jpg?v=2" alt="MERIDIAN — an AI-produced cinematic trailer" width="100%">
 </p>
 
 > **"MERIDIAN"** — a cinematic sci-fi trailer produced from a single prompt. Six AI-generated video clips, dramatic voiceover, crossfade transitions, and a title card — composed into a 30-second trailer. Total human input: one sentence.

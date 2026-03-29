@@ -330,10 +330,31 @@ Before committing to execution, present:
 3. Recommended tool path.
 4. Alternative tool paths that are actually available.
 5. Cost estimate and quality tradeoffs.
-6. Production plan by stage.
-7. Approval gate before asset generation.
+6. **Music plan** — mandatory for every pipeline that has audio. See below.
+7. Production plan by stage.
+8. Approval gate before asset generation.
 
 If a user prefers a specific vendor and that tool is available, surface it directly. Do not hide provider choice.
+
+### Music Plan (Mandatory)
+
+Music is a critical part of any video. **Surface the music situation to the user at proposal/idea time** — do not silently defer it to the asset stage where a failure becomes expensive.
+
+Check music availability in this order and present the options:
+
+1. **User music library (`music_library/`):** Check if this folder exists and contains tracks. If so, list available tracks with durations and let the user pick one.
+2. **Music generation APIs:** Check which music tools are available via the registry (`registry.get_by_capability("music_generation")`). Report their status honestly — include quota status if known.
+3. **Royalty-free sources:** Note if the user can provide their own track (e.g., from YouTube Audio Library, Jamendo, or other free sources). Offer the `music_library/` drop path.
+
+**Always present the user with explicit choices:**
+- Use a track from their library (which one?)
+- Provide a different track (drop it in `music_library/`)
+- Generate one via API (if available — name the provider and cost)
+- Proceed without music
+
+**If no music source is available:** Tell the user explicitly. Do NOT let this surface as a surprise at the asset stage.
+
+Record the music decision in the proposal/brief artifact so the asset director knows what to do.
 
 ## Pipeline Asset Expectations
 

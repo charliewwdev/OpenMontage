@@ -65,11 +65,39 @@ Recommended metadata keys:
 
 If the user has weak source media and no generation path, say so. A cinematic result still needs enough visual or audio material to carry mood.
 
-### 5. Quality Gate
+### 5. Music Plan (Mandatory)
+
+Cinematic videos live and die by their audio. **Surface the music situation before the user approves the brief.**
+
+Check availability in this order:
+
+1. **User music library (`music_library/`):** Check if this folder exists and contains tracks. List available tracks with durations and moods. Let the user choose.
+2. **Music generation APIs:** Check `registry.get_by_capability("music_generation")`. Report status, quota, and cost per track.
+3. **Royalty-free sources:** Note that the user can provide a track from YouTube Audio Library, Jamendo, or other free sources by dropping it in `music_library/`.
+
+Present explicit options:
+
+```
+MUSIC PLAN
+├── Your music library: [N tracks / empty]
+├── AI generation: [provider] — [AVAILABLE/UNAVAILABLE] [cost]
+└── Bring your own: Drop a track in music_library/ before asset stage
+
+Options:
+  (a) Use a library track (which one?)
+  (b) Provide your own track
+  (c) Generate via API (if available)
+  (d) Proceed without music (not recommended for cinematic)
+```
+
+Record the decision in `brief.metadata.music_strategy` with the chosen source and path/prompt.
+
+### 6. Quality Gate
 
 - the source truth is explicit,
 - the emotional arc is specific,
 - the output shape fits the available assets,
+- the music plan is resolved (source chosen or explicitly deferred),
 - the treatment is cinematic for a reason, not by label only.
 
 ## Common Pitfalls

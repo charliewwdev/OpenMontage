@@ -129,7 +129,9 @@ class KlingVideo(BaseTool):
         start = time.time()
         operation = inputs.get("operation", "text_to_video")
         variant = inputs.get("model_variant", "v3/standard")
-        model_path = f"kling-video/{variant}/{operation}"
+        # fal.ai uses hyphens in endpoint paths (text-to-video, not text_to_video)
+        operation_path = operation.replace("_", "-")
+        model_path = f"kling-video/{variant}/{operation_path}"
 
         payload: dict[str, Any] = {"prompt": inputs["prompt"]}
         if inputs.get("duration"):
@@ -139,18 +141,42 @@ class KlingVideo(BaseTool):
         if operation == "image_to_video" and inputs.get("image_url"):
             payload["image_url"] = inputs["image_url"]
 
+        headers = {
+            "Authorization": f"Key {api_key}",
+            "Content-Type": "application/json",
+        }
+
         try:
-            response = requests.post(
-                f"https://fal.run/fal-ai/{model_path}",
-                headers={
-                    "Authorization": f"Key {api_key}",
-                    "Content-Type": "application/json",
-                },
+            # Submit to queue API (async) — sync endpoint times out for video gen
+            submit_resp = requests.post(
+                f"https://queue.fal.run/fal-ai/{model_path}",
+                headers=headers,
                 json=payload,
-                timeout=300,
+                timeout=30,
             )
-            response.raise_for_status()
-            data = response.json()
+            submit_resp.raise_for_status()
+            queue_data = submit_resp.json()
+            status_url = queue_data["status_url"]
+            response_url = queue_data["response_url"]
+
+            # Poll until complete
+            while True:
+                time.sleep(5)
+                status_resp = requests.get(status_url, headers=headers, timeout=15)
+                status_resp.raise_for_status()
+                status = status_resp.json().get("status", "UNKNOWN")
+                if status == "COMPLETED":
+                    break
+                if status in ("FAILED", "CANCELLED"):
+                    return ToolResult(
+                        success=False,
+                        error=f"Kling video generation {status.lower()}",
+                    )
+
+            # Fetch result
+            result_resp = requests.get(response_url, headers=headers, timeout=30)
+            result_resp.raise_for_status()
+            data = result_resp.json()
 
             video_url = data["video"]["url"]
             video_response = requests.get(video_url, timeout=120)

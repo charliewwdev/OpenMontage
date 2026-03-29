@@ -4,6 +4,27 @@ Start here. This is the complete operating guide and agent contract for OpenMont
 
 For architecture, key files, and conventions see [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md).
 
+## Rule Zero — All Production Goes Through a Pipeline
+
+**Every video production request MUST go through the pipeline system. No exceptions.**
+
+When the user asks to make, create, produce, or generate any video content — a trailer, explainer, clip, animation, or any other video — the agent must:
+
+1. **Identify the pipeline.** Match the request to one of the pipelines in `pipeline_defs/`. If unclear, ask the user.
+2. **Read the pipeline manifest.** `pipeline_defs/<pipeline>.yaml` — know the stages, tools, and quality gates.
+3. **Run preflight.** Discover available tools via the registry. Present the capability menu.
+4. **Execute stage by stage.** For EACH stage, read the stage director skill (`skills/pipelines/<pipeline>/<stage>-director.md`) BEFORE doing any work in that stage.
+5. **Read Layer 3 skills before calling tools.** Before using any tool with an `agent_skills` field, read the referenced skill in `.agents/skills/`. These contain provider-specific prompting guidance, parameter optimization, and quality techniques that dramatically improve output.
+
+**Do NOT:**
+- Write ad-hoc Python scripts to call tools directly
+- Skip the pipeline and go straight to API calls
+- Generate assets without reading the stage director skill first
+- Use a tool without checking its Layer 3 skill for prompting guidance
+- Bypass preflight, checkpoints, or review
+
+The intelligence is in the skills, not in improvised code. An agent that reads the director skills and Layer 3 knowledge will produce significantly better output than one that calls tools directly with generic prompts.
+
 ## What OpenMontage Is
 
 OpenMontage is an instruction-driven video production system. The AI agent IS the intelligence — it reads instructions (pipeline manifests + stage director skills + meta skills) and drives the pipeline using tools.
@@ -415,9 +436,13 @@ OpenMontage has three instruction layers:
 
 Reading order:
 
-1. registry / tool contract
-2. relevant pipeline or creative skill
-3. underlying vendor skill only if needed
+1. registry / tool contract — discover what's available
+2. relevant pipeline or creative skill — know HOW to use it in this context
+3. underlying vendor skill — **mandatory before calling any generation tool**
+
+**Layer 3 is not optional.** Every generation tool (video, image, TTS, music) has an `agent_skills` field listing its Layer 3 skills. These skills contain provider-specific prompt engineering, parameter tuning, and quality techniques. Read them before writing prompts. The difference between a generic prompt and a skill-informed prompt is the difference between "usable" and "cinematic."
+
+Example: Before calling `kling_video`, read its `agent_skills` → `ai-video-gen` → get Kling-specific prompt structure, camera direction syntax, and quality keywords that the model responds to best.
 
 ## Quick Lookup
 
@@ -432,6 +457,9 @@ Reading order:
 
 ## What Not To Do
 
+- **Do not bypass the pipeline.** Never write ad-hoc scripts to call tools directly. All production goes through pipeline stages with director skills. See Rule Zero.
+- **Do not call generation tools without reading their Layer 3 skill.** Check the tool's `agent_skills` field, read the referenced skill, then craft your prompts using that guidance.
+- **Do not skip stage director skills.** Before executing any pipeline stage, read its director skill. The skill contains the quality bar, the workflow, and the review criteria.
 - Do not use deleted legacy names such as `tts_cloud`, `tts_engine`, or `video_gen`.
 - Do not hardcode provider names, API key names, or setup URLs. Read them from the registry's `install_instructions` and `dependencies` fields.
 - Do not begin asset generation before user approval on the production plan.

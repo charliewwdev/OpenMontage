@@ -31,6 +31,8 @@ Edit your own talking-head footage. Generate a fully animated explainer from scr
 
 ## Supported Providers
 
+> **Detailed setup instructions, pricing, and free tiers for every provider:** [`docs/PROVIDERS.md`](docs/PROVIDERS.md)
+
 ### Video Generation (12 providers)
 | Provider | Type | Notes |
 |----------|------|-------|
@@ -377,7 +379,7 @@ OpenMontage is built to be extended. The two most common contributions:
 2. Create stage director skills in `skills/pipelines/<your-pipeline>/`
 3. Reference existing tools — or add new ones if needed
 
-See `docs/ARCHITECTURE.md` for the full technical reference and `AGENT_GUIDE.md` for the agent contract.
+See `docs/ARCHITECTURE.md` for the full technical reference, `docs/PROVIDERS.md` for the complete provider guide (setup, pricing, free tiers), and `AGENT_GUIDE.md` for the agent contract.
 
 ---
 

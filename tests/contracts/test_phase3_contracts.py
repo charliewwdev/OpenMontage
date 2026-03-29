@@ -143,7 +143,7 @@ class TestCapabilityMetadata:
         catalog = reg.capability_catalog()
         assert "tts" in catalog
         providers = {item["provider"] for item in catalog["tts"] if item["provider"] != "selector"}
-        assert providers == {"elevenlabs", "openai", "piper"}
+        assert providers == {"elevenlabs", "google_tts", "openai", "piper"}
 
 
 # ---- Animated Explainer Pipeline ----

@@ -21,7 +21,7 @@ Most AI video tools give you a single clip from a prompt. OpenMontage gives you 
 Edit your own talking-head footage. Generate a fully animated explainer from scratch. Cut a 2-hour podcast into a dozen social clips. Translate and dub your content into 10 languages. Build a cinematic brand teaser from stock footage and AI-generated scenes. **If a production team can make it, OpenMontage can orchestrate it.**
 
 - **11 production pipelines** — explainers, talking heads, screen demos, cinematic trailers, animations, podcasts, localization, and more
-- **47 production tools** — spanning video generation, image creation, text-to-speech, music, audio mixing, subtitles, enhancement, and analysis
+- **49 production tools** — spanning video generation, image creation, text-to-speech, music, audio mixing, subtitles, enhancement, and analysis
 - **Live web research built in** — before writing a single word of script, the agent runs 15-25+ web searches across YouTube, Reddit, news sites, and academic sources to ground your video in real, current data
 - **Both free/local AND cloud providers** — every capability supports open-source local alternatives alongside premium APIs. Use what you have.
 - **No vendor lock-in** — swap providers freely. The selector pattern auto-routes to whatever's available on your machine.
@@ -46,10 +46,11 @@ Edit your own talking-head footage. Generate a fully animated explainer from scr
 | **Pexels** | Stock | Free stock footage |
 | **Pixabay** | Stock | Free stock footage |
 
-### Image Generation (7 providers)
+### Image Generation (8 providers)
 | Provider | Type | Notes |
 |----------|------|-------|
 | **FLUX** | Cloud API | State-of-the-art quality |
+| **Google Imagen** | Cloud API | Imagen 4 — high-quality, multiple aspect ratios |
 | **DALL-E 3** | Cloud API | OpenAI's image model |
 | **Recraft** | Cloud API | Design-focused generation |
 | **Local Diffusion** | Local GPU | Stable Diffusion, free |
@@ -57,10 +58,11 @@ Edit your own talking-head footage. Generate a fully animated explainer from scr
 | **Pixabay** | Stock | Free stock images |
 | **ManimCE** | Local | Mathematical animations |
 
-### Text-to-Speech (3 providers)
+### Text-to-Speech (4 providers)
 | Provider | Type | Notes |
 |----------|------|-------|
 | **ElevenLabs** | Cloud API | Premium voice quality |
+| **Google TTS** | Cloud API | 700+ voices, 50+ languages — best for localization |
 | **OpenAI TTS** | Cloud API | Fast, affordable |
 | **Piper** | Local | Completely free, offline |
 
@@ -223,6 +225,7 @@ SUNO_API_KEY=your-key          # Suno AI — full songs, instrumentals, any genr
 # Voice & images:
 ELEVENLABS_API_KEY=your-key    # Premium TTS, AI music, sound effects
 OPENAI_API_KEY=your-key        # OpenAI TTS, DALL-E 3 images
+GOOGLE_API_KEY=your-key        # Google Imagen images, Google TTS (700+ voices)
 
 # More video providers:
 HEYGEN_API_KEY=your-key        # HeyGen — VEO, Sora, Runway, Kling via single gateway
@@ -260,10 +263,10 @@ The agent will:
 
 ```
 OpenMontage/
-├── tools/              # 46 Python tools (the agent's hands)
+├── tools/              # 48 Python tools (the agent's hands)
 │   ├── video/          # 12 video gen providers + compose, stitch, trim
-│   ├── audio/          # 3 TTS providers + Suno/ElevenLabs music, mixing, enhancement
-│   ├── graphics/       # 7 image gen providers + diagrams, code snippets, math
+│   ├── audio/          # 4 TTS providers + Suno/ElevenLabs music, mixing, enhancement
+│   ├── graphics/       # 8 image gen providers + diagrams, code snippets, math
 │   ├── enhancement/    # Upscale, bg remove, face enhance, color grade
 │   ├── analysis/       # Transcription, scene detect, frame sampling
 │   ├── avatar/         # Talking head, lip sync

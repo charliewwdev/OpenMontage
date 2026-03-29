@@ -40,7 +40,7 @@ OpenMontage/
 │   ├── env_loader.py       # .env variable management
 │   └── providers/          # (Reserved for future provider abstractions)
 │
-├── tools/                  # 55+ Python tool implementations
+├── tools/                  # 57+ Python tool implementations
 │   ├── base_tool.py        # Abstract base class — the tool contract
 │   ├── tool_registry.py    # Auto-discovery singleton registry
 │   ├── cost_tracker.py     # Budget governance (estimate → reserve → reconcile)
@@ -142,8 +142,8 @@ Three selector tools abstract multi-provider capabilities:
 
 | Selector | Capability | Providers (priority order) |
 |----------|-----------|---------------------------|
-| `tts_selector` | Text-to-speech | ElevenLabs > OpenAI > Piper (offline) |
-| `image_selector` | Image generation | FLUX > DALL-E > Recraft > LocalDiffusion > Pexels/Pixabay (stock) |
+| `tts_selector` | Text-to-speech | ElevenLabs > Google TTS > OpenAI > Piper (offline) |
+| `image_selector` | Image generation | FLUX > Google Imagen > DALL-E > Recraft > LocalDiffusion > Pexels/Pixabay (stock) |
 | `video_selector` | Video generation | Kling > Runway > VEO > MiniMax > HeyGen > LTX (modal) > LTX (local) > CogVideo > Hunyuan > WAN > Pexels/Pixabay (stock) |
 
 Selectors route based on: user preference > availability > fallback order. They adapt input schemas between providers transparently.
@@ -152,13 +152,13 @@ Selectors route based on: user preference > availability > fallback order. They 
 
 **Analysis (4):** transcriber (WhisperX), scene_detect, frame_sampler, video_understand (CLIP/BLIP-2)
 
-**Audio (7):** elevenlabs_tts, openai_tts, piper_tts, tts_selector, music_gen, audio_mixer, audio_enhance
+**Audio (8):** elevenlabs_tts, google_tts, openai_tts, piper_tts, tts_selector, music_gen, audio_mixer, audio_enhance
 
 **Avatar (2):** talking_head (SadTalker/MuseTalk), lip_sync (Wav2Lip)
 
 **Enhancement (5):** upscale (Real-ESRGAN), bg_remove (rembg/U2Net), face_enhance, face_restore (CodeFormer/GFPGAN), color_grade (FFmpeg LUTs)
 
-**Graphics (11):** flux_image, openai_image, recraft_image, local_diffusion, pexels_image, pixabay_image, image_selector, code_snippet, diagram_gen, math_animate (ManimCE), image_gen (deprecated)
+**Graphics (12):** flux_image, google_imagen, openai_image, recraft_image, local_diffusion, pexels_image, pixabay_image, image_selector, code_snippet, diagram_gen, math_animate (ManimCE), image_gen (deprecated)
 
 **Subtitle (1):** subtitle_gen
 
@@ -382,6 +382,7 @@ All config is validated via Pydantic models in `lib/config_model.py`.
 | `HEYGEN_API_KEY` | heygen_video | Multi-provider video generation |
 | `PEXELS_API_KEY` | pexels_image, pexels_video | Stock media |
 | `PIXABAY_API_KEY` | pixabay_image, pixabay_video | Stock media |
+| `GOOGLE_API_KEY` | google_imagen, google_tts | Google Imagen images, Google Cloud TTS |
 | `RUNWAY_API_KEY` | runway_video | Runway Gen-4 direct |
 | `MODAL_LTX2_ENDPOINT_URL` | ltx_video_modal | Self-hosted LTX-2 |
 | `VIDEO_GEN_LOCAL_ENABLED` | local video tools | Enable local GPU generation |

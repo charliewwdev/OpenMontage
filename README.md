@@ -18,7 +18,7 @@ Works with **Claude Code, Cursor, Copilot, Windsurf, Codex** — any AI coding a
 
 > **"Nature's Source Code"** — a cinematic explainer produced from a single prompt. The agent researched the topic across dozens of sources, wrote the script, generated every visual, composed narration and music, added word-by-word captions, and rendered the final video. Total human input: one sentence and a few approvals.
 >
-> OpenMontage produces **10+ minute videos** with minimal interaction — describe your vision, approve the creative direction, and get a finished production.
+> OpenMontage produces videos in **less than 10 minutes** with minimal interaction — describe your vision, approve the creative direction, and get a finished production.
 
 ---
 

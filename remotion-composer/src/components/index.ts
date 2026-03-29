@@ -4,3 +4,7 @@ export { ProgressBar } from "./ProgressBar";
 export { CalloutBox } from "./CalloutBox";
 export { ComparisonCard } from "./ComparisonCard";
 export { BarChart, LineChart, PieChart, KPIGrid } from "./charts";
+export { CaptionOverlay } from "./CaptionOverlay";
+export { SectionTitle } from "./SectionTitle";
+export { StatReveal } from "./StatReveal";
+export { HeroTitle } from "./HeroTitle";

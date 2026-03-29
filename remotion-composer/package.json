@@ -8,11 +8,15 @@
     "upgrade": "npx remotion upgrade"
   },
   "dependencies": {
-    "@remotion/cli": "4.0.0",
-    "@remotion/player": "4.0.0",
+    "@remotion/captions": "^4.0.441",
+    "@remotion/cli": "^4.0.441",
+    "@remotion/google-fonts": "^4.0.441",
+    "@remotion/media": "^4.0.441",
+    "@remotion/player": "^4.0.441",
+    "@remotion/transitions": "^4.0.441",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "remotion": "4.0.0"
+    "remotion": "^4.0.441"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",

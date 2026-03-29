@@ -161,13 +161,19 @@ class VideoCompose(BaseTool):
     ]
 
     def _remotion_available(self) -> bool:
-        """Check if Remotion rendering is available (requires npx + composer project)."""
+        """Check if Remotion rendering is available (requires npx + composer project + node_modules)."""
         import shutil as _shutil
 
         if not _shutil.which("npx"):
             return False
         composer_dir = Path(__file__).resolve().parent.parent.parent / "remotion-composer"
-        return composer_dir.exists() and (composer_dir / "package.json").exists()
+        if not composer_dir.exists() or not (composer_dir / "package.json").exists():
+            return False
+        # Check that node_modules are actually installed — without this,
+        # npx remotion render will fail even though the project exists.
+        if not (composer_dir / "node_modules").exists():
+            return False
+        return True
 
     def get_info(self) -> dict[str, Any]:
         """Extend base get_info to surface Remotion sub-capability.
@@ -193,10 +199,18 @@ class VideoCompose(BaseTool):
                 "and motion-graphics pipelines."
             )
         else:
-            info["remotion_note"] = (
-                "Remotion is NOT available (needs Node.js/npx + remotion-composer). "
-                "Falling back to FFmpeg Ken Burns for image-based compositions."
-            )
+            composer_dir = Path(__file__).resolve().parent.parent.parent / "remotion-composer"
+            if composer_dir.exists() and (composer_dir / "package.json").exists() and not (composer_dir / "node_modules").exists():
+                info["remotion_note"] = (
+                    "Remotion project exists but node_modules are NOT installed. "
+                    "Run 'cd remotion-composer && npm install' to enable Remotion rendering. "
+                    "Falling back to FFmpeg Ken Burns for image-based compositions."
+                )
+            else:
+                info["remotion_note"] = (
+                    "Remotion is NOT available (needs Node.js/npx + remotion-composer). "
+                    "Falling back to FFmpeg Ken Burns for image-based compositions."
+                )
         return info
 
     def execute(self, inputs: dict[str, Any]) -> ToolResult:

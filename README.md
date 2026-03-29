@@ -12,6 +12,14 @@ No video editing experience required. No complex UI to learn. Just describe your
 
 Works with **Claude Code, Cursor, Copilot, Windsurf, Codex** — any AI coding assistant that can read files and run code.
 
+<p align="center">
+  <img src="assets/showcase.jpg" alt="Nature's Source Code — an AI-produced explainer video" width="100%">
+</p>
+
+> **"Nature's Source Code"** — a cinematic explainer produced from a single prompt. The agent researched the topic across dozens of sources, wrote the script, generated every visual, composed narration and music, added word-by-word captions, and rendered the final video. Total human input: one sentence and a few approvals.
+>
+> OpenMontage produces **10+ minute videos** with minimal interaction — describe your vision, approve the creative direction, and get a finished production.
+
 ---
 
 ## Why OpenMontage?
@@ -112,7 +120,7 @@ Edit your own talking-head footage. Generate a fully animated explainer from scr
 ### Composition & Rendering
 | Engine | Type | What It Does |
 |--------|------|-------------|
-| **Remotion** | Local (Node.js) | React-based programmatic video — animated text cards, stat cards, charts, spring physics transitions, image-to-video with motion. **When no video generation providers are configured, the agent generates still images and Remotion turns them into fully animated video.** |
+| **Remotion** | Local (Node.js) | React-based programmatic video — spring-animated image scenes, stat reveals, section titles, hero cards, TikTok-style word-by-word captions, scene transitions (fade/slide/wipe/flip), Google Fonts, and audio with fade curves. **When no video generation providers are configured, the agent generates still images and Remotion turns them into fully animated video.** |
 | **FFmpeg** | Local | Core video assembly, encoding, subtitle burn, audio muxing, color grading |
 
 ---
@@ -207,6 +215,8 @@ That's it. `make setup` installs Python dependencies, the Remotion composer, fre
 > pip install piper-tts
 > cp .env.example .env
 > ```
+>
+> **Windows users:** If `npm install` fails with `ERR_INVALID_ARG_TYPE`, use `npx --yes npm install` instead.
 
 ### 3. Add API Keys (optional)
 

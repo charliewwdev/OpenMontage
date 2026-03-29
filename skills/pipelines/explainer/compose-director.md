@@ -95,6 +95,56 @@ Call the `audio_mixer` tool to:
 
 The video_compose tool will mux this with the video.
 
+### Step 5b: Generate Subtitles (Mandatory)
+
+Subtitles are mandatory for all explainer content. Generate them from the narration audio — do NOT skip this step.
+
+1. **Transcribe** the full narration using the `transcriber` tool (whisperx):
+   ```python
+   from tools.analysis.transcriber import Transcriber
+   result = Transcriber().execute({
+       'input_path': 'projects/<project>/assets/audio/narration_full.mp3',
+       'model_size': 'base',
+       'language': 'en',
+       'output_dir': 'projects/<project>/assets/audio'
+   })
+   # result.data contains segments with word-level timestamps
+   ```
+
+2. **Generate SRT** from the transcription using `subtitle_gen`:
+   ```python
+   from tools.subtitle.subtitle_gen import SubtitleGen
+   result = SubtitleGen().execute({
+       'segments': transcription_data['segments'],
+       'format': 'srt',
+       'output_path': 'projects/<project>/assets/subtitles.srt',
+       'max_words_per_cue': 8,
+       'max_chars_per_line': 42
+   })
+   ```
+
+3. **Burn subtitles** into the video using `video_compose`:
+   ```python
+   from tools.video.video_compose import VideoCompose
+   result = VideoCompose().execute({
+       'operation': 'burn_subtitles',
+       'input_path': 'projects/<project>/renders/output.mp4',
+       'output_path': 'projects/<project>/renders/final.mp4',
+       'subtitle_path': 'projects/<project>/assets/subtitles.srt',
+       'subtitle_style': {
+           'font': '<from playbook typography.headings.font or Arial>',
+           'font_size': 22,
+           'primary_color': '&HFFFFFF',
+           'outline_color': '&H000000',
+           'outline_width': 2,
+           'margin_v': 50,
+           'alignment': 2
+       }
+   })
+   ```
+
+**The final deliverable is the subtitled version**, not the pre-subtitle render.
+
 ### Step 6: Verify Output
 
 **File verification:**

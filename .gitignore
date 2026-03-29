@@ -21,6 +21,12 @@ output/
 pipeline/
 tests/qa/output/
 
+# Project workspaces (generated assets, renders — all regenerable)
+projects/
+
+# User music library (personal royalty-free tracks — not part of repo)
+music_library/
+
 # Environment
 .env
 .env.local
@@ -42,3 +48,7 @@ Thumbs.db
 
 # Node (for remotion-composer/)
 node_modules/
+
+# Remotion build output and copied project assets (regenerable at render time)
+remotion-composer/out/
+remotion-composer/public/

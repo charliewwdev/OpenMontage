@@ -216,6 +216,43 @@ Also present **alternative production paths** — complete packages at different
 | Budget | Local TTS + images | ~$0.05-0.15 | Robotic voice, image-only |
 | Free | Local TTS + diagrams | $0.00 | Functional but minimal |
 
+### Step 5b: Music Plan (Mandatory)
+
+Music is a critical part of the video's feel. **Surface the music situation to the user at proposal time** — do not silently defer it to the asset stage where a failure becomes expensive.
+
+**Check music availability in this order:**
+
+1. **User music library (`music_library/`):** Check if this folder exists and contains tracks. If so, list available tracks with durations and let the user pick one.
+2. **Music generation APIs:** Check which music tools are available via the registry (`registry.get_by_capability("music_generation")`). Report their status honestly.
+3. **Stock music sources:** Note if stock music is available via any provider.
+
+**Present to the user:**
+
+```
+MUSIC PLAN
+├── Your music library: 3 tracks available
+│   ├── cosmic_interstellar_space.mp3 (3:13) — ambient, cosmic
+│   ├── cinematic_epic.mp3 (2:45) — dramatic, building
+│   └── lofi_beat.mp3 (4:00) — chill, electronic
+├── AI generation: music_gen (ElevenLabs) — UNAVAILABLE (plan limit)
+└── Recommendation: Use "cosmic_interstellar_space.mp3" from your library
+    OR provide a different track before asset generation
+
+Would you like to:
+  (a) Use a track from your library (which one?)
+  (b) Provide a different track (drop it in music_library/)
+  (c) Generate one via API (if available)
+  (d) Proceed without music
+```
+
+**If no music source is available:** Tell the user explicitly. Do NOT let this surface as a surprise at the asset stage. Offer the `music_library/` path so they can add a track before production starts.
+
+**Rules:**
+- Always check `music_library/` first — user-provided music is free and intentional
+- Always report music API status (available, unavailable, quota remaining if checkable)
+- Record the music decision in `proposal_packet.production_plan.music_source`
+- If the user picks a library track, record its path for the asset director
+
 ### Step 6: Build the Cost Estimate
 
 Itemize every paid operation:

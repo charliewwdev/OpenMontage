@@ -46,6 +46,40 @@ Infrastructure files:
 - `tools/cost_tracker.py` — budget governance
 - `lib/pipeline_loader.py` — manifest loading and helpers
 
+## Project Directory Convention
+
+Every production run creates a project workspace under `projects/`. This directory is gitignored — all generated assets are regenerable.
+
+```
+projects/<project-name>/
+├── artifacts/          # JSON artifacts from each stage (research_brief, script, scene_plan, etc.)
+├── assets/
+│   ├── images/         # Generated images (PNG)
+│   ├── video/          # Generated video clips (MP4)
+│   ├── audio/          # Narration segments + final mix (MP3/WAV)
+│   ├── music/          # Background music track (MP3)
+│   └── subtitles.srt   # Generated subtitles
+└── renders/
+    └── final.mp4       # Final rendered video (the deliverable)
+```
+
+**Naming convention**: Use kebab-case derived from the video title (e.g., `hidden-math-of-nature`, `how-music-rewires-brain`).
+
+Create the project directory at pipeline initialization, before any stage runs. All tools and agents should write outputs to these paths — never to the repo root or ad-hoc locations.
+
+## Music Library
+
+Users can place royalty-free music tracks in `music_library/` (gitignored). The asset director will check this folder before falling back to API-based music generation.
+
+```
+music_library/
+├── ambient_track.mp3
+├── cinematic_epic.mp3
+└── ...
+```
+
+If the folder has tracks, the proposal and asset stages should present them as options alongside generated music. See the proposal-director and asset-director skills for details.
+
 ## Available Pipelines
 
 | Pipeline | Best For | Stability |
@@ -236,6 +270,23 @@ Key capability families to look for in the output:
 - **enhancement** — Upscale, background removal, face enhance, color grading.
 
 Each tool in the registry declares `best_for`, `install_instructions`, `runtime` (LOCAL, API, LOCAL_GPU, HYBRID), and `status`. Read these fields — do not assume tool strengths from memory.
+
+### Tool Class Naming Convention
+
+All tool classes use **PascalCase without a "Tool" suffix**. When importing tools in Python:
+
+| Module | Class Name | NOT |
+|--------|-----------|-----|
+| `tools.audio.music_gen` | `MusicGen` | ~~MusicGenTool~~ |
+| `tools.video.video_compose` | `VideoCompose` | ~~VideoComposeTool~~ |
+| `tools.audio.audio_mixer` | `AudioMixer` | ~~AudioMixerTool~~ |
+| `tools.tts.elevenlabs_tts` | `ElevenLabsTTS` | ~~ElevenLabsTTSTool~~ |
+| `tools.analysis.transcriber` | `Transcriber` | ~~TranscriberTool~~ |
+| `tools.subtitle.subtitle_gen` | `SubtitleGen` | ~~SubtitleGenTool~~ |
+
+When in doubt, check: `grep "^class " tools/<path>.py`
+
+All tools call via `.execute(params_dict)` (returns `ToolResult` with `.success`, `.data`, `.error`), NOT `.run()`.
 
 ### Selector Pattern
 

@@ -134,7 +134,7 @@ export const ComparisonCard: React.FC<ComparisonCardProps> = ({
   return (
     <AbsoluteFill
       style={{
-        backgroundColor,
+        background: backgroundColor,
         justifyContent: "center",
         alignItems: "center",
       }}

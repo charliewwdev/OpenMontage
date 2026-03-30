@@ -107,7 +107,7 @@ const PageRenderer: React.FC<{
                     : "0 2px 4px rgba(0,0,0,0.5)",
                 }}
               >
-                {w.word}
+                {w.word}{i < page.words.length - 1 ? " " : ""}
               </span>
             );
           })}

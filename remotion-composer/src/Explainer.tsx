@@ -88,6 +88,8 @@ interface Cut {
   heroSubtitle?: string;
   // Styling overrides
   backgroundColor?: string;
+  backgroundImage?: string; // AI-generated or stock image rendered behind the component
+  backgroundOverlay?: number; // Opacity of dark overlay on backgroundImage (0-1, default 0.55)
   color?: string;
   accentColor?: string;
   fontSize?: number;
@@ -219,7 +221,7 @@ const ImageScene: React.FC<{ src: string; animation?: string }> = ({
   // "static" or "none" → just display
 
   return (
-    <AbsoluteFill style={{ overflow: "hidden", backgroundColor: "#0F172A" }}>
+    <AbsoluteFill style={{ overflow: "hidden", background: "#0F172A" }}>
       <Img
         src={resolveAsset(src)}
         style={{
@@ -255,7 +257,7 @@ const VideoScene: React.FC<{ src: string; startFrom?: number }> = ({
   });
 
   return (
-    <AbsoluteFill style={{ backgroundColor: "#0F172A" }}>
+    <AbsoluteFill style={{ background: "#0F172A" }}>
       <OffthreadVideo
         src={resolveAsset(src)}
         startFrom={Math.round(startFrom * fps)}
@@ -276,154 +278,162 @@ const VideoScene: React.FC<{ src: string; startFrom?: number }> = ({
 // Scene renderer — maps cut type / source to the right component
 // ---------------------------------------------------------------------------
 
+// Background image layer — renders an AI-generated/stock image behind data components
+const BackgroundImageLayer: React.FC<{
+  src: string;
+  overlayOpacity?: number;
+  children: React.ReactNode;
+}> = ({ src, overlayOpacity = 0.55, children }) => {
+  const frame = useCurrentFrame();
+  const { fps, durationInFrames } = useVideoConfig();
+
+  // Subtle ken-burns on the background
+  const progress = interpolate(frame, [0, durationInFrames], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const bgScale = 1 + progress * 0.08;
+
+  return (
+    <AbsoluteFill style={{ overflow: "hidden" }}>
+      {/* Background image with subtle zoom */}
+      <Img
+        src={resolveAsset(src)}
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          transform: `scale(${bgScale})`,
+          willChange: "transform",
+        }}
+      />
+      {/* Dark overlay for readability */}
+      <AbsoluteFill
+        style={{
+          background: `rgba(15, 23, 42, ${overlayOpacity})`,
+        }}
+      />
+      {/* Component content on top */}
+      {children}
+    </AbsoluteFill>
+  );
+};
+
 const SceneRenderer: React.FC<{ cut: Cut }> = ({ cut }) => {
+  // Wrap component with background image if specified
+  const maybeWrapWithBgImage = (element: React.ReactElement) => {
+    if (cut.backgroundImage) {
+      return (
+        <BackgroundImageLayer
+          src={cut.backgroundImage}
+          overlayOpacity={cut.backgroundOverlay ?? 0.55}
+        >
+          {element}
+        </BackgroundImageLayer>
+      );
+    }
+    return element;
+  };
+
+  // Resolve the scene element based on cut type, then wrap with backgroundImage if set
+  const bgColor = cut.backgroundImage ? "transparent" : cut.backgroundColor;
+
   // Explicit component types
   if (cut.type === "text_card" && cut.text) {
-    return (
-      <TextCard
-        text={cut.text}
-        fontSize={cut.fontSize}
-        color={cut.color}
-        backgroundColor={cut.backgroundColor}
-      />
+    return maybeWrapWithBgImage(
+      <TextCard text={cut.text} fontSize={cut.fontSize} color={cut.color} backgroundColor={bgColor} />
     );
   }
   if (cut.type === "stat_card" && cut.stat) {
-    return (
-      <StatCard
-        stat={cut.stat}
-        subtitle={cut.subtitle}
-        accentColor={cut.accentColor}
-        backgroundColor={cut.backgroundColor}
-      />
+    return maybeWrapWithBgImage(
+      <StatCard stat={cut.stat} subtitle={cut.subtitle} accentColor={cut.accentColor} backgroundColor={bgColor} />
     );
   }
   if (cut.type === "callout" && cut.text) {
-    return (
+    return maybeWrapWithBgImage(
       <CalloutBox
-        text={cut.text}
-        type={cut.callout_type}
-        title={cut.title}
-        borderColor={cut.accentColor}
-        backgroundColor={cut.backgroundColor}
-        textColor={cut.color}
-        containerBackgroundColor={cut.backgroundColor}
+        text={cut.text} type={cut.callout_type} title={cut.title}
+        borderColor={cut.accentColor} backgroundColor={cut.backgroundColor}
+        textColor={cut.color} containerBackgroundColor={bgColor}
       />
     );
   }
-  if (
-    cut.type === "comparison" &&
-    cut.leftLabel &&
-    cut.rightLabel &&
-    cut.leftValue &&
-    cut.rightValue
-  ) {
-    return (
+  if (cut.type === "comparison" && cut.leftLabel && cut.rightLabel && cut.leftValue && cut.rightValue) {
+    return maybeWrapWithBgImage(
       <ComparisonCard
-        leftLabel={cut.leftLabel}
-        rightLabel={cut.rightLabel}
-        leftValue={cut.leftValue}
-        rightValue={cut.rightValue}
-        title={cut.title}
-        backgroundColor={cut.backgroundColor}
-        textColor={cut.color}
+        leftLabel={cut.leftLabel} rightLabel={cut.rightLabel}
+        leftValue={cut.leftValue} rightValue={cut.rightValue}
+        title={cut.title} backgroundColor={bgColor} textColor={cut.color}
       />
     );
   }
   if (cut.type === "hero_title" && cut.text) {
-    return <HeroTitle title={cut.text} subtitle={cut.heroSubtitle || cut.subtitle} />;
+    return maybeWrapWithBgImage(
+      <HeroTitle title={cut.text} subtitle={cut.heroSubtitle || cut.subtitle} />
+    );
   }
 
   // --- Chart types ---
   if (cut.type === "bar_chart" && cut.chartData) {
-    return (
+    return maybeWrapWithBgImage(
       <BarChart
-        data={cut.chartData}
-        title={cut.title}
-        colors={cut.chartColors}
+        data={cut.chartData} title={cut.title} colors={cut.chartColors}
         animationStyle={(cut.chartAnimation as any) || "grow-up"}
-        showGrid={cut.showGrid}
-        showValues={cut.showValues}
-        backgroundColor={cut.backgroundColor}
+        showGrid={cut.showGrid} showValues={cut.showValues} backgroundColor={bgColor}
       />
     );
   }
   if (cut.type === "line_chart" && cut.chartSeries) {
-    return (
+    return maybeWrapWithBgImage(
       <LineChart
-        series={cut.chartSeries}
-        title={cut.title}
-        colors={cut.chartColors}
+        series={cut.chartSeries} title={cut.title} colors={cut.chartColors}
         animationStyle={(cut.chartAnimation as any) || "draw"}
-        showGrid={cut.showGrid}
-        showMarkers={cut.showMarkers}
-        showLegend={cut.showLegend}
-        xLabel={cut.xLabel}
-        yLabel={cut.yLabel}
-        backgroundColor={cut.backgroundColor}
+        showGrid={cut.showGrid} showMarkers={cut.showMarkers} showLegend={cut.showLegend}
+        xLabel={cut.xLabel} yLabel={cut.yLabel} backgroundColor={bgColor}
       />
     );
   }
   if (cut.type === "pie_chart" && cut.chartData) {
-    return (
+    return maybeWrapWithBgImage(
       <PieChart
-        data={cut.chartData}
-        title={cut.title}
-        colors={cut.chartColors}
+        data={cut.chartData} title={cut.title} colors={cut.chartColors}
         animationStyle={(cut.chartAnimation as any) || "expand"}
-        donut={cut.donut}
-        centerLabel={cut.centerLabel}
-        centerValue={cut.centerValue}
-        showLegend={cut.showLegend}
-        backgroundColor={cut.backgroundColor}
+        donut={cut.donut} centerLabel={cut.centerLabel} centerValue={cut.centerValue}
+        showLegend={cut.showLegend} backgroundColor={bgColor}
       />
     );
   }
   if (cut.type === "kpi_grid" && cut.chartData) {
-    return (
+    return maybeWrapWithBgImage(
       <KPIGrid
-        metrics={cut.chartData}
-        title={cut.title}
-        columns={cut.columns}
-        colors={cut.chartColors}
-        animationStyle={(cut.chartAnimation as any) || "count-up"}
-        backgroundColor={cut.backgroundColor}
+        metrics={cut.chartData} title={cut.title} columns={cut.columns}
+        colors={cut.chartColors} animationStyle={(cut.chartAnimation as any) || "count-up"}
+        backgroundColor={bgColor}
       />
     );
   }
   if (cut.type === "progress_bar" && cut.progress !== undefined) {
-    return (
+    return maybeWrapWithBgImage(
       <AbsoluteFill
         style={{
-          backgroundColor: cut.backgroundColor || "#FFFFFF",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
+          background: bgColor || "#FFFFFF",
+          display: "flex", alignItems: "center", justifyContent: "center",
           padding: "80px 120px",
         }}
       >
         {cut.title && (
-          <div
-            style={{
-              position: "absolute",
-              top: 120,
-              fontSize: 48,
-              fontWeight: 700,
-              color: "#1F2937",
-              textAlign: "center",
-              width: "100%",
-            }}
-          >
+          <div style={{
+            position: "absolute", top: 120, fontSize: 48, fontWeight: 700,
+            color: "#1F2937", textAlign: "center", width: "100%",
+          }}>
             {cut.title}
           </div>
         )}
         <ProgressBar
-          progress={cut.progress}
-          label={cut.progressLabel}
+          progress={cut.progress} label={cut.progressLabel}
           color={cut.progressColor || cut.accentColor}
           animationStyle={(cut.progressAnimation as any) || "fill"}
-          segments={cut.progressSegments}
-          backgroundColor={cut.backgroundColor}
+          segments={cut.progressSegments} backgroundColor={cut.backgroundColor}
         />
       </AbsoluteFill>
     );
@@ -493,7 +503,7 @@ export const Explainer: React.FC<ExplainerProps> = ({
   const { fps, durationInFrames } = useVideoConfig();
 
   return (
-    <AbsoluteFill style={{ backgroundColor: "#0F172A", fontFamily }}>
+    <AbsoluteFill style={{ background: "#0F172A", fontFamily }}>
       {/* Layer 1: Visual scenes */}
       {cuts.map((cut) => {
         const from = Math.round(cut.in_seconds * fps);

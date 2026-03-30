@@ -41,7 +41,7 @@ export const StatCard: React.FC<StatCardProps> = ({
       style={{
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor,
+        background: backgroundColor,
       }}
     >
       <div style={{ textAlign: "center" }}>

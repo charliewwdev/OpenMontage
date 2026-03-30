@@ -24,7 +24,7 @@ export const HeroTitle: React.FC<HeroTitleProps> = ({ title, subtitle }) => {
         justifyContent: "center",
         alignItems: "center",
         background:
-          "radial-gradient(ellipse at center, rgba(15,23,42,0.85) 0%, rgba(15,23,42,0.95) 100%)",
+          "radial-gradient(ellipse at center, rgba(15,23,42,0.35) 0%, rgba(15,23,42,0.55) 100%)",
       }}
     >
       <div style={{ textAlign: "center", maxWidth: "85%" }}>

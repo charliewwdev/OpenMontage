@@ -36,7 +36,84 @@ Based on the edit decisions, pick the rendering approach:
 
 You can combine both: Remotion for animated segments, FFmpeg for final assembly.
 
-### Step 2: Prepare Render Inputs
+### Step 2: Audio Acquisition (Narration, Music, Subtitles)
+
+Before rendering, present the user with audio options and get their preferences.
+
+**Present to the user:**
+
+> **Audio setup for this video:**
+>
+> **Narration:** I can generate TTS narration using OpenAI TTS (`gpt-4o-mini-tts` — $0.015/min, 6 voices, voice direction). Which voice and tone would you like? I'll propose a voice based on the video topic, or you can choose:
+> - `onyx` — deep, authoritative (documentaries, tech)
+> - `echo` — resonant, futuristic (product ads, sci-fi)
+> - `nova` — bright, energetic (upbeat, explainers)
+> - `fable` — warm, storytelling (narratives, education)
+> - `shimmer` — expressive, warm (organic, lifestyle)
+> - `alloy` — neutral, balanced (general purpose)
+>
+> **Music:** I can automatically find royalty-free background music from Pixabay (no key needed). If you have a `FREESOUND_API_KEY`, I can also search Freesound as a backup.
+>
+> **Subtitles:** I'll generate word-level subtitles using WhisperX transcription of the final narration, burned into the video via Remotion captions.
+>
+> Want me to proceed with my recommendations, or adjust anything?
+
+**After user confirms:**
+
+1. **Write narration script with duration budget** (see scene-director Step 4b):
+   - Calculate video duration from cuts
+   - Budget at 85-90% of video duration
+   - Use 2.0-2.5 words/sec for documentary, 2.5-3.0 for energetic
+   - Verify word count before generating TTS
+
+2. **Generate TTS narration:**
+   ```python
+   from tools.audio.openai_tts import OpenAITTS
+   result = OpenAITTS().execute({
+       'text': narration_script,
+       'voice': '<user-chosen or agent-recommended>',
+       'instructions': '<voice direction matching video tone>',
+       'output_path': 'path/to/narration.mp3',
+   })
+   # CRITICAL: Check result.data['audio_duration_seconds'] vs video duration
+   # If narration exceeds video by >1s: shorten script and regenerate
+   ```
+
+3. **Download background music:**
+   ```python
+   from tools.audio.pixabay_music import PixabayMusic
+   result = PixabayMusic().execute({
+       'query': '<mood/genre matching video topic>',
+       'min_duration': video_duration_seconds,
+       'max_duration': 300,
+       'output_path': 'path/to/music.mp3',
+   })
+   ```
+
+4. **Generate subtitles via WhisperX:**
+   ```python
+   from tools.analysis.transcriber import Transcriber
+   result = Transcriber().execute({
+       'input_path': 'path/to/narration.mp3',
+       'model_size': 'base',
+       'language': 'en',
+   })
+   # Convert word_timestamps to Remotion caption format:
+   # [{ "word": "Hello", "startMs": 0, "endMs": 340 }, ...]
+   ```
+
+5. **Assemble composition JSON** with audio config:
+   ```json
+   {
+     "audio": {
+       "narration": { "src": "path/to/narration.mp3", "volume": 1 },
+       "music": { "src": "path/to/music.mp3", "volume": 0.1, "fadeInSeconds": 2, "fadeOutSeconds": 3 }
+     },
+     "captions": [ ... word-level captions from WhisperX ... ]
+   }
+   ```
+
+### Step 3: Prepare Render Inputs
 
 For each cut in the edit decisions:
 1. Verify the source asset exists at its declared path
@@ -44,8 +121,8 @@ For each cut in the edit decisions:
 3. Prepare transform parameters (scale, position, crop)
 
 For audio:
-1. Verify all narration segments exist
-2. Verify music track exists
+1. Verify narration duration fits within video duration (use `audio_probe`)
+2. Verify music duration covers video duration
 3. Prepare ducking parameters from edit decisions
 
 ### Step 3: Determine Output Profile
@@ -152,7 +229,85 @@ Subtitles are mandatory for all explainer content. Generate them from the narrat
 
 **The final deliverable is the subtitled version**, not the pre-subtitle render.
 
-### Step 6: Verify Output
+### Step 5c: Pre-Render Validation (Mandatory)
+
+**Always run the composition validator before rendering.** This catches problems that waste render time.
+
+```python
+from tools.analysis.composition_validator import CompositionValidator
+result = CompositionValidator().execute({
+    'composition_path': 'path/to/composition.json',
+    'assets_root': 'remotion-composer/public',
+})
+# result.data['valid'] MUST be True before proceeding to render
+# If False: fix the reported errors first (missing assets, audio-video mismatch, etc.)
+```
+
+Common catches:
+- Narration audio longer than video (would be cut off)
+- Missing image/audio files (render would fail)
+- Music shorter than video (silence at end)
+
+**Do not skip this step.** If validation fails, fix the issue and re-validate before rendering.
+
+### Step 6: Post-Render Self-Review (Mandatory)
+
+After rendering, the agent **must review its own output** before presenting to the user. This catches issues the validator can't see (visual quality, audio sync, subtitle readability).
+
+**6a. Extract review frames:**
+```python
+from tools.analysis.frame_sampler import FrameSampler
+# Extract one frame per scene at the midpoint
+midpoints = [(cut['in_seconds'] + cut['out_seconds']) / 2 for cut in cuts]
+FrameSampler().execute({
+    'input_path': 'path/to/rendered_video.mp4',
+    'strategy': 'timestamps',
+    'timestamps': midpoints,
+    'output_dir': 'path/to/review-frames',
+    'format': 'png',
+})
+```
+
+**6b. Transcribe rendered audio:**
+```python
+from tools.analysis.transcriber import Transcriber
+Transcriber().execute({
+    'input_path': 'path/to/rendered_video.mp4',
+    'model_size': 'base',
+    'language': 'en',
+    'output_dir': 'path/to/review-frames',
+})
+# Verify all narration words are present and not cut off
+```
+
+**6c. Visual inspection — review each frame:**
+- Does the background color/gradient match intent? (watch for white backgrounds on dark-themed videos)
+- Are images rendering correctly? (not blank, not stretched)
+- Are subtitles visible and properly spaced?
+- Are overlays (section titles, stat reveals) positioned correctly?
+- Is the opening scene visually strong? (important for social media thumbnails)
+
+**6d. Audio inspection — check transcript:**
+- Is the full narration captured? (compare last transcribed word to last scripted word)
+- Any words cut off at the end? (narration exceeding video duration)
+- Timing alignment — do narration segments roughly match their intended scenes?
+
+**6e. Compile and present review to user:**
+
+> **Post-render review for "[Video Title]":**
+>
+> **Audio:** [Complete/Cut off at Xs] — all N words captured / last sentence missing
+> **Visuals:** [N scenes inspected] — [issues or "all scenes rendering correctly"]
+> **Subtitles:** [Present/Missing] — [spacing ok / words running together]
+> **Issues found:** [list any issues with severity]
+>
+> **Recommendations:** [what to fix, if anything]
+>
+> Want me to fix these issues and re-render, or is this good to go?
+
+**Only after user approves (or agent finds zero issues) should the video be considered final.**
+
+### Step 6-old: File and Content Verification
 
 **File verification:**
 - [ ] Output file exists at declared path
@@ -165,9 +320,9 @@ Subtitles are mandatory for all explainer content. Generate them from the narrat
 - [ ] Audio channels present (stereo)
 - [ ] No audio clipping or silence gaps > 1s
 
-**Quality check:**
-- [ ] Visual: scrub through at 25%, 50%, 75% marks — images display correctly
-- [ ] Audio: narration is audible and clear throughout
+**Quality check (covered by self-review above):**
+- [ ] Visual: all scene frames inspected
+- [ ] Audio: full transcription verified
 - [ ] Subtitles: visible and correctly timed
 
 ### Step 7: Build Render Report

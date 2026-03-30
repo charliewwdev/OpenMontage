@@ -30,7 +30,7 @@ export const TextCard: React.FC<TextCardProps> = ({
       style={{
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor,
+        background: backgroundColor,
       }}
     >
       <div

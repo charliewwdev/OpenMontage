@@ -129,7 +129,7 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   return (
     <AbsoluteFill
       style={{
-        backgroundColor,
+        background: backgroundColor,
         justifyContent: "center",
         alignItems: "center",
       }}

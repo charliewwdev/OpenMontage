@@ -91,7 +91,7 @@ export const PieChart: React.FC<PieChartProps> = ({
   return (
     <AbsoluteFill
       style={{
-        backgroundColor,
+        background: backgroundColor,
         justifyContent: "flex-start",
         alignItems: "center",
         padding: 40,

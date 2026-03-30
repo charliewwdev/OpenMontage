@@ -101,7 +101,7 @@ export const LineChart: React.FC<LineChartProps> = ({
   return (
     <AbsoluteFill
       style={{
-        backgroundColor,
+        background: backgroundColor,
         justifyContent: "flex-start",
         alignItems: "center",
         padding: 40,

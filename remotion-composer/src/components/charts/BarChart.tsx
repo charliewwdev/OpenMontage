@@ -73,7 +73,7 @@ export const BarChart: React.FC<BarChartProps> = ({
   return (
     <AbsoluteFill
       style={{
-        backgroundColor,
+        background: backgroundColor,
         justifyContent: "flex-start",
         alignItems: "center",
         padding: 40,

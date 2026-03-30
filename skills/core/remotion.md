@@ -88,6 +88,29 @@ across bar/pie/line scenes for visual unity.
 **Reference compositions:** See `remotion-composer/public/demo-props/climate-dashboard.json`
 as the gold standard, and other demo files for additional patterns.
 
+### Pre-Render Validation (mandatory)
+
+**Always run `composition_validator` before rendering.** It catches:
+- Missing asset files (images, audio) that would cause render failures
+- Narration audio longer than video duration (audio gets cut off)
+- Music shorter than video (silence at end)
+- Invalid cut timings (out ≤ in)
+
+```python
+from tools.analysis.composition_validator import CompositionValidator
+result = CompositionValidator().execute({
+    "composition_path": "path/to/composition.json",
+    "assets_root": "remotion-composer/public",
+})
+# result.data["valid"] must be True before rendering
+```
+
+**Audio duration alignment:**
+- After generating TTS narration, the tool returns `audio_duration_seconds`.
+- If narration exceeds video duration: shorten script and regenerate, OR extend the last scene.
+- Use `tools.analysis.audio_probe.probe_duration(path)` to check any audio file's duration.
+- Music should be ≥ video duration; the player handles fade-out via `fadeOutSeconds`.
+
 ## Architecture
 
 ```

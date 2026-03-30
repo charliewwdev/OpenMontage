@@ -78,7 +78,7 @@ export const KPIGrid: React.FC<KPIGridProps> = ({
   return (
     <AbsoluteFill
       style={{
-        backgroundColor,
+        background: backgroundColor,
         justifyContent: "flex-start",
         alignItems: "center",
         fontFamily,

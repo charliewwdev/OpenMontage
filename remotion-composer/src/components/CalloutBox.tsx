@@ -111,7 +111,7 @@ export const CalloutBox: React.FC<CalloutBoxProps> = ({
   return (
     <AbsoluteFill
       style={{
-        backgroundColor: containerBackgroundColor,
+        background: containerBackgroundColor,
         justifyContent: "center",
         alignItems: "center",
       }}

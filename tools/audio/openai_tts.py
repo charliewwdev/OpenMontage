@@ -122,6 +122,8 @@ class OpenAITTS(BaseTool):
     def _generate(self, inputs: dict[str, Any]) -> ToolResult:
         from openai import OpenAI
 
+        from tools.analysis.audio_probe import probe_duration
+
         client = OpenAI()
         text = inputs["text"]
         model = inputs.get("model", "gpt-4o-mini-tts")
@@ -139,6 +141,8 @@ class OpenAITTS(BaseTool):
         ) as response:
             response.stream_to_file(output_path)
 
+        audio_duration = probe_duration(output_path)
+
         return ToolResult(
             success=True,
             data={
@@ -147,6 +151,7 @@ class OpenAITTS(BaseTool):
                 "voice": voice,
                 "format": fmt,
                 "text_length": len(text),
+                "audio_duration_seconds": round(audio_duration, 2) if audio_duration else None,
                 "output": str(output_path),
             },
             artifacts=[str(output_path)],

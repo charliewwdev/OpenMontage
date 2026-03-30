@@ -131,6 +131,31 @@ Show code with syntax highlighting. Highlight specific lines as the narrator exp
 - Tools: `code_snippet` tool + Remotion
 - Example: "Python code: `results = collection.query(embedding, n_results=5)`. Highlight `embedding` parameter when narrator says 'vector'."
 
+### Step 4b: Write Narration with Duration Budget
+
+If the video includes narration, the script **must** be written to fit the video duration.
+
+**Duration budgeting formula:**
+1. Calculate total video duration from scene timings (last cut's `out_seconds`).
+2. Target narration at **85-90%** of video duration to leave breathing room at intro/outro.
+3. Budget words: **2.0-2.5 words/second** for documentary style with natural pauses; **2.5-3.0 words/second** for energetic/fast-paced delivery.
+4. Example: 53s video → target 45-48s of narration → 90-120 words max (documentary) or 112-144 words (energetic).
+
+**Per-scene word budgets:**
+- Allocate words proportionally to each scene's duration.
+- A 5s scene gets ~10-12 words. A 6s scene gets ~12-15 words.
+- Leave 0.5-1s of silence between scene transitions for visual breathing room.
+
+**Validation (mandatory before TTS generation):**
+- [ ] Total word count is within budget for the target duration
+- [ ] No single scene's narration exceeds its time slot
+- [ ] Opening and closing scenes have brief narration (let visuals breathe)
+
+**After TTS generation:**
+- The TTS tool returns `audio_duration_seconds` — compare it against video duration.
+- If narration exceeds video by >1s, either trim the script and regenerate, or extend the video's closing scene.
+- Always run `composition_validator` before rendering to catch mismatches automatically.
+
 ### Step 5: Validate Against Playbook
 
 The style playbook constrains your visual choices:

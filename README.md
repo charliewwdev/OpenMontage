@@ -13,12 +13,14 @@ No video editing experience required. No complex UI to learn. Just describe your
 Works with **Claude Code, Cursor, Copilot, Windsurf, Codex** — any AI coding assistant that can read files and run code.
 
 <p align="center">
-  <img src="assets/showcase.jpg?v=2" alt="MERIDIAN — an AI-produced cinematic trailer" width="100%">
+  <video src="https://github.com/charliewwdev/OpenMontage/raw/main/assets/signal-from-tomorrow-demo.mp4" controls playsinline preload="metadata" width="100%">
+    Your browser does not support the video tag.
+  </video>
 </p>
 
-> **"MERIDIAN"** — a cinematic sci-fi trailer produced from a single prompt. Six AI-generated video clips, dramatic voiceover, crossfade transitions, and a title card — composed into a 30-second trailer. Total human input: one sentence.
+> **"SIGNAL FROM TOMORROW"** — a cinematic sci-fi trailer produced through OpenMontage's staged pipeline: concept, script, scene plan, Veo-generated motion clips, approvals, soundtrack, and final Remotion composition.
 >
-> OpenMontage produces videos in **less than 10 minutes** with minimal interaction — describe your vision, approve the creative direction, and get a finished production.
+> OpenMontage turns agent orchestration into a real production workflow — with provider locking, checkpointed creative stages, sample-before-batch generation, and a finished video as the output.
 
 ---
 

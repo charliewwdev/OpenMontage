@@ -32,6 +32,9 @@ music_library/
 .env.local
 *.env
 
+# Internal docs (strategy, handoffs, playbooks — not shipped)
+internal/
+
 # Local agent config (user-specific)
 .claude/memory/
 .claude/settings.local.json

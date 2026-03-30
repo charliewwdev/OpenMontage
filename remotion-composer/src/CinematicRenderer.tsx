@@ -2,6 +2,7 @@ import React from "react";
 import { loadFont } from "@remotion/google-fonts/SpaceGrotesk";
 import {
   AbsoluteFill,
+  Audio,
   CalculateMetadataFunction,
   OffthreadVideo,
   Sequence,
@@ -36,16 +37,24 @@ const toneGradient = (tone: CinematicTone) => {
 const SceneVideo: React.FC<{ scene: CinematicVideoScene }> = ({ scene }) => {
   const frame = useCurrentFrame();
   const { durationInFrames, fps } = useVideoConfig();
-
-  const opacity = interpolate(
-    frame,
-    [0, 10, durationInFrames - 10, durationInFrames],
-    [0, 1, 1, 0],
-    {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-    },
-  );
+  const fadeInFrames = scene.fadeInFrames ?? 10;
+  const fadeOutFrames = scene.fadeOutFrames ?? 10;
+  const fadeOutStart = Math.max(fadeInFrames, durationInFrames - fadeOutFrames);
+  const fadeInOpacity =
+    fadeInFrames === 0
+      ? 1
+      : interpolate(frame, [0, fadeInFrames], [0, 1], {
+          extrapolateLeft: "clamp",
+          extrapolateRight: "clamp",
+        });
+  const fadeOutOpacity =
+    fadeOutFrames === 0
+      ? 1
+      : interpolate(frame, [fadeOutStart, durationInFrames], [1, 0], {
+          extrapolateLeft: "clamp",
+          extrapolateRight: "clamp",
+        });
+  const opacity = Math.min(fadeInOpacity, fadeOutOpacity);
 
   const scale = interpolate(frame, [0, durationInFrames], [1.015, 1], {
     extrapolateLeft: "clamp",
@@ -242,6 +251,59 @@ const TitleCard: React.FC<{
   );
 };
 
+const Soundtrack: React.FC<{
+  src: string;
+  volume: number;
+  trimBeforeSeconds?: number;
+  trimAfterSeconds?: number;
+  fadeInSeconds: number;
+  fadeOutSeconds: number;
+}> = ({
+  src,
+  volume,
+  trimBeforeSeconds,
+  trimAfterSeconds,
+  fadeInSeconds,
+  fadeOutSeconds,
+}) => {
+  const frame = useCurrentFrame();
+  const { durationInFrames, fps } = useVideoConfig();
+
+  const fadeInFrames = Math.max(1, Math.round(fadeInSeconds * fps));
+  const fadeOutFrames = Math.max(1, Math.round(fadeOutSeconds * fps));
+  const trimBefore =
+    trimBeforeSeconds !== undefined
+      ? Math.round(trimBeforeSeconds * fps)
+      : undefined;
+  const trimAfter =
+    trimAfterSeconds !== undefined
+      ? Math.round(trimAfterSeconds * fps)
+      : undefined;
+
+  const fadeIn = interpolate(frame, [0, fadeInFrames], [0, volume], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const fadeOut = interpolate(
+    frame,
+    [durationInFrames - fadeOutFrames, durationInFrames],
+    [volume, 0],
+    {
+      extrapolateLeft: "clamp",
+      extrapolateRight: "clamp",
+    },
+  );
+
+  return (
+    <Audio
+      src={src}
+      trimBefore={trimBefore}
+      trimAfter={trimAfter}
+      volume={() => Math.min(fadeIn, fadeOut)}
+    />
+  );
+};
+
 export const calculateCinematicMetadata: CalculateMetadataFunction<CinematicRendererProps> =
   async ({ props }) => {
     const totalSeconds =
@@ -264,9 +326,20 @@ export const CinematicRenderer: React.FC<CinematicRendererProps> = ({
   titleFontSize = 78,
   titleWidth = 1320,
   signalLineCount = 18,
+  soundtrack,
 }) => {
   return (
     <AbsoluteFill style={{ backgroundColor: "#000000" }}>
+      {soundtrack ? (
+        <Soundtrack
+          src={soundtrack.src}
+          volume={soundtrack.volume ?? 0.45}
+          trimBeforeSeconds={soundtrack.trimBeforeSeconds}
+          trimAfterSeconds={soundtrack.trimAfterSeconds}
+          fadeInSeconds={soundtrack.fadeInSeconds ?? 1.5}
+          fadeOutSeconds={soundtrack.fadeOutSeconds ?? 2}
+        />
+      ) : null}
       {scenes.map((scene) => (
         <Sequence
           key={scene.id}

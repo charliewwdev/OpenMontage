@@ -6,122 +6,143 @@
 
 <p align="center"><strong>The first open-source, agentic video production system.</strong></p>
 
-OpenMontage turns your AI coding assistant into a full video production studio. Tell it what you want — a 60-second explainer, a cinematic brand teaser, a batch of TikTok clips from your podcast — and your agent handles the entire pipeline: research, scripting, asset generation, editing, and final composition.
+<p align="center">
+  <a href="#quick-start">Quick Start</a> &nbsp;·&nbsp;
+  <a href="#try-these-prompts">Try These Prompts</a> &nbsp;·&nbsp;
+  <a href="#pipelines">Pipelines</a> &nbsp;·&nbsp;
+  <a href="#how-it-works">How It Works</a> &nbsp;·&nbsp;
+  <a href="docs/PROVIDERS.md">Providers</a> &nbsp;·&nbsp;
+  <a href="AGENT_GUIDE.md">Agent Guide</a>
+</p>
 
-No video editing experience required. No complex UI to learn. Just describe your vision in plain language.
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPLv3-blue.svg" alt="License"></a>
+</p>
 
-Works with **Claude Code, Cursor, Copilot, Windsurf, Codex** — any AI coding assistant that can read files and run code.
+---
+
+Turn your AI coding assistant into a full video production studio. Describe what you want in plain language — your agent handles research, scripting, asset generation, editing, and final composition.
 
 <div align="center">
   <video src="https://github.com/user-attachments/assets/f77ce7a4-68b8-4f94-a287-e94bf50a32e1" width="100%" controls></video>
 </div>
 
-> **"SIGNAL FROM TOMORROW"** — a cinematic sci-fi trailer produced through OpenMontage's staged pipeline: concept, script, scene plan, Veo-generated motion clips, approvals, soundtrack, and final Remotion composition.
+> **"SIGNAL FROM TOMORROW"** — a cinematic sci-fi trailer fully produced through OpenMontage: concept, script, scene plan, Veo-generated motion clips, soundtrack, and Remotion composition.
+
+Works with **Claude Code, Cursor, Copilot, Windsurf, Codex** — any AI coding assistant that can read files and run code.
+
+---
+
+## Quick Start
+
+### Prerequisites
+
+- **Python 3.10+** — [python.org](https://www.python.org/downloads/)
+- **FFmpeg** — `brew install ffmpeg` / `sudo apt install ffmpeg` / [ffmpeg.org](https://ffmpeg.org/download.html)
+- **Node.js 18+** — [nodejs.org](https://nodejs.org/)
+- **An AI coding assistant** — Claude Code, Cursor, Copilot, Windsurf, or Codex
+
+### Install & Run
+
+```bash
+git clone https://github.com/charliewwdev/OpenMontage.git
+cd OpenMontage
+make setup
+```
+
+Open the project in your AI coding assistant and tell it what you want:
+
+```
+"Make a 60-second animated explainer about how neural networks learn"
+```
+
+That's it. The agent discovers your available tools, researches the topic, presents you with concept options and cost estimates, then produces the video stage by stage — asking for your approval at every creative decision.
+
+> **No `make`?** Run manually: `pip install -r requirements.txt && cd remotion-composer && npm install && cd .. && pip install piper-tts && cp .env.example .env`
 >
-> OpenMontage turns agent orchestration into a real production workflow — with provider locking, checkpointed creative stages, sample-before-batch generation, and a finished video as the output.
+> **Windows:** If `npm install` fails with `ERR_INVALID_ARG_TYPE`, use `npx --yes npm install` instead.
+
+### Add API Keys (optional — more keys = more tools)
+
+```bash
+# .env — every key is optional, add what you have
+
+# Best bang for buck — one key unlocks 5 tools:
+FAL_KEY=your-key               # FLUX images + Google Veo, Kling, MiniMax video + Recraft images
+
+# Free stock media:
+PEXELS_API_KEY=your-key        # Free — stock footage and images
+PIXABAY_API_KEY=your-key       # Free — stock footage and images
+
+# Music:
+SUNO_API_KEY=your-key          # Full songs, instrumentals, any genre
+
+# Voice & images:
+ELEVENLABS_API_KEY=your-key    # Premium TTS, AI music, sound effects
+OPENAI_API_KEY=your-key        # OpenAI TTS, DALL-E 3 images
+GOOGLE_API_KEY=your-key        # Google Imagen images, Google TTS (700+ voices)
+
+# More video providers:
+HEYGEN_API_KEY=your-key        # HeyGen — VEO, Sora, Runway, Kling via single gateway
+RUNWAY_API_KEY=your-key        # Runway Gen-4 direct
+```
+
+<details>
+<summary><strong>Have a GPU? Unlock free local video generation</strong></summary>
+
+```bash
+make install-gpu
+
+# Then add to .env:
+VIDEO_GEN_LOCAL_ENABLED=true
+VIDEO_GEN_LOCAL_MODEL=wan2.1-1.3b  # or wan2.1-14b, hunyuan-1.5, ltx2-local, cogvideo-5b
+```
+
+</details>
 
 ---
 
-## Why OpenMontage?
+## What You Get With Zero API Keys
 
-Most AI video tools give you a single clip from a prompt. OpenMontage gives you an **end-to-end production pipeline** — the same structured process a real production team follows, automated by your AI agent.
+You don't need any API keys to make real videos. Out of the box, `make setup` gives you:
 
-Edit your own talking-head footage. Generate a fully animated explainer from scratch. Cut a 2-hour podcast into a dozen social clips. Translate and dub your content into 10 languages. Build a cinematic brand teaser from stock footage and AI-generated scenes. **If a production team can make it, OpenMontage can orchestrate it.**
+| Capability | Free Tool | What It Does |
+|-----------|-----------|-------------|
+| **Narration** | Piper TTS | Free offline text-to-speech — real human-sounding narration |
+| **Visuals** | Pexels + Pixabay | Free stock images and footage (API keys are free to get) |
+| **Composition** | Remotion | Turns still images into animated video with spring physics, transitions, typography, and TikTok-style captions |
+| **Post-production** | FFmpeg | Encoding, subtitle burn-in, audio mixing, color grading |
+| **Subtitles** | Built-in | Auto-generated captions with word-level timing |
 
-- **11 production pipelines** — explainers, talking heads, screen demos, cinematic trailers, animations, podcasts, localization, and more
-- **49 production tools** — spanning video generation, image creation, text-to-speech, music, audio mixing, subtitles, enhancement, and analysis
-- **400+ agent skills** — production skills, pipeline directors, creative techniques, quality checklists, and deep technology knowledge packs that teach the agent how to use every tool like an expert
-- **Live web research built in** — before writing a single word of script, the agent runs 15-25+ web searches across YouTube, Reddit, news sites, and academic sources to ground your video in real, current data
-- **Both free/local AND cloud providers** — every capability supports open-source local alternatives alongside premium APIs. Use what you have.
-- **No vendor lock-in** — swap providers freely. The selector pattern auto-routes to whatever's available on your machine.
-- **Budget governance built in** — cost estimation before execution, spend caps, per-action approval thresholds. No surprise bills.
+**The zero-key path:** Piper narrates your script, stock images provide the visuals, and Remotion animates everything into a polished video with transitions, text overlays, and synced captions. Add API keys later to unlock AI-generated images, video clips, premium voices, and music.
 
 ---
 
-## Supported Providers
+## Try These Prompts
 
-> **Detailed setup instructions, pricing, and free tiers for every provider:** [`docs/PROVIDERS.md`](docs/PROVIDERS.md)
+Copy any of these into your AI coding assistant after setup. Each one runs a full production pipeline.
 
-### Video Generation (12 providers)
-| Provider | Type | Notes |
-|----------|------|-------|
-| **Kling** | Cloud API | High quality, fast |
-| **Runway Gen-4** | Cloud API | Cinematic quality |
-| **Google Veo 3** | Cloud API | Long-form, cinematic. Via fal.ai or HeyGen. |
-| **MiniMax** | Cloud API | Cost-effective |
-| **HeyGen** | Cloud API | Multi-model gateway |
-| **WAN 2.1** | Local GPU | Free, 1.3B and 14B variants |
-| **Hunyuan** | Local GPU | Free, high quality |
-| **CogVideo** | Local GPU | Free, 2B and 5B variants |
-| **LTX-Video** | Local GPU / Modal | Free locally, or self-hosted cloud |
-| **Pexels** | Stock | Free stock footage |
-| **Pixabay** | Stock | Free stock footage |
+### Zero keys needed
 
-### Image Generation (8 providers)
-| Provider | Type | Notes |
-|----------|------|-------|
-| **FLUX** | Cloud API | State-of-the-art quality |
-| **Google Imagen** | Cloud API | Imagen 4 — high-quality, multiple aspect ratios |
-| **DALL-E 3** | Cloud API | OpenAI's image model |
-| **Recraft** | Cloud API | Design-focused generation |
-| **Local Diffusion** | Local GPU | Stable Diffusion, free |
-| **Pexels** | Stock | Free stock images |
-| **Pixabay** | Stock | Free stock images |
-| **ManimCE** | Local | Mathematical animations |
+> "Make a 45-second animated explainer about why the sky is blue"
 
-### Text-to-Speech (4 providers)
-| Provider | Type | Notes |
-|----------|------|-------|
-| **ElevenLabs** | Cloud API | Premium voice quality |
-| **Google TTS** | Cloud API | 700+ voices, 50+ languages — best for localization |
-| **OpenAI TTS** | Cloud API | Fast, affordable |
-| **Piper** | Local | Completely free, offline |
+> "Create a 60-second video about the history of the internet, with narration and captions"
 
-### Music & Sound
-| Provider | Type | Notes |
-|----------|------|-------|
-| **Suno AI** | Cloud API | Full song generation with vocals, lyrics, any genre. Up to 8 minutes. |
-| **ElevenLabs Music** | Cloud API | AI music generation |
-| **ElevenLabs SFX** | Cloud API | Sound effect generation |
+> "Make a data-driven explainer about coffee consumption around the world"
 
-### Post-Production (always available, always free)
-| Tool | What It Does |
-|------|-------------|
-| **FFmpeg** | Video composition, encoding, subtitle burn-in, audio muxing |
-| **Video Stitch** | Multi-clip assembly, crossfades, picture-in-picture, spatial layouts |
-| **Video Trimmer** | Precision cutting and extraction |
-| **Audio Mixer** | Multi-track mixing, ducking, fades |
-| **Audio Enhance** | Noise reduction, normalization |
-| **Color Grade** | LUT-based color grading |
-| **Subtitle Gen** | SRT/VTT generation from timestamps |
+### With FAL_KEY (~$0.50–$1.50)
 
-### Enhancement
-| Tool | What It Does |
-|------|-------------|
-| **Upscale** | Real-ESRGAN image/video upscaling |
-| **Background Remove** | rembg / U2Net background removal |
-| **Face Enhance** | Face quality enhancement |
-| **Face Restore** | CodeFormer / GFPGAN face restoration |
+> "Create an animated explainer about how CRISPR gene editing works, using AI-generated visuals"
 
-### Analysis
-| Tool | What It Does |
-|------|-------------|
-| **Transcriber** | WhisperX speech-to-text with word-level timestamps |
-| **Scene Detect** | Automatic scene boundary detection |
-| **Frame Sampler** | Intelligent frame extraction |
-| **Video Understand** | CLIP/BLIP-2 vision-language analysis |
+> "Make a product launch teaser for a fictional smart water bottle called AquaPulse"
 
-### Avatar & Lip Sync
-| Tool | What It Does |
-|------|-------------|
-| **Talking Head** | SadTalker / MuseTalk avatar animation |
-| **Lip Sync** | Wav2Lip audio-driven lip synchronization |
+### Full setup (~$1–$3)
 
-### Composition & Rendering
-| Engine | Type | What It Does |
-|--------|------|-------------|
-| **Remotion** | Local (Node.js) | React-based programmatic video — spring-animated image scenes, stat reveals, section titles, hero cards, TikTok-style word-by-word captions, scene transitions (fade/slide/wipe/flip), Google Fonts, and audio with fade curves. **When no video generation providers are configured, the agent generates still images and Remotion turns them into fully animated video.** |
-| **FFmpeg** | Local | Core video assembly, encoding, subtitle burn, audio muxing, color grading |
+> "Create a cinematic 30-second trailer for a sci-fi concept: humanity receives a warning from 1000 years in the future"
+
+> "Make a 90-second animated explainer about quantum computing for middle school students, with a fun narrator voice and custom soundtrack"
+
+Want more? See the full **[Prompt Gallery](PROMPT_GALLERY.md)** for tested prompts with expected costs and output examples, or run `make demo` to render zero-key demo videos instantly.
 
 ---
 
@@ -151,6 +172,22 @@ research -> proposal -> script -> scene_plan -> assets -> edit -> compose
 Each stage has a dedicated **director skill** — a markdown instruction file that teaches the agent exactly how to execute that stage. The agent reads the skill, uses the tools, self-reviews, checkpoints state, and asks for human approval at creative decision points.
 
 > **Web research is a first-class stage.** Before writing a single word of script, the agent searches YouTube, Reddit, Hacker News, news sites, and academic sources. It gathers data points, audience questions, trending angles, and visual references — then cites everything in a structured research brief. Your videos are grounded in real, current information, not hallucinated facts.
+
+---
+
+## Why OpenMontage?
+
+Most AI video tools give you a single clip from a prompt. OpenMontage gives you an **end-to-end production pipeline** — the same structured process a real production team follows, automated by your AI agent.
+
+Edit your own talking-head footage. Generate a fully animated explainer from scratch. Cut a 2-hour podcast into a dozen social clips. Translate and dub your content into 10 languages. Build a cinematic brand teaser from stock footage and AI-generated scenes. **If a production team can make it, OpenMontage can orchestrate it.**
+
+- **11 production pipelines** — explainers, talking heads, screen demos, cinematic trailers, animations, podcasts, localization, and more
+- **49 production tools** — spanning video generation, image creation, text-to-speech, music, audio mixing, subtitles, enhancement, and analysis
+- **400+ agent skills** — production skills, pipeline directors, creative techniques, quality checklists, and deep technology knowledge packs that teach the agent how to use every tool like an expert
+- **Live web research built in** — before writing a single word of script, the agent runs 15-25+ web searches across YouTube, Reddit, news sites, and academic sources to ground your video in real, current data
+- **Both free/local AND cloud providers** — every capability supports open-source local alternatives alongside premium APIs. Use what you have.
+- **No vendor lock-in** — swap providers freely. The selector pattern auto-routes to whatever's available on your machine.
+- **Budget governance built in** — cost estimation before execution, spend caps, per-action approval thresholds. No surprise bills.
 
 ---
 
@@ -184,91 +221,6 @@ Final video output
 ```
 
 **Python provides tools and persistence.** All creative decisions, orchestration logic, review criteria, and quality standards live in readable instruction files (YAML manifests + Markdown skills) that you can inspect and customize.
-
----
-
-## Quick Start
-
-### 1. Prerequisites
-
-Make sure these are installed before you begin:
-
-- **Python 3.10+** — [python.org](https://www.python.org/downloads/)
-- **FFmpeg** — `brew install ffmpeg` / `sudo apt install ffmpeg` / [ffmpeg.org](https://ffmpeg.org/download.html)
-- **Node.js 18+** — [nodejs.org](https://nodejs.org/)
-- **An AI coding assistant** — Claude Code, Cursor, Copilot, Windsurf, or Codex
-
-### 2. Install
-
-```bash
-git clone https://github.com/charliewwdev/OpenMontage.git
-cd OpenMontage
-make setup
-```
-
-That's it. `make setup` installs Python dependencies, the Remotion composer, free offline TTS (Piper), and creates your `.env` file.
-
-> **No `make`?** Run the steps manually:
-> ```bash
-> pip install -r requirements.txt
-> cd remotion-composer && npm install && cd ..
-> pip install piper-tts
-> cp .env.example .env
-> ```
->
-> **Windows users:** If `npm install` fails with `ERR_INVALID_ARG_TYPE`, use `npx --yes npm install` instead.
-
-### 3. Add API Keys (optional)
-
-Open `.env` in your editor and add any keys you have. Every key is optional — the more you add, the more providers unlock.
-
-```bash
-# .env — add your keys here
-
-# Best bang for buck — one key unlocks 5 tools:
-FAL_KEY=your-key               # FLUX images + Google Veo, Kling, MiniMax video + Recraft images
-
-# Free stock media:
-PEXELS_API_KEY=your-key        # Free — stock footage and images
-PIXABAY_API_KEY=your-key       # Free — stock footage and images
-
-# Music:
-SUNO_API_KEY=your-key          # Suno AI — full songs, instrumentals, any genre
-
-# Voice & images:
-ELEVENLABS_API_KEY=your-key    # Premium TTS, AI music, sound effects
-OPENAI_API_KEY=your-key        # OpenAI TTS, DALL-E 3 images
-GOOGLE_API_KEY=your-key        # Google Imagen images, Google TTS (700+ voices)
-
-# More video providers:
-HEYGEN_API_KEY=your-key        # HeyGen — VEO, Sora, Runway, Kling via single gateway
-RUNWAY_API_KEY=your-key        # Runway Gen-4 direct
-```
-
-**Have a GPU?** Unlock free local video and image generation:
-```bash
-make install-gpu
-
-# Then add to .env:
-VIDEO_GEN_LOCAL_ENABLED=true
-VIDEO_GEN_LOCAL_MODEL=wan2.1-1.3b  # or wan2.1-14b, hunyuan-1.5, ltx2-local, cogvideo-5b
-```
-
-### 4. Run
-
-Open the project in your AI coding assistant and tell it what you want:
-
-```
-"Make a 60-second animated explainer about how neural networks learn"
-```
-
-The agent will:
-1. Run preflight to discover your available tools and show you what's configured
-2. Research the topic with live web searches — grounding the script in real data
-3. Present you with concept directions, a production plan, and cost estimates
-4. Execute the pipeline stage by stage, checkpointing as it goes
-5. Ask for your approval at creative decision points
-6. Deliver the final composed video
 
 ---
 
@@ -308,6 +260,116 @@ Layer 3: .agents/skills/             "How it works" — 47 external technology k
 ```
 
 Each tool declares which Layer 3 skills it relies on. The agent reads Layer 1 to know what's available, Layer 2 to know how OpenMontage wants it used, and Layer 3 for deep technical knowledge when needed.
+
+---
+
+## Supported Providers
+
+> **Full setup guide with pricing and free tiers:** [`docs/PROVIDERS.md`](docs/PROVIDERS.md)
+
+<details>
+<summary><strong>Video Generation — 12 providers</strong></summary>
+
+| Provider | Type | Notes |
+|----------|------|-------|
+| **Kling** | Cloud API | High quality, fast |
+| **Runway Gen-4** | Cloud API | Cinematic quality |
+| **Google Veo 3** | Cloud API | Long-form, cinematic. Via fal.ai or HeyGen. |
+| **MiniMax** | Cloud API | Cost-effective |
+| **HeyGen** | Cloud API | Multi-model gateway |
+| **WAN 2.1** | Local GPU | Free, 1.3B and 14B variants |
+| **Hunyuan** | Local GPU | Free, high quality |
+| **CogVideo** | Local GPU | Free, 2B and 5B variants |
+| **LTX-Video** | Local GPU / Modal | Free locally, or self-hosted cloud |
+| **Pexels** | Stock | Free stock footage |
+| **Pixabay** | Stock | Free stock footage |
+
+</details>
+
+<details>
+<summary><strong>Image Generation — 8 providers</strong></summary>
+
+| Provider | Type | Notes |
+|----------|------|-------|
+| **FLUX** | Cloud API | State-of-the-art quality |
+| **Google Imagen** | Cloud API | Imagen 4 — high-quality, multiple aspect ratios |
+| **DALL-E 3** | Cloud API | OpenAI's image model |
+| **Recraft** | Cloud API | Design-focused generation |
+| **Local Diffusion** | Local GPU | Stable Diffusion, free |
+| **Pexels** | Stock | Free stock images |
+| **Pixabay** | Stock | Free stock images |
+| **ManimCE** | Local | Mathematical animations |
+
+</details>
+
+<details>
+<summary><strong>Text-to-Speech — 4 providers</strong></summary>
+
+| Provider | Type | Notes |
+|----------|------|-------|
+| **ElevenLabs** | Cloud API | Premium voice quality |
+| **Google TTS** | Cloud API | 700+ voices, 50+ languages — best for localization |
+| **OpenAI TTS** | Cloud API | Fast, affordable |
+| **Piper** | Local | Completely free, offline |
+
+</details>
+
+<details>
+<summary><strong>Music, Sound & Post-Production</strong></summary>
+
+**Music & Sound:**
+
+| Provider | Type | Notes |
+|----------|------|-------|
+| **Suno AI** | Cloud API | Full song generation with vocals, lyrics, any genre. Up to 8 minutes. |
+| **ElevenLabs Music** | Cloud API | AI music generation |
+| **ElevenLabs SFX** | Cloud API | Sound effect generation |
+
+**Post-Production (always available, always free):**
+
+| Tool | What It Does |
+|------|-------------|
+| **FFmpeg** | Video composition, encoding, subtitle burn-in, audio muxing |
+| **Video Stitch** | Multi-clip assembly, crossfades, picture-in-picture, spatial layouts |
+| **Video Trimmer** | Precision cutting and extraction |
+| **Audio Mixer** | Multi-track mixing, ducking, fades |
+| **Audio Enhance** | Noise reduction, normalization |
+| **Color Grade** | LUT-based color grading |
+| **Subtitle Gen** | SRT/VTT generation from timestamps |
+
+**Enhancement:**
+
+| Tool | What It Does |
+|------|-------------|
+| **Upscale** | Real-ESRGAN image/video upscaling |
+| **Background Remove** | rembg / U2Net background removal |
+| **Face Enhance** | Face quality enhancement |
+| **Face Restore** | CodeFormer / GFPGAN face restoration |
+
+**Analysis:**
+
+| Tool | What It Does |
+|------|-------------|
+| **Transcriber** | WhisperX speech-to-text with word-level timestamps |
+| **Scene Detect** | Automatic scene boundary detection |
+| **Frame Sampler** | Intelligent frame extraction |
+| **Video Understand** | CLIP/BLIP-2 vision-language analysis |
+
+**Avatar & Lip Sync:**
+
+| Tool | What It Does |
+|------|-------------|
+| **Talking Head** | SadTalker / MuseTalk avatar animation |
+| **Lip Sync** | Wav2Lip audio-driven lip synchronization |
+
+**Composition & Rendering:**
+
+| Engine | Type | What It Does |
+|--------|------|-------------|
+| **Remotion** | Local (Node.js) | React-based programmatic video — spring-animated image scenes, stat reveals, section titles, hero cards, TikTok-style word-by-word captions, scene transitions (fade/slide/wipe/flip), Google Fonts, and audio with fade curves. **When no video generation providers are configured, the agent generates still images and Remotion turns them into fully animated video.** |
+| **FFmpeg** | Local | Core video assembly, encoding, subtitle burn, audio muxing, color grading |
+
+</details>
 
 ---
 

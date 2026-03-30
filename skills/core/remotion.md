@@ -27,8 +27,66 @@ stages, how artifacts flow in, and how renders are triggered.
 | Talking-head (video-only cuts) | FFmpeg | No images/animations needed |
 
 **Note:** The `render` operation auto-routes — if any cut contains images,
-animations, transitions, or component types (text_card, stat_card, etc.),
-it delegates to Remotion automatically. No need to manually select backend.
+animations, transitions, or component types, it delegates to Remotion
+automatically. No need to manually select backend.
+
+## Supported Scene Types (Cut Types)
+
+The Explainer composition supports the following cut types:
+
+| Type | Props Required | Best For |
+|------|---------------|----------|
+| `text_card` | `text` | Statements, titles, closing messages |
+| `stat_card` | `stat`, optional `subtitle`, `accentColor` | Big numbers, impactful metrics |
+| `hero_title` | `text`, optional `heroSubtitle` | Opening titles, dramatic reveals |
+| `callout` | `text`, optional `title`, `callout_type` (info/warning/tip/quote) | Tips, quotes, important notes |
+| `comparison` | `leftLabel`, `rightLabel`, `leftValue`, `rightValue` | Before/after, A/B, versus |
+| `bar_chart` | `chartData` [{label, value}], optional `title`, `chartAnimation` | Category comparisons, rankings |
+| `line_chart` | `chartSeries` [{label, data: [{x,y}]}], optional `title` | Trends, time series, growth |
+| `pie_chart` | `chartData` [{label, value}], optional `donut`, `centerLabel` | Proportions, breakdowns |
+| `kpi_grid` | `chartData` [{label, value, prefix, suffix, change, icon}] | Dashboards, traction metrics |
+| `progress_bar` | `progress` (0-100), optional `progressSegments` | Journey viz, completion, stacked metrics |
+
+**Chart animations:** `grow-up`, `slide-in`, `pop` (bar), `draw`, `fade-in` (line), `spin`, `expand`, `sequential` (pie), `count-up`, `pop`, `cascade` (kpi)
+
+**Zero-key video strategy:** When no image or video generation is available, build
+entire videos from these component types. A well-composed sequence of hero_title →
+kpi_grid → bar_chart → comparison → stat_card → text_card produces a polished,
+professional video with zero external dependencies.
+
+### The Proven Formula for Zero-Key Videos
+
+These rules were discovered through systematic render testing and produce cinematic results:
+
+**1. ALL-DARK BACKGROUNDS (mandatory).** Set `backgroundColor: "#0F172A"` on EVERY scene.
+This prevents jarring white↔dark flash transitions and makes chart colors pop dramatically.
+Dark backgrounds transform basic charts into cinematic data visualization.
+
+**2. Flat props format.** All scene properties go at the TOP LEVEL of the cut object
+(e.g., `cut.text`, `cut.chartData`), NOT nested under a `props` key.
+
+**3. KPI Grid data rules:**
+- `value` must be a small, human-readable number. The component auto-formats ≥1M→"XM", ≥1K→"XK".
+  For "8.1 Billion" use `value: 8.1, suffix: " Billion"`. Never use raw huge numbers with a suffix.
+- `change` must be a NUMBER (e.g., `3.2`), not a string (e.g., NOT `"+3.2%"`).
+
+**4. Comparison and Callout theming:**
+- `comparison` accepts `backgroundColor` and `color` (text color) for dark themes.
+- `callout` accepts `backgroundColor` which sets both the container and card background.
+
+**5. Overlays add polish.**
+- `section_title` overlays group scenes narratively ("THE CRISIS", "THE DATA").
+- `stat_reveal` overlays float dramatic numbers over chart scenes (e.g., "10x" in corner).
+
+**6. Scene pacing:** 4-6 seconds per scene, 8-10 scenes for a 45-50s video. Give chart
+animations at least 4 seconds to complete. Hero title needs only 4 seconds.
+
+**7. Color palette cohesion.** Pick 4-5 accent colors that relate to the topic and use
+them consistently across charts, overlays, and accents. Use the same chartColors array
+across bar/pie/line scenes for visual unity.
+
+**Reference compositions:** See `remotion-composer/public/demo-props/climate-dashboard.json`
+as the gold standard, and other demo files for additional patterns.
 
 ## Architecture
 

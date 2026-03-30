@@ -84,6 +84,13 @@ If using Remotion for animated segments:
 2. Call `video_compose` with `operation: "remotion_render"` for animated segments
 3. Assemble Remotion outputs with remaining segments via FFmpeg
 
+**Zero-key Remotion render (component-only videos):**
+When all scenes are Remotion component types (hero_title, stat_card, bar_chart, line_chart,
+pie_chart, kpi_grid, comparison, callout, progress_bar, text_card), render the entire video
+as a single Remotion composition using the Explainer entry point. No FFmpeg assembly needed.
+The edit_decisions cuts array maps directly to Remotion props. See `skills/core/remotion.md`
+for the proven formula — especially the all-dark-background rule for visual consistency.
+
 ### Step 5: Audio Post-Processing
 
 Call the `audio_mixer` tool to:

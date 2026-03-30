@@ -1,4 +1,4 @@
-.PHONY: setup install install-dev install-gpu test test-contracts lint clean preflight
+.PHONY: setup install install-dev install-gpu test test-contracts lint clean preflight demo
 
 # ---- One-command setup ----
 
@@ -47,6 +47,15 @@ test-contracts:
 
 preflight:
 	python -c "from tools.tool_registry import registry; import json; registry.discover(); print(json.dumps(registry.provider_menu(), indent=2))"
+
+demo:
+	@echo "==> Rendering zero-key demo videos (no API keys needed)..."
+	@echo "    These use only Remotion components — animated charts, text, data viz."
+	@echo ""
+	./render-demo.sh
+
+demo-list:
+	@./render-demo.sh --list
 
 lint:
 	python -m py_compile tools/base_tool.py

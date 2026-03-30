@@ -4,6 +4,7 @@ import {
   CinematicRenderer,
   calculateCinematicMetadata,
 } from "./CinematicRenderer";
+import { signalFromTomorrowWithMusicFixture } from "./cinematic/fixtures";
 
 const calculateMetadata: CalculateMetadataFunction<ExplainerProps> = async ({
   props,
@@ -48,6 +49,16 @@ export const Root: React.FC = () => {
           titleWidth: 1320,
           signalLineCount: 18,
         }}
+        calculateMetadata={calculateCinematicMetadata}
+      />
+      <Composition
+        id="SignalFromTomorrowWithMusic"
+        component={CinematicRenderer}
+        durationInFrames={30 * 30}
+        fps={30}
+        width={1920}
+        height={1080}
+        defaultProps={signalFromTomorrowWithMusicFixture}
         calculateMetadata={calculateCinematicMetadata}
       />
     </>

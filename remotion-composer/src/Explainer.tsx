@@ -25,6 +25,11 @@ import { TextCard } from "./components/TextCard";
 import { StatCard } from "./components/StatCard";
 import { CalloutBox } from "./components/CalloutBox";
 import { ComparisonCard } from "./components/ComparisonCard";
+import { BarChart } from "./components/charts/BarChart";
+import { LineChart } from "./components/charts/LineChart";
+import { PieChart } from "./components/charts/PieChart";
+import { KPIGrid } from "./components/charts/KPIGrid";
+import { ProgressBar } from "./components/ProgressBar";
 import { CaptionOverlay, WordCaption } from "./components/CaptionOverlay";
 import { SectionTitle } from "./components/SectionTitle";
 import { StatReveal } from "./components/StatReveal";
@@ -58,6 +63,34 @@ interface Cut {
   rightLabel?: string;
   leftValue?: string;
   rightValue?: string;
+  // Chart props
+  chartData?: any[];
+  chartSeries?: any[];
+  chartColors?: string[];
+  chartAnimation?: string;
+  donut?: boolean;
+  centerLabel?: string;
+  centerValue?: string;
+  showGrid?: boolean;
+  showValues?: boolean;
+  showLegend?: boolean;
+  showMarkers?: boolean;
+  xLabel?: string;
+  yLabel?: string;
+  columns?: 2 | 3 | 4;
+  // Progress bar props
+  progress?: number;
+  progressLabel?: string;
+  progressColor?: string;
+  progressAnimation?: string;
+  progressSegments?: any[];
+  // Hero title props (when used as scene, not overlay)
+  heroSubtitle?: string;
+  // Styling overrides
+  backgroundColor?: string;
+  color?: string;
+  accentColor?: string;
+  fontSize?: number;
   // Animation & transitions
   animation?: string;
   transition_in?: string;
@@ -246,14 +279,36 @@ const VideoScene: React.FC<{ src: string; startFrom?: number }> = ({
 const SceneRenderer: React.FC<{ cut: Cut }> = ({ cut }) => {
   // Explicit component types
   if (cut.type === "text_card" && cut.text) {
-    return <TextCard text={cut.text} />;
+    return (
+      <TextCard
+        text={cut.text}
+        fontSize={cut.fontSize}
+        color={cut.color}
+        backgroundColor={cut.backgroundColor}
+      />
+    );
   }
   if (cut.type === "stat_card" && cut.stat) {
-    return <StatCard stat={cut.stat} subtitle={cut.subtitle} />;
+    return (
+      <StatCard
+        stat={cut.stat}
+        subtitle={cut.subtitle}
+        accentColor={cut.accentColor}
+        backgroundColor={cut.backgroundColor}
+      />
+    );
   }
   if (cut.type === "callout" && cut.text) {
     return (
-      <CalloutBox text={cut.text} type={cut.callout_type} title={cut.title} />
+      <CalloutBox
+        text={cut.text}
+        type={cut.callout_type}
+        title={cut.title}
+        borderColor={cut.accentColor}
+        backgroundColor={cut.backgroundColor}
+        textColor={cut.color}
+        containerBackgroundColor={cut.backgroundColor}
+      />
     );
   }
   if (
@@ -270,21 +325,128 @@ const SceneRenderer: React.FC<{ cut: Cut }> = ({ cut }) => {
         leftValue={cut.leftValue}
         rightValue={cut.rightValue}
         title={cut.title}
+        backgroundColor={cut.backgroundColor}
+        textColor={cut.color}
       />
     );
   }
+  if (cut.type === "hero_title" && cut.text) {
+    return <HeroTitle title={cut.text} subtitle={cut.heroSubtitle || cut.subtitle} />;
+  }
 
+  // --- Chart types ---
+  if (cut.type === "bar_chart" && cut.chartData) {
+    return (
+      <BarChart
+        data={cut.chartData}
+        title={cut.title}
+        colors={cut.chartColors}
+        animationStyle={(cut.chartAnimation as any) || "grow-up"}
+        showGrid={cut.showGrid}
+        showValues={cut.showValues}
+        backgroundColor={cut.backgroundColor}
+      />
+    );
+  }
+  if (cut.type === "line_chart" && cut.chartSeries) {
+    return (
+      <LineChart
+        series={cut.chartSeries}
+        title={cut.title}
+        colors={cut.chartColors}
+        animationStyle={(cut.chartAnimation as any) || "draw"}
+        showGrid={cut.showGrid}
+        showMarkers={cut.showMarkers}
+        showLegend={cut.showLegend}
+        xLabel={cut.xLabel}
+        yLabel={cut.yLabel}
+        backgroundColor={cut.backgroundColor}
+      />
+    );
+  }
+  if (cut.type === "pie_chart" && cut.chartData) {
+    return (
+      <PieChart
+        data={cut.chartData}
+        title={cut.title}
+        colors={cut.chartColors}
+        animationStyle={(cut.chartAnimation as any) || "expand"}
+        donut={cut.donut}
+        centerLabel={cut.centerLabel}
+        centerValue={cut.centerValue}
+        showLegend={cut.showLegend}
+        backgroundColor={cut.backgroundColor}
+      />
+    );
+  }
+  if (cut.type === "kpi_grid" && cut.chartData) {
+    return (
+      <KPIGrid
+        metrics={cut.chartData}
+        title={cut.title}
+        columns={cut.columns}
+        colors={cut.chartColors}
+        animationStyle={(cut.chartAnimation as any) || "count-up"}
+        backgroundColor={cut.backgroundColor}
+      />
+    );
+  }
+  if (cut.type === "progress_bar" && cut.progress !== undefined) {
+    return (
+      <AbsoluteFill
+        style={{
+          backgroundColor: cut.backgroundColor || "#FFFFFF",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "80px 120px",
+        }}
+      >
+        {cut.title && (
+          <div
+            style={{
+              position: "absolute",
+              top: 120,
+              fontSize: 48,
+              fontWeight: 700,
+              color: "#1F2937",
+              textAlign: "center",
+              width: "100%",
+            }}
+          >
+            {cut.title}
+          </div>
+        )}
+        <ProgressBar
+          progress={cut.progress}
+          label={cut.progressLabel}
+          color={cut.progressColor || cut.accentColor}
+          animationStyle={(cut.progressAnimation as any) || "fill"}
+          segments={cut.progressSegments}
+          backgroundColor={cut.backgroundColor}
+        />
+      </AbsoluteFill>
+    );
+  }
+
+  // --- Media types (image / video fallback) ---
   const animation = cut.animation || cut.transform?.animation;
 
-  if (isImage(cut.source)) {
+  if (cut.source && isImage(cut.source)) {
     return <ImageScene src={cut.source} animation={animation} />;
   }
 
-  if (isVideo(cut.source)) {
+  if (cut.source && isVideo(cut.source)) {
     return <VideoScene src={cut.source} startFrom={cut.in_seconds} />;
   }
 
-  return <ImageScene src={cut.source} animation={animation} />;
+  // Final fallback — try as image if source exists, otherwise show text_card
+  if (cut.source) {
+    return <ImageScene src={cut.source} animation={animation} />;
+  }
+
+  // No source, no type — render as text card with cut id as fallback
+  return <TextCard text={cut.text || cut.id} />;
 };
 
 // ---------------------------------------------------------------------------

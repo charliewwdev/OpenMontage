@@ -67,14 +67,24 @@ Transform each script section into 1-3 visual scenes. Each scene is a distinct v
 
 | Type | Best For | Available Tools | Duration Guidance |
 |------|----------|-----------------|-------------------|
-| `animation` | Concepts needing motion (data flow, transformations, math) | Remotion, Manim | 4-10s |
-| `diagram` | Processes, architecture, relationships | `diagram_gen` (Mermaid), `image_selector` (stylized) | 4-8s |
-| `text_card` | Key terms, definitions, statistics, quotes | Remotion TextCard component | 3-5s |
+| `hero_title` | Opening titles, dramatic reveals | Remotion HeroTitle (cyan first word, animated underline) | 3-5s |
+| `stat_card` | Big dramatic numbers, impactful metrics | Remotion StatCard (large stat + subtitle) | 4-6s |
+| `bar_chart` | Category comparisons, rankings | Remotion BarChart (animated grow-up/slide-in/pop) | 5-7s |
+| `line_chart` | Trends, time series, growth curves | Remotion LineChart (draw/fade animation, multi-series) | 5-7s |
+| `pie_chart` | Proportions, breakdowns, distributions | Remotion PieChart (donut mode, center label, spin/expand) | 5-7s |
+| `kpi_grid` | Dashboards, traction metrics, at-a-glance data | Remotion KPIGrid (2-4 columns, count-up/pop/cascade) | 5-7s |
+| `comparison` | Before/after, A/B, versus comparisons | Remotion ComparisonCard (dual-value with divider) | 4-6s |
+| `callout` | Expert quotes, tips, warnings, important notes | Remotion CalloutBox (info/warning/tip/quote types) | 4-6s |
+| `progress_bar` | Journey visualization, completion, stacked metrics | Remotion ProgressBar (fill/pulse/step animations) | 4-6s |
+| `text_card` | Statements, closing messages, key terms | Remotion TextCard (centered, spring animation) | 3-5s |
+| `animation` | Concepts needing motion (data flow, math) | Remotion, Manim | 4-10s |
+| `diagram` | Processes, architecture, relationships | `diagram_gen` (Mermaid), `image_selector` | 4-8s |
 | `generated` | Illustrations, metaphors, real-world imagery | `image_selector` (FLUX/DALL-E) | 3-6s |
 | `talking_head` | AI avatar speaking (if HeyGen available) | HeyGen tools | 5-15s |
 | `broll` | Context, real-world examples | Stock or generated footage | 3-6s |
-| `transition` | Dedicated transition moment between topics | Remotion transition | 1-2s |
 | `screen_recording` | Code demos, UI walkthroughs | Recorded or simulated | 5-15s |
+
+**Zero-key scene selection:** When no image/video generation is available, prefer `hero_title`, `stat_card`, `bar_chart`, `line_chart`, `pie_chart`, `kpi_grid`, `comparison`, `callout`, `progress_bar`, and `text_card`. These render entirely from Remotion components with zero external dependencies and produce professional, animated results. See `skills/core/remotion.md` for the proven formula (all-dark backgrounds, KPI data formatting rules, overlay techniques).
 
 ### Step 4: Apply the Visual Technique Library
 
@@ -91,14 +101,20 @@ Show the abstract concept alongside its real-world analogy. Split screen or side
 - Example: "Left: actual vector space with dots. Right: a library with books sorted by topic."
 
 **Stat Card Punch**
-Full-screen number or comparison. Appears with impact animation (scale up, slight bounce). Hold for 2-3 seconds.
-- Tools: Remotion TextCard component
-- Example: "1ms" in large text, then smaller text below: "vs 500ms with traditional search"
+Full-screen number with impact animation (scale up, slight bounce). Use `stat_card` type with a dark background and bold accent color. Hold for 4-5 seconds.
+- Tools: Remotion StatCard component
+- Example: stat="1ms", subtitle="vs 500ms with traditional search", accentColor="#22D3EE"
+
+**Data Dashboard Sequence**
+A series of data visualization scenes that tell a story through numbers. Start with a KPI overview, then drill into specific charts. Use section_title overlays to group related data. This pattern works with zero external tools.
+- Tools: Remotion chart components (bar_chart, line_chart, pie_chart, kpi_grid)
+- Example: kpi_grid (4 key stats) → bar_chart (breakdown) → line_chart (trend) → pie_chart (distribution)
+- Always use dark backgrounds (`backgroundColor: "#0F172A"`) for cinematic feel.
 
 **Before/After Split**
-Show the problem, then the solution. Can be sequential (problem → transition → solution) or split-screen.
-- Tools: `image_selector` for both states
-- Example: "Before: SQL query scanning millions of rows (slow). After: vector search finding nearest neighbors (fast)."
+Show the problem, then the solution using `comparison` type. The comparison card shows dual values side-by-side with animated entrance.
+- Tools: Remotion ComparisonCard component
+- Example: leftLabel="Before", leftValue="500ms", rightLabel="After", rightValue="1ms"
 
 **Timeline Progression**
 Left-to-right or top-to-bottom sequence showing evolution or process steps. Each step appears as narrator describes it.

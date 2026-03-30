@@ -13,6 +13,8 @@ export interface CinematicVideoScene extends CinematicBaseScene {
   trimBeforeSeconds?: number;
   trimAfterSeconds?: number;
   filter?: string;
+  fadeInFrames?: number;
+  fadeOutFrames?: number;
 }
 
 export interface CinematicTitleScene extends CinematicBaseScene {
@@ -24,10 +26,20 @@ export interface CinematicTitleScene extends CinematicBaseScene {
 
 export type CinematicScene = CinematicVideoScene | CinematicTitleScene;
 
+export interface CinematicSoundtrack {
+  src: string;
+  volume?: number;
+  trimBeforeSeconds?: number;
+  trimAfterSeconds?: number;
+  fadeInSeconds?: number;
+  fadeOutSeconds?: number;
+}
+
 export interface CinematicRendererProps {
   [key: string]: unknown;
   scenes: CinematicScene[];
   titleFontSize?: number;
   titleWidth?: number;
   signalLineCount?: number;
+  soundtrack?: CinematicSoundtrack;
 }

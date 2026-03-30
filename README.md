@@ -12,7 +12,9 @@ No video editing experience required. No complex UI to learn. Just describe your
 
 Works with **Claude Code, Cursor, Copilot, Windsurf, Codex** — any AI coding assistant that can read files and run code.
 
-assets/signal-from-tomorrow-demo.mp4
+<div align="center">
+  <video src="https://github.com/user-attachments/assets/1201eb3c-1d13-4d99-a7c8-6c687e6e09f3" width="100%" controls></video>
+</div>
 
 > **"SIGNAL FROM TOMORROW"** — a cinematic sci-fi trailer produced through OpenMontage's staged pipeline: concept, script, scene plan, Veo-generated motion clips, approvals, soundtrack, and final Remotion composition.
 >

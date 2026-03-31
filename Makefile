@@ -12,12 +12,7 @@ setup:
 	@echo "==> Installing free offline TTS (Piper)..."
 	pip install piper-tts || echo "  [skip] piper-tts install failed — TTS will use cloud providers instead"
 	@echo ""
-	@if [ ! -f .env ]; then \
-		cp .env.example .env; \
-		echo "==> Created .env from .env.example — add your API keys there."; \
-	else \
-		echo "==> .env already exists — skipping."; \
-	fi
+	python -c "import shutil, os; e=os.path.exists('.env'); shutil.copy('.env.example','.env') if not e else None; print('==> Created .env from .env.example — add your API keys there.' if not e else '==> .env already exists — skipping.')"
 	@echo ""
 	@echo "Done! Open this project in your AI coding assistant and start creating."
 	@echo "  Optional: add API keys to .env to unlock cloud providers."
@@ -38,10 +33,10 @@ install-gpu:
 # ---- Testing ----
 
 test:
-	pytest tests/ -v
+	python -m pytest tests/ -v
 
 test-contracts:
-	pytest tests/contracts/ -v
+	python -m pytest tests/contracts/ -v
 
 # ---- Utilities ----
 
@@ -61,7 +56,7 @@ lint:
 	python -m py_compile tools/base_tool.py
 	python -m py_compile tools/tool_registry.py
 	python -m py_compile tools/cost_tracker.py
+	python -m py_compile tools/composition_validator.py
 
 clean:
-	find . -type d -name __pycache__ -exec rm -rf {} +
-	find . -type f -name "*.pyc" -delete
+	python -c "import pathlib, shutil; [shutil.rmtree(p) for p in pathlib.Path('.').rglob('__pycache__')]; [p.unlink() for p in pathlib.Path('.').rglob('*.pyc')]"

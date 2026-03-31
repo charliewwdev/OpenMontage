@@ -445,6 +445,8 @@ OpenMontage works with any AI coding assistant that can read files and execute P
 
 All platform files point to the shared `AGENT_GUIDE.md` (operating guide and agent contract) and `PROJECT_CONTEXT.md` (architecture reference).
 
+> **Coming soon:** Local LLM support via **Ollama** and **LM Studio** — run the full production pipeline without any cloud LLM.
+
 ---
 
 ## Contributing

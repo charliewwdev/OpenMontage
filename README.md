@@ -489,3 +489,5 @@ make test
 ---
 
 **OpenMontage** — Production-grade video, orchestrated by your AI assistant.
+
+If this project looks useful to you, a star would really mean a lot — it helps others discover it too.

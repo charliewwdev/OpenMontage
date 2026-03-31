@@ -62,7 +62,7 @@ Open the project in your AI coding assistant and tell it what you want:
 "Make a 60-second animated explainer about how neural networks learn"
 ```
 
-That's it. The agent discovers your available tools, researches the topic, presents you with concept options and cost estimates, then produces the video stage by stage — asking for your approval at every creative decision.
+That's it. The agent researches your topic with live web search, generates AI images, writes and narrates the script with voice direction, finds royalty-free background music automatically, burns in word-level subtitles, validates everything before rendering — then reviews its own output by extracting frames and transcribing audio to catch issues before you even see them. Every creative decision gets your approval. The entire pipeline runs for under a dollar.
 
 > **No `make`?** Run manually: `pip install -r requirements.txt && cd remotion-composer && npm install && cd .. && pip install piper-tts && cp .env.example .env`
 >

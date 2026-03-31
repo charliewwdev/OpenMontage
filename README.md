@@ -35,6 +35,12 @@ Turn your AI coding assistant into a full video production studio. Describe what
 
 > **"VOID — Neural Interface"** — a product ad produced with just one API key (OpenAI). 4 AI-generated images (gpt-image-1), TTS narration, auto-sourced royalty-free music, word-level subtitles via WhisperX, and Remotion data visualizations. Total cost: **$0.69**. Zero manual asset work.
 
+<div align="center">
+  <video src="https://github.com/user-attachments/assets/08b108e6-c120-4fed-ab21-8549a71f4bd1" width="100%" controls></video>
+</div>
+
+> **"LUMINA — Bioluminescent Terrarium"** — a product ad with zero narration, driven entirely by music, typography, and AI-generated imagery. 5 FLUX-generated images, cinematic ambient soundtrack from Pixabay, animated data visualizations (KPI grids, bar charts, comparison cards), and layered stat reveal overlays. Total cost: **$0.15**. No voiceover, no manual editing.
+
 Works with **Claude Code, Cursor, Copilot, Windsurf, Codex** — any AI coding assistant that can read files and run code.
 
 ---

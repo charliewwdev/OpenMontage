@@ -17,15 +17,14 @@ You have edit decisions and an asset manifest. Your job is to render the final t
 
 ### Step 1: Run Enhancement Chain
 
-Apply video enhancements in order:
-1. **Face enhancement** (if `face_enhance` tool available) — apply `talking_head_standard` preset
-2. **Eye enhancement** (if `eye_enhance` tool available) — under-eye dark circle removal + eye brightening
-3. **Color grading** (if `color_grade` tool available) — apply a profile
-4. **Audio enhancement** (if `audio_enhance` tool available) — noise reduction, normalization
+Apply video enhancements in this exact order. **Attempt every step** if the tool is available — do not skip steps without a reason.
 
-Each step is optional — check tool availability first.
+1. **Face enhancement** — apply `talking_head_standard` preset
+2. **Eye enhancement** — under-eye dark circle removal + eye brightening
+3. **Color grading** — apply a profile
+4. **Audio enhancement** — noise reduction, normalization
 
-**Eye enhancement** — removes under-eye dark circles and brightens eyes using MediaPipe Face Mesh landmark detection:
+**Eye enhancement** — always attempt this after face_enhance. It makes a visible difference on webcam/phone footage:
 ```
 eye_enhance.execute({
     "input_path": "<face_enhanced_video>",
@@ -35,7 +34,7 @@ eye_enhance.execute({
     "eye_brighten_intensity": 0.3,
 })
 ```
-**Important:** Keep intensities low (0.2-0.5). Over-processing makes eyes look unnatural. Always compare before/after.
+**Important:** Keep intensities low (0.2-0.5). Over-processing makes eyes look unnatural. If the tool fails (e.g. MediaPipe not installed), log the fallback and continue with the face_enhanced video.
 
 ### Step 1b: Speed Adjustment (if requested)
 
@@ -86,6 +85,25 @@ The tool automatically runs face detection and keeps the speaker centered. If Me
 
 **Important:** Run auto_reframe AFTER face_enhance and color_grade but BEFORE burning subtitles. Subtitles need to be positioned for the final aspect ratio.
 
+### Step 2b: Build ASR Corrections Dictionary
+
+Before burning captions, scan the transcript for likely ASR misrecognitions. Common issues:
+- Product/brand names: "cloud" → "Claude", "co-pilot" → "Copilot", "remotion" → "Remotion"
+- Technical terms: "pythonic" misheard as "pathonic", "API" as "a pie"
+- Speaker's name or company name
+- Domain-specific jargon
+
+Build a corrections dict:
+```python
+corrections = {
+    "cloud": "Claude",
+    "co pilot": "Copilot",
+    "open montage": "OpenMontage",
+}
+```
+
+Pass this dict to both `subtitle_gen` (if generating SRT) and `remotion_caption_burn` (if using Remotion captions). Even if you find zero corrections needed, explicitly pass an empty dict `{}` to confirm you checked.
+
 ### Step 3: Burn Subtitles
 
 **Preferred: Remotion captions** (if `remotion_caption_burn` tool available):
@@ -106,11 +124,40 @@ Remotion renders animated word-by-word captions at the bottom of the frame with 
 Use `video_compose` with `burn_subtitles` operation:
 - Input: reframed video (or enhanced video if no reframe needed)
 - Subtitle file from asset manifest
-- Style from playbook
-- For vertical (9:16) output: position subtitles in the lower 20% of frame with `MarginV=100`
-- **Never** position subtitles in the center of the frame — they will occlude the face
 
-### Step 3b: Build Showcase Cards (if multi-clip reel)
+**CRITICAL: Caption positioning for 9:16 vertical video.**
+Captions MUST be in the lower 20% of the frame. On a 1920-high frame, that means `MarginV=160` or higher. The default FFmpeg subtitle position is center — this WILL occlude the face. You MUST override it.
+
+FFmpeg subtitle style string for vertical talking-head:
+```
+"FontName=Arial,FontSize=22,Bold=1,PrimaryColour=&H00FFFFFF,OutlineColour=&H00000000,Outline=2,Shadow=0,MarginV=160,Alignment=2"
+```
+
+**Never** use the default subtitle position. **Never** position subtitles in the center or upper half of the frame. If you see captions on the face during visual QA, the video must be re-rendered with corrected positioning.
+
+### Step 3b: Burn Overlay Graphics (if scene plan includes overlays)
+
+If the scene plan includes overlay scenes (text_cards, stat_cards, charts, comparisons, callouts), render them onto the video.
+
+**How overlay compositing works:**
+1. Each overlay is a short Remotion composition (3-5 seconds) rendered as a transparent video clip or composited directly
+2. Use `video_compose` with `picture_in_picture` or `overlay` operation to place each overlay at the correct timestamp
+3. Respect the overlay's `position` field from the scene plan:
+   - `lower_third` → bottom 30% of frame
+   - `upper_third` → top 30% of frame
+   - `side_panel` → left or right 40%
+   - `full_overlay` → centered, brief (1-2s)
+
+**For Remotion-based overlays:** Create a composition JSON with the overlay cuts, render to a transparent clip, then composite onto the talking-head video using FFmpeg.
+
+**For simple text overlays:** Use FFmpeg's drawtext filter directly:
+```
+ffmpeg -i captioned.mp4 -vf "drawtext=text='Key Term':fontsize=48:fontcolor=white:borderw=3:bordercolor=black:x=(w-text_w)/2:y=h*0.75:enable='between(t,22,26)'" -c:a copy output.mp4
+```
+
+**Important:** Time each overlay to match the scene plan timestamps. After speed adjustment, recalculate overlay timestamps: `adjusted_time = original_time / speed_factor`.
+
+### Step 3c: Build Showcase Cards (if multi-clip reel)
 
 If the output is a reel with showcase clips, use `showcase_card` for each:
 ```
@@ -166,11 +213,34 @@ audio_mixer.execute({
 - Apply ducking if music is present
 - Normalize final levels
 
-### Step 6: Final Encode
+### Step 6: Final Encode — MANDATORY
+
+**Do not skip this step.** Without a final encode, the output will be oversized and may not play correctly on the target platform.
 
 Use `video_compose` with `encode` operation:
 - Apply target media profile (youtube_landscape, tiktok, instagram_reels, etc.)
 - Two-pass encoding for quality
+
+**Target file sizes:**
+| Platform | Max Duration | Target Size |
+|----------|-------------|-------------|
+| Instagram Reels | 90s | < 50 MB |
+| TikTok | 10 min | < 100 MB |
+| YouTube Shorts | 60s | < 40 MB |
+| YouTube | unlimited | < 25 MB/min |
+
+If the output exceeds the target, re-encode with a lower bitrate. A 66-second Instagram Reel at 76 MB is unacceptable — it should be under 30 MB.
+
+```
+video_compose.execute({
+    "operation": "encode",
+    "input_path": "<mixed_video>",
+    "output_path": "<project>/renders/final.mp4",
+    "media_profile": "instagram_reels",
+    "video_bitrate": "4M",
+    "audio_bitrate": "192k",
+})
+```
 
 ### Step 7: Visual QA
 

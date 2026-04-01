@@ -64,3 +64,4 @@ remotion-composer/public/*
 # Ignore test/scratch compositions in demo-props (keep only curated demos)
 remotion-composer/public/demo-props/test-*
 remotion-composer/public/demo-props/talking-head-*
+remotion-composer/public/demo-props/caption-burn-*

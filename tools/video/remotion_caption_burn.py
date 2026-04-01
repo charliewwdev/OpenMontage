@@ -257,7 +257,8 @@ class RemotionCaptionBurn(BaseTool):
             "-of", "csv=p=0",
             input_path,
         ]
-        dur_out = self.run_command(dur_cmd, capture=True)
+        dur_result = self.run_command(dur_cmd)
+        dur_out = dur_result.stdout
         duration_s = float(dur_out.strip().split("\n")[0])
         total_frames = math.ceil(duration_s * 30)
 
@@ -281,9 +282,11 @@ class RemotionCaptionBurn(BaseTool):
         props_file = props_dir / f"caption-burn-{Path(input_path).stem}.json"
         props_file.write_text(json.dumps(props, indent=2), encoding="utf-8")
 
-        # Render
+        # Render (use npx.cmd on Windows for subprocess compatibility)
+        import sys
+        npx_bin = "npx.cmd" if sys.platform == "win32" else "npx"
         render_cmd = [
-            "npx", "remotion", "render",
+            npx_bin, "remotion", "render",
             "src/index.tsx", "TalkingHead",
             f"--props={props_file.relative_to(root)}",
             "--width=1080", "--height=1920", "--fps=30",

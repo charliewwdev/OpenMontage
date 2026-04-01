@@ -215,7 +215,8 @@ class VisualQA(BaseTool):
             input_path,
         ]
         import json
-        probe_out = self.run_command(cmd, capture=True)
+        probe_result = self.run_command(cmd)
+        probe_out = probe_result.stdout
         probe_data = json.loads(probe_out)
 
         # Extract key info
@@ -302,10 +303,11 @@ class VisualQA(BaseTool):
                 "-t", "3",
                 "-i", input_path,
                 "-vn", "-af", "volumedetect",
-                "-f", "null", "/dev/null",
+                "-f", "null", "NUL" if __import__("sys").platform == "win32" else "/dev/null",
             ]
             try:
-                output = self.run_command(cmd, capture=True, stderr=True)
+                cmd_result = self.run_command(cmd)
+                output = cmd_result.stderr  # volumedetect outputs to stderr
                 mean_vol = None
                 max_vol = None
                 for line in output.split("\n"):
@@ -340,4 +342,5 @@ class VisualQA(BaseTool):
             "-of", "csv=p=0",
             path,
         ]
-        return float(self.run_command(cmd, capture=True).strip().split("\n")[0])
+        dur_result = self.run_command(cmd)
+        return float(dur_result.stdout.strip().split("\n")[0])

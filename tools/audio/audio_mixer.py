@@ -40,7 +40,7 @@ class AudioMixer(BaseTool):
     )
     agent_skills = ["ffmpeg", "video_toolkit"]
 
-    capabilities = ["mix", "duck", "fade", "normalize", "extract_audio"]
+    capabilities = ["mix", "duck", "fade", "normalize", "extract_audio", "segmented_music"]
 
     input_schema = {
         "type": "object",
@@ -48,13 +48,16 @@ class AudioMixer(BaseTool):
         "properties": {
             "operation": {
                 "type": "string",
-                "enum": ["mix", "duck", "extract", "full_mix"],
+                "enum": ["mix", "duck", "extract", "full_mix", "segmented_music"],
                 "description": (
                     "mix: layer multiple tracks with volume/delay/fades. "
                     "duck: lower music volume when speech is present. "
                     "extract: extract audio from video file. "
                     "full_mix: combine narration tracks + music with ducking + normalize "
-                    "in a single call (preferred for compose-director)."
+                    "in a single call (preferred for compose-director). "
+                    "segmented_music: mix music into a video only during specified "
+                    "time segments (e.g. music during talking head, silence during "
+                    "showcase clips)."
                 ),
             },
             "tracks": {
@@ -128,6 +131,45 @@ class AudioMixer(BaseTool):
                 },
             },
             "normalize": {"type": "boolean", "default": True},
+            "video_path": {
+                "type": "string",
+                "description": (
+                    "Path to the assembled video (segmented_music operation). "
+                    "Music is mixed into this video's audio at specified segments."
+                ),
+            },
+            "music_path": {
+                "type": "string",
+                "description": "Path to background music file (segmented_music operation).",
+            },
+            "music_volume": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1.0,
+                "default": 0.20,
+                "description": "Volume level for music during active segments.",
+            },
+            "segments": {
+                "type": "array",
+                "description": (
+                    "Time segments where music should play (segmented_music operation). "
+                    "Each segment: {start: seconds, end: seconds}. Music fades in/out "
+                    "at segment boundaries. Outside these segments, music is silent."
+                ),
+                "items": {
+                    "type": "object",
+                    "required": ["start", "end"],
+                    "properties": {
+                        "start": {"type": "number", "minimum": 0},
+                        "end": {"type": "number", "minimum": 0},
+                    },
+                },
+            },
+            "fade_duration": {
+                "type": "number",
+                "default": 0.5,
+                "description": "Duration of fade in/out at segment boundaries (seconds).",
+            },
         },
     }
 
@@ -151,6 +193,8 @@ class AudioMixer(BaseTool):
                 result = self._extract(inputs)
             elif operation == "full_mix":
                 result = self._full_mix(inputs)
+            elif operation == "segmented_music":
+                result = self._segmented_music(inputs)
             else:
                 return ToolResult(success=False, error=f"Unknown operation: {operation}")
         except Exception as e:
@@ -554,6 +598,108 @@ class AudioMixer(BaseTool):
                 "sfx_tracks": len(sfx_tracks),
                 "ducking_enabled": duck_enabled,
                 "normalized": normalize,
+                "output": str(output_path),
+            },
+            artifacts=[str(output_path)],
+        )
+
+    def _segmented_music(self, inputs: dict[str, Any]) -> ToolResult:
+        """Mix background music into a video only during specified time segments.
+
+        Uses FFmpeg volume expressions with smooth fades at segment boundaries.
+        Music is silent outside the specified segments.
+
+        Input format:
+            {
+                "operation": "segmented_music",
+                "video_path": "assembled.mp4",
+                "music_path": "bg_music.mp3",
+                "music_volume": 0.20,
+                "segments": [
+                    {"start": 0, "end": 17.0},
+                    {"start": 167.0, "end": 175.0}
+                ],
+                "fade_duration": 0.5,
+                "output_path": "final_with_music.mp4"
+            }
+        """
+        video_path = inputs.get("video_path")
+        music_path = inputs.get("music_path")
+        output_path = Path(inputs.get("output_path", "segmented_music_output.mp4"))
+        segments = inputs.get("segments", [])
+        music_volume = inputs.get("music_volume", 0.20)
+        fade_dur = inputs.get("fade_duration", 0.5)
+
+        if not video_path or not Path(video_path).exists():
+            return ToolResult(success=False, error=f"Video not found: {video_path}")
+        if not music_path or not Path(music_path).exists():
+            return ToolResult(success=False, error=f"Music not found: {music_path}")
+        if not segments:
+            return ToolResult(success=False, error="No segments specified")
+
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Get video duration
+        dur_cmd = [
+            "ffprobe", "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "csv=p=0",
+            video_path,
+        ]
+        total_dur = float(self.run_command(dur_cmd, capture=True).strip().split("\n")[0])
+
+        # Build volume expression for each segment with smooth fades
+        parts = []
+        for seg in sorted(segments, key=lambda s: s["start"]):
+            s = seg["start"]
+            e = seg["end"]
+            fade_in_end = s + fade_dur
+            fade_out_start = e - fade_dur
+            parts.append(
+                f"if(lt(t,{s}),0,"
+                f"if(lt(t,{fade_in_end}),{music_volume}*(t-{s})/{fade_dur},"
+                f"if(lt(t,{fade_out_start}),{music_volume},"
+                f"if(lt(t,{e}),{music_volume}*({e}-t)/{fade_dur},"
+                f"0))))"
+            )
+
+        vol_expr = "+".join(f"({p})" for p in parts) if len(parts) > 1 else parts[0]
+
+        filter_complex = (
+            f"[1:a]atrim=0:{total_dur},asetpts=PTS-STARTPTS,"
+            f"volume='{vol_expr}':eval=frame[music_shaped];"
+            f"[0:a]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[speech];"
+            f"[music_shaped]aformat=sample_fmts=fltp:sample_rates=44100:channel_layouts=stereo[music_fmt];"
+            f"[speech][music_fmt]amix=inputs=2:duration=first:dropout_transition=2[aout]"
+        )
+
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", video_path,
+            "-stream_loop", "-1",
+            "-i", music_path,
+            "-filter_complex", filter_complex,
+            "-map", "0:v",
+            "-map", "[aout]",
+            "-c:v", "copy",
+            "-c:a", "aac", "-b:a", "192k",
+            str(output_path),
+        ]
+
+        self.run_command(cmd)
+
+        if not output_path.exists():
+            return ToolResult(success=False, error="No output produced")
+
+        return ToolResult(
+            success=True,
+            data={
+                "operation": "segmented_music",
+                "video": video_path,
+                "music": music_path,
+                "segments": segments,
+                "music_volume": music_volume,
+                "fade_duration": fade_dur,
                 "output": str(output_path),
             },
             artifacts=[str(output_path)],

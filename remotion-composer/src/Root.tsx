@@ -5,6 +5,7 @@ import {
   calculateCinematicMetadata,
 } from "./CinematicRenderer";
 import { signalFromTomorrowWithMusicFixture } from "./cinematic/fixtures";
+import { TalkingHead, TalkingHeadProps } from "./TalkingHead";
 
 const calculateMetadata: CalculateMetadataFunction<ExplainerProps> = async ({
   props,
@@ -60,6 +61,21 @@ export const Root: React.FC = () => {
         height={1080}
         defaultProps={signalFromTomorrowWithMusicFixture}
         calculateMetadata={calculateCinematicMetadata}
+      />
+      <Composition
+        id="TalkingHead"
+        component={TalkingHead}
+        durationInFrames={30 * 30}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={{
+          videoSrc: "",
+          captions: [],
+          wordsPerPage: 4,
+          fontSize: 52,
+          highlightColor: "#22D3EE",
+        }}
       />
     </>
   );

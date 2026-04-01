@@ -60,6 +60,15 @@ class SubtitleGen(BaseTool):
                 "enum": ["none", "word_by_word", "karaoke"],
                 "default": "none",
             },
+            "corrections": {
+                "type": "object",
+                "description": (
+                    "Dictionary of word corrections for common ASR misrecognitions. "
+                    "Keys are the wrong word (case-insensitive), values are the "
+                    "correct replacement. Applied before generating subtitles. "
+                    "Example: {\"cloud\": \"Claude\", \"co-pilot\": \"Copilot\"}."
+                ),
+            },
         },
     }
 
@@ -77,8 +86,13 @@ class SubtitleGen(BaseTool):
         max_chars = inputs.get("max_chars_per_line", 42)
         highlight_style = inputs.get("highlight_style", "none")
         output_path = inputs.get("output_path")
+        corrections = inputs.get("corrections")
 
         start = time.time()
+
+        # Apply word corrections if provided
+        if corrections:
+            segments = self._apply_corrections(segments, corrections)
 
         # Build cues from word-level timestamps
         cues = self._build_cues(segments, max_words, max_chars)
@@ -113,6 +127,43 @@ class SubtitleGen(BaseTool):
             artifacts=[str(out)],
             duration_seconds=round(elapsed, 2),
         )
+
+    @staticmethod
+    def _apply_corrections(
+        segments: list[dict], corrections: dict[str, str]
+    ) -> list[dict]:
+        """Apply word-level corrections to transcript segments.
+
+        Handles case-insensitive matching and preserves punctuation.
+        """
+        import copy
+
+        corr = {k.lower(): v for k, v in corrections.items()}
+        result = copy.deepcopy(segments)
+
+        for seg in result:
+            words = seg.get("words", [])
+            for w in words:
+                raw = w.get("word", "").strip()
+                # Strip punctuation for lookup, preserve it
+                stripped = raw.lower().rstrip(".,!?;:'\"")
+                if stripped in corr:
+                    trailing = raw[len(stripped):]
+                    w["word"] = corr[stripped] + trailing
+            # Also fix segment-level text
+            if "text" in seg and words:
+                seg["text"] = " ".join(w["word"] for w in words)
+            elif "text" in seg:
+                for wrong, right in corr.items():
+                    import re as _re
+                    seg["text"] = _re.sub(
+                        r"\b" + _re.escape(wrong) + r"\b",
+                        right,
+                        seg["text"],
+                        flags=_re.IGNORECASE,
+                    )
+
+        return result
 
     def _build_cues(
         self, segments: list[dict], max_words: int, max_chars: int

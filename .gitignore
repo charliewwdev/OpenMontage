@@ -44,6 +44,10 @@ skills-lock.json
 
 # Generated images (logo drafts — final logo lives in assets/)
 logo_*.png
+generated_image.png
+
+# Downloaded music files (Pixabay, Freesound — not source code)
+pixabay_music_*
 
 # OS
 .DS_Store
@@ -57,3 +61,6 @@ remotion-composer/out/
 remotion-composer/public/*
 # But keep demo props (shipped with the project for zero-key demos)
 !remotion-composer/public/demo-props/
+# Ignore test/scratch compositions in demo-props (keep only curated demos)
+remotion-composer/public/demo-props/test-*
+remotion-composer/public/demo-props/talking-head-*

@@ -106,6 +106,19 @@ class RemotionCaptionBurn(BaseTool):
                     "correct replacement. Example: {\"cloud\": \"Claude\"}."
                 ),
             },
+            "overlays": {
+                "type": "array",
+                "description": (
+                    "Array of overlay objects to render on top of the video. "
+                    "Each overlay has: type (text_card, stat_card, callout, "
+                    "comparison, bar_chart, line_chart, pie_chart, kpi_grid, "
+                    "hero_title, section_title, stat_reveal), in_seconds, "
+                    "out_seconds, position (lower_third, upper_third, "
+                    "left_panel, right_panel, full_overlay), and component-"
+                    "specific props (text, stat, chartData, etc.). "
+                    "See asset_manifest overlays from the asset-director."
+                ),
+            },
             "force_ffmpeg": {
                 "type": "boolean",
                 "default": False,
@@ -245,6 +258,7 @@ class RemotionCaptionBurn(BaseTool):
         words_per_page: int,
         font_size: int,
         highlight_color: str,
+        overlays: list[dict] | None = None,
     ) -> ToolResult:
         root = self._find_remotion_root()
         if root is None:
@@ -262,6 +276,19 @@ class RemotionCaptionBurn(BaseTool):
         duration_s = float(dur_out.strip().split("\n")[0])
         total_frames = math.ceil(duration_s * 30)
 
+        # Detect video dimensions
+        dim_cmd = [
+            "ffprobe", "-v", "error",
+            "-select_streams", "v:0",
+            "-show_entries", "stream=width,height",
+            "-of", "csv=p=0:s=x",
+            input_path,
+        ]
+        dim_result = self.run_command(dim_cmd)
+        dim_parts = dim_result.stdout.strip().split("x")
+        width = int(dim_parts[0])
+        height = int(dim_parts[1])
+
         # Copy video to Remotion public folder
         pub_dir = root / "public" / "talking-head"
         pub_dir.mkdir(parents=True, exist_ok=True)
@@ -273,6 +300,7 @@ class RemotionCaptionBurn(BaseTool):
         props = {
             "videoSrc": f"public/talking-head/{video_filename}",
             "captions": captions,
+            "overlays": overlays or [],
             "wordsPerPage": words_per_page,
             "fontSize": font_size,
             "highlightColor": highlight_color,
@@ -287,12 +315,12 @@ class RemotionCaptionBurn(BaseTool):
         npx_bin = "npx.cmd" if sys.platform == "win32" else "npx"
         render_cmd = [
             npx_bin, "remotion", "render",
-            "src/index.tsx", "TalkingHead",
+            "TalkingHead",
             f"--props={props_file.relative_to(root)}",
-            "--width=1080", "--height=1920", "--fps=30",
+            f"--width={width}", f"--height={height}", "--fps=30",
             f"--frames=0-{total_frames - 1}",
             "--codec=h264", "--crf=18",
-            str(Path(output_path).resolve()),
+            f"--output={str(Path(output_path).resolve())}",
         ]
         self.run_command(render_cmd, cwd=str(root))
 
@@ -307,6 +335,7 @@ class RemotionCaptionBurn(BaseTool):
                 "duration_seconds": round(duration_s, 2),
                 "total_frames": total_frames,
                 "caption_count": len(captions),
+                "overlay_count": len(overlays or []),
                 "words_per_page": words_per_page,
             },
             artifacts=[output_path],
@@ -429,11 +458,14 @@ class RemotionCaptionBurn(BaseTool):
         if not captions:
             return ToolResult(success=False, error="No caption words extracted.")
 
+        overlays = inputs.get("overlays")
+
         # Choose render method
         if not force_ffmpeg and self._remotion_available():
             result = self._render_remotion(
                 input_path, output_path, captions,
                 words_per_page, font_size, highlight_color,
+                overlays=overlays,
             )
         else:
             result = self._render_ffmpeg(input_path, output_path, captions)

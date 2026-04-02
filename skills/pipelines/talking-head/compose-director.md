@@ -15,6 +15,45 @@ You have edit decisions and an asset manifest. Your job is to render the final t
 
 ## Process
 
+### Step 0: Pre-flight Checks
+
+Before rendering anything, validate the inputs and catch issues that are expensive to fix later.
+
+1. **Silence detection** -- Run `silence_cutter` in mark mode:
+   ```
+   silence_cutter.execute({
+       "input_path": "<raw_footage>",
+       "mode": "mark",
+       "silence_threshold_db": -35,
+       "min_silence_duration": 0.5
+   })
+   ```
+   - Report all gaps > 0.5s with timestamps.
+   - If total silence > 5s, **recommend cutting before proceeding**. Long silences waste render time and produce dead spots in the final video.
+
+2. **ASR confidence check** -- Scan word-level transcript for low-confidence words:
+   - Flag any word with probability < 0.7.
+   - List flagged words with timestamps so the user can verify correct transcription.
+   - Common misrecognitions to watch for: proper nouns, brand names, domain jargon.
+
+3. **Auto-build corrections dictionary** from common ASR error patterns:
+   ```python
+   corrections = {
+       # Indian finance context
+       "DMI": "EMI",
+       "AMI": "EMI",
+       # Common brand misspellings
+       "open montage": "OpenMontage",
+       "remotion": "Remotion",
+       # Numbers that got split by ASR
+       "4 -5": "4-5",
+       "10 -15": "10-15",
+   }
+   ```
+   Extend this dict with domain-specific corrections based on the video topic. Present the corrections to the user for review before applying.
+
+4. **Green screen flag** -- Check if scene-director Step 0 flagged green/blue screen footage. If yes, note that Step 3c (Green Screen Composite) will be needed.
+
 ### Step 1: Run Enhancement Chain
 
 Apply video enhancements in this exact order. **Attempt every step** if the tool is available — do not skip steps without a reason.
@@ -106,7 +145,14 @@ Pass this dict to both `subtitle_gen` (if generating SRT) and `remotion_caption_
 
 ### Step 3: Burn Subtitles
 
-**Preferred: Remotion captions** (if `remotion_caption_burn` tool available):
+**ALWAYS use Remotion TikTok-style captions** (word-by-word highlighting). This is the default and preferred method. Do NOT fall back to FFmpeg ASS subtitles unless Remotion is completely unavailable.
+
+**Remotion caption requirements:**
+- **Auto-detect video dimensions** -- do NOT hardcode width/height. Use `visual_qa` probe or ffprobe to get actual dimensions, then pass them to the render.
+- **Set `--frames` based on actual video duration** -- calculate from probe: `frames = duration_seconds * fps`. Never use a hardcoded frame count.
+- Word-by-word highlighting with active word color (`highlight_color`).
+- Captions positioned at the bottom of frame, away from the face.
+
 ```
 remotion_caption_burn.execute({
     "input_path": "<reframed_or_enhanced_video>",
@@ -118,15 +164,11 @@ remotion_caption_burn.execute({
     "highlight_color": "#22D3EE",
 })
 ```
-Remotion renders animated word-by-word captions at the bottom of the frame with active word highlighting. Captions are positioned away from the face.
 
-**Fallback: FFmpeg subtitles** (if Remotion unavailable):
-Use `video_compose` with `burn_subtitles` operation:
-- Input: reframed video (or enhanced video if no reframe needed)
-- Subtitle file from asset manifest
+**Fallback ONLY if Remotion is completely unavailable:** Use `video_compose` with `burn_subtitles` operation. This is a degraded experience -- warn the user that word-by-word highlighting won't be available.
 
-**CRITICAL: Caption positioning for 9:16 vertical video.**
-Captions MUST be in the lower 20% of the frame. On a 1920-high frame, that means `MarginV=160` or higher. The default FFmpeg subtitle position is center — this WILL occlude the face. You MUST override it.
+**CRITICAL: Caption positioning for 9:16 vertical video (FFmpeg fallback only).**
+Captions MUST be in the lower 20% of the frame. On a 1920-high frame, that means `MarginV=160` or higher. The default FFmpeg subtitle position is center -- this WILL occlude the face. You MUST override it.
 
 FFmpeg subtitle style string for vertical talking-head:
 ```
@@ -137,27 +179,152 @@ FFmpeg subtitle style string for vertical talking-head:
 
 ### Step 3b: Burn Overlay Graphics (if scene plan includes overlays)
 
-If the scene plan includes overlay scenes (text_cards, stat_cards, charts, comparisons, callouts), render them onto the video.
+If the scene plan includes overlay scenes (text_cards, stat_cards, charts, comparisons, callouts), pass them to `remotion_caption_burn` alongside captions. **Both captions and overlays render in a single Remotion pass** — no separate FFmpeg compositing needed.
 
-**How overlay compositing works:**
-1. Each overlay is a short Remotion composition (3-5 seconds) rendered as a transparent video clip or composited directly
-2. Use `video_compose` with `picture_in_picture` or `overlay` operation to place each overlay at the correct timestamp
-3. Respect the overlay's `position` field from the scene plan:
-   - `lower_third` → bottom 30% of frame
-   - `upper_third` → top 30% of frame
-   - `side_panel` → left or right 40%
-   - `full_overlay` → centered, brief (1-2s)
+**How it works:** The TalkingHead Remotion composition renders three layers:
+1. **Video** (bottom) — the talking-head footage
+2. **Overlays** (middle) — positioned charts, stats, callouts with fade in/out
+3. **Captions** (top) — word-by-word highlighting, always visible
 
-**For Remotion-based overlays:** Create a composition JSON with the overlay cuts, render to a transparent clip, then composite onto the talking-head video using FFmpeg.
-
-**For simple text overlays:** Use FFmpeg's drawtext filter directly:
+**Combine Step 3 and 3b into one `remotion_caption_burn` call:**
 ```
-ffmpeg -i captioned.mp4 -vf "drawtext=text='Key Term':fontsize=48:fontcolor=white:borderw=3:bordercolor=black:x=(w-text_w)/2:y=h*0.75:enable='between(t,22,26)'" -c:a copy output.mp4
+remotion_caption_burn.execute({
+    "input_path": "<reframed_or_enhanced_video>",
+    "output_path": "<project>/assets/video/captioned.mp4",
+    "segments": <transcript_segments>,
+    "corrections": {"cloud": "Claude"},
+    "words_per_page": 4,
+    "font_size": 52,
+    "highlight_color": "#22D3EE",
+    "overlays": [
+        {
+            "id": "term-agentic-ai",
+            "type": "callout",
+            "text": "Agentic AI: software that acts autonomously toward goals",
+            "callout_type": "info",
+            "in_seconds": 22.0,
+            "out_seconds": 26.0,
+            "position": "lower_third",
+            "backgroundColor": "#0F172A",
+            "accentColor": "#22D3EE"
+        },
+        {
+            "id": "stat-market-size",
+            "type": "stat_card",
+            "stat": "$4.8B",
+            "subtitle": "Global AI Agent Market (2026)",
+            "in_seconds": 35.0,
+            "out_seconds": 39.0,
+            "position": "upper_third",
+            "accentColor": "#A78BFA"
+        },
+        {
+            "id": "chart-growth",
+            "type": "bar_chart",
+            "chartData": [
+                {"label": "2023", "value": 1.2},
+                {"label": "2024", "value": 2.1},
+                {"label": "2025", "value": 3.5},
+                {"label": "2026", "value": 4.8}
+            ],
+            "title": "AI Agent Market ($B)",
+            "in_seconds": 40.0,
+            "out_seconds": 45.0,
+            "position": "lower_third",
+            "chartColors": ["#22D3EE", "#A78BFA", "#F472B6", "#34D399"]
+        }
+    ]
+})
 ```
 
-**Important:** Time each overlay to match the scene plan timestamps. After speed adjustment, recalculate overlay timestamps: `adjusted_time = original_time / speed_factor`.
+**Overlay position options:**
+- `lower_third` → bottom area, above captions (default — safest for most overlays)
+- `upper_third` → top area (good for stats while speaker is center/lower)
+- `left_panel` → left 45% of frame (side-by-side with speaker)
+- `right_panel` → right 45% of frame
+- `full_overlay` → full frame with dark backdrop (use sparingly, 1-2s max)
 
-### Step 3c: Build Showcase Cards (if multi-clip reel)
+**Overlay type → required props** (same as asset-director mapping):
+
+| Type | Required Props |
+|------|---------------|
+| `text_card` | `text` |
+| `stat_card` | `stat`, `subtitle` (optional) |
+| `callout` | `text`, `callout_type` (info/warning/tip/quote) |
+| `comparison` | `leftLabel`, `rightLabel`, `leftValue`, `rightValue` |
+| `bar_chart` | `chartData` (array of `{label, value}`) |
+| `line_chart` | `chartSeries` (array of `{name, data: number[]}`) |
+| `pie_chart` | `chartData` (array of `{label, value}`) |
+| `kpi_grid` | `chartData` (array of `{label, value}`) |
+| `hero_title` | `text`, `subtitle` (optional) |
+| `section_title` | `text`, `subtitle` (optional) |
+| `stat_reveal` | `text` (the stat), `subtitle` (label) |
+
+**Important:** After speed adjustment, recalculate overlay timestamps: `adjusted_time = original_time / speed_factor`.
+
+**Fallback (no Remotion):** If Remotion is unavailable, `remotion_caption_burn` falls back to FFmpeg for captions only. Overlays are NOT rendered in FFmpeg fallback mode — warn the user that overlays require Remotion.
+
+### Step 3c: Green Screen Composite (if green screen footage)
+
+If the footage has a green/blue screen (detected in scene-director Step 0), follow this pipeline:
+
+1. **Run `green_screen_processor` tool** to remove the green/blue screen:
+   ```
+   green_screen_processor.execute({
+       "input_path": "<enhanced_video>",
+       "output_path": "<project>/assets/video/greenscreen_removed.mp4",
+       "method": "auto"
+   })
+   ```
+   The `auto` method detects whether the background is green or blue and applies the appropriate chroma key.
+
+2. **Render Remotion animated background** using the Explainer composition:
+   ```
+   # Render an AnimatedBackground clip (gradient mesh, floating orbs, subtle grid)
+   # Use the Explainer composition — NOT a flat #0F172A solid color
+   npx remotion render src/index.ts Explainer --props='{"duration":VIDEO_DURATION}' --output=<project>/assets/video/animated_bg.mp4
+   ```
+   The AnimatedBackground provides a professional gradient mesh with floating orbs and a subtle grid pattern. This is far superior to a flat solid color.
+
+3. **Run `green_screen_composite` tool** to layer the speaker onto the animated background:
+   ```
+   green_screen_composite.execute({
+       "foreground_path": "<greenscreen_removed_video>",
+       "background_path": "<animated_bg>",
+       "output_path": "<project>/assets/video/composited.mp4",
+       "layout": "news_anchor"
+   })
+   ```
+   Default layout is `news_anchor` (speaker center-bottom, background fills frame). Adjust layout based on speaker position detected in Step 0.
+
+4. **Burn captions via Remotion TalkingHead composition** (NOT FFmpeg ASS subtitles):
+   ```
+   remotion_caption_burn.execute({
+       "input_path": "<composited_video>",
+       "output_path": "<project>/assets/video/captioned.mp4",
+       "segments": <transcript_segments>,
+       "corrections": <corrections_dict>,
+       "words_per_page": 4,
+       "font_size": 52,
+       "highlight_color": "#22D3EE",
+       "overlays": <overlay_list_from_scene_plan>
+   })
+   ```
+
+5. **Mix background music** (ducked at 15% volume under speech):
+   ```
+   audio_mixer.execute({
+       "operation": "duck",
+       "video_path": "<captioned_video>",
+       "music_path": "<bg_music>",
+       "music_volume": 0.15,
+       "output_path": "<project>/assets/video/with_music.mp4"
+   })
+   ```
+
+6. **Final encode** to target platform specs (see Step 6 below).
+
+### Step 3d: Build Showcase Cards (if multi-clip reel)
 
 If the output is a reel with showcase clips, use `showcase_card` for each:
 ```

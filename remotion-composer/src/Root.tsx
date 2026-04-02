@@ -65,13 +65,14 @@ export const Root: React.FC = () => {
       <Composition
         id="TalkingHead"
         component={TalkingHead}
-        durationInFrames={30 * 30}
+        durationInFrames={30 * 300}
         fps={30}
         width={1080}
         height={1920}
         defaultProps={{
           videoSrc: "",
           captions: [],
+          overlays: [],
           wordsPerPage: 4,
           fontSize: 52,
           highlightColor: "#22D3EE",

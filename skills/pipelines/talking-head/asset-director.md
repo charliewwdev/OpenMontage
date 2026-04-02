@@ -90,7 +90,34 @@ Create a composition JSON snippet for each overlay. These will be rendered by th
 | Callout/quote | `callout` | `text`, `icon` |
 | Lower third | `text_card` | `text` |
 
-**Dark theme for all overlays** — use dark backgrounds (`#0F172A`, `#1E293B`) with light text. This ensures overlays are legible when composited on top of talking-head footage.
+**Remotion AnimatedBackground:**
+
+The Explainer composition now includes an `AnimatedBackground` component that renders an animated gradient mesh, floating orbs, and a subtle grid pattern. This provides a far more professional look than flat solid colors.
+
+- Scene backgrounds should use `backgroundColor: "#0F172A"` which auto-converts to transparent, letting the animated gradient show through.
+- Do NOT use flat solid colors for backgrounds -- always let the AnimatedBackground render behind overlays.
+- When compositing green screen footage, render the AnimatedBackground as the replacement background (see compose-director Step 3c).
+
+**Component constraints:**
+
+| Component | Min Width | 720px Portrait? | Value Type |
+|-----------|-----------|-----------------|------------|
+| comparison | 900px | NO -> use 2x stat_card | string |
+| kpi_grid | 720px | YES | numeric ONLY (no "15+") |
+| bar_chart | 500px | YES | numeric |
+| stat_card | 300px | YES | string OK |
+| callout | 400px | YES | string |
+| hero_title | 400px | YES | string |
+| line_chart | 500px | YES | numeric |
+| progress_bar | 600px | YES | numeric |
+| stat_reveal | 300px | YES | string OK |
+
+Key rules:
+- `comparison` requires 900px+ width. In 720px portrait frames, substitute with two sequential `stat_card` components instead.
+- `kpi_grid` values MUST be purely numeric (e.g., `4.8`, `73`, `2400`). Formatted strings like `"15+"`, `"$4.8B"`, or `"2.4M"` will cause rendering errors. Use `stat_card` for string-formatted numbers instead.
+- Always check the target frame width before choosing a component. Portrait (720px) excludes `comparison`.
+
+**Dark theme for all overlays** -- use dark backgrounds (`#0F172A`, `#1E293B`) with light text. This ensures overlays are legible when composited on top of talking-head footage. The `#0F172A` backgroundColor is treated as transparent by the AnimatedBackground system, so overlays will show the animated gradient behind them.
 
 **For simple text overlays** (if Remotion is overkill):
 

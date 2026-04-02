@@ -18,6 +18,34 @@ You are not just a processor. You are a creative director. Your job is to figure
 
 ## Process
 
+### Step 0: Footage Analysis
+
+Before watching the content, analyze the raw footage to understand the physical setup.
+
+1. **Sample 5 frames** from the footage using ffmpeg (evenly spaced across the duration):
+   ```
+   ffmpeg -i <footage> -vf "select='not(mod(n\,TOTAL_FRAMES/5))'" -vsync vfr -frames:v 5 frame_%02d.png
+   ```
+
+2. **Run visual_qa or histogram analysis** on each sampled frame to detect:
+   - **Background type:** Green screen / blue screen / natural background. Green/blue screens show a dominant narrow-band color spike in the histogram. Use `visual_qa` with prompt "Is this a green screen or blue screen background?" for confirmation.
+   - **Speaker position:** Center, left, or right of frame. Estimate the approximate bounding box (e.g., "speaker occupies center 40% of frame, from x=30% to x=70%").
+   - **Lighting quality:** Even studio lighting, harsh shadows, backlit, mixed color temperature. Note any issues that may affect chroma keying.
+
+3. **Green screen detected?**
+   - If yes, note that `green_screen_processor` tool will be needed in the compose stage.
+   - Record the detected screen color (green or blue) and estimated uniformity.
+   - The compose-director will use this to run chroma key removal and composite onto an animated background.
+
+4. **Measure speaker safe zone:**
+   - From the speaker's bounding box, determine where graphics can be placed WITHOUT overlapping the speaker.
+   - For a centered speaker: left panel and right panel are safe for overlays.
+   - For a left-positioned speaker: right panel is the primary safe zone.
+   - For a right-positioned speaker: left panel is the primary safe zone.
+   - Upper third and lower third are generally safe regardless of speaker position.
+
+Record all findings in the scene plan metadata for downstream stages.
+
 ### Step 1: Watch & Listen — Understand the Content
 
 **This is the most important step. Do not skip it.**
@@ -51,6 +79,24 @@ Based on your content analysis, propose **on-screen graphics** that will appear 
 | **Section title** | `hero_title` | At major topic transitions — show the new section title |
 | **Callout/quote** | `callout` | When the speaker makes a key point worth emphasizing |
 | **Lower third** | `text_card` | Speaker identification at the start |
+
+**Remotion Component Constraints:**
+
+| Component | Min Width | 720px Portrait? | Value Type |
+|-----------|-----------|-----------------|------------|
+| comparison | 900px | NO -> use 2x stat_card | string |
+| kpi_grid | 720px | YES | numeric ONLY (no "15+") |
+| bar_chart | 500px | YES | numeric |
+| stat_card | 300px | YES | string OK |
+| callout | 400px | YES | string |
+| hero_title | 400px | YES | string |
+| line_chart | 500px | YES | numeric |
+| progress_bar | 600px | YES | numeric |
+| stat_reveal | 300px | YES | string OK |
+
+When a component's minimum width exceeds the available space (e.g., `comparison` at 900px won't fit in a 720px portrait frame), substitute with the recommended alternative. For `comparison`, use two `stat_card` components shown sequentially instead.
+
+For `kpi_grid`, values MUST be numeric (e.g., `4.8`, `73`, `2400`). String values like `"15+"` or `"$4.8B"` will cause rendering errors. Use `stat_card` for string-formatted numbers.
 
 **Overlay planning rules:**
 - **Don't over-overlay.** 3-6 overlays per minute of final video is the sweet spot. More than that is distracting.
@@ -91,6 +137,8 @@ Format your proposal clearly:
 
 **Estimated final duration:** ~Xs (from Xs raw)
 ```
+
+**IMPORTANT: When outputting the overlay plan, ALSO generate the actual Remotion JSON props file (`greenscreen-bg.json`) -- do not just describe scenes in prose.** The JSON props file should be a complete, valid input for the Remotion TalkingHead composition, including all overlay definitions, timing, colors, and content. Save it to `<project>/public/demo-props/` or the project's props directory.
 
 Wait for user approval before proceeding. The user may:
 - Approve as-is

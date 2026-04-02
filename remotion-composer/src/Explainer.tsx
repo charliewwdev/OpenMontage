@@ -45,6 +45,97 @@ const { fontFamily } = loadFont("normal", {
 });
 
 // ---------------------------------------------------------------------------
+// Animated Background — Gradient Mesh + Floating Orbs
+// ---------------------------------------------------------------------------
+
+const AnimatedBackground: React.FC<{ style?: "fintech" | "default" }> = ({
+  style: bgStyle = "default",
+}) => {
+  const frame = useCurrentFrame();
+  const { fps, durationInFrames, width, height } = useVideoConfig();
+  const progress = frame / durationInFrames;
+
+  // Slow-moving gradient angles
+  const angle1 = 135 + Math.sin(frame / (fps * 8)) * 30;
+  const angle2 = 225 + Math.cos(frame / (fps * 6)) * 25;
+
+  // Color stops shift over time
+  const shift = Math.sin(frame / (fps * 12)) * 0.15;
+
+  const gradient = `
+    radial-gradient(ellipse at ${30 + Math.sin(frame / (fps * 10)) * 20}% ${40 + Math.cos(frame / (fps * 8)) * 20}%,
+      rgba(15, 23, 60, 1) 0%, transparent 60%),
+    radial-gradient(ellipse at ${70 + Math.cos(frame / (fps * 7)) * 20}% ${60 + Math.sin(frame / (fps * 9)) * 25}%,
+      rgba(30, 10, 60, 0.8) 0%, transparent 55%),
+    radial-gradient(ellipse at ${50 + Math.sin(frame / (fps * 14)) * 30}% ${20 + Math.cos(frame / (fps * 11)) * 15}%,
+      rgba(0, 40, 60, 0.6) 0%, transparent 50%),
+    linear-gradient(${angle1}deg, #060918 0%, #0B1026 40%, #0F0A2E 70%, #080D1F 100%)
+  `;
+
+  // Floating orbs
+  const orbs = [
+    { x: 20, y: 30, size: 300, color: "rgba(34, 211, 238, 0.08)", speedX: 7, speedY: 11 },
+    { x: 70, y: 60, size: 250, color: "rgba(139, 92, 246, 0.1)", speedX: 9, speedY: 8 },
+    { x: 40, y: 80, size: 200, color: "rgba(16, 185, 129, 0.07)", speedX: 13, speedY: 6 },
+    { x: 80, y: 20, size: 350, color: "rgba(245, 158, 11, 0.06)", speedX: 11, speedY: 14 },
+    { x: 10, y: 70, size: 180, color: "rgba(236, 72, 153, 0.05)", speedX: 8, speedY: 10 },
+  ];
+
+  return (
+    <AbsoluteFill style={{ background: gradient }}>
+      {/* Floating glow orbs */}
+      {orbs.map((orb, i) => {
+        const ox = orb.x + Math.sin(frame / (fps * orb.speedX)) * 15;
+        const oy = orb.y + Math.cos(frame / (fps * orb.speedY)) * 12;
+        return (
+          <div
+            key={i}
+            style={{
+              position: "absolute",
+              left: `${ox}%`,
+              top: `${oy}%`,
+              width: orb.size,
+              height: orb.size,
+              borderRadius: "50%",
+              background: orb.color,
+              filter: `blur(${orb.size * 0.4}px)`,
+              transform: "translate(-50%, -50%)",
+              willChange: "transform",
+            }}
+          />
+        );
+      })}
+
+      {/* Subtle grid overlay */}
+      <div
+        style={{
+          position: "absolute",
+          inset: 0,
+          backgroundImage: `
+            linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)
+          `,
+          backgroundSize: "60px 60px",
+          opacity: 0.5 + Math.sin(frame / (fps * 20)) * 0.2,
+        }}
+      />
+
+      {/* Top gradient fade for depth */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          right: 0,
+          height: "30%",
+          background: "linear-gradient(to bottom, rgba(6,9,24,0.4), transparent)",
+        }}
+      />
+    </AbsoluteFill>
+  );
+};
+
+// ---------------------------------------------------------------------------
 // Types — aligned with edit_decisions artifact schema
 // ---------------------------------------------------------------------------
 
@@ -353,7 +444,9 @@ const SceneRenderer: React.FC<{ cut: Cut }> = ({ cut }) => {
   };
 
   // Resolve the scene element based on cut type, then wrap with backgroundImage if set
-  const bgColor = cut.backgroundImage ? "transparent" : cut.backgroundColor;
+  // Use transparent bg so the animated gradient background shows through
+  const rawBg = cut.backgroundImage ? "transparent" : cut.backgroundColor;
+  const bgColor = (rawBg === "#0F172A" || rawBg === "#0f172a") ? "transparent" : rawBg;
 
   // Explicit component types
   if (cut.type === "text_card" && cut.text) {
@@ -539,7 +632,10 @@ export const Explainer: React.FC<ExplainerProps> = ({
   const { fps, durationInFrames } = useVideoConfig();
 
   return (
-    <AbsoluteFill style={{ background: "#0F172A", fontFamily }}>
+    <AbsoluteFill style={{ background: "#060918", fontFamily }}>
+      {/* Layer 0: Animated gradient background */}
+      <AnimatedBackground style="fintech" />
+
       {/* Layer 1: Visual scenes */}
       {cuts.map((cut) => {
         const from = Math.round(cut.in_seconds * fps);

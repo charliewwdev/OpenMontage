@@ -12,13 +12,18 @@ import {
 } from "remotion";
 import { loadFont } from "@remotion/google-fonts/SpaceGrotesk";
 
-// Resolve asset path — use staticFile() for local paths, passthrough URLs
+// Resolve asset path — handle URLs, absolute paths (Windows/Unix), and public/ relative paths
 function resolveAsset(src: string): string {
   if (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("data:")) {
     return src;
   }
   // Strip any file:// prefix
   const clean = src.replace(/^file:\/\/\/?/, "");
+  // Absolute paths (Unix: /foo, Windows: C:\foo or C:/foo) — convert to file:// URI
+  // staticFile() only accepts relative paths within public/, so absolute paths must bypass it
+  if (clean.startsWith("/") || /^[A-Za-z]:[\\/]/.test(clean)) {
+    return `file:///${clean.replace(/\\/g, "/")}`;
+  }
   return staticFile(clean);
 }
 import { TextCard } from "./components/TextCard";
@@ -37,6 +42,7 @@ import { HeroTitle } from "./components/HeroTitle";
 import { AnimeScene } from "./components/AnimeScene";
 import type { CameraMotion } from "./components/AnimeScene";
 import type { ParticleType } from "./components/ParticleOverlay";
+import { resolveTheme, type ThemeConfig, DEFAULT_THEME } from "./Root";
 
 // Load Space Grotesk font for cinematic typography
 const { fontFamily } = loadFont("normal", {
@@ -48,38 +54,76 @@ const { fontFamily } = loadFont("normal", {
 // Animated Background — Gradient Mesh + Floating Orbs
 // ---------------------------------------------------------------------------
 
-const AnimatedBackground: React.FC<{ style?: "fintech" | "default" }> = ({
-  style: bgStyle = "default",
-}) => {
+// Parse hex color to RGB components
+function hexToRgb(hex: string): { r: number; g: number; b: number } {
+  const clean = hex.replace("#", "");
+  const bigint = parseInt(clean.length === 3
+    ? clean.split("").map(c => c + c).join("")
+    : clean, 16);
+  return { r: (bigint >> 16) & 255, g: (bigint >> 8) & 255, b: bigint & 255 };
+}
+
+// Detect if a color is "light" (for choosing grid/overlay treatment)
+function isLightColor(hex: string): boolean {
+  const { r, g, b } = hexToRgb(hex);
+  return (r * 299 + g * 587 + b * 114) / 1000 > 128;
+}
+
+// Darken/lighten a color by mixing toward black or white
+function shiftColor(hex: string, amount: number): string {
+  const { r, g, b } = hexToRgb(hex);
+  const clamp = (v: number) => Math.max(0, Math.min(255, Math.round(v)));
+  if (amount < 0) {
+    // Darken
+    const f = 1 + amount;
+    return `rgb(${clamp(r * f)}, ${clamp(g * f)}, ${clamp(b * f)})`;
+  }
+  // Lighten
+  return `rgb(${clamp(r + (255 - r) * amount)}, ${clamp(g + (255 - g) * amount)}, ${clamp(b + (255 - b) * amount)})`;
+}
+
+const AnimatedBackground: React.FC<{ theme: ThemeConfig }> = ({ theme }) => {
   const frame = useCurrentFrame();
-  const { fps, durationInFrames, width, height } = useVideoConfig();
-  const progress = frame / durationInFrames;
+  const { fps, durationInFrames } = useVideoConfig();
+
+  const bg = theme.backgroundColor;
+  const primary = theme.primaryColor;
+  const accent = theme.accentColor;
+  const surface = theme.surfaceColor;
+  const light = isLightColor(bg);
 
   // Slow-moving gradient angles
   const angle1 = 135 + Math.sin(frame / (fps * 8)) * 30;
-  const angle2 = 225 + Math.cos(frame / (fps * 6)) * 25;
 
-  // Color stops shift over time
-  const shift = Math.sin(frame / (fps * 12)) * 0.15;
+  // Build gradient from theme colors instead of hardcoded dark blue
+  const { r: bgR, g: bgG, b: bgB } = hexToRgb(bg);
+  const { r: priR, g: priG, b: priB } = hexToRgb(primary);
+  const { r: accR, g: accG, b: accB } = hexToRgb(accent);
 
   const gradient = `
     radial-gradient(ellipse at ${30 + Math.sin(frame / (fps * 10)) * 20}% ${40 + Math.cos(frame / (fps * 8)) * 20}%,
-      rgba(15, 23, 60, 1) 0%, transparent 60%),
+      rgba(${priR}, ${priG}, ${priB}, 0.15) 0%, transparent 60%),
     radial-gradient(ellipse at ${70 + Math.cos(frame / (fps * 7)) * 20}% ${60 + Math.sin(frame / (fps * 9)) * 25}%,
-      rgba(30, 10, 60, 0.8) 0%, transparent 55%),
-    radial-gradient(ellipse at ${50 + Math.sin(frame / (fps * 14)) * 30}% ${20 + Math.cos(frame / (fps * 11)) * 15}%,
-      rgba(0, 40, 60, 0.6) 0%, transparent 50%),
-    linear-gradient(${angle1}deg, #060918 0%, #0B1026 40%, #0F0A2E 70%, #080D1F 100%)
+      rgba(${accR}, ${accG}, ${accB}, 0.1) 0%, transparent 55%),
+    linear-gradient(${angle1}deg, ${bg} 0%, ${shiftColor(bg, light ? -0.05 : 0.05)} 40%, ${surface} 70%, ${bg} 100%)
   `;
 
-  // Floating orbs
+  // Floating orbs — derived from theme chart colors with low opacity
+  const orbColors = theme.chartColors.slice(0, 5);
+  const orbOpacity = light ? 0.06 : 0.08;
   const orbs = [
-    { x: 20, y: 30, size: 300, color: "rgba(34, 211, 238, 0.08)", speedX: 7, speedY: 11 },
-    { x: 70, y: 60, size: 250, color: "rgba(139, 92, 246, 0.1)", speedX: 9, speedY: 8 },
-    { x: 40, y: 80, size: 200, color: "rgba(16, 185, 129, 0.07)", speedX: 13, speedY: 6 },
-    { x: 80, y: 20, size: 350, color: "rgba(245, 158, 11, 0.06)", speedX: 11, speedY: 14 },
-    { x: 10, y: 70, size: 180, color: "rgba(236, 72, 153, 0.05)", speedX: 8, speedY: 10 },
+    { x: 20, y: 30, size: 300, color: orbColors[0] || primary, speedX: 7, speedY: 11 },
+    { x: 70, y: 60, size: 250, color: orbColors[1] || accent, speedX: 9, speedY: 8 },
+    { x: 40, y: 80, size: 200, color: orbColors[2] || primary, speedX: 13, speedY: 6 },
+    { x: 80, y: 20, size: 350, color: orbColors[3] || accent, speedX: 11, speedY: 14 },
+    { x: 10, y: 70, size: 180, color: orbColors[4] || primary, speedX: 8, speedY: 10 },
   ];
+
+  // Grid and overlay colors adapt to light vs dark backgrounds
+  const gridColor = light ? "rgba(0,0,0,0.03)" : "rgba(255,255,255,0.02)";
+  const fadeColor = light
+    ? `rgba(${bgR},${bgG},${bgB},0.2)`
+    : `rgba(${bgR},${bgG},${bgB},0.4)`;
 
   return (
     <AbsoluteFill style={{ background: gradient }}>
@@ -87,6 +131,7 @@ const AnimatedBackground: React.FC<{ style?: "fintech" | "default" }> = ({
       {orbs.map((orb, i) => {
         const ox = orb.x + Math.sin(frame / (fps * orb.speedX)) * 15;
         const oy = orb.y + Math.cos(frame / (fps * orb.speedY)) * 12;
+        const { r, g, b } = hexToRgb(orb.color);
         return (
           <div
             key={i}
@@ -97,7 +142,7 @@ const AnimatedBackground: React.FC<{ style?: "fintech" | "default" }> = ({
               width: orb.size,
               height: orb.size,
               borderRadius: "50%",
-              background: orb.color,
+              background: `rgba(${r}, ${g}, ${b}, ${orbOpacity})`,
               filter: `blur(${orb.size * 0.4}px)`,
               transform: "translate(-50%, -50%)",
               willChange: "transform",
@@ -112,8 +157,8 @@ const AnimatedBackground: React.FC<{ style?: "fintech" | "default" }> = ({
           position: "absolute",
           inset: 0,
           backgroundImage: `
-            linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px)
+            linear-gradient(${gridColor} 1px, transparent 1px),
+            linear-gradient(90deg, ${gridColor} 1px, transparent 1px)
           `,
           backgroundSize: "60px 60px",
           opacity: 0.5 + Math.sin(frame / (fps * 20)) * 0.2,
@@ -128,7 +173,7 @@ const AnimatedBackground: React.FC<{ style?: "fintech" | "default" }> = ({
           left: 0,
           right: 0,
           height: "30%",
-          background: "linear-gradient(to bottom, rgba(6,9,24,0.4), transparent)",
+          background: `linear-gradient(to bottom, ${fadeColor}, transparent)`,
         }}
       />
     </AbsoluteFill>
@@ -427,7 +472,7 @@ const BackgroundImageLayer: React.FC<{
   );
 };
 
-const SceneRenderer: React.FC<{ cut: Cut }> = ({ cut }) => {
+const SceneRenderer: React.FC<{ cut: Cut; theme: ThemeConfig }> = ({ cut, theme }) => {
   // Wrap component with background image if specified
   const maybeWrapWithBgImage = (element: React.ReactElement) => {
     if (cut.backgroundImage) {
@@ -445,26 +490,29 @@ const SceneRenderer: React.FC<{ cut: Cut }> = ({ cut }) => {
 
   // Resolve the scene element based on cut type, then wrap with backgroundImage if set
   // Use transparent bg so the animated gradient background shows through
-  const rawBg = cut.backgroundImage ? "transparent" : cut.backgroundColor;
-  const bgColor = (rawBg === "#0F172A" || rawBg === "#0f172a") ? "transparent" : rawBg;
+  // When no explicit backgroundColor on the cut, inherit from theme
+  const rawBg = cut.backgroundImage ? "transparent" : (cut.backgroundColor || theme.surfaceColor);
+  const bgColor = (rawBg === theme.backgroundColor || rawBg === "#0F172A" || rawBg === "#0f172a") ? "transparent" : rawBg;
+  const textColor = cut.color || theme.textColor;
+  const accent = cut.accentColor || theme.accentColor;
 
-  // Explicit component types
+  // Explicit component types — use theme-derived defaults for colors
   if (cut.type === "text_card" && cut.text) {
     return maybeWrapWithBgImage(
-      <TextCard text={cut.text} fontSize={cut.fontSize} color={cut.color} backgroundColor={bgColor} />
+      <TextCard text={cut.text} fontSize={cut.fontSize} color={textColor} backgroundColor={bgColor} />
     );
   }
   if (cut.type === "stat_card" && cut.stat) {
     return maybeWrapWithBgImage(
-      <StatCard stat={cut.stat} subtitle={cut.subtitle} accentColor={cut.accentColor} backgroundColor={bgColor} />
+      <StatCard stat={cut.stat} subtitle={cut.subtitle} accentColor={accent} backgroundColor={bgColor} />
     );
   }
   if (cut.type === "callout" && cut.text) {
     return maybeWrapWithBgImage(
       <CalloutBox
         text={cut.text} type={cut.callout_type} title={cut.title}
-        borderColor={cut.accentColor} backgroundColor={cut.backgroundColor}
-        textColor={cut.color} containerBackgroundColor={bgColor}
+        borderColor={accent} backgroundColor={cut.backgroundColor || theme.surfaceColor}
+        textColor={textColor} containerBackgroundColor={bgColor}
       />
     );
   }
@@ -473,7 +521,7 @@ const SceneRenderer: React.FC<{ cut: Cut }> = ({ cut }) => {
       <ComparisonCard
         leftLabel={cut.leftLabel} rightLabel={cut.rightLabel}
         leftValue={cut.leftValue} rightValue={cut.rightValue}
-        title={cut.title} backgroundColor={bgColor} textColor={cut.color}
+        title={cut.title} backgroundColor={bgColor} textColor={textColor}
       />
     );
   }
@@ -483,11 +531,11 @@ const SceneRenderer: React.FC<{ cut: Cut }> = ({ cut }) => {
     );
   }
 
-  // --- Chart types ---
+  // --- Chart types — use theme.chartColors as default palette ---
   if (cut.type === "bar_chart" && cut.chartData) {
     return maybeWrapWithBgImage(
       <BarChart
-        data={cut.chartData} title={cut.title} colors={cut.chartColors}
+        data={cut.chartData} title={cut.title} colors={cut.chartColors || theme.chartColors}
         animationStyle={(cut.chartAnimation as any) || "grow-up"}
         showGrid={cut.showGrid} showValues={cut.showValues} backgroundColor={bgColor}
       />
@@ -496,7 +544,7 @@ const SceneRenderer: React.FC<{ cut: Cut }> = ({ cut }) => {
   if (cut.type === "line_chart" && cut.chartSeries) {
     return maybeWrapWithBgImage(
       <LineChart
-        series={cut.chartSeries} title={cut.title} colors={cut.chartColors}
+        series={cut.chartSeries} title={cut.title} colors={cut.chartColors || theme.chartColors}
         animationStyle={(cut.chartAnimation as any) || "draw"}
         showGrid={cut.showGrid} showMarkers={cut.showMarkers} showLegend={cut.showLegend}
         xLabel={cut.xLabel} yLabel={cut.yLabel} backgroundColor={bgColor}
@@ -506,7 +554,7 @@ const SceneRenderer: React.FC<{ cut: Cut }> = ({ cut }) => {
   if (cut.type === "pie_chart" && cut.chartData) {
     return maybeWrapWithBgImage(
       <PieChart
-        data={cut.chartData} title={cut.title} colors={cut.chartColors}
+        data={cut.chartData} title={cut.title} colors={cut.chartColors || theme.chartColors}
         animationStyle={(cut.chartAnimation as any) || "expand"}
         donut={cut.donut} centerLabel={cut.centerLabel} centerValue={cut.centerValue}
         showLegend={cut.showLegend} backgroundColor={bgColor}
@@ -517,7 +565,7 @@ const SceneRenderer: React.FC<{ cut: Cut }> = ({ cut }) => {
     return maybeWrapWithBgImage(
       <KPIGrid
         metrics={cut.chartData} title={cut.title} columns={cut.columns}
-        colors={cut.chartColors} animationStyle={(cut.chartAnimation as any) || "count-up"}
+        colors={cut.chartColors || theme.chartColors} animationStyle={(cut.chartAnimation as any) || "count-up"}
         backgroundColor={bgColor}
       />
     );
@@ -526,7 +574,7 @@ const SceneRenderer: React.FC<{ cut: Cut }> = ({ cut }) => {
     return maybeWrapWithBgImage(
       <AbsoluteFill
         style={{
-          background: bgColor || "#FFFFFF",
+          background: bgColor || theme.surfaceColor,
           display: "flex", alignItems: "center", justifyContent: "center",
           padding: "80px 120px",
         }}
@@ -534,16 +582,16 @@ const SceneRenderer: React.FC<{ cut: Cut }> = ({ cut }) => {
         {cut.title && (
           <div style={{
             position: "absolute", top: 120, fontSize: 48, fontWeight: 700,
-            color: "#1F2937", textAlign: "center", width: "100%",
+            color: textColor, textAlign: "center", width: "100%",
           }}>
             {cut.title}
           </div>
         )}
         <ProgressBar
           progress={cut.progress} label={cut.progressLabel}
-          color={cut.progressColor || cut.accentColor}
+          color={cut.progressColor || accent}
           animationStyle={(cut.progressAnimation as any) || "fill"}
-          segments={cut.progressSegments} backgroundColor={cut.backgroundColor}
+          segments={cut.progressSegments} backgroundColor={cut.backgroundColor || theme.surfaceColor}
         />
       </AbsoluteFill>
     );
@@ -585,7 +633,7 @@ const SceneRenderer: React.FC<{ cut: Cut }> = ({ cut }) => {
   }
 
   // No source, no type — render as text card with cut id as fallback
-  return <TextCard text={cut.text || cut.id} />;
+  return <TextCard text={cut.text || cut.id} color={textColor} backgroundColor={bgColor} />;
 };
 
 // ---------------------------------------------------------------------------
@@ -623,18 +671,17 @@ const OverlayRenderer: React.FC<{ overlay: Overlay }> = ({ overlay }) => {
 // Main composition
 // ---------------------------------------------------------------------------
 
-export const Explainer: React.FC<ExplainerProps> = ({
-  cuts,
-  overlays,
-  captions,
-  audio,
-}) => {
+export const Explainer: React.FC<ExplainerProps> = (props) => {
+  const { cuts, overlays, captions, audio } = props;
   const { fps, durationInFrames } = useVideoConfig();
 
+  // Resolve theme from props — playbook name, theme name, or custom themeConfig
+  const theme = resolveTheme(props as Record<string, unknown>);
+
   return (
-    <AbsoluteFill style={{ background: "#060918", fontFamily }}>
-      {/* Layer 0: Animated gradient background */}
-      <AnimatedBackground style="fintech" />
+    <AbsoluteFill style={{ background: theme.backgroundColor, fontFamily: theme.headingFont || fontFamily }}>
+      {/* Layer 0: Animated gradient background — driven by theme */}
+      <AnimatedBackground theme={theme} />
 
       {/* Layer 1: Visual scenes */}
       {cuts.map((cut) => {
@@ -643,7 +690,7 @@ export const Explainer: React.FC<ExplainerProps> = ({
 
         return (
           <Sequence key={cut.id} from={from} durationInFrames={duration}>
-            <SceneRenderer cut={cut} />
+            <SceneRenderer cut={cut} theme={theme} />
           </Sequence>
         );
       })}
@@ -668,8 +715,8 @@ export const Explainer: React.FC<ExplainerProps> = ({
           words={captions}
           wordsPerPage={6}
           fontSize={42}
-          highlightColor="#22D3EE"
-          backgroundColor="rgba(15, 23, 42, 0.7)"
+          highlightColor={theme.captionHighlightColor}
+          backgroundColor={theme.captionBackgroundColor}
         />
       )}
 

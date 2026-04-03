@@ -58,6 +58,21 @@ This directly affects what you can promise in the production plan. **Do not prop
 
 **Setup offers:** If critical tools are UNAVAILABLE but fixable with a simple configuration, read each tool's `install_instructions` from the registry and offer the user setup help before designing around the limitation. See AGENT_GUIDE.md "Provider Menu" protocol for the approach. Group related tools that share the same env var dependency.
 
+### Step 2c: Mood Board (Before Concepts)
+
+Before developing full concepts, present a quick mood board to catch direction mismatches early:
+
+- **3-5 reference images** (from web search, stock, or quick generations)
+- **Color palette direction** (2-3 options derived from playbook candidates)
+- **Tone references** ("Think: Kurzgesagt meets Vice" or "Think: Apple product video meets TED-Ed")
+- **1-2 music mood references** (genre + energy level, not specific tracks)
+
+Ask: **"Does this FEEL like what you're imagining? Any of these off-track?"**
+
+This is cheaper than generating 3 full concepts and catches direction mismatches before they become expensive. If the user says "too corporate" or "more playful," you've saved an entire concept round.
+
+If the user confirms the direction, proceed. If they redirect, adjust your concept design to match.
+
 ### Step 3: Design Concept Options
 
 Build **at least 3 genuinely different concepts.** Start from the `angles_discovered` in the research brief, but elevate them into full production concepts.
@@ -137,31 +152,88 @@ Set realistic duration based on platform and content depth:
 | YouTube | 60-180s | 150-450 words |
 | LinkedIn | 60-120s | 150-300 words |
 
-#### 3e: Concept Diversity Check
+#### 3e: When to Break the Patterns
 
-Before finalizing, verify diversity:
+The hook patterns and narrative structures above are starting points, not templates. Here are signs you should invent something new:
 
+**Signs your concepts are cosmetically diverse but conceptually identical:**
+- All three hooks create the same type of curiosity gap
+- Swapping the hooks between concepts would barely change anything
+- All three would produce roughly the same script if you wrote them blind
+- The visual approaches are "dark vs light vs colorful" but the content structure is identical
+
+**Anti-formula rule:** Write the hook in your own words first. Then check if a pattern helps sharpen it. If you start FROM the pattern, you'll produce pattern-shaped content instead of research-shaped content.
+
+**When to deviate from the 6 hook templates:**
+- The research reveals a unique framing that doesn't fit any template
+- The audience is sophisticated enough that template hooks feel condescending
+- The topic's best angle is emotional rather than informational
+- You found a specific quote, anecdote, or event that IS the hook
+
+#### 3f: Concept Diversity Gate
+
+This is two checks, not one:
+
+**Structural diversity (necessary but not sufficient):**
 - [ ] No two concepts use the same narrative structure
 - [ ] No two concepts use the same hook pattern
-- [ ] At least one concept targets a different audience segment
-- [ ] At least one concept leverages the most surprising data point
-- [ ] At least one concept addresses the biggest content gap found
 - [ ] Each concept's `grounded_in` references different research findings
 
-### Step 4: Present Concepts and Get Selection
+**Conceptual diversity (the actual test):**
+- [ ] Each concept offers a genuinely different INSIGHT, not just a different title for the same insight
+- [ ] At least one concept takes a creative risk (unusual structure, unexpected angle, provocative framing)
+- [ ] If you removed the titles and hooks, the concepts would still be distinguishable by their content structure
+- [ ] The concepts are NOT interchangeable — each serves a different audience need or curiosity
 
-Present all concepts clearly to the user. For each concept, show:
+If your concepts fail the conceptual diversity test, go back to the research brief. The problem is usually that you're working from one angle and varying the surface, instead of working from different angles entirely.
 
+#### 3g: Playbook Violation Budget
+
+Up to 20% of scenes in the final video may intentionally deviate from the playbook for creative impact. When presenting concepts, note which moments might benefit from visual surprise (a color shift, a different typography treatment, an unexpected transition). These deviations must be logged as `playbook_override` decisions in the decision log.
+
+#### 3h: Voice Selection
+
+Surface the voice/TTS decision at proposal time:
+- What voice provider and voice ID will be used
+- Why this voice fits the concept's tone
+- Cost implications
+- Whether voice variation is appropriate for hero moments
+
+### Step 4: Progressive Reveal and Concept Selection
+
+Don't dump the full proposal at once. Build understanding step by step:
+
+**4a. Research summary** (2-3 sentences): "Here's what I found..."
+→ User reacts, course-corrects if needed.
+
+**4b. Mood board** (from Step 2c — already presented)
+→ User confirms feel.
+
+**4c. Concept options** (3+ directions):
+
+For each concept, show:
 1. **Title** and **hook** — the creative pitch
 2. **Why this works** — the research backing, in one sentence
 3. **What it'll look like** — visual approach in plain language
 4. **Duration** — how long the video will be
 
+**4d. Invite Mixing:**
+
+After presenting concepts, always say something like:
+> "You can also mix elements — for example, Concept A's hook with Concept C's visual approach. What speaks to you?"
+
+If the user mixes, create a new hybrid concept entry in the proposal_packet with clear attribution: "Hook from Concept A, visual approach from Concept C, narrative structure from Concept B."
+
 Let the user:
 - Select one as-is
-- Combine elements from multiple concepts
+- Combine elements from multiple concepts (hybrid)
 - Request modifications
 - Describe a completely different direction (in which case, use the research to strengthen it)
+
+**4e. Production plan for selected concept** (tools, cost, timeline):
+→ User approves budget and approach.
+
+Each step is a chance for the user to course-correct before the next step builds on it. This prevents the "I approved a proposal and then the video wasn't what I expected" failure mode.
 
 Record the selection in `selected_concept` with rationale and any modifications.
 
@@ -378,3 +450,22 @@ TOTAL: $0.64 of $2.00 budget
 - Premium (Remotion): Best available TTS + 4 AI images + 4 Remotion animated scenes = $0.48
 - Standard: Mid-tier TTS + images = $0.40
 - Free: Local TTS + Remotion component scenes only = $0.00 (no images, pure motion graphics)
+
+
+## When You Do Not Know How
+
+If you encounter a generation technique, provider behavior, or prompting pattern you are unsure about:
+
+1. **Search the web** for current best practices — models and APIs change frequently, and the agent's training data may be stale
+2. **Check `.agents/skills/`** for existing Layer 3 knowledge (provider-specific prompting guides, API patterns)
+3. **If neither helps**, write a project-scoped skill at `projects/<project-name>/skills/<name>.md` documenting what you learned
+4. **Reference source URLs** in the skill so the knowledge is traceable
+5. **Log it** in the decision log: `category: "capability_extension"`, `subject: "learned technique: <name>"`
+
+This is especially important for:
+- **Video generation prompting** — models respond to specific vocabularies that change with each version
+- **Image model parameters** — optimal settings for FLUX, DALL-E, Imagen differ and evolve
+- **Audio provider quirks** — voice cloning, music generation, and TTS each have model-specific best practices
+- **Remotion component patterns** — new composition techniques emerge as the framework evolves
+
+Do not rely on stale knowledge. When in doubt, search first.

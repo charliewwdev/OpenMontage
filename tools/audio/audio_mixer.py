@@ -646,7 +646,7 @@ class AudioMixer(BaseTool):
             "-of", "csv=p=0",
             video_path,
         ]
-        total_dur = float(self.run_command(dur_cmd, capture=True).strip().split("\n")[0])
+        total_dur = float(self.run_command(dur_cmd).stdout.strip().split("\n")[0])
 
         # Build volume expression for each segment with smooth fades
         parts = []

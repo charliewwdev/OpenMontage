@@ -96,47 +96,150 @@ a11y = validate_accessibility(playbook)
 print(f"  Playbook a11y: pass={a11y['pass']}, errors={a11y['error_count']}, warnings={a11y['warning_count']}")
 
 # ===================================================================
-# Stage 1: idea -> brief
+# Stage 0: research -> research_brief (minimal, to satisfy pipeline order)
 # ===================================================================
-print("\n--- Stage 1: idea ---")
-brief = {
+print("\n--- Stage 0: research ---")
+research_brief = {
     "version": "1.0",
-    "title": "AI Video Production in 60 Seconds",
-    "hook": "What if you could create a professional video in 60 seconds with just a text prompt?",
-    "key_points": [
-        "Traditional video production takes days or weeks",
-        "AI can automate scripting, visuals, narration, and editing",
-        "OpenMontage orchestrates the full pipeline",
+    "topic": "AI Video Production",
+    "research_date": "2026-04-02",
+    "landscape": {
+        "existing_content": [
+            {"title": "AI Video Tools Explained", "source": "youtube", "angle": "tutorial", "what_it_covers": "Tool comparison", "what_it_misses": "End-to-end pipeline"},
+            {"title": "Making Videos with AI", "source": "blog", "angle": "overview", "what_it_covers": "Market landscape", "what_it_misses": "Hands-on workflow"},
+            {"title": "AI Content Creation Guide", "source": "youtube", "angle": "how-to", "what_it_covers": "Individual tools", "what_it_misses": "Orchestration concept"},
+        ],
+        "saturated_angles": ["basic tool demos", "AI will replace editors"],
+        "underserved_gaps": ["End-to-end orchestration pipeline", "Cost vs quality tradeoffs"],
+    },
+    "data_points": [
+        {"claim": "AI video market growing 25% YoY", "source_url": "https://example.com/report", "credibility": "primary_source"},
+        {"claim": "70% of creators want automated editing", "source_url": "https://example.com/survey", "credibility": "primary_source"},
+        {"claim": "Average production time drops 80% with AI", "source_url": "https://example.com/study", "credibility": "secondary_source"},
     ],
-    "tone": "confident, energetic",
-    "style": "clean-professional",
-    "target_platform": "youtube",
-    "target_duration_seconds": 60,
-    "target_audience": "content creators and developers",
-    "cta": "Try OpenMontage today",
-    "angle_options": [
-        {"name": "democratization", "description": "AI makes video creation accessible to everyone"},
-        {"name": "workflow", "description": "AI automates the tedious parts of video production"},
-        {"name": "quality", "description": "AI-generated content is reaching professional quality"},
+    "audience_insights": {
+        "common_questions": [
+            "Can AI really make professional-looking videos?",
+            "How much does AI video production cost?",
+            "What tools do I need to get started?",
+        ],
+        "misconceptions": [
+            {"myth": "AI videos always look robotic", "reality": "Modern AI produces broadcast-quality output"},
+        ],
+        "knowledge_level": "Familiar with basic editing but not AI-specific tools",
+    },
+    "angles_discovered": [
+        {"name": "60-Second Studio", "hook": "Your entire production team in a single prompt", "type": "trending", "why_now": "AI orchestration tools just reached production quality"},
+        {"name": "Quality Democratization", "hook": "Pro-grade video without pro skills", "type": "evergreen", "why_now": "Creator economy growing, skill gap remains"},
+        {"name": "The Hidden Cost Myth", "hook": "AI video costs pennies, not thousands", "type": "contrarian", "why_now": "Most creators still think AI video is expensive"},
     ],
-    "selected_angle": "workflow",
+    "sources": [
+        {"url": "https://example.com/ai-video", "title": "AI Video Production Overview", "used_for": "landscape"},
+        {"url": "https://example.com/ai-tools", "title": "Top AI Video Tools 2026", "used_for": "data_points"},
+        {"url": "https://example.com/workflow", "title": "Automated Video Workflows", "used_for": "angles"},
+        {"url": "https://example.com/creators", "title": "Creator Economy Report", "used_for": "audience_insights"},
+        {"url": "https://example.com/market", "title": "AI Video Market Analysis", "used_for": "landscape"},
+    ],
 }
-
 try:
-    validate_artifact("brief", brief)
-    check("Brief validates against schema", True)
+    validate_artifact("research_brief", research_brief)
+    check("Research brief validates against schema", True)
 except Exception as e:
-    check("Brief validates against schema", False, str(e))
+    check("Research brief validates against schema", False, str(e))
 
 cp_path = write_checkpoint(
-    PIPELINE_DIR, PROJECT_ID, "idea", "completed",
-    artifacts={"brief": brief},
+    PIPELINE_DIR, PROJECT_ID, "research", "completed",
+    artifacts={"research_brief": research_brief},
     pipeline_type="animated-explainer",
     style_playbook="clean-professional",
 )
-check("Idea checkpoint written", cp_path.exists())
-# Next uncompleted stage in global STAGES order (research/proposal come before idea)
-check("Next stage after idea", get_next_stage(PIPELINE_DIR, PROJECT_ID) == "research")
+check("Research checkpoint written", cp_path.exists())
+
+# ===================================================================
+# Stage 1: proposal -> proposal_packet
+# ===================================================================
+print("\n--- Stage 1: proposal ---")
+proposal_packet = {
+    "version": "1.0",
+    "concept_options": [
+        {
+            "id": "c1",
+            "title": "AI Video Production in 60 Seconds",
+            "hook": "What if you could create a professional video in 60 seconds?",
+            "narrative_structure": "problem_solution",
+            "visual_approach": "Clean motion graphics with side-by-side comparisons",
+            "suggested_playbook": "clean-professional",
+            "target_audience": "content creators and developers",
+            "target_platform": "youtube",
+            "target_duration_seconds": 60,
+            "why_this_works": "Direct problem/solution framing with clear visual proof points",
+        },
+        {
+            "id": "c2",
+            "title": "The 60-Second Studio",
+            "hook": "Your entire production team, in a single prompt.",
+            "narrative_structure": "journey",
+            "visual_approach": "Animated workflow diagram that builds step by step",
+            "suggested_playbook": "flat-motion-graphics",
+            "target_audience": "content creators and developers",
+            "target_platform": "youtube",
+            "target_duration_seconds": 60,
+            "why_this_works": "Journey structure creates natural pacing for a process walkthrough",
+        },
+        {
+            "id": "c3",
+            "title": "From Prompt to Premiere",
+            "hook": "Traditional video production takes weeks. This takes seconds.",
+            "narrative_structure": "comparison",
+            "visual_approach": "Split-screen timeline comparison: old way vs AI way",
+            "suggested_playbook": "clean-professional",
+            "target_audience": "content creators and developers",
+            "target_platform": "youtube",
+            "target_duration_seconds": 60,
+            "why_this_works": "Comparison structure makes the value proposition immediately tangible",
+        },
+    ],
+    "selected_concept": {"concept_id": "c1", "rationale": "Direct problem/solution framing is most effective for this audience"},
+    "production_plan": {
+        "pipeline": "animated-explainer",
+        "playbook": "clean-professional",
+        "stages": [
+            {"stage": "script", "tools": [{"tool_name": "tts_selector", "role": "narration", "available": True}], "approach": "AI-written script with TTS narration"},
+            {"stage": "scene_plan", "tools": [], "approach": "5 scenes with motion graphics"},
+            {"stage": "assets", "tools": [{"tool_name": "image_selector", "role": "visuals", "available": True}], "approach": "AI-generated images"},
+            {"stage": "edit", "tools": [], "approach": "Automated edit decisions"},
+            {"stage": "compose", "tools": [{"tool_name": "video_compose", "role": "render", "available": True}], "approach": "Remotion render"},
+        ],
+    },
+    "cost_estimate": {
+        "total_estimated_usd": 0.50,
+        "line_items": [
+            {"tool": "tts_selector", "operation": "narration", "estimated_usd": 0.10},
+            {"tool": "image_selector", "operation": "5 images", "estimated_usd": 0.30},
+            {"tool": "music_gen", "operation": "background track", "estimated_usd": 0.10},
+        ],
+        "budget_verdict": "within_budget",
+    },
+    "approval": {
+        "status": "approved",
+        "approved_budget_usd": 2.00,
+    },
+}
+
+try:
+    validate_artifact("proposal_packet", proposal_packet)
+    check("Proposal packet validates against schema", True)
+except Exception as e:
+    check("Proposal packet validates against schema", False, str(e))
+
+cp_path = write_checkpoint(
+    PIPELINE_DIR, PROJECT_ID, "proposal", "completed",
+    artifacts={"proposal_packet": proposal_packet},
+    pipeline_type="animated-explainer",
+    style_playbook="clean-professional",
+)
+check("Proposal checkpoint written", cp_path.exists())
+check("Next stage after proposal", get_next_stage(PIPELINE_DIR, PROJECT_ID, "animated-explainer") == "script")
 
 # ===================================================================
 # Stage 2: script
@@ -183,7 +286,7 @@ write_checkpoint(
     artifacts={"script": script},
     pipeline_type="animated-explainer",
 )
-check("Completed stages", get_completed_stages(PIPELINE_DIR, PROJECT_ID) == ["idea", "script"])  # idea and script appear in STAGES order
+check("Completed stages", get_completed_stages(PIPELINE_DIR, PROJECT_ID) == ["research", "proposal", "script"])  # research, proposal and script in pipeline order
 
 # ===================================================================
 # Stage 3: scene_plan
@@ -520,13 +623,14 @@ write_checkpoint(
 # ===================================================================
 print("\n--- Final validation ---")
 
+E2E_STAGES = ["research", "proposal", "script", "scene_plan", "assets", "edit", "compose", "publish"]
 completed = get_completed_stages(PIPELINE_DIR, PROJECT_ID)
-check("All 7 stages completed", len(completed) == 7, f"completed={completed}")
-check("Next stage is None (done)", get_next_stage(PIPELINE_DIR, PROJECT_ID) is None)
-check("Stages in correct order", completed == STAGES, f"{completed}")
+check("All 8 stages completed", len(completed) == 8, f"completed={completed}")
+check("Next stage is None (done)", get_next_stage(PIPELINE_DIR, PROJECT_ID, "animated-explainer") is None)
+check("Stages in correct order", completed == E2E_STAGES, f"{completed}")
 
 # Verify all checkpoints are readable
-for stage in STAGES:
+for stage in E2E_STAGES:
     cp = read_checkpoint(PIPELINE_DIR, PROJECT_ID, stage)
     check(f"Checkpoint {stage} readable", cp is not None)
     if cp:

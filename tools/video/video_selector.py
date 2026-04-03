@@ -49,7 +49,7 @@ class VideoSelector(BaseTool):
                 "default": "auto",
             },
             "allowed_providers": {"type": "array", "items": {"type": "string"}},
-            "operation": {"type": "string", "enum": ["text_to_video", "image_to_video"], "default": "text_to_video"},
+            "operation": {"type": "string", "enum": ["text_to_video", "image_to_video", "rank"], "default": "text_to_video"},
             "output_path": {"type": "string"},
         },
     }
@@ -81,15 +81,38 @@ class VideoSelector(BaseTool):
         return ToolStatus.UNAVAILABLE
 
     def estimate_cost(self, inputs: dict[str, object]) -> float:
-        tool = self._select_tool(inputs)
+        candidates = self._providers()
+        if not candidates:
+            return 0.0
+        tool, _ = self._select_best_tool(inputs, candidates, inputs.get("task_context", {}))
         return tool.estimate_cost(inputs) if tool else 0.0
 
     def estimate_runtime(self, inputs: dict[str, object]) -> float:
-        tool = self._select_tool(inputs)
+        candidates = self._providers()
+        if not candidates:
+            return 0.0
+        tool, _ = self._select_best_tool(inputs, candidates, inputs.get("task_context", {}))
         return tool.estimate_runtime(inputs) if tool else 0.0
 
     def execute(self, inputs: dict[str, object]) -> ToolResult:
-        tool = self._select_tool(inputs)
+        from lib.scoring import rank_providers
+
+        task_context = inputs.get("task_context", {})
+        candidates = self._providers()
+
+        # Rank mode — return scored provider rankings without generating
+        if inputs.get("operation") == "rank":
+            rankings = rank_providers(candidates, task_context)
+            return ToolResult(
+                success=True,
+                data={
+                    "rankings": [r.to_dict() for r in rankings],
+                    "explanation": "\n".join(r.explain() for r in rankings[:5]),
+                },
+            )
+
+        # Normal generation — use scored selection
+        tool, score = self._select_best_tool(inputs, candidates, task_context)
         if tool is None:
             return ToolResult(success=False, error="No video generation provider available.")
 
@@ -103,12 +126,30 @@ class VideoSelector(BaseTool):
         result = tool.execute(adapted)
         if result.success:
             result.data.setdefault("selected_tool", tool.name)
+            result.data["selection_reason"] = score.explain() if score else f"Selected {tool.provider} ({tool.name})"
+            if score:
+                result.data["provider_score"] = score.to_dict()
+            result.data["alternatives_considered"] = [
+                t.name for t in candidates
+                if t.name != tool.name and t.get_status().value == "available"
+            ]
         return result
 
-    def _select_tool(self, inputs: dict[str, object]) -> BaseTool | None:
+    def _select_best_tool(
+        self,
+        inputs: dict[str, object],
+        candidates: list[BaseTool],
+        task_context: dict[str, object],
+    ) -> tuple[BaseTool | None, object]:
+        """Select the best provider using scored ranking.
+
+        Respects preferred_provider and environment hints as tie-breakers,
+        but the scoring engine drives the primary selection.
+        """
+        from lib.scoring import rank_providers, ProviderScore
+
         preferred = inputs.get("preferred_provider", "auto")
         allowed = set(inputs.get("allowed_providers") or [])
-        candidates = self._providers()
         if allowed:
             candidates = [tool for tool in candidates if tool.provider in allowed]
 
@@ -124,13 +165,24 @@ class VideoSelector(BaseTool):
         if preferred == "auto" and env_hint in env_map:
             preferred = env_map[env_hint]
 
-        if preferred != "auto":
-            ordered = [tool for tool in candidates if tool.provider == preferred]
-            ordered.extend([tool for tool in candidates if tool.provider != preferred])
-        else:
-            ordered = candidates
+        rankings = rank_providers(candidates, task_context)
 
-        for tool in ordered:
-            if tool.get_status() == ToolStatus.AVAILABLE:
-                return tool
-        return None
+        # Build tool lookup: provider → tool (first available per provider)
+        tool_by_provider: dict[str, BaseTool] = {}
+        for tool in candidates:
+            if tool.provider not in tool_by_provider and tool.get_status() == ToolStatus.AVAILABLE:
+                tool_by_provider[tool.provider] = tool
+
+        # If a preferred provider is explicitly requested and available,
+        # boost it to the top unless its score is drastically worse.
+        if preferred != "auto":
+            for score in rankings:
+                if score.provider == preferred and score.provider in tool_by_provider:
+                    return tool_by_provider[score.provider], score
+
+        # Return the highest-scored available provider
+        for score in rankings:
+            if score.provider in tool_by_provider:
+                return tool_by_provider[score.provider], score
+
+        return None, None

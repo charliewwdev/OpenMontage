@@ -61,6 +61,12 @@ class ImageSelector(BaseTool):
                 "type": "array",
                 "items": {"type": "string"},
             },
+            "operation": {
+                "type": "string",
+                "enum": ["generate", "rank"],
+                "default": "generate",
+                "description": "Operation mode. 'rank' returns scored provider rankings without generating.",
+            },
             "output_path": {"type": "string"},
         },
     }
@@ -92,11 +98,33 @@ class ImageSelector(BaseTool):
         return ToolStatus.UNAVAILABLE
 
     def estimate_cost(self, inputs: dict[str, Any]) -> float:
-        tool = self._select_tool(inputs)
+        candidates = self._providers()
+        if not candidates:
+            return 0.0
+        tool, _ = self._select_best_tool(inputs, candidates, inputs.get("task_context", {}))
         return tool.estimate_cost(inputs) if tool else 0.0
 
     def execute(self, inputs: dict[str, Any]) -> ToolResult:
-        tool = self._select_tool(inputs)
+        import logging
+        from lib.scoring import rank_providers
+
+        logger = logging.getLogger(__name__)
+        task_context = inputs.get("task_context", {})
+        candidates = self._providers()
+
+        # Rank mode — return scored provider rankings without generating
+        if inputs.get("operation") == "rank":
+            rankings = rank_providers(candidates, task_context)
+            return ToolResult(
+                success=True,
+                data={
+                    "rankings": [r.to_dict() for r in rankings],
+                    "explanation": "\n".join(r.explain() for r in rankings[:5]),
+                },
+            )
+
+        # Normal generation — use scored selection
+        tool, score = self._select_best_tool(inputs, candidates, task_context)
         if tool is None:
             return ToolResult(success=False, error="No image provider available.")
 
@@ -111,32 +139,59 @@ class ImageSelector(BaseTool):
         adapted.pop("preferred_provider", None)
         adapted.pop("allowed_providers", None)
 
-        # Pass through generation params only to tools that accept them
+        # Pass through generation params only to tools that accept them.
         if hasattr(tool, 'input_schema'):
             props = tool.input_schema.get("properties", {})
+            stripped = []
             for passthrough_key in ("negative_prompt", "width", "height", "seed"):
                 if passthrough_key in adapted and passthrough_key not in props:
-                    adapted.pop(passthrough_key)
+                    stripped.append(f"{passthrough_key}={adapted.pop(passthrough_key)}")
+            if stripped:
+                logger.warning(
+                    "image_selector: stripped unsupported params for %s: %s",
+                    tool.name, ", ".join(stripped),
+                )
 
         result = tool.execute(adapted)
         if result.success:
             result.data.setdefault("selected_tool", tool.name)
+            result.data["selection_reason"] = score.explain() if score else f"Selected {tool.provider} ({tool.name})"
+            if score:
+                result.data["provider_score"] = score.to_dict()
+            result.data["alternatives_considered"] = [
+                t.name for t in candidates
+                if t.name != tool.name and t.get_status().value == "available"
+            ]
         return result
 
-    def _select_tool(self, inputs: dict[str, Any]) -> BaseTool | None:
+    def _select_best_tool(
+        self,
+        inputs: dict[str, Any],
+        candidates: list[BaseTool],
+        task_context: dict[str, Any],
+    ) -> tuple[BaseTool | None, object]:
+        """Select the best provider using scored ranking."""
+        from lib.scoring import rank_providers
+
         preferred = inputs.get("preferred_provider", "auto")
         allowed = set(inputs.get("allowed_providers") or [])
-        candidates = self._providers()
         if allowed:
             candidates = [tool for tool in candidates if tool.provider in allowed]
 
-        if preferred != "auto":
-            ordered = [tool for tool in candidates if tool.provider == preferred]
-            ordered.extend([tool for tool in candidates if tool.provider != preferred])
-        else:
-            ordered = candidates
+        rankings = rank_providers(candidates, task_context)
 
-        for tool in ordered:
-            if tool.get_status() == ToolStatus.AVAILABLE:
-                return tool
-        return None
+        tool_by_provider: dict[str, BaseTool] = {}
+        for tool in candidates:
+            if tool.provider not in tool_by_provider and tool.get_status() == ToolStatus.AVAILABLE:
+                tool_by_provider[tool.provider] = tool
+
+        if preferred != "auto":
+            for score_item in rankings:
+                if score_item.provider == preferred and score_item.provider in tool_by_provider:
+                    return tool_by_provider[score_item.provider], score_item
+
+        for score_item in rankings:
+            if score_item.provider in tool_by_provider:
+                return tool_by_provider[score_item.provider], score_item
+
+        return None, None

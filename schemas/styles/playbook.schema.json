@@ -114,9 +114,21 @@
         "music_mood": { "type": "string" },
         "music_volume": { "type": "number", "minimum": 0, "maximum": 1 },
         "sfx_style": { "type": "string" },
-        "ducking_threshold_db": { "type": "number" }
-      },
-      "additionalProperties": false
+        "ducking_threshold_db": { "type": "number" },
+        "voice_variation_allowed": {
+          "type": "boolean",
+          "default": false,
+          "description": "Whether voice characteristics can shift between sections for emphasis"
+        },
+        "hero_moment_voice_shift": {
+          "type": "string",
+          "description": "How the voice should change for hero moments, e.g., 'slower, more deliberate, drop pitch'"
+        },
+        "transition_voice_shift": {
+          "type": "string",
+          "description": "How the voice should change at transitions, e.g., 'brief pause, then resume at slightly higher energy'"
+        }
+      }
     },
     "asset_generation": {
       "type": "object",
@@ -172,11 +184,36 @@
           "description": "Enable color-blind safety checking for palettes.",
           "type": "boolean"
         }
-      },
-      "additionalProperties": false
+      }
+    },
+    "overrides": {
+      "description": "Per-scene palette or rule exceptions. Up to 20% of scenes may intentionally deviate from the playbook for creative impact.",
+      "type": "object",
+      "properties": {
+        "max_deviation_ratio": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 0.5,
+          "default": 0.2,
+          "description": "Maximum fraction of scenes that may deviate from playbook defaults"
+        },
+        "scene_overrides": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["scene_id", "reason"],
+            "properties": {
+              "scene_id": { "type": "string" },
+              "reason": { "type": "string", "description": "Why this scene deviates from the playbook" },
+              "color_override": { "type": "object" },
+              "typography_override": { "type": "object" },
+              "motion_override": { "type": "object" }
+            }
+          }
+        }
+      }
     }
   },
-  "additionalProperties": false,
   "$defs": {
     "font_spec": {
       "type": "object",

@@ -55,16 +55,70 @@ FLUX.2 supports up to 4 references (klein) or 8 references (pro/max/flex). Refer
 
 Use the same `seed` parameter across generations with similar prompts. Produces similar compositions but is fragile to prompt changes — use as supplement, not primary strategy.
 
-## Prompt Template
+## Prompt Construction — 3-Part Contextual Approach
+
+**Do NOT copy the playbook's `image_prompt_prefix` verbatim into every prompt.** That's what makes all scenes look the same. Instead, build each prompt from 3 contextual layers:
+
+### Part 1: Scene-Specific Style Direction (from shot_language + texture_keywords)
+
+Use the scene's `shot_language` fields to set camera and lighting:
+```
+[SHOT SIZE from shot_language.shot_size, e.g., "medium close-up"].
+[LIGHTING from shot_language.lighting_key, e.g., "golden hour warm light"].
+[DEPTH from shot_language.depth_of_field, e.g., "shallow depth of field with bokeh"].
+[TEXTURE from scene.texture_keywords, e.g., "film grain, warm tones"].
+```
+
+If the scene has no shot_language, fall back to the template below.
+
+### Part 2: Playbook Consistency Anchor (adapted, not verbatim)
+
+Extract the ESSENCE of the playbook's visual language — don't copy the prefix. For example:
+- Playbook says "Clean, minimal illustration with soft shadows, muted color palette" → Adapt to: "muted color palette, soft shadows"
+- Playbook says "Bold flat motion graphics, vibrant gradients" → Adapt to: "vibrant flat style"
+
+The anchor keeps scenes visually coherent without making them identical.
+
+### Part 3: Scene Description
+
+The actual content of the scene. Be specific — replace generic words with concrete details.
+
+**BAD:** "A person using a computer in a modern office"
+**GOOD:** "Software developer in a dimly lit home office, blue monitor glow reflecting off glasses, desk cluttered with energy drinks and sticky notes"
+
+### Full Prompt Example (with shot_language)
 
 ```
-[STYLE PREFIX from playbook].
-[SCENE DESCRIPTION: subject, action, environment].
+Medium close-up, golden hour warm lighting, shallow depth of field.
+Muted earth tones, soft shadows.
+Beekeeper in white protective gear lifting a frame dripping with honey,
+late afternoon sun catching golden droplets, lavender field blurred
+in the background. Film grain, warm amber tones.
+16:9 aspect ratio.
+```
+
+### Fallback Template (when no shot_language is available)
+
+```
+[ADAPTED STYLE ANCHOR from playbook — 5-10 words, not the full prefix].
+[SCENE DESCRIPTION: specific subject, action, environment].
 [LIGHTING: golden hour / overcast / studio softbox / dramatic side-light].
 [COMPOSITION: wide shot / medium shot / close-up / overhead / isometric].
 [CAMERA: Shot on [camera] with [lens] at [aperture]] (for photorealistic only).
 16:9 aspect ratio.
 ```
+
+### Using lib/shot_prompt_builder.py
+
+For programmatic prompt construction, use the shot prompt builder which automates the 3-part approach:
+
+```python
+from lib.shot_prompt_builder import build_shot_prompt
+prompt = build_shot_prompt(scene, style_context=playbook_data)
+```
+
+This converts the structured shot_language fields into natural-language prompts
+optimized for image/video generation providers.
 
 ### Style-Specific Prompt Patterns
 

@@ -139,7 +139,7 @@ class ShowcaseCard(BaseTool):
             "-of", "csv=p=0",
             input_path,
         ]
-        probe_out = self.run_command(probe_cmd, capture=True).strip()
+        probe_out = self.run_command(probe_cmd).stdout.strip()
         src_w, src_h = [int(x.strip()) for x in probe_out.split(",")[:2]]
 
         # Calculate letterbox dimensions — fit source into output width,

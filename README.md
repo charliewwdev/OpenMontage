@@ -80,7 +80,7 @@ Open the project in your AI coding assistant and tell it what you want:
 "Make a 60-second animated explainer about how neural networks learn"
 ```
 
-That's it. The agent researches your topic with live web search, generates AI images, writes and narrates the script with voice direction, finds royalty-free background music automatically, burns in word-level subtitles, validates everything before rendering — then reviews its own output by extracting frames and transcribing audio to catch issues before you even see them. Every creative decision gets your approval.
+That's it. The agent researches your topic with live web search, generates AI images, writes and narrates the script with voice direction, finds royalty-free background music automatically, burns in word-level subtitles, and renders the final video. Before you see anything, the system runs a multi-point self-review — ffprobe validation, frame sampling, audio level analysis, delivery promise verification, and subtitle checks. Every provider selection is scored across 7 dimensions with an auditable decision log. Every creative decision gets your approval.
 
 > **No `make`?** Run manually: `pip install -r requirements.txt && cd remotion-composer && npm install && cd .. && pip install piper-tts && cp .env.example .env`
 >
@@ -214,7 +214,8 @@ Edit your own talking-head footage. Generate a fully animated explainer from scr
 - **400+ agent skills** — production skills, pipeline directors, creative techniques, quality checklists, and deep technology knowledge packs that teach the agent how to use every tool like an expert
 - **Live web research built in** — before writing a single word of script, the agent runs 15-25+ web searches across YouTube, Reddit, news sites, and academic sources to ground your video in real, current data
 - **Both free/local AND cloud providers** — every capability supports open-source local alternatives alongside premium APIs. Use what you have.
-- **No vendor lock-in** — swap providers freely. The selector pattern auto-routes to whatever's available on your machine.
+- **No vendor lock-in** — swap providers freely. The scored selector ranks every provider across 7 dimensions (task fit, output quality, control, reliability, cost efficiency, latency, continuity) and picks the best match automatically.
+- **Production-grade quality gates** — delivery promise enforcement blocks slideshow-looking renders, pre-compose validation catches broken plans before wasting GPU time, and mandatory post-render self-review (ffprobe + frame extraction + audio analysis) ensures the agent never presents garbage. Every provider choice, style decision, and fallback gets logged in an auditable decision trail.
 - **Budget governance built in** — cost estimation before execution, spend caps, per-action approval thresholds. No surprise bills.
 
 ---
@@ -227,28 +228,37 @@ OpenMontage uses an **agent-first architecture**. There is no code orchestrator.
 You: "Make an explainer video about how black holes form"
  |
  v
-Agent reads pipeline manifest (YAML) -- what stages to run, what tools to use
+Agent reads pipeline manifest (YAML) -- stages, tools, review criteria, success gates
  |
  v
 Agent reads stage director skill (Markdown) -- HOW to execute each stage
  |
  v
-Agent calls Python tools -- TTS, image gen, video gen, FFmpeg, etc.
+Agent calls Python tools -- scored provider selection ranks every tool across 7 dimensions
  |
  v
-Agent self-reviews using reviewer skill -- quality checks
+Agent self-reviews using reviewer skill -- schema validation, playbook compliance, quality checks
  |
  v
-Agent checkpoints state (JSON) -- resumable if interrupted
+Agent checkpoints state (JSON) -- resumable, with decision log and cost snapshot
  |
  v
-Agent presents for your approval -- you stay in control
+Agent presents for your approval -- you stay in control at every creative decision
  |
  v
-Final video output
+Pre-compose validation gate -- delivery promise, slideshow risk, renderer governance
+ |
+ v
+Render (Remotion or FFmpeg) -- composition engine matched to visual grammar
+ |
+ v
+Post-render self-review -- ffprobe, frame extraction, audio analysis, promise verification
+ |
+ v
+Final video output -- only if self-review passes
 ```
 
-**Python provides tools and persistence.** All creative decisions, orchestration logic, review criteria, and quality standards live in readable instruction files (YAML manifests + Markdown skills) that you can inspect and customize.
+**Python provides tools and persistence.** All creative decisions, orchestration logic, review criteria, and quality standards live in readable instruction files (YAML manifests + Markdown skills) that you can inspect and customize. Every decision is logged with alternatives considered, confidence scores, and the reasoning behind each choice.
 
 ---
 
@@ -432,9 +442,26 @@ Built-in render profiles for every major platform:
 
 ---
 
-## Budget Governance
+## Production Governance
 
-Every paid API call goes through the cost tracker:
+OpenMontage treats video production like real engineering — with quality gates, audit trails, and enforcement at every stage.
+
+### Quality Gates
+
+- **Pre-compose validation** — blocks render if the delivery promise is violated (e.g. "motion-led" video with 80% still images), slideshow risk score is critical, or renderer family is missing. Catches broken plans before wasting GPU time.
+- **Post-render self-review** — after every render, the runtime runs ffprobe validation, extracts frames at 4 positions to check for black frames and broken overlays, analyzes audio levels for silence and clipping, verifies the delivery promise was honored, and checks subtitle presence. If the review fails, the video is not presented.
+- **Slideshow risk scoring** — 6-dimension analysis (repetition, decorative visuals, weak motion, shot intent, typography overreliance, unsupported cinematic claims) prevents "animated PowerPoint" outputs.
+- **Source media inspection** — when users supply their own footage, the system probes every file (resolution, codec, audio channels, duration) and builds planning implications before a single creative decision is made. No hallucinating content from filenames.
+
+### Scored Provider Selection
+
+Every tool selection (video generation, image generation, TTS, music) runs through a 7-dimension scoring engine: task fit (30%), output quality (20%), control features (15%), reliability (15%), cost efficiency (10%), latency (5%), continuity (5%). The winning provider and its score are logged in the decision trail with all alternatives considered.
+
+### Decision Audit Trail
+
+Every major creative and technical choice — provider selection, style/playbook choice, music track, voice selection, renderer family, any fallback or downgrade — is logged with alternatives considered, confidence scores, and reasoning. The cumulative decision log persists across all stages so you can trace exactly why the output looks the way it does.
+
+### Budget Controls
 
 - **Estimate** before execution — see what it will cost
 - **Reserve** budget — lock funds before the call
@@ -514,6 +541,6 @@ make test
 
 ---
 
-**OpenMontage** — Production-grade video, orchestrated by your AI assistant.
+**OpenMontage** — Production-grade video with real quality enforcement, orchestrated by your AI assistant.
 
 If this project looks useful to you, a star would really mean a lot — it helps others discover it too.

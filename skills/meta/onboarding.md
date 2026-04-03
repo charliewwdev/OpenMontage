@@ -81,9 +81,9 @@ Based on the user's tier, present **3 ready-to-use prompts** they can copy right
 >
 > This will research the topic, write a script, find stock visuals, generate narration with Piper, and compose an animated video with transitions and captions — all free.
 
-> **Also try:** "Create a 60-second data-driven video about coffee consumption around the world"
+> **Also try:** "I have a screen recording of a dashboard workflow — make it a polished product demo with captions and a voiceover" *(Screen Demo pipeline)*
 
-> **Or:** "Make a short explainer about how the internet works, with narration and animated captions"
+> **Or:** "Turn this interview recording into 3 short clips for TikTok and YouTube Shorts" *(Clip Factory pipeline)*
 
 **Starter-tier prompts (image gen available):**
 
@@ -91,19 +91,19 @@ Based on the user's tier, present **3 ready-to-use prompts** they can copy right
 >
 > I'll use FLUX to generate custom images for each scene — much more visually striking than stock.
 
-> **Also try:** "Make a product launch teaser for a fictional smart water bottle called AquaPulse"
+> **Also try:** "Make a short documentary-style video about urban beekeeping — keep it grounded and textural, not flashy" *(Hybrid pipeline — source + generated support)*
 
-> **Or:** "Build a 90-second explainer about the psychology of color in marketing"
+> **Or:** "Create a classroom-ready video teaching photosynthesis to 8th graders — simple, clear, and engaging" *(Explainer pipeline — teacher mode)*
 
 **Full-tier prompts (video gen available):**
 
 > **Try this:** "Create a cinematic 30-second trailer for a sci-fi concept: humanity receives a warning from 1000 years in the future"
 >
-> I'll generate actual motion video clips, compose a soundtrack, and deliver a finished cinematic trailer.
+> I'll generate actual motion video clips, compose a soundtrack, and deliver a finished cinematic trailer. *(Cinematic pipeline)*
 
-> **Also try:** "Make a 60-second avatar spokesperson video announcing a company rebrand"
+> **Also try:** "Make a 60-second avatar spokesperson video announcing a company rebrand" *(Avatar Spokesperson pipeline)*
 
-> **Or:** "Create a 90-second animated explainer about quantum computing for middle school students, with a fun narrator voice and custom soundtrack"
+> **Or:** "I recorded a founder update on my webcam — make it feel polished, confident, and premium without looking fake" *(Talking Head pipeline)*
 
 **Rules for prompt suggestions:**
 - Present exactly 3 prompts.

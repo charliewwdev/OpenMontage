@@ -22,6 +22,9 @@ ARTIFACT_NAMES = [
     "publish_log",
     "review",
     "cost_log",
+    "decision_log",
+    "source_media_review",
+    "final_review",
 ]
 
 

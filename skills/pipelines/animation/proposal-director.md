@@ -164,7 +164,32 @@ Note: This approach is not yet proven in the OpenMontage pipeline.
 - **Always offer at least one free/local option** alongside paid approaches
 - **Never silently downgrade** — if the best approach needs a key the user doesn't have, say so explicitly
 
-### Step 4: Design Concept Options
+### Step 3d: Mood Board (Before Concepts)
+
+Before developing full concepts, present a quick mood board to catch direction mismatches early:
+
+- **3-5 reference images** (animation style examples from web search — show what each approach LOOKS like)
+- **Color palette direction** (2-3 options, e.g. clean data-viz vs vibrant motion graphics vs sketchy hand-drawn)
+- **Tone references** ("Think: 3Blue1Brown meets Kurzgesagt" or "Think: Pixar short meets infographic")
+- **1-2 animation style samples** (if Manim: mathematical elegance; if Remotion: smooth data transitions; if AI video: cinematic motion)
+
+Ask: **"Does this FEEL like what you're imagining? Any of these off-track?"**
+
+This catches style misalignment before concept design. If the user expected hand-drawn and you're heading toward data-viz, better to know now.
+
+### Step 4: Progressive Reveal and Concept Design
+
+Don't dump the full proposal at once. Build understanding step by step:
+
+1. **Research summary** (2-3 sentences): "Here's what I found..."
+   → User reacts, course-corrects if needed.
+2. **Mood board** (from Step 3d — already presented)
+   → User confirms animation style direction.
+3. **Concept options** (3+ approaches):
+   → Present below.
+4. **Invite mixing** (see Step 4c below).
+5. **Production plan for selected concept** (tools, cost, timeline):
+   → User approves budget and approach.
 
 Build **at least 3 genuinely different concepts.** Start from the `angles_discovered` in the research brief and the animation mode analysis.
 
@@ -232,6 +257,13 @@ Present all concepts clearly to the user. For each concept, show:
 3. **Why this works** — research backing, in one sentence
 4. **Duration** — how long
 5. **Reuse strategy** — "5 scenes built from 2 templates" vs "8 unique scenes"
+
+#### Step 5b: Invite Mixing
+
+After presenting concepts, always say something like:
+> "You can also mix elements — for example, Concept A's hook with Concept C's animation approach, or Concept B's narrative with Concept A's visual style. What speaks to you?"
+
+If the user mixes, create a new hybrid concept entry in the proposal_packet with clear attribution: "Hook from Concept A, animation approach from Concept C, narrative structure from Concept B."
 
 Let the user select, combine, modify, or redirect.
 
@@ -351,3 +383,22 @@ Validate the `proposal_packet` artifact against `schemas/artifacts/proposal_pack
 - **Ignoring mathematical accuracy**: If the research brief flagged technical accuracy constraints, the concept MUST respect them. A beautiful but wrong animation is a failure.
 - **Not distinguishing image_animation from clip_video**: These are fundamentally different. Image-based animation (Approach A) generates still images and uses Remotion for motion/crossfade. Clip-based video (Approach B) generates actual video clips with an AI video model. The user should understand this distinction clearly.
 - **Silent downgrades**: If the user picked image_animation but image generation fails, STOP and tell them. Never silently fall back to text cards or diagram stills.
+
+
+## When You Do Not Know How
+
+If you encounter a generation technique, provider behavior, or prompting pattern you are unsure about:
+
+1. **Search the web** for current best practices — models and APIs change frequently, and the agent's training data may be stale
+2. **Check `.agents/skills/`** for existing Layer 3 knowledge (provider-specific prompting guides, API patterns)
+3. **If neither helps**, write a project-scoped skill at `projects/<project-name>/skills/<name>.md` documenting what you learned
+4. **Reference source URLs** in the skill so the knowledge is traceable
+5. **Log it** in the decision log: `category: "capability_extension"`, `subject: "learned technique: <name>"`
+
+This is especially important for:
+- **Video generation prompting** — models respond to specific vocabularies that change with each version
+- **Image model parameters** — optimal settings for FLUX, DALL-E, Imagen differ and evolve
+- **Audio provider quirks** — voice cloning, music generation, and TTS each have model-specific best practices
+- **Remotion component patterns** — new composition techniques emerge as the framework evolves
+
+Do not rely on stale knowledge. When in doubt, search first.

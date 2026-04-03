@@ -189,6 +189,19 @@
         "required": ["type", "at_seconds", "duration_seconds"]
       }
     },
+    "renderer_family": {
+      "type": "string",
+      "enum": ["explainer-data", "explainer-teacher", "cinematic-trailer", "product-reveal", "screen-demo", "presenter", "animation-first"],
+      "description": "Locked at proposal stage — determines which Remotion composition renders this video"
+    },
+    "slideshow_risk_score": {
+      "type": "object",
+      "description": "Slideshow risk assessment from lib/slideshow_risk.py",
+      "properties": {
+        "average": { "type": "number" },
+        "verdict": { "type": "string", "enum": ["strong", "acceptable", "revise", "fail"] }
+      }
+    },
     "metadata": { "type": "object" }
   },
   "additionalProperties": false

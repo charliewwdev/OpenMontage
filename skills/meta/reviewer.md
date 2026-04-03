@@ -107,10 +107,143 @@ Structure your review as:
 
 | Stage | What matters most |
 |-------|-----------------|
+| research | Source diversity, claim verifiability, visual reference quality |
+| proposal | Delivery promise clarity, renderer family selection, music/voice plan, decision log started |
 | idea | Hook uniqueness, research depth, angle diversity |
 | script | Timing accuracy, narrative arc, enhancement cue density |
-| scene_plan | Full coverage, visual variety, asset feasibility |
+| scene_plan | Full coverage, visual variety, asset feasibility, slideshow risk score |
 | assets | File existence, style consistency, budget adherence |
-| edit | Timeline coverage, audio sync, subtitle presence |
-| compose | Playability, duration accuracy, audio quality |
+| edit | Timeline coverage, audio sync, subtitle presence, delivery promise compliance |
+| compose | Playability, duration accuracy, audio quality, pre-compose validation pass |
 | publish | SEO quality, metadata completeness, export packaging |
+
+## Slideshow Risk Review
+
+Run at **scene_plan** and **edit** stages. Use `lib/slideshow_risk.py` to compute the score.
+
+### At scene_plan stage:
+1. Compute `score_slideshow_risk(scenes, renderer_family=renderer_family)`
+2. If verdict is **"fail"** (average ≥ 4.0): **CRITICAL** — scene plan must be revised before proceeding
+3. If verdict is **"revise"** (average ≥ 3.0): **SUGGESTION** — flag specific dimensions scoring ≥ 3.5
+4. If verdict is **"strong"** or **"acceptable"**: note in review summary, no finding needed
+
+### At edit stage:
+1. Recompute with full edit_decisions: `score_slideshow_risk(scenes, edit_decisions, renderer_family)`
+2. Same thresholds apply — if the edit stage made things worse (higher score than scene_plan), flag it
+
+### What to flag per dimension:
+| Dimension | What to say when score ≥ 3.0 |
+|-----------|------------------------------|
+| repetition | "X scenes use the same layout/shot size — vary the visual grammar" |
+| decorative_visuals | "X scenes have no stated purpose (no information_role or shot_intent)" |
+| weak_motion | "Camera movement exists but lacks narrative justification" |
+| weak_shot_intent | "X scenes are missing shot_intent — why does this frame exist?" |
+| typography_overreliance | "X% of scenes are text/stat cards — video feels like animated slides" |
+| unsupported_cinematic_claims | "Claiming cinematic but missing hero moments / lighting / movement" |
+
+## Decision Log Review
+
+Run at **every stage** after proposal. The decision log (`schemas/artifacts/decision_log.schema.json`) is a cumulative audit trail.
+
+### Checks:
+1. **Existence**: Does the checkpoint reference a `decision_log_ref`? If not after proposal stage, flag as **SUGGESTION**.
+2. **Coverage**: Does every major choice have an entry? Key decisions that MUST be logged:
+   - Provider selection (which image/video/audio tool and why)
+   - Style/playbook selection
+   - Music track selection
+   - Voice selection
+   - Renderer family selection
+   - Any fallback or downgrade (e.g., motion → still)
+3. **Quality**: Each decision should have:
+   - At least 2 `options_considered` (not just the one picked)
+   - A `reason` that isn't boilerplate ("best option" is not a reason)
+   - Correct `confidence` (0.0–1.0) — flag if everything is 1.0 (unrealistic)
+4. **User visibility**: Decisions marked `user_visible: true` should be ones the user would actually care about (not internal routing)
+
+### Severity:
+- Missing decision log after proposal: **SUGGESTION** (first time), **CRITICAL** (if still missing at edit stage)
+- Decision with only 1 option considered: **SUGGESTION** — "Log rejected alternatives for auditability"
+- All decisions at confidence 1.0: **SUGGESTION** — "Unrealistic confidence — at least provider selection involves tradeoffs"
+
+## Creative Differentiation Review
+
+Run at **scene_plan** and **edit** stages. Prevents the "every video looks the same" failure mode.
+
+### Checks:
+1. **Variation check** (scene_plan only): Use `lib/variation_checker.py` → `check_scene_variation(scenes)`.
+   - If verdict is "poor" (score ≤ 2): **CRITICAL** — "Scene plan lacks variety: [list violations]"
+   - If verdict is "fair" (score ≤ 3): **SUGGESTION** — note specific suggestions from the checker
+
+2. **Playbook alignment**: Is the active playbook appropriate for this content?
+   - Cinematic trailer using "clean-professional" theme → flag mismatch
+   - Educational explainer using "anime-ghibli" theme without user request → flag
+
+3. **Shot language completeness** (scene_plan):
+   - Every scene should have at least `shot_size` and `shot_intent`
+   - Hero moments should have full shot_language (all 6 fields)
+   - Flag scenes with empty shot_language as **SUGGESTION**
+
+4. **Renderer family match** (edit stage):
+   - Does `renderer_family` in edit_decisions match what was set at proposal?
+   - If changed without documented reason in decision log → **CRITICAL**
+
+## Delivery Promise Review
+
+Run at **edit** and **compose** stages. Uses `lib/delivery_promise.py`.
+
+### At edit stage:
+1. Extract delivery promise from proposal packet or edit_decisions metadata
+2. Run `promise.validate_cuts(cuts)` against the resolved cut list
+3. If `valid` is False: **CRITICAL** — "Delivery promise violation: [violations]"
+4. Check `motion_ratio`: if a motion-led promise has < 50% motion cuts, flag even if technically valid
+
+### At compose stage:
+1. The `_pre_compose_validation()` in video_compose.py enforces this automatically
+2. Review should verify the validation was not bypassed (check render report for warnings)
+3. If render succeeded despite low motion ratio on a motion-led promise, flag as **SUGGESTION**
+
+## Source Understanding Review
+
+Run at **research** and **proposal** stages when user-supplied media files exist.
+
+### Checks:
+1. **Existence**: If user-supplied files were provided to the project, does a `source_media_review` artifact exist?
+   - If user media exists but no `source_media_review`: **CRITICAL** — "User supplied media but the agent did not inspect it before planning. Run `lib/source_media_review.review_source_media()` before proceeding."
+2. **Actual inspection**: Does every file entry have `reviewed: true` and a non-empty `technical_probe`?
+   - If `reviewed` is missing or `technical_probe` is empty: **CRITICAL** — "The source_media_review claims review but contains no probe data. The file was not actually inspected."
+3. **Planning reflection**: Do the `planning_implications` appear in the proposal's production plan?
+   - If quality risks were identified (e.g. low resolution, mono audio) but the proposal doesn't mention them: **SUGGESTION** — "Source media has quality risks that the proposal does not address."
+4. **Content accuracy**: Does the plan rely on content that the source media does not actually contain?
+   - E.g. plan assumes interview dialogue but transcript_summary shows no speech: **CRITICAL** — "Plan assumes dialogue but source media contains no speech."
+5. **No hallucinated content**: The agent must not infer unsupported content from filenames alone. If `content_summary` says "interview footage" but the probe only shows 3s of silent video, flag as **CRITICAL**.
+
+### Severity:
+- Missing `source_media_review` when user files exist: **CRITICAL** at proposal stage
+- Unreviewed files (no probe): **CRITICAL**
+- Plan doesn't reflect quality risks: **SUGGESTION**
+- Plan assumes content not in source: **CRITICAL**
+
+## Final Self-Review Review
+
+Run at **compose** and **publish** stages. Ensures the agent reviewed the actual rendered output.
+
+### At compose stage:
+1. **Existence**: Does a `final_review` artifact exist alongside the `render_report`?
+   - If missing: **CRITICAL** — "Compose produced a render_report but no final_review. The agent must inspect the rendered output before presenting it."
+2. **Status check**: What is `final_review.status`?
+   - `pass` → OK, proceed
+   - `revise` → The agent should have fixed issues before presenting. If the pipeline continued anyway: **CRITICAL** — "Self-review found revise-worthy issues but the agent presented anyway."
+   - `fail` → The pipeline MUST NOT proceed. If it did: **CRITICAL**
+3. **Check completeness**: All 5 required checks must have data:
+   - `technical_probe` must show a valid container with plausible duration/resolution
+   - `visual_spotcheck` must have `frames_sampled >= 4`
+   - `audio_spotcheck` must report narration/music presence
+   - `promise_preservation` must confirm `delivery_promise_honored`
+   - `subtitle_check` must report presence/absence
+   - Any check with missing data: **SUGGESTION** — "Self-review check [X] has incomplete data"
+4. **Promise preservation**: If `promise_preservation.silent_downgrade_detected` is true: **CRITICAL** — "Self-review detected silent downgrade from motion-led to still-led."
+
+### At publish stage:
+1. Verify that `final_review` was passed through as a required artifact
+2. If `final_review.status` is not `pass`: **CRITICAL** — "Cannot publish with a non-passing self-review"
+3. If `final_review.issues_found` is non-empty and `recommended_action` is not `present_to_user`: **SUGGESTION** — "Self-review found issues; verify they were resolved before publishing"

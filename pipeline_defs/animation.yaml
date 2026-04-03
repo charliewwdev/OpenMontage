@@ -10,6 +10,12 @@ category: animation
 stability: production
 default_checkpoint_policy: guided
 
+extensions:
+  custom_scripts: true
+  custom_playbooks: true
+  custom_skills: true
+  custom_tools: false
+
 required_skills:
   - pipelines/animation/executive-producer
   - pipelines/animation/research-director
@@ -64,6 +70,7 @@ stages:
       - research_brief
     produces:
       - proposal_packet
+      - decision_log
     tools_available: []
     checkpoint_required: true
     human_approval_default: true
@@ -194,6 +201,7 @@ stages:
       - scene_plan
     produces:
       - render_report
+      - final_review
     required_tools:
       - video_compose
       - audio_mixer
@@ -218,6 +226,7 @@ stages:
     skill: pipelines/animation/publish-director
     required_artifacts_in:
       - render_report
+      - final_review
     optional_artifacts_in:
       - proposal_packet
       - script

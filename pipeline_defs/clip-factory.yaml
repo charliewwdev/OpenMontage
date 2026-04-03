@@ -17,6 +17,12 @@ orchestration:
   max_send_backs: 3
   max_wall_time_minutes: 12
 
+extensions:
+  custom_scripts: true
+  custom_playbooks: true
+  custom_skills: true
+  custom_tools: false
+
 required_skills:
   - pipelines/clip-factory/executive-producer
   - pipelines/clip-factory/idea-director
@@ -36,8 +42,11 @@ compatible_playbooks:
 stages:
   - name: idea
     skill: pipelines/clip-factory/idea-director
+    optional_artifacts_in:
+      - source_media_review
     produces:
       - brief
+      - decision_log
     tools_available: []
     checkpoint_required: true
     human_approval_default: true
@@ -149,6 +158,7 @@ stages:
       - scene_plan
     produces:
       - render_report
+      - final_review
     required_tools:
       - video_compose
       - video_trimmer
@@ -176,6 +186,7 @@ stages:
     skill: pipelines/clip-factory/publish-director
     required_artifacts_in:
       - render_report
+      - final_review
     optional_artifacts_in:
       - brief
     produces:

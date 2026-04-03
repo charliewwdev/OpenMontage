@@ -43,6 +43,10 @@
               },
               "required": ["word", "phonetic"]
             }
+          },
+          "source_ref": {
+            "type": "string",
+            "description": "Reference to the research_brief data point or URL that supports this claim. Every factual claim should be traceable."
           }
         },
         "additionalProperties": false

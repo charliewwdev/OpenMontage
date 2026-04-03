@@ -11,7 +11,7 @@ This is where a great video reaches its audience. Without proper metadata and pa
 | Layer | Resource | Purpose |
 |-------|----------|---------|
 | Schema | `schemas/artifacts/publish_log.schema.json` | Artifact validation |
-| Prior artifacts | `state.artifacts["compose"]["render_report"]`, `state.artifacts["idea"]["brief"]` | Video file and original brief |
+| Prior artifacts | `state.artifacts["compose"]["render_report"]`, `state.artifacts["proposal"]["proposal_packet"]`, `state.artifacts["research"]["research_brief"]` | Video file and original proposal |
 | Playbook | Active style playbook | Visual style for thumbnail |
 
 ## Process
@@ -19,14 +19,14 @@ This is where a great video reaches its audience. Without proper metadata and pa
 ### Step 1: Gather Context
 
 Collect everything needed for metadata:
-- **Brief**: title, hook, key points, target platform, tone
+- **Proposal packet**: title, hook, key points, target platform, tone
 - **Render report**: output path, duration, resolution
 - **Script**: section summaries for description/chapters
 
 ### Step 2: Generate SEO Metadata
 
 **Title** (max 60 characters for YouTube):
-- Include the primary keyword from the brief
+- Include the primary keyword from the proposal packet
 - Lead with a hook or number
 - Avoid clickbait but be compelling
 - Examples: "Vector Databases Explained in 60 Seconds" > "About Vector Databases"
@@ -39,7 +39,7 @@ Collect everything needed for metadata:
 - Links: relevant resources mentioned in the video
 
 **Tags/Keywords** (platform-dependent):
-- 5-10 specific tags derived from brief's key_points
+- 5-10 specific tags derived from proposal packet's key_points
 - Mix broad and specific: "machine learning" + "vector database tutorial"
 - Include the topic, format ("explainer"), and related terms
 

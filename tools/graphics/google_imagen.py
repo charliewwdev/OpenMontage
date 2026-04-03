@@ -158,11 +158,19 @@ class GoogleImagen(BaseTool):
         model = inputs.get("model", "imagen-4.0-generate-001")
         prompt = inputs["prompt"]
 
+        import logging
+        logger = logging.getLogger(__name__)
+
         # Resolve aspect ratio: explicit > derived from width/height > default
         if "aspect_ratio" in inputs:
             aspect_ratio = inputs["aspect_ratio"]
         elif "width" in inputs and "height" in inputs:
+            requested_ratio = f"{inputs['width']}x{inputs['height']}"
             aspect_ratio = _dims_to_aspect_ratio(inputs["width"], inputs["height"])
+            logger.info(
+                "google_imagen: remapped %s to nearest supported aspect ratio %s",
+                requested_ratio, aspect_ratio,
+            )
         else:
             aspect_ratio = "1:1"
 

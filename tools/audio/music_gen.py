@@ -60,10 +60,13 @@ class MusicGen(BaseTool):
             },
             "duration_seconds": {
                 "type": "number",
-                "default": 60,
                 "minimum": 3,
                 "maximum": 600,
-                "description": "Target duration in seconds (API supports 3-600s)",
+                "description": (
+                    "Target duration in seconds (API supports 3-600s). "
+                    "Should match the target video duration from the script/proposal. "
+                    "Omitting this defaults to 60s which may not match your video."
+                ),
             },
             "output_path": {"type": "string"},
         },
@@ -86,7 +89,13 @@ class MusicGen(BaseTool):
 
     def estimate_cost(self, inputs: dict[str, Any]) -> float:
         # ElevenLabs music generation pricing is per generation
-        duration = inputs.get("duration_seconds", 60)
+        duration = inputs.get("duration_seconds")
+        if duration is None:
+            raise ValueError(
+                "music_gen.estimate_cost: duration_seconds is required. "
+                "Derive it from the approved target runtime in the script/proposal. "
+                "Silent defaults are not permitted."
+            )
         # Approximate: ~$0.05 per 30 seconds
         return round(duration / 30 * 0.05, 4)
 
@@ -110,10 +119,23 @@ class MusicGen(BaseTool):
         return result
 
     def _generate(self, inputs: dict[str, Any], api_key: str) -> ToolResult:
+        import logging
         import requests
 
+        logger = logging.getLogger(__name__)
+
         prompt = inputs["prompt"]
-        duration = inputs.get("duration_seconds", 60)
+        duration = inputs.get("duration_seconds")
+        if duration is None:
+            return ToolResult(
+                success=False,
+                error=(
+                    "music_gen: duration_seconds is required. "
+                    "Derive it from the approved target runtime in the script/proposal. "
+                    "Silent defaults to 60s are not permitted — the generated music "
+                    "must match the actual video duration."
+                ),
+            )
 
         url = "https://api.elevenlabs.io/v1/music"
 

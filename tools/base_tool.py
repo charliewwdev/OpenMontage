@@ -10,6 +10,7 @@ import hashlib
 import inspect
 import json
 import os
+import platform
 import subprocess
 import shutil
 from abc import ABC, abstractmethod
@@ -37,6 +38,12 @@ def _load_dotenv() -> None:
             key, _, value = line.partition("=")
             key = key.strip()
             value = value.strip().strip("'\"")
+            # Strip inline comments: VAR=value  # comment
+            # But only if the # is preceded by whitespace (avoid stripping from values like colors)
+            if "  #" in value:
+                value = value[:value.index("  #")].rstrip()
+            elif "\t#" in value:
+                value = value[:value.index("\t#")].rstrip()
             if key and key not in os.environ:
                 os.environ[key] = value
 
@@ -294,9 +301,18 @@ class BaseTool(ABC):
         timeout: Optional[int] = None,
         cwd: Optional[Path] = None,
     ) -> subprocess.CompletedProcess:
-        """Run a subprocess command with standard error handling."""
+        """Run a subprocess command with standard error handling.
+
+        On Windows, resolves .cmd/.bat wrappers (e.g. npx, npm) via
+        shutil.which() so subprocess.run() can find them without shell=True.
+        """
+        resolved_cmd = list(cmd)
+        if platform.system() == "Windows" and resolved_cmd:
+            exe = shutil.which(resolved_cmd[0])
+            if exe:
+                resolved_cmd[0] = exe
         return subprocess.run(
-            cmd,
+            resolved_cmd,
             capture_output=True,
             text=True,
             timeout=timeout,

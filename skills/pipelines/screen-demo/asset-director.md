@@ -25,6 +25,16 @@ Screen demos do not need a large asset pile. They need the right few assets:
 - optional: one intro card, one outro card, sparse diagram overlays
 - optional only if preflight allows it: generated narration for silent recordings
 
+### 1b. Hero Scene Sample (Mandatory)
+
+Before batch asset generation:
+1. Identify the hero scene (the most important step or interaction in the demo)
+2. Generate ONE sample asset for that scene (subtitle style, highlight overlay, or intro card)
+3. Present it: "This is the visual direction for the most important step. Does this match what you're imagining? I'll generate the rest in this style."
+4. Wait for approval before proceeding to batch generation
+
+This prevents the most expensive mistake: generating 10+ assets in a direction the user doesn't like.
+
 ### 2. Generate Subtitles First
 
 Rules:
@@ -101,9 +111,39 @@ Use `asset_manifest.metadata` for details like:
 - [ ] Callout colors have sufficient contrast
 - [ ] Blur masks fully cover the sensitive content
 
+### Mid-Production Fact Verification
+
+If you encounter uncertainty during asset generation:
+- Use `web_search` to verify visual accuracy of subjects (e.g. what does this building actually look like?)
+- Use `web_search` to find reference images before generating illustrations
+- Log verification in the decision log: `category="visual_accuracy_check"`
+
+Visual accuracy matters. If the script mentions a specific place, person, or object,
+verify what it actually looks like before generating images. Don't rely on
+the AI model's training data — it may be wrong or outdated.
+
 ## Common Pitfalls
 
 - Generating too many one-off overlay files instead of a reusable kit.
 - Using subtitles that sit directly on top of terminal output or bottom navigation.
 - Assuming silent recordings will magically gain narration without checking TTS.
 - Spending image generation budget on visuals the raw screen already provides.
+
+
+## When You Do Not Know How
+
+If you encounter a generation technique, provider behavior, or prompting pattern you are unsure about:
+
+1. **Search the web** for current best practices — models and APIs change frequently, and the agent's training data may be stale
+2. **Check `.agents/skills/`** for existing Layer 3 knowledge (provider-specific prompting guides, API patterns)
+3. **If neither helps**, write a project-scoped skill at `projects/<project-name>/skills/<name>.md` documenting what you learned
+4. **Reference source URLs** in the skill so the knowledge is traceable
+5. **Log it** in the decision log: `category: "capability_extension"`, `subject: "learned technique: <name>"`
+
+This is especially important for:
+- **Video generation prompting** — models respond to specific vocabularies that change with each version
+- **Image model parameters** — optimal settings for FLUX, DALL-E, Imagen differ and evolve
+- **Audio provider quirks** — voice cloning, music generation, and TTS each have model-specific best practices
+- **Remotion component patterns** — new composition techniques emerge as the framework evolves
+
+Do not rely on stale knowledge. When in doubt, search first.

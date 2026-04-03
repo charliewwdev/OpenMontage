@@ -127,6 +127,126 @@
             "additionalProperties": false
           },
           "description": "Alternative production paths at different price/quality points"
+        },
+        "delivery_promise": {
+          "type": "object",
+          "description": "Explicit classification of what this production promises to deliver",
+          "required": ["promise_type", "motion_required", "tone_mode", "quality_floor"],
+          "properties": {
+            "promise_type": {
+              "type": "string",
+              "enum": ["motion_led", "source_led", "data_explainer", "teacher_explainer", "screen_demo", "avatar_presenter", "hybrid", "localization"]
+            },
+            "motion_required": { "type": "boolean", "description": "True when the video's quality depends on actual motion, not still-image animation" },
+            "source_required": { "type": "boolean", "description": "True when user-provided footage is the primary medium" },
+            "tone_mode": { "type": "string", "description": "cinematic, educational, corporate, playful, raw, intimate, epic" },
+            "quality_floor": { "type": "string", "enum": ["draft", "presentable", "broadcast"] },
+            "approved_fallback": { "type": ["string", "null"], "description": "animatic, still_led, or null (no fallback approved)" }
+          },
+          "additionalProperties": false
+        },
+        "renderer_family": {
+          "type": "string",
+          "enum": ["explainer-data", "explainer-teacher", "cinematic-trailer", "product-reveal", "screen-demo", "presenter", "animation-first"],
+          "description": "Locked at proposal stage — compose cannot change without logging a decision"
+        },
+        "music_source": {
+          "type": "object",
+          "description": "Resolved music plan from the proposal stage",
+          "properties": {
+            "source_type": { "type": "string", "enum": ["user_library", "ai_generated", "bring_your_own", "none"] },
+            "track_path": { "type": "string", "description": "Path to selected track, if known" },
+            "provider": { "type": "string", "description": "Music generation provider, if AI-generated" },
+            "mood_direction": { "type": "string", "description": "Music mood description from research" },
+            "estimated_cost_usd": { "type": "number", "minimum": 0 }
+          },
+          "additionalProperties": false
+        },
+        "voice_selection": {
+          "type": "object",
+          "description": "Selected voice/TTS provider and rationale",
+          "properties": {
+            "provider": { "type": "string" },
+            "voice_id": { "type": "string" },
+            "rationale": { "type": "string" },
+            "estimated_cost_usd": { "type": "number", "minimum": 0 }
+          },
+          "additionalProperties": false
+        },
+        "decision_log_ref": {
+          "type": "string",
+          "description": "Path to the decision_log artifact for this project"
+        },
+        "provider_rankings": {
+          "type": "object",
+          "description": "Scored provider rankings for each asset category used in this production",
+          "properties": {
+            "video": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["tool_name", "provider", "weighted_score"],
+                "properties": {
+                  "tool_name": { "type": "string" },
+                  "provider": { "type": "string" },
+                  "weighted_score": { "type": "number" },
+                  "task_fit": { "type": "number" },
+                  "output_quality": { "type": "number" },
+                  "explanation": { "type": "string" }
+                },
+                "additionalProperties": false
+              }
+            },
+            "image": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["tool_name", "provider", "weighted_score"],
+                "properties": {
+                  "tool_name": { "type": "string" },
+                  "provider": { "type": "string" },
+                  "weighted_score": { "type": "number" },
+                  "task_fit": { "type": "number" },
+                  "output_quality": { "type": "number" },
+                  "explanation": { "type": "string" }
+                },
+                "additionalProperties": false
+              }
+            },
+            "tts": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["tool_name", "provider", "weighted_score"],
+                "properties": {
+                  "tool_name": { "type": "string" },
+                  "provider": { "type": "string" },
+                  "weighted_score": { "type": "number" },
+                  "task_fit": { "type": "number" },
+                  "output_quality": { "type": "number" },
+                  "explanation": { "type": "string" }
+                },
+                "additionalProperties": false
+              }
+            },
+            "music": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["tool_name", "provider", "weighted_score"],
+                "properties": {
+                  "tool_name": { "type": "string" },
+                  "provider": { "type": "string" },
+                  "weighted_score": { "type": "number" },
+                  "task_fit": { "type": "number" },
+                  "output_quality": { "type": "number" },
+                  "explanation": { "type": "string" }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false

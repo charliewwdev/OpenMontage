@@ -19,8 +19,20 @@
       "description": "Whether this pipeline has been audited and is considered stable"
     },
     "compatible_playbooks": {
-      "type": "array",
-      "items": { "type": "string" }
+      "oneOf": [
+        {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        {
+          "type": "object",
+          "properties": {
+            "recommended": { "type": "array", "items": { "type": "string" } },
+            "also_works": { "type": "array", "items": { "type": "string" } },
+            "custom_allowed": { "type": "boolean", "default": false }
+          }
+        }
+      ]
     },
     "required_skills": {
       "type": "array",
@@ -105,6 +117,17 @@
         "max_revisions_per_stage": { "type": "integer" },
         "max_send_backs": { "type": "integer" },
         "max_wall_time_minutes": { "type": "integer" }
+      },
+      "additionalProperties": false
+    },
+    "extensions": {
+      "type": "object",
+      "description": "Capability extension permissions for this pipeline",
+      "properties": {
+        "custom_scripts": { "type": "boolean", "default": true },
+        "custom_playbooks": { "type": "boolean", "default": true },
+        "custom_skills": { "type": "boolean", "default": true },
+        "custom_tools": { "type": "boolean", "default": false }
       },
       "additionalProperties": false
     }

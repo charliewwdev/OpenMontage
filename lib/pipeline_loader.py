@@ -85,3 +85,53 @@ def get_stage_review_focus(manifest: dict, stage_name: str) -> list[str]:
         if stage["name"] == stage_name:
             return stage.get("review_focus", [])
     return []
+
+
+# ---------------------------------------------------------------------------
+# Capability-Extension Enforcement
+# ---------------------------------------------------------------------------
+
+class ExtensionNotPermitted(PermissionError):
+    """Raised when a capability extension is used but not permitted by the pipeline."""
+
+
+def check_extension_permitted(
+    manifest: dict,
+    extension_type: str,
+) -> None:
+    """Enforce that a capability extension is permitted by the pipeline manifest.
+
+    Args:
+        manifest: Loaded pipeline manifest dict.
+        extension_type: One of 'custom_scripts', 'custom_playbooks',
+                        'custom_skills', 'custom_tools'.
+
+    Raises:
+        ExtensionNotPermitted: If the extension is not allowed.
+    """
+    valid_extensions = {"custom_scripts", "custom_playbooks", "custom_skills", "custom_tools"}
+    if extension_type not in valid_extensions:
+        raise ValueError(
+            f"Unknown extension type {extension_type!r}. "
+            f"Valid types: {sorted(valid_extensions)}"
+        )
+
+    extensions = manifest.get("extensions", {})
+    if not extensions.get(extension_type, False):
+        raise ExtensionNotPermitted(
+            f"Pipeline {manifest.get('name', 'unknown')!r} does not permit "
+            f"{extension_type}. Set extensions.{extension_type}: true in the "
+            f"pipeline manifest to allow this."
+        )
+
+
+def get_permitted_extensions(manifest: dict) -> dict[str, bool]:
+    """Return the extension permission flags for a pipeline."""
+    defaults = {
+        "custom_scripts": False,
+        "custom_playbooks": False,
+        "custom_skills": False,
+        "custom_tools": False,
+    }
+    extensions = manifest.get("extensions", {})
+    return {k: extensions.get(k, v) for k, v in defaults.items()}

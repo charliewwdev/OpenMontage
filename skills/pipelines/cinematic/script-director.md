@@ -9,7 +9,7 @@ This stage builds the beat map, selected lines, title-card copy, and reveal stru
 | Layer | Resource | Purpose |
 |-------|----------|---------|
 | Schema | `schemas/artifacts/script.schema.json` | Artifact validation |
-| Prior artifact | `state.artifacts["idea"]["brief"]` | Emotional arc and source truth |
+| Prior artifact | `state.artifacts["proposal"]["proposal_packet"]` | Emotional arc and source truth |
 | Tools | `transcriber`, `scene_detect` | Optional dialogue mining and source review |
 
 ## Process
@@ -61,6 +61,17 @@ Recommended metadata keys:
 - dialogue and title cards do not explain the same thing twice,
 - the reveal lands distinctly,
 - the landing gives the viewer a final feeling or action.
+
+### Mid-Production Fact Verification
+
+If you encounter uncertainty during script writing:
+- Use `web_search` to verify factual claims before committing them to the script
+- Use `web_search` to find reference images for visual accuracy
+- Log verification in the decision log: `category="visual_accuracy_check"`
+
+Every factual claim in the script should be traceable to the `research_brief`.
+If you make a claim that isn't in the research, do additional research and
+add the source. Do not invent statistics, dates, or attributions.
 
 ## Common Pitfalls
 

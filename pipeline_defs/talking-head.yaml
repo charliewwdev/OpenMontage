@@ -8,6 +8,12 @@ category: talking_head
 stability: beta
 default_checkpoint_policy: guided
 
+extensions:
+  custom_scripts: true
+  custom_playbooks: true
+  custom_skills: true
+  custom_tools: false
+
 required_skills:
   - pipelines/talking-head/executive-producer
   - pipelines/talking-head/idea-director
@@ -35,6 +41,7 @@ stages:
     skill: pipelines/talking-head/idea-director
     produces:
       - brief
+      - decision_log
     tools_available: []
     checkpoint_required: true
     human_approval_default: true
@@ -50,6 +57,8 @@ stages:
     skill: pipelines/talking-head/script-director
     required_artifacts_in:
       - brief
+    optional_artifacts_in:
+      - source_media_review
     produces:
       - script
     required_tools:
@@ -156,6 +165,7 @@ stages:
       - scene_plan
     produces:
       - render_report
+      - final_review
     required_tools:
       - video_compose    # rendering
       - audio_mixer      # audio layering + segmented music
@@ -201,6 +211,7 @@ stages:
     skill: pipelines/talking-head/publish-director
     required_artifacts_in:
       - render_report
+      - final_review
     produces:
       - publish_log
     tools_available: []

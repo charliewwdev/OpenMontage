@@ -82,6 +82,17 @@ Each candidate should record:
 - the set covers the source deliberately instead of clustering in one section,
 - low-quality candidates are rejected honestly.
 
+### Mid-Production Fact Verification
+
+If you encounter uncertainty during script writing:
+- Use `web_search` to verify factual claims before committing them to the script
+- Use `web_search` to find reference images for visual accuracy
+- Log verification in the decision log: `category="visual_accuracy_check"`
+
+Every factual claim in the script should be traceable to the `research_brief`.
+If you make a claim that isn't in the research, do additional research and
+add the source. Do not invent statistics, dates, or attributions.
+
 ## Common Pitfalls
 
 - Trusting first-pass candidate timestamps without transcript-level review.

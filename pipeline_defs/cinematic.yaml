@@ -17,9 +17,16 @@ orchestration:
   max_send_backs: 3
   max_wall_time_minutes: 12
 
+extensions:
+  custom_scripts: true
+  custom_playbooks: true
+  custom_skills: true
+  custom_tools: false
+
 required_skills:
   - pipelines/cinematic/executive-producer
-  - pipelines/cinematic/idea-director
+  - pipelines/cinematic/research-director
+  - pipelines/cinematic/proposal-director
   - pipelines/cinematic/script-director
   - pipelines/cinematic/scene-director
   - pipelines/cinematic/asset-director
@@ -30,15 +37,41 @@ required_skills:
   - meta/checkpoint-protocol
 
 compatible_playbooks:
-  - clean-professional
-  - flat-motion-graphics
-  - minimalist-diagram
+  recommended:
+    - clean-professional
+    - flat-motion-graphics
+  also_works:
+    - minimalist-diagram
+  custom_allowed: true
 
 stages:
-  - name: idea
-    skill: pipelines/cinematic/idea-director
+  - name: research
+    skill: pipelines/cinematic/research-director
     produces:
-      - brief
+      - research_brief
+    tools_available:
+      - web_search
+    checkpoint_required: true
+    human_approval_default: false
+    review_focus:
+      - Visual references are specific and relevant to the mood
+      - Sound and music direction is substantive, not generic
+      - Motion commitment is honest about available capabilities
+      - At least 3 genuinely different cinematic directions identified
+    success_criteria:
+      - Schema-valid research_brief artifact
+      - At least 8 web searches executed
+      - Visual references include specific URLs and descriptions
+
+  - name: proposal
+    skill: pipelines/cinematic/proposal-director
+    required_artifacts_in:
+      - research_brief
+    optional_artifacts_in:
+      - source_media_review
+    produces:
+      - proposal_packet
+      - decision_log
     tools_available: []
     checkpoint_required: true
     human_approval_default: true
@@ -47,14 +80,19 @@ stages:
       - Motion-required delivery is explicitly identified when applicable
       - Delivery shape is realistic for available footage and assets
       - Cinematic treatment is justified rather than decorative
+      - Delivery promise is explicit and honest
+      - Renderer family is selected and locked
+      - Music plan is resolved
     success_criteria:
-      - Schema-valid brief artifact
-      - Brief records source reality and target output shape
+      - Schema-valid proposal_packet artifact
+      - At least 3 concept options with different emotional arcs
+      - Delivery promise present with motion_required flag
+      - Cost estimate includes per-item breakdown
 
   - name: script
     skill: pipelines/cinematic/script-director
     required_artifacts_in:
-      - brief
+      - proposal_packet
     produces:
       - script
     optional_tools:
@@ -78,7 +116,7 @@ stages:
     required_artifacts_in:
       - script
     optional_artifacts_in:
-      - brief
+      - proposal_packet
     produces:
       - scene_plan
     optional_tools:
@@ -158,6 +196,7 @@ stages:
       - scene_plan
     produces:
       - render_report
+      - final_review
     required_tools:
       - video_compose
       - audio_mixer
@@ -188,8 +227,9 @@ stages:
     skill: pipelines/cinematic/publish-director
     required_artifacts_in:
       - render_report
+      - final_review
     optional_artifacts_in:
-      - brief
+      - proposal_packet
       - script
     produces:
       - publish_log

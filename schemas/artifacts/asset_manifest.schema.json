@@ -28,7 +28,12 @@
           "duration_seconds": { "type": "number", "minimum": 0 },
           "resolution": { "type": "string" },
           "format": { "type": "string" },
-          "quality_score": { "type": "number", "minimum": 0, "maximum": 1 }
+          "quality_score": { "type": "number", "minimum": 0, "maximum": 1 },
+          "subtype": { "type": "string", "description": "Sub-classification (e.g. 'background', 'stock', 'generated')" },
+          "generation_summary": { "type": "string", "description": "Brief summary of how the asset was generated or sourced" },
+          "provider": { "type": "string", "description": "Provider name (e.g. pixabay, google_imagen)" },
+          "license": { "type": "string", "description": "License type (e.g. Pixabay License, CC0)" },
+          "original_url": { "type": "string", "description": "Source URL if downloaded from a stock service" }
         },
         "additionalProperties": false
       }

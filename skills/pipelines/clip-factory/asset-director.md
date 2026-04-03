@@ -25,6 +25,16 @@ Prefer reusable assets over per-clip reinvention:
 - one watermark / brand frame,
 - one CTA / end-tag treatment if needed.
 
+### 1b. Hero Scene Sample (Mandatory)
+
+Before batch asset generation:
+1. Identify the hero scene (the visual peak of the batch)
+2. Generate ONE sample visual asset for that scene
+3. Present it: "This is the visual direction for the most important clip. Does this match what you're imagining? I'll generate the rest in this style."
+4. Wait for approval before proceeding to batch generation
+
+This prevents the most expensive mistake: generating 10+ assets in a direction the user doesn't like.
+
 ### 2. Generate Per-Clip Subtitles
 
 Each approved clip needs its own subtitle asset, timed from clip start rather than source start. This timestamp rebasing is critical.
@@ -60,9 +70,39 @@ Recommended metadata keys:
 - shared assets are referenced consistently,
 - the asset count stays practical for the batch size.
 
+### Mid-Production Fact Verification
+
+If you encounter uncertainty during asset generation:
+- Use `web_search` to verify visual accuracy of subjects (e.g. what does this building actually look like?)
+- Use `web_search` to find reference images before generating illustrations
+- Log verification in the decision log: `category="visual_accuracy_check"`
+
+Visual accuracy matters. If the script mentions a specific place, person, or object,
+verify what it actually looks like before generating images. Don't rely on
+the AI model's training data — it may be wrong or outdated.
+
 ## Common Pitfalls
 
 - Forgetting to rebase subtitle timing per clip.
 - Overdesigning hook assets so the batch becomes inconsistent.
 - Normalizing some clips and not others.
 - Treating a 10-clip batch like 10 unrelated projects.
+
+
+## When You Do Not Know How
+
+If you encounter a generation technique, provider behavior, or prompting pattern you are unsure about:
+
+1. **Search the web** for current best practices — models and APIs change frequently, and the agent's training data may be stale
+2. **Check `.agents/skills/`** for existing Layer 3 knowledge (provider-specific prompting guides, API patterns)
+3. **If neither helps**, write a project-scoped skill at `projects/<project-name>/skills/<name>.md` documenting what you learned
+4. **Reference source URLs** in the skill so the knowledge is traceable
+5. **Log it** in the decision log: `category: "capability_extension"`, `subject: "learned technique: <name>"`
+
+This is especially important for:
+- **Video generation prompting** — models respond to specific vocabularies that change with each version
+- **Image model parameters** — optimal settings for FLUX, DALL-E, Imagen differ and evolve
+- **Audio provider quirks** — voice cloning, music generation, and TTS each have model-specific best practices
+- **Remotion component patterns** — new composition techniques emerge as the framework evolves
+
+Do not rely on stale knowledge. When in doubt, search first.

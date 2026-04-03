@@ -17,6 +17,12 @@ orchestration:
   max_send_backs: 3
   max_wall_time_minutes: 10
 
+extensions:
+  custom_scripts: true
+  custom_playbooks: true
+  custom_skills: true
+  custom_tools: false
+
 required_skills:
   - pipelines/screen-demo/executive-producer
   - pipelines/screen-demo/idea-director
@@ -38,6 +44,7 @@ stages:
     skill: pipelines/screen-demo/idea-director
     produces:
       - brief
+      - decision_log
     tools_available: []
     checkpoint_required: true
     human_approval_default: true
@@ -53,6 +60,8 @@ stages:
     skill: pipelines/screen-demo/script-director
     required_artifacts_in:
       - brief
+    optional_artifacts_in:
+      - source_media_review
     produces:
       - script
     required_tools:
@@ -104,9 +113,9 @@ stages:
       - script
     produces:
       - asset_manifest
-    required_tools:
-      - subtitle_gen
+    required_tools: []
     optional_tools:
+      - subtitle_gen
       - tts_selector
       - image_selector
       - diagram_gen
@@ -156,6 +165,7 @@ stages:
       - scene_plan
     produces:
       - render_report
+      - final_review
     required_tools:
       - video_compose
       - audio_mixer
@@ -181,6 +191,7 @@ stages:
     skill: pipelines/screen-demo/publish-director
     required_artifacts_in:
       - render_report
+      - final_review
     optional_artifacts_in:
       - brief
     produces:

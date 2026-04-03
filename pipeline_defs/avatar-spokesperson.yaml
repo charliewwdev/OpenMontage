@@ -36,8 +36,11 @@ required_skills:
   - meta/checkpoint-protocol
 
 compatible_playbooks:
-  - clean-professional
-  - flat-motion-graphics
+  recommended:
+    - clean-professional
+    - flat-motion-graphics
+  also_works: []
+  custom_allowed: true
 
 stages:
   - name: idea
@@ -201,4 +204,3 @@ stages:
     success_criteria:
       - Schema-valid publish_log artifact
       - Export package contains video and metadata outputs
-

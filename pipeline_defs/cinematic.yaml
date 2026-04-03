@@ -38,9 +38,9 @@ required_skills:
 
 compatible_playbooks:
   recommended:
-    - clean-professional
     - flat-motion-graphics
   also_works:
+    - clean-professional
     - minimalist-diagram
   custom_allowed: true
 

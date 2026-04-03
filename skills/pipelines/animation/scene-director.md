@@ -45,7 +45,7 @@ Use:
 
 Use `anime_scene` type for each scene. Plan:
 
-- **Images per scene**: 2-3 images with consistent style prefix and nearby seeds for crossfade effect
+- **Images per scene**: 2-3 images built from the same visual system and nearby seeds for crossfade effect
 - **Camera motion**: choose from `zoom-in`, `zoom-out`, `pan-left`, `pan-right`, `ken-burns`, `drift-up`, `drift-down`, `parallax`, `static` — vary per scene to prevent monotony
 - **Particle type**: choose from `fireflies`, `petals`, `sparkles`, `mist`, `light-rays` — match to scene mood
 - **Lighting**: optional `lightingFrom`/`lightingTo` gradient for atmospheric shifts within the scene
@@ -70,7 +70,7 @@ Use `anime_scene` type for each scene. Plan:
 | Lighting start | `lightingFrom` | `"rgba(255,200,100,0.15)"` or `"transparent"` |
 | Lighting end | `lightingTo` | `"rgba(255,107,157,0.08)"` or `"transparent"` |
 | Cinematic edge darken | `vignette` | `true` / `false` |
-| Scene background | `backgroundColor` | `"#0A0A1A"` |
+| Scene background | `backgroundColor` | theme-derived value such as `"#0A0A1A"` or `"#F6F1E8"` |
 
 Reference: `remotion-composer/public/demo-props/mori-no-seishin.json` — 6 scenes using this pattern.
 Reference: `remotion-composer/public/demo-props/deep-ocean.json` — 6 underwater scenes with different palette.

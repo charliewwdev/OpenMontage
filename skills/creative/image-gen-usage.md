@@ -9,7 +9,7 @@
 FLUX RESOLUTION:  1920x1088 (16:9) | 1088x1920 (9:16) — must be multiples of 16
 MAX TOTAL:        4 megapixels (width x height)
 CONSISTENCY:      Use hero image as input_image for subsequent frames
-STYLE PREFIX:     Set in playbook, prepend to every prompt
+STYLE SYSTEM:     Derive from subject + audience + tone, then adapt per scene
 BATCH STRATEGY:   Hero at max quality → iterate with klein → final pass with pro
 ```
 
@@ -29,14 +29,19 @@ All FLUX dimensions **must be multiples of 16**. Maximum total is 4MP.
 
 The biggest challenge: making 8-12 generated images look like they belong in the same video.
 
-### Strategy 1 — Style Prefix (Always Use)
+### Strategy 1 — Shared Visual System (Always Use)
 
-Prepend the playbook's `image_prompt_prefix` to every prompt. Example from `clean-professional`:
+Define a shared visual system for the project first, then adapt it per scene.
+Capture the project's:
 
-```
-"Clean, minimal illustration with soft shadows, muted color palette,
-white background, professional vector art style. [YOUR SCENE DESCRIPTION]"
-```
+- dominant mood and texture,
+- palette direction,
+- lighting bias,
+- rendering medium,
+- character/environment consistency anchors.
+
+The playbook's `image_prompt_prefix` is source material, not something to paste
+verbatim into every prompt. Distill it into a shorter scene-appropriate anchor.
 
 ### Strategy 2 — Hero Reference Image (Recommended)
 
@@ -148,17 +153,17 @@ optimized for image/video generation providers.
 2. **Hands and fingers** — DALL-E 3 and FLUX still struggle. Avoid prompts requiring detailed hand poses
 3. **Inconsistent characters** — Without reference images, the same character will look different each time. Always use the hero reference strategy
 4. **Over-prompting** — Long, complex prompts produce unpredictable results. Keep to 2-3 sentences
-5. **Ignoring the playbook** — Every image must match the style playbook. The style prefix is not optional
+5. **Over-unifying prompts** — Forcing the exact same style phrase into every prompt makes scenes look samey. Keep the visual system consistent, but let each scene express its own subject, shot, and emotional beat.
 
 ## Applying to OpenMontage
 
 When using the `image_selector` tool in the asset stage:
 
-1. **Always prepend the playbook's style prefix** to every prompt
+1. **Design the visual system first** from the proposal or custom playbook: mood, palette, texture, motion energy
 2. **Generate a hero image first** at highest quality, use as reference for all others
 3. **Use `1920x1088`** for 16:9 video frames (FLUX multiple-of-16 requirement)
 4. **Never request text in images** — add text overlays in the compose stage
 5. **Budget check** — estimate total image cost before generating; switch to local diffusers if over budget
 6. **Iterate with klein** during planning, finalize with pro
-7. **Keep prompts to 2-3 sentences** — style prefix + scene description + composition
+7. **Keep prompts to 2-3 sentences** — scene-specific camera/lighting + adapted visual anchor + concrete subject
 8. **Match the scene plan** — each image maps to a specific scene in the script

@@ -161,7 +161,7 @@ remotion_caption_burn.execute({
     "corrections": {"cloud": "Claude", "co-pilot": "Copilot"},
     "words_per_page": 4,
     "font_size": 52,
-    "highlight_color": "#22D3EE",
+    "highlight_color": "<theme_accent>",
 })
 ```
 
@@ -195,7 +195,7 @@ remotion_caption_burn.execute({
     "corrections": {"cloud": "Claude"},
     "words_per_page": 4,
     "font_size": 52,
-    "highlight_color": "#22D3EE",
+    "highlight_color": "<theme_accent>",
     "overlays": [
         {
             "id": "term-agentic-ai",
@@ -205,8 +205,8 @@ remotion_caption_burn.execute({
             "in_seconds": 22.0,
             "out_seconds": 26.0,
             "position": "lower_third",
-            "backgroundColor": "#0F172A",
-            "accentColor": "#22D3EE"
+            "backgroundColor": "<theme_background>",
+            "accentColor": "<theme_accent>"
         },
         {
             "id": "stat-market-size",
@@ -216,7 +216,7 @@ remotion_caption_burn.execute({
             "in_seconds": 35.0,
             "out_seconds": 39.0,
             "position": "upper_third",
-            "accentColor": "#A78BFA"
+            "accentColor": "<theme_secondary_accent>"
         },
         {
             "id": "chart-growth",
@@ -231,7 +231,7 @@ remotion_caption_burn.execute({
             "in_seconds": 40.0,
             "out_seconds": 45.0,
             "position": "lower_third",
-            "chartColors": ["#22D3EE", "#A78BFA", "#F472B6", "#34D399"]
+            "chartColors": ["<theme_accent>", "<theme_secondary_accent>", "<theme_tertiary_accent>", "<theme_supporting_accent>"]
         }
     ]
 })
@@ -306,7 +306,7 @@ If the footage has a green/blue screen (detected in scene-director Step 0), foll
        "corrections": <corrections_dict>,
        "words_per_page": 4,
        "font_size": 52,
-       "highlight_color": "#22D3EE",
+        "highlight_color": "<theme_accent>",
        "overlays": <overlay_list_from_scene_plan>
    })
    ```

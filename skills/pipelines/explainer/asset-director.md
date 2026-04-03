@@ -79,9 +79,13 @@ For each script section:
 Process asset tasks grouped by tool for efficiency:
 
 **Images (`image_selector`)**:
-1. Build the prompt: `playbook.asset_generation.image_prompt_prefix` + scene description + style cues
+1. Build the prompt from the scene's actual purpose:
+   - scene-specific shot/lighting/texture cues from `shot_language`, `shot_intent`, and `texture_keywords`
+   - an adapted visual anchor from the playbook or custom identity
+   - the concrete subject/action/environment
+   Use `lib/shot_prompt_builder.py` when helpful.
 2. Add negative prompt from playbook
-3. Include consistency anchors (same palette, same style across all images)
+3. Include consistency anchors (same character/world/palette family), but do NOT reuse the exact same phrasing for every image
 4. Generate and verify the file exists
 5. If the result doesn't match expectations, refine the prompt and regenerate (max 2 retries)
 
@@ -202,7 +206,7 @@ the AI model's training data — it may be wrong or outdated.
 ## Common Pitfalls
 
 - **Generating before checking budget**: Always estimate total cost first. A 60-second video with 15 images can burn $3+ quickly.
-- **Inconsistent image style**: Each image_selector call is independent. Without explicit consistency anchors in every prompt, images will drift. Always include the playbook prefix.
+- **Inconsistent image style**: Each image_selector call is independent. Use consistent anchors, but adapt them per scene. If you paste the same style prefix into every prompt, the video will feel machine-made and repetitive.
 - **Ignoring narration timing**: If TTS produces 12s of audio for a 10s section, the edit phase will struggle. Check durations.
 - **Missing pronunciation guide**: "PostgreSQL" or "Kubernetes" will be mispronounced without explicit guidance.
 - **One retry then give up**: If an image doesn't match, refine the prompt specifically — don't just retry the same prompt.

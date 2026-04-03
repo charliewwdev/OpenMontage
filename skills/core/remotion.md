@@ -60,7 +60,7 @@ The `anime_scene` type renders 1-4 images with smooth crossfade transitions, cin
 
 **Key prop:** `sceneDurationSeconds` is automatically passed by `SceneRenderer` — this fixes a critical Remotion pitfall where `useVideoConfig().durationInFrames` returns the full composition duration, not the scene's Sequence duration.
 
-**Multi-image crossfade math:** Each image owns an equal time segment. Fade-out of image N and fade-in of image N+1 OVERLAP by `crossfadeDur` (~1.2s) so there's never a dead frame. Generate 2-3 images per scene with same style prefix + different seeds for subtle motion effect.
+**Multi-image crossfade math:** Each image owns an equal time segment. Fade-out of image N and fade-in of image N+1 OVERLAP by `crossfadeDur` (~1.2s) so there's never a dead frame. Generate 2-3 images per scene from the same visual system, but vary the shot, subject, and lighting per beat. Nearby seeds help create subtle motion without flattening the whole sequence into one repeated prompt.
 
 **Reference composition:** `remotion-composer/public/demo-props/mori-no-seishin.json` — 6 anime scenes, 30 seconds, with particles, lighting, overlays, and ambient music.
 
@@ -75,9 +75,9 @@ professional video with zero external dependencies.
 
 These rules were discovered through systematic render testing and produce cinematic results:
 
-**1. ALL-DARK BACKGROUNDS (mandatory).** Set `backgroundColor: "#0F172A"` on EVERY scene.
+**1. Commit to one background family per video.** Use a coherent background treatment derived from the playbook or custom identity instead of forcing every sequence into the same dark dashboard look.
 This prevents jarring white↔dark flash transitions and makes chart colors pop dramatically.
-Dark backgrounds transform basic charts into cinematic data visualization.
+The goal is visual cohesion, not a mandatory dark theme.
 
 **2. Flat props format.** All scene properties go at the TOP LEVEL of the cut object
 (e.g., `cut.text`, `cut.chartData`), NOT nested under a `props` key.

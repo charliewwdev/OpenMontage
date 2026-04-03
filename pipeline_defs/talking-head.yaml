@@ -34,7 +34,10 @@ orchestration:
   max_send_backs: 3
 
 compatible_playbooks:
-  - clean-professional
+  recommended:
+    - clean-professional
+  also_works: []
+  custom_allowed: true
 
 stages:
   - name: idea

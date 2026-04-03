@@ -117,17 +117,36 @@ Choose the structure that best fits the research findings:
 | `tutorial` | Audience wants to DO something | `audience_insights.common_questions` are how-to |
 | `story` | Human interest angle exists | Expert voices or real-world cases available |
 
-#### 3c: Visual Approach and Playbook
+#### 3c: Visual Identity — Design It, Don't Pick It
 
-Match the visual approach to the content. **Check Remotion availability first** — if `video_compose` reports `render_engines.remotion: true`, the Remotion render path unlocks animated text cards, stat cards, charts, spring-physics transitions, and component-based scenes. This should change your visual design:
+**Your job is to design a visual identity for THIS video, not to pick from a preset menu.**
 
-| Content Type | Visual Approach (Remotion available) | Visual Approach (FFmpeg only) | Playbook |
-|--------------|--------------------------------------|-------------------------------|----------|
-| Technical architecture/process | Remotion animated diagrams, flowcharts with spring transitions | Static diagrams with Ken Burns motion | `minimalist-diagram` |
-| Data-heavy narrative | Remotion stat cards, animated charts, comparison cards | Static image cards with zoom-in | `flat-motion-graphics` |
-| Professional/business | Remotion text cards with clean typography | Image-based title cards | `clean-professional` |
-| Storytelling/analogy | Remotion scenes with animated character cards | Image sequence with pan | Warm/narrative playbook |
-| Tutorial/how-to | Screen captures + Remotion callout overlays | Screen captures + static overlays | `minimalist-diagram` |
+The existing playbooks (`clean-professional`, `flat-motion-graphics`, `minimalist-diagram`) are starting points, not destinations. Most videos should get a **custom visual identity** derived from the subject matter, audience, and tone. A video about coffee should feel warm and tactile. A video about cybersecurity should feel technical and urgent. A video about marine biology should feel deep and fluid.
+
+**How to design visual identity:**
+
+1. **Start from the content.** What colors does the subject naturally evoke? What textures, materials, lighting? A video about volcanoes should feel different from a video about meditation — in colors, motion speed, typography weight, and transition style.
+
+2. **Consider the audience.** A Gen Z TikTok audience expects bold, high-contrast, fast motion. A corporate training audience expects restrained, professional, readable. A kids' educational audience expects bright, playful, bouncy.
+
+3. **Consider the tone.** The user's mood board and creative intake should guide this. "Cinematic" means different colors/motion than "playful" which means different from "clinical."
+
+4. **Build the palette from the subject.** Don't default to blue. Choose 2-3 colors that serve the content:
+   - Primary: the dominant brand/feel color
+   - Accent: for emphasis, stats, highlights
+   - Background: sets the overall mood (light = approachable, dark = dramatic/technical)
+
+5. **Use a preset playbook only when it genuinely fits.** If the video is a straightforward corporate explainer, `clean-professional` is fine. But if the topic has its own visual world (nature, space, food, music, sports, history), design a custom identity.
+
+6. **Generate a custom playbook when presets don't match.** Use `lib/playbook_generator.py` to create one from your design decisions. The Remotion theme system will automatically derive colors, fonts, and motion from whatever playbook you create — including custom ones.
+
+**Record your visual identity choices in the proposal_packet:**
+- `production_plan.playbook`: name of preset OR "custom"
+- If custom, include color choices and font choices in the concept's `visual_approach`
+- Include the reasoning: "Warm amber palette because the subject is coffee craftsmanship"
+- Log as decision: `category: "playbook_selection"`
+
+**Check Remotion availability** — if `video_compose` reports `render_engines.remotion: true`, design for animated components (text cards, stat cards, charts, spring transitions). This is a major quality upgrade.
 
 **Remotion components available** (when Remotion engine is active):
 - `text_card` — animated text with spring entrance
@@ -138,7 +157,7 @@ Match the visual approach to the content. **Check Remotion availability first** 
 - `chart` — bar, line, pie charts with animated data entry
 - `kpi_grid` — multi-stat dashboard layout
 
-**Important:** When Remotion is available and the playbook is `flat-motion-graphics`, **always design for Remotion component scenes** rather than static AI-generated images with Ken Burns pan. This is the difference between a professional motion graphics video and a slideshow.
+**Important:** When Remotion is available, **always design for Remotion component scenes** rather than static AI-generated images with Ken Burns pan. This is the difference between a professional motion graphics video and a slideshow.
 
 #### 3d: Duration and Platform
 
@@ -401,7 +420,7 @@ The `selected_concept` in the proposal_packet effectively replaces what the old 
 **Concept 1: "The 200ms Journey" (data_driven)**
 - Hook: "Every website you visit starts with a 200-millisecond treasure hunt across the internet."
 - Structure: journey — follow a DNS query step by step
-- Visual: minimalist-diagram, animated packet flow
+- Visual: custom signal-map identity — midnight background, electric route traces, packet-flow motion language
 - Duration: 90s (YouTube)
 - Grounded in: recursive resolution timing data, audience gap about multi-step process
 - Why it works: Most viewers think DNS is instant and singular. Showing the real journey is the aha moment.
@@ -409,7 +428,7 @@ The `selected_concept` in the proposal_packet effectively replaces what the old 
 **Concept 2: "Your ISP Knows Everything" (contrarian)**
 - Hook: "Your internet provider logs every website you visit. Here's the 40-year-old system that makes it possible."
 - Structure: myth_busting — challenge "private browsing = private" belief
-- Visual: clean-professional, privacy-focused with dark tones
+- Visual: custom surveillance-noir identity — low-key contrast, privacy-warning accents, restrained typography
 - Duration: 75s (YouTube)
 - Grounded in: DNS privacy misconception (audience research), DoH trending signal
 - Why it works: Privacy is emotionally charged. The misconception that HTTPS = full privacy is widespread.
@@ -417,7 +436,7 @@ The `selected_concept` in the proposal_packet effectively replaces what the old 
 **Concept 3: "The Internet's Phone Book" (analogy)**
 - Hook: "DNS is a phone book designed in 1983 that somehow still runs the modern internet."
 - Structure: analogy — phone book metaphor through historical evolution
-- Visual: flat-motion-graphics, retro-to-modern visual timeline
+- Visual: custom retro-systems identity — off-white paper base, archival type, neon-modern contrast for present-day beats
 - Duration: 60s (LinkedIn)
 - Grounded in: audience knowledge gap about DNS age, landscape gap (no historical angle found)
 - Why it works: Simplest on-ramp for non-technical audience. The "still works after 40 years" angle is inherently surprising.

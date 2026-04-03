@@ -25,7 +25,7 @@ The EP solves all of these by maintaining cumulative state and applying judgment
 | Pipeline | `pipeline_defs/talking-head.yaml` | Stage definitions, review focus, success criteria |
 | Skills | All 7 director skills + `meta/reviewer` | Stage execution knowledge |
 | Schemas | All artifact schemas | Validation |
-| Playbook | `clean-professional` (or user-selected) | Quality constraints |
+| Playbook | user-selected, footage-derived, or safe fallback | Quality constraints |
 | Tools | Full tool registry | Available capabilities |
 
 ## Key Difference from Explainer EP
@@ -49,7 +49,7 @@ The EP maintains a running state object that flows through the entire pipeline:
 ```
 EP_STATE:
   pipeline: talking-head
-  playbook: <selected playbook name, default: clean-professional>
+  playbook: <selected playbook name, custom identity, or safe fallback>
   raw_footage_path: <path to source footage>
   raw_footage_duration_seconds: <from ffprobe>
   raw_footage_resolution: <from ffprobe>
@@ -94,7 +94,7 @@ EP_STATE:
 ### Phase 0: Initialize
 
 1. Load the pipeline manifest (`talking-head.yaml`)
-2. Load the playbook (from user selection or default `clean-professional`)
+2. Load the playbook from user selection, brand system, or footage-derived visual identity. Use `clean-professional` only when no stronger identity is warranted.
 3. Set budget from configuration or user input (default: $0.50 — talking-head is mostly processing)
 4. Probe the raw footage with ffprobe: duration, resolution, fps, audio channels, codec
 5. Store footage metadata in EP_STATE
@@ -373,7 +373,7 @@ The EP doesn't replace any director skill — it wraps them. Each director skill
 
 ```
 [EP] Starting pipeline: talking-head v2.0
-[EP] Default budget: $0.50 | Playbook: clean-professional
+[EP] Default budget: $0.50 | Playbook: footage-derived identity (or safe fallback)
 
 [EP] Probing raw footage: interview_raw.mp4
 [EP] → Duration: 4m22s | Resolution: 1920x1080 | FPS: 30 | Audio: stereo AAC

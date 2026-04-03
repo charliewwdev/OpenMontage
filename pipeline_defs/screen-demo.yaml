@@ -36,8 +36,11 @@ required_skills:
   - meta/checkpoint-protocol
 
 compatible_playbooks:
-  - clean-professional
-  - minimalist-diagram
+  recommended:
+    - minimalist-diagram
+    - clean-professional
+  also_works: []
+  custom_allowed: true
 
 stages:
   - name: idea

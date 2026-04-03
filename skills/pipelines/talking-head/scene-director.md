@@ -192,8 +192,8 @@ For each approved overlay from Step 3, create an overlay scene entry:
   "content": {
     "text": "Agentic AI",
     "subtext": "Software that acts autonomously toward goals",
-    "backgroundColor": "#0F172A",
-    "accentColor": "#22D3EE"
+    "backgroundColor": "<theme_background>",
+    "accentColor": "<theme_accent>"
   },
   "position": "lower_third"
 }

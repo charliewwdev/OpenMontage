@@ -75,8 +75,8 @@ Create a composition JSON snippet for each overlay. These will be rendered by th
     "text": "Agentic AI: software that acts autonomously toward goals",
     "in_seconds": 0,
     "out_seconds": 4,
-    "backgroundColor": "#0F172A",
-    "accentColor": "#22D3EE",
+    "backgroundColor": "<theme_background>",
+    "accentColor": "<theme_accent>",
     "icon": "💡"
   },
   "overlay_timestamp": 22.0,
@@ -104,8 +104,8 @@ Create a composition JSON snippet for each overlay. These will be rendered by th
 
 The Explainer composition now includes an `AnimatedBackground` component that renders an animated gradient mesh, floating orbs, and a subtle grid pattern. This provides a far more professional look than flat solid colors.
 
-- Scene backgrounds should use `backgroundColor: "#0F172A"` which auto-converts to transparent, letting the animated gradient show through.
-- Do NOT use flat solid colors for backgrounds -- always let the AnimatedBackground render behind overlays.
+- Scene backgrounds should use the active theme background so the AnimatedBackground and overlay cards feel like one system.
+- Do NOT use arbitrary flat solid colors for backgrounds -- let the AnimatedBackground and theme drive the treatment.
 - When compositing green screen footage, render the AnimatedBackground as the replacement background (see compose-director Step 3c).
 
 **Component constraints:**
@@ -127,7 +127,7 @@ Key rules:
 - `kpi_grid` values MUST be purely numeric (e.g., `4.8`, `73`, `2400`). Formatted strings like `"15+"`, `"$4.8B"`, or `"2.4M"` will cause rendering errors. Use `stat_card` for string-formatted numbers instead.
 - Always check the target frame width before choosing a component. Portrait (720px) excludes `comparison`.
 
-**Dark theme for all overlays** -- use dark backgrounds (`#0F172A`, `#1E293B`) with light text. This ensures overlays are legible when composited on top of talking-head footage. The `#0F172A` backgroundColor is treated as transparent by the AnimatedBackground system, so overlays will show the animated gradient behind them.
+**Overlay theming rule** -- derive overlay backgrounds, accents, and text colors from the chosen playbook or custom identity. Use dark cards only when the footage/topic calls for it; a bright editorial talk can legitimately use light cards if contrast remains strong.
 
 **For simple text overlays** (if Remotion is overkill):
 

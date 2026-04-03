@@ -42,7 +42,7 @@ Create a brief artifact documenting:
 - **Hook**: What makes this worth watching?
 - **Key points**: Main topics covered in the footage
 - **Tone**: Match the speaker's actual tone (casual, professional, educational)
-- **Style**: Usually `clean-professional` for talking head
+- **Style**: Derive the overlay/look direction from the footage, speaker persona, audience, and platform. `clean-professional` is a safe fallback, not the default answer to every talking-head brief.
 - **Target platform**: Where this will be published
 - **Target duration**: May be shorter than raw footage (trimmed)
 

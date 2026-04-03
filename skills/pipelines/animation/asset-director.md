@@ -39,16 +39,19 @@ When `animation_mode == "image_animation"`, each scene needs **2-3 images** for 
 
 **Image generation workflow:**
 
-1. **Define a STYLE_PREFIX** — a consistent prompt prefix used across ALL images in the project. This ensures visual coherence. Store it as a reusable asset.
+1. **Define a VISUAL SYSTEM** — a reusable set of anchors used across all images in the project. This ensures visual coherence without flattening every shot into the same prompt. Store it as reusable metadata.
    ```
-   Example: "Studio Ghibli anime style, hand-painted watercolor aesthetic,
-   soft diffused lighting, lush natural environment, warm color palette,
-   painterly brushstrokes visible, high detail..."
+   Example: "Hand-painted nature fantasy, warm moss-and-amber palette,
+   soft diffused light, painterly foliage textures, gentle wonder."
    ```
+   Then adapt it per scene:
+   - Scene 1: wide establishing forest valley, mist, sunrise
+   - Scene 2: close character beat, lantern glow, drifting spores
+   - Scene 3: abstract magical energy reveal, brighter accent contrast
 
 2. **Use seed management** — for each scene, use nearby seed values (e.g., seed 100 and 101) for the A/B variants. Same prompt + different seed = same composition with subtle differences = natural crossfade motion.
 
-3. **Generate one test image first** — render a single scene to verify the style prefix produces good results at 1920×1080 before batch generating all images.
+3. **Generate one test image first** — render a single scene to verify the visual system produces good results at 1920×1080 before batch generating all images.
 
 4. **Batch generation** — generate all scene images. Skip any that already exist on disk (idempotent).
 
@@ -111,6 +114,7 @@ the AI model's training data — it may be wrong or outdated.
 - Using high-variance generation when a deterministic asset would work better.
 - Rebuilding the same title or label system repeatedly.
 - Hiding failed asset paths instead of reporting them.
+- Treating "consistency" as "same prompt every time." Good animation keeps a recognizable world while still letting each beat feel fresh.
 
 
 ## When You Do Not Know How

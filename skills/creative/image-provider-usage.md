@@ -102,9 +102,11 @@ When mixing stock and generated images in the same video, visual consistency is 
 Apply the playbook's color grading LUT to both stock and generated images in the compose stage.
 This unifies the look. The `color_grade` enhancement tool handles this.
 
-### Strategy: Match Playbook Style in Prompts
-When generating images, always prepend the playbook's `image_prompt_prefix`. When searching stock,
-use the playbook's color names in search filters (Pexels supports color filtering).
+### Strategy: Match The Visual Identity, Not A Copied Prefix
+When generating images, adapt the playbook's mood, palette, texture, and medium
+into a short scene-specific anchor. When searching stock, filter for the same
+emotional and visual qualities: color, lighting, environment, composition, era,
+and texture. Use the playbook as a consistency source, not a script to paste.
 
 ### Strategy: Avoid Mixing Styles Within a Scene
 Don't use a stock photo for one element and an AI illustration for another in the same scene.

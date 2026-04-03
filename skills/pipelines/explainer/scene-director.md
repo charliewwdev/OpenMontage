@@ -67,7 +67,7 @@ Transform each script section into 1-3 visual scenes. Each scene is a distinct v
 
 | Type | Best For | Available Tools | Duration Guidance |
 |------|----------|-----------------|-------------------|
-| `hero_title` | Opening titles, dramatic reveals | Remotion HeroTitle (cyan first word, animated underline) | 3-5s |
+| `hero_title` | Opening titles, dramatic reveals | Remotion HeroTitle (theme-driven title treatment) | 3-5s |
 | `stat_card` | Big dramatic numbers, impactful metrics | Remotion StatCard (large stat + subtitle) | 4-6s |
 | `bar_chart` | Category comparisons, rankings | Remotion BarChart (animated grow-up/slide-in/pop) | 5-7s |
 | `line_chart` | Trends, time series, growth curves | Remotion LineChart (draw/fade animation, multi-series) | 5-7s |
@@ -84,7 +84,7 @@ Transform each script section into 1-3 visual scenes. Each scene is a distinct v
 | `broll` | Context, real-world examples | Stock or generated footage | 3-6s |
 | `screen_recording` | Code demos, UI walkthroughs | Recorded or simulated | 5-15s |
 
-**Zero-key scene selection:** When no image/video generation is available, prefer `hero_title`, `stat_card`, `bar_chart`, `line_chart`, `pie_chart`, `kpi_grid`, `comparison`, `callout`, `progress_bar`, and `text_card`. These render entirely from Remotion components with zero external dependencies and produce professional, animated results. See `skills/core/remotion.md` for the proven formula (all-dark backgrounds, KPI data formatting rules, overlay techniques).
+**Zero-key scene selection:** When no image/video generation is available, prefer `hero_title`, `stat_card`, `bar_chart`, `line_chart`, `pie_chart`, `kpi_grid`, `comparison`, `callout`, `progress_bar`, and `text_card`. These render entirely from Remotion components with zero external dependencies and can still feel distinct if you derive color, typography, and pacing from the subject instead of defaulting to a generic dashboard aesthetic.
 
 ### Step 4: Apply the Visual Technique Library
 
@@ -101,15 +101,15 @@ Show the abstract concept alongside its real-world analogy. Split screen or side
 - Example: "Left: actual vector space with dots. Right: a library with books sorted by topic."
 
 **Stat Card Punch**
-Full-screen number with impact animation (scale up, slight bounce). Use `stat_card` type with a dark background and bold accent color. Hold for 4-5 seconds.
+Full-screen number with impact animation (scale up, slight bounce). Use `stat_card` type with a background and accent treatment chosen for the video's identity. Hold for 4-5 seconds.
 - Tools: Remotion StatCard component
-- Example: stat="1ms", subtitle="vs 500ms with traditional search", accentColor="#22D3EE"
+- Example: stat="1ms", subtitle="vs 500ms with traditional search", accentColor="<theme_accent>"
 
 **Data Dashboard Sequence**
 A series of data visualization scenes that tell a story through numbers. Start with a KPI overview, then drill into specific charts. Use section_title overlays to group related data. This pattern works with zero external tools.
 - Tools: Remotion chart components (bar_chart, line_chart, pie_chart, kpi_grid)
 - Example: kpi_grid (4 key stats) → bar_chart (breakdown) → line_chart (trend) → pie_chart (distribution)
-- Always use dark backgrounds (`backgroundColor: "#0F172A"`) for cinematic feel.
+- Choose the background treatment from the visual identity: dark for dramatic/technical subjects, light for approachable/educational, textured or warm when the topic calls for it.
 
 **Before/After Split**
 Show the problem, then the solution using `comparison` type. The comparison card shows dual values side-by-side with animated entrance.
@@ -167,14 +167,14 @@ The style playbook constrains your visual choices:
 | `motion.transitions` | Allowed transition types (e.g., `gentle-fade`, `soft-dissolve`) |
 | `motion.animation_style` | Animation feel (e.g., `ease-in-out, organic curves`) |
 | `motion.pacing_rules` | Minimum hold times (e.g., "hold establishing shots for 2s minimum") |
-| `asset_generation.image_prompt_prefix` | Prepend to all image generation prompts |
+| `asset_generation.image_prompt_prefix` | Distill into a short visual anchor; do not paste verbatim into all prompts |
 | `asset_generation.consistency_anchors` | What must stay consistent across all images (color palette, lighting, style) |
 
 **Checklist before submitting:**
 - [ ] Every scene uses playbook-compatible transitions
 - [ ] All required_asset descriptions include style cues from the playbook
 - [ ] No scene violates pacing rules (min/max duration)
-- [ ] Image descriptions reference playbook's color palette and texture
+- [ ] Image descriptions reference the video's actual visual identity, not just a preset name
 
 ### Step 6: Verify Coverage and Variety
 
@@ -221,4 +221,5 @@ Call `handle_explainer_scene_plan(state, {"scene_plan": scene_plan_json})` to va
 - **Overly ambitious animations**: "Photorealistic 3D fly-through of a data center" can't be generated with current tools. Keep it achievable.
 - **No transition strategy**: Random transitions feel chaotic. Use the playbook's transition rules consistently. Reserve special transitions for topic shifts.
 - **Vague required_assets**: "An image about databases" is useless for prompt engineering. "Isometric illustration of a vector database with embedding vectors floating in 3D space, using the playbook's blue-green palette" is actionable.
+- **Preset thinking**: A scene plan that says "make it flat-motion-graphics" is not enough. The planner must specify what makes THIS video's motion graphics feel distinct.
 - **Static scenes for dynamic concepts**: If the narrator describes a process or transformation, the visual should move. Use animation or progressive reveal, not a static image.

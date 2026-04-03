@@ -38,10 +38,13 @@ orchestration:
   max_wall_time_minutes: 15
 
 compatible_playbooks:
-  - clean-professional
-  - flat-motion-graphics
-  - minimalist-diagram
-  - anime-ghibli
+  recommended:
+    - flat-motion-graphics
+    - anime-ghibli
+  also_works:
+    - clean-professional
+    - minimalist-diagram
+  custom_allowed: true
 
 stages:
   # ── Pre-Production ──────────────────────────────────────────────

@@ -212,7 +212,7 @@ For each concept, specify:
 - Hook must promise a VISUAL experience, not just information
 - Hook must be grounded in a specific research finding
 
-#### 4b: Animation Approach and Approach
+#### 4b: Animation Approach and Visual Identity
 
 For each concept, specify:
 - **Animation approach**: `image_animation` / `clip_video` / `manim` / `remotion_dataviz` / `diagram_stills` / `mixed`
@@ -220,7 +220,10 @@ For each concept, specify:
 - **Image/video generation provider**: which specific provider from the preflight scan (e.g., "FLUX via fal.ai", "gpt-image-1 via OpenAI", "Stable Diffusion local")
 - **Reuse strategy**: What's the visual system? (recurring motifs, layout grid, color scheme, transition family)
 - **Complexity estimate**: How many unique scene types vs. reusable templates?
-- **Style playbook**: which playbook from `styles/*.yaml` (e.g., `anime-ghibli`, `clean-professional`)
+- **Visual identity**: palette, typography, texture, motion energy, and why they fit this subject, audience, and platform
+- **Playbook strategy**: preset if it truly fits, or a custom playbook generated via `lib/playbook_generator.py`
+
+**Important:** Do not reduce animation identity to a preset name. A physics explainer, a startup launch video, and a dreamy anime short may all use Remotion, but they should not share the same color logic, typography, or motion cadence.
 
 #### 4c: Narrative Structure
 

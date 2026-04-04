@@ -99,9 +99,16 @@ REFERENCE NEEDS          YOUR CAPABILITIES          GAP
 Video clips (sci-fi)     Video gen: 0/12 configured BLOCKED without key
 Narration (deep male)    TTS: ElevenLabs available  READY
 Background music         Music: MusicGen available  READY
-Text animations          Remotion: available        READY
-Fast-cut editing         FFmpeg: available          READY
+Composition engine       Remotion: available        READY (preferred)
+                         FFmpeg: available          READY (fallback only)
 ```
+
+**Composition engine priority:** Always check Remotion availability at this step.
+When Remotion is available, it is the **primary** composition engine — use it for
+transitions, animated text, still-image animation, and scene assembly. FFmpeg is
+the fallback for when Remotion is unavailable, or for simple operations that don't
+benefit from Remotion (pure concat, trim, audio mux). Never default to FFmpeg when
+Remotion is available.
 
 Be honest about gaps. If video generation is needed but unavailable, say so clearly:
 
@@ -149,7 +156,8 @@ Use this structure for each variant:
 **Visual plan:**
 - Playbook: [closest match + customizations]
 - Visual treatment: [how visuals will be created — which tools, which providers]
-- Motion: [Remotion animations / video gen clips / stock + Ken Burns / etc.]
+- Composition: [Remotion (preferred when available) / FFmpeg (fallback only)]
+- Motion: [video gen clips / Remotion spring animations on stills / etc.]
 
 **Audio plan:**
 - Narration: [yes/no, which TTS provider, voice style]

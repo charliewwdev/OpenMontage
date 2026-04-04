@@ -44,6 +44,7 @@ class FrameSampler(BaseTool):
         "extract_frames_interval",
         "extract_frames_count",
         "extract_frames_timestamps",
+        "extract_frames_scene_guided",
     ]
 
     input_schema = {
@@ -53,7 +54,7 @@ class FrameSampler(BaseTool):
             "input_path": {"type": "string"},
             "strategy": {
                 "type": "string",
-                "enum": ["interval", "count", "timestamps"],
+                "enum": ["interval", "count", "timestamps", "scene_guided"],
             },
             "interval_seconds": {
                 "type": "number",
@@ -69,6 +70,23 @@ class FrameSampler(BaseTool):
                 "type": "array",
                 "items": {"type": "number"},
                 "description": "Specific timestamps in seconds (for timestamps strategy)",
+            },
+            "scene_boundaries": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "start_seconds": {"type": "number"},
+                        "end_seconds": {"type": "number"},
+                    },
+                },
+                "description": "Scene boundary list (for scene_guided strategy)",
+            },
+            "max_frames": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 20,
+                "description": "Max frames to extract (for scene_guided strategy)",
             },
             "output_dir": {"type": "string"},
             "format": {"type": "string", "enum": ["png", "jpg"], "default": "jpg"},
@@ -101,6 +119,8 @@ class FrameSampler(BaseTool):
                 frames = self._extract_count(input_path, output_dir, fmt, quality, inputs)
             elif strategy == "timestamps":
                 frames = self._extract_timestamps(input_path, output_dir, fmt, quality, inputs)
+            elif strategy == "scene_guided":
+                frames = self._extract_scene_guided(input_path, output_dir, fmt, quality, inputs)
             else:
                 return ToolResult(success=False, error=f"Unknown strategy: {strategy}")
         except Exception as e:
@@ -207,6 +227,54 @@ class FrameSampler(BaseTool):
                 })
 
         return frames
+
+    def _extract_scene_guided(
+        self,
+        input_path: Path,
+        output_dir: Path,
+        fmt: str,
+        quality: int,
+        inputs: dict,
+    ) -> list[dict]:
+        """Extract keyframes guided by scene boundaries.
+
+        Extracts the first frame of each scene plus a midpoint frame for scenes
+        longer than 3 seconds. This captures all visual transitions with a
+        bounded, predictable number of frames — much better than uniform FPS.
+        """
+        scene_boundaries = inputs.get("scene_boundaries", [])
+        max_frames = inputs.get("max_frames", 20)
+
+        if not scene_boundaries:
+            # No scene data — fall back to count-based
+            return self._extract_count(input_path, output_dir, fmt, quality, {
+                "count": min(max_frames, 15),
+            })
+
+        # Compute timestamps: first frame + midpoint for long scenes
+        timestamps = []
+        for scene in scene_boundaries:
+            start = scene.get("start_seconds", 0)
+            end = scene.get("end_seconds", 0)
+            duration = end - start
+
+            # First frame of scene (offset slightly to avoid black frames)
+            timestamps.append(start + 0.1)
+
+            # Midpoint for scenes > 3 seconds
+            if duration > 3.0:
+                timestamps.append(start + duration / 2)
+
+        # Deduplicate, sort, limit
+        timestamps = sorted(set(round(t, 3) for t in timestamps))
+        if len(timestamps) > max_frames:
+            step = len(timestamps) / max_frames
+            timestamps = [timestamps[int(i * step)] for i in range(max_frames)]
+
+        # Extract via timestamps strategy
+        return self._extract_timestamps(
+            input_path, output_dir, fmt, quality, {"timestamps": timestamps}
+        )
 
     def _get_duration(self, input_path: Path) -> float:
         """Get video duration in seconds via ffprobe."""

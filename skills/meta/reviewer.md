@@ -117,6 +117,39 @@ Structure your review as:
 | compose | Playability, duration accuracy, audio quality, pre-compose validation pass |
 | publish | SEO quality, metadata completeness, export packaging |
 
+## Reference Alignment Review
+
+Run at **every stage** when a VideoAnalysisBrief exists (reference-driven production).
+
+### Checks:
+
+1. **Grounding check:** Does the output reference specific findings from the
+   VideoAnalysisBrief, or is it making things up about the reference?
+   - Proposal mentions "fast pacing" but reference pacing_style is "slow_contemplative" → **CRITICAL**
+   - Script claims reference has narration but VideoAnalysisBrief shows no narration → **CRITICAL**
+
+2. **Differentiation check:** Does each concept/scene have a clear creative
+   difference from the reference, or is it a copy?
+   - Proposal is a carbon copy of the reference (same topic, same structure, same treatment) → **CRITICAL**
+   - At least one element per concept MUST differ from the reference → **SUGGESTION** if weak
+   - Creative differentiation seeds from the brief should be reflected in proposals
+
+3. **Promise preservation:** Are the elements the user said they loved about the
+   reference still present in the output?
+   - User said "I love the pacing" but scene_plan has 2x longer scenes → **SUGGESTION**
+   - User said "keep the hook style" but script uses a different hook → **SUGGESTION**
+
+4. **Cost alignment:** Is the cost estimate still accurate, or has scope crept?
+   - If actual spend exceeds estimate by >30% without user re-approval → **CRITICAL**
+   - If new assets were added beyond the approved proposal → **SUGGESTION**
+
+### Severity:
+- Factual errors about the reference video: **CRITICAL**
+- Carbon copy with no differentiation: **CRITICAL**
+- Weak differentiation (surface-level changes only): **SUGGESTION**
+- User preference not honored: **SUGGESTION**
+- Cost drift >30%: **CRITICAL**
+
 ## Slideshow Risk Review
 
 Run at **scene_plan** and **edit** stages. Use `lib/slideshow_risk.py` to compute the score.

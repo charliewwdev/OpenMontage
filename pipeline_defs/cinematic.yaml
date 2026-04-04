@@ -9,6 +9,17 @@ category: cinematic
 stability: production
 default_checkpoint_policy: guided
 
+# Reference video input support
+reference_input:
+  supported: true
+  analysis_depth: deep
+  analysis_tools:
+    - video_analyzer
+    - transcript_fetcher
+    - video_downloader
+    - scene_detect
+    - frame_sampler
+
 orchestration:
   mode: executive-producer
   skill: pipelines/cinematic/executive-producer
@@ -88,6 +99,16 @@ stages:
       - At least 3 concept options with different emotional arcs
       - Delivery promise present with motion_required flag
       - Cost estimate includes per-item breakdown
+    sub_stages:
+      - name: sample
+        description: "10-15 second cinematic preview for reference-driven productions"
+        condition: "video_analysis_brief_exists"
+        human_approval_default: true
+        tools_available: [tts_selector, image_selector, video_selector, video_compose, audio_mixer, color_grade]
+        review_focus:
+          - "Sample captures the approved emotional tone"
+          - "Color palette and lighting match approved direction"
+          - "Music mood matches approved cinematic treatment"
 
   - name: script
     skill: pipelines/cinematic/script-director

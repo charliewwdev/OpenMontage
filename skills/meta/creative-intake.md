@@ -55,6 +55,26 @@ The intake_brief is passed as context to the research-director, not as a
 formal artifact. It exists to prevent the research stage from inventing
 intent that the user never expressed.
 
+## Handling Reference Video Input
+
+When the user provides a video URL or file as their starting point:
+
+1. **Read the video-reference-analyst skill** (`skills/meta/video-reference-analyst.md`)
+   and follow its protocol. Do not proceed with standard creative intake.
+
+2. The VideoAnalysisBrief replaces the need for most intake questions — it provides
+   tone, structure, pacing, audience signals, and style information directly from the
+   reference.
+
+3. The remaining intake questions are:
+   - What topic/subject for YOUR version? (if different from reference)
+   - How long?
+   - Narration yes/no?
+   - Budget ceiling?
+
+4. Do NOT ask "what should it feel like?" — the reference video IS the answer to that
+   question. Extract tone from the VideoAnalysisBrief instead.
+
 ## What NOT To Do
 
 - Do not present a numbered survey. This is a conversation, not a form.

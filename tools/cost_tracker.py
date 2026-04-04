@@ -173,6 +173,310 @@ class CostTracker:
         entry["timestamp"] = self._now()
         self._save()
 
+    # ---- Reference-driven estimation ----
+
+    def estimate_from_reference(
+        self,
+        video_analysis_brief: dict,
+        target_duration_seconds: int,
+        tool_plan: dict,
+    ) -> dict:
+        """Estimate production cost based on reference analysis + target duration.
+
+        Args:
+            video_analysis_brief: The VideoAnalysisBrief artifact from video analysis
+            target_duration_seconds: How long the output video should be
+            tool_plan: Which tools will be used for each asset type, e.g.:
+                {
+                    "image_generation": {"tool": "flux_fal", "cost_per_unit": 0.05},
+                    "video_generation": {"tool": "kling_fal", "cost_per_unit": 0.30,
+                                         "clip_duration_seconds": 5},
+                    "tts": {"tool": "elevenlabs_tts", "cost_per_word": 0.00003},
+                    "music": {"tool": "music_gen", "cost_per_track": 0.10},
+                }
+
+        Returns:
+            Itemized cost breakdown with line items, total, sample cost, and assumptions.
+        """
+        structure = video_analysis_brief.get("structure_analysis", {})
+        pacing = structure.get("pacing_profile", {})
+        narration = video_analysis_brief.get("narration_transcript", {})
+        ref_duration = video_analysis_brief.get("source", {}).get("duration_seconds", 60)
+        pacing_style = pacing.get("pacing_style", "steady_educational")
+
+        # ── Scene count estimation ──
+        # Don't just scale linearly — use the PACING DENSITY from the reference.
+        # A music video with 8 scenes in 162s has ~3 cuts/min.
+        # Scaling to 60s should PRESERVE that cut rate, not reduce scene count.
+        ref_scenes = structure.get("total_scenes", 8)
+        if ref_duration > 0:
+            cuts_per_minute = ref_scenes / (ref_duration / 60)
+        else:
+            cuts_per_minute = 4.0  # default: moderate pacing
+
+        # Apply pacing-aware minimums (a fast-cut video doesn't become a slideshow)
+        min_scenes_by_pacing = {
+            "rapid_fire": 10,
+            "dynamic_social": 8,
+            "steady_educational": 5,
+            "slow_contemplative": 3,
+            "variable": 6,
+        }
+        min_scenes = min_scenes_by_pacing.get(pacing_style, 5)
+
+        # Scene count = max(pacing-density-based, minimum for style)
+        density_based_scenes = round(cuts_per_minute * (target_duration_seconds / 60))
+        estimated_scenes = max(min_scenes, density_based_scenes)
+
+        # ── Narration word count ──
+        ref_word_count = narration.get("word_count", 0)
+        if ref_duration > 0 and ref_word_count > 0:
+            actual_wpm = (ref_word_count / ref_duration) * 60
+        else:
+            actual_wpm = 150  # default conversational pace
+        estimated_words = round(actual_wpm * (target_duration_seconds / 60))
+
+        # ── Motion ratio from reference ──
+        scenes_list = structure.get("scenes", [])
+        motion_ratio, motion_basis = self._estimate_motion_ratio(
+            video_analysis_brief=video_analysis_brief,
+            scenes_list=scenes_list,
+            pacing_style=pacing_style,
+        )
+
+        estimated_motion_scenes = (
+            max(1, round(estimated_scenes * motion_ratio))
+            if motion_ratio > 0
+            else 0
+        )
+        estimated_still_scenes = estimated_scenes - estimated_motion_scenes
+
+        # ── Video clip coverage ──
+        # Video gen tools produce clips of limited duration (typically 5-10s).
+        # A 60s video with motion needs enough clips to COVER the duration,
+        # not just 1 per scene.
+        vid_plan = tool_plan.get("video_generation", {})
+        clip_duration = vid_plan.get("clip_duration_seconds", 5) if vid_plan else 5
+        motion_seconds = target_duration_seconds * motion_ratio
+        clips_needed_for_coverage = max(
+            estimated_motion_scenes,
+            round(motion_seconds / clip_duration)
+        ) if vid_plan else 0
+
+        # ── Retry/waste buffer ──
+        # Not every generation succeeds or looks good. Add a buffer.
+        retry_multiplier = 1.3  # ~30% extra for retries and rejected outputs
+
+        # ── Image count ──
+        # Images per scene depends on visual variety needs:
+        # - Explainer: 1-2 images per scene
+        # - Music video / cinematic: 2-3 images per scene (mood shifts, variety)
+        images_per_scene = 2.0 if pacing_style in ("dynamic_social", "rapid_fire") else 1.5
+        estimated_images = max(
+            estimated_scenes,
+            round(estimated_scenes * images_per_scene)
+        )
+
+        # Build line items
+        line_items = []
+        assumptions = []
+
+        assumptions.append(
+            f"{estimated_scenes} scenes (reference has {cuts_per_minute:.1f} cuts/min, "
+            f"pacing: {pacing_style})"
+        )
+        assumptions.append(motion_basis)
+
+        # Image generation
+        img_plan = tool_plan.get("image_generation", {})
+        if img_plan:
+            img_count = round(estimated_images * retry_multiplier)
+            unit_cost = img_plan.get("cost_per_unit", 0.05)
+            line_items.append({
+                "category": "image_generation",
+                "provider": img_plan.get("tool", "unknown"),
+                "quantity": img_count,
+                "unit_cost_usd": unit_cost,
+                "total_usd": round(img_count * unit_cost, 4),
+                "basis": (
+                    f"~{images_per_scene:.0f} images/scene x {estimated_scenes} scenes "
+                    f"+ {round((retry_multiplier - 1) * 100)}% retry buffer"
+                ),
+            })
+
+        # Video generation
+        if vid_plan and clips_needed_for_coverage > 0:
+            clip_count = round(clips_needed_for_coverage * retry_multiplier)
+            unit_cost = vid_plan.get("cost_per_unit", 0.30)
+            line_items.append({
+                "category": "video_generation",
+                "provider": vid_plan.get("tool", "unknown"),
+                "quantity": clip_count,
+                "unit_cost_usd": unit_cost,
+                "total_usd": round(clip_count * unit_cost, 4),
+                "basis": (
+                    f"{motion_seconds:.0f}s of motion / {clip_duration}s clips = "
+                    f"{clips_needed_for_coverage} clips + retry buffer"
+                ),
+            })
+            assumptions.append(
+                f"{round(motion_ratio * 100)}% motion ratio → "
+                f"{motion_seconds:.0f}s needs {clips_needed_for_coverage} clips "
+                f"({clip_duration}s each)"
+            )
+
+        # TTS narration
+        tts_plan = tool_plan.get("tts", {})
+        if tts_plan and estimated_words > 10:
+            cost_per_word = tts_plan.get("cost_per_word", 0.00003)
+            tts_cost = round(estimated_words * cost_per_word, 4)
+            line_items.append({
+                "category": "tts_narration",
+                "provider": tts_plan.get("tool", "unknown"),
+                "quantity": estimated_words,
+                "unit_cost_usd": cost_per_word,
+                "total_usd": tts_cost,
+                "basis": f"Narration at {round(actual_wpm)} WPM = ~{estimated_words} words",
+            })
+            assumptions.append(
+                f"Narration at {round(actual_wpm)} WPM = ~{estimated_words} words "
+                f"for {target_duration_seconds} seconds"
+            )
+
+        # Music
+        music_plan = tool_plan.get("music", {})
+        if music_plan:
+            music_cost = music_plan.get("cost_per_track", 0.0)
+            line_items.append({
+                "category": "music",
+                "provider": music_plan.get("tool", "unknown"),
+                "quantity": 1,
+                "unit_cost_usd": music_cost,
+                "total_usd": music_cost,
+                "basis": "1 background music track",
+            })
+
+        subtotal = round(sum(item["total_usd"] for item in line_items), 4)
+
+        # ── Cost range instead of single number ──
+        # Low: everything works first try. High: retry buffer fully consumed.
+        low_total = round(subtotal / retry_multiplier, 4)
+        high_total = round(subtotal * 1.15, 4)  # 15% above retry-buffered estimate
+
+        # Sample cost: 2 scenes worth of assets (hook + 1 middle)
+        sample_scenes = 2
+        sample_fraction = sample_scenes / max(estimated_scenes, 1)
+        sample_cost = round(subtotal * sample_fraction, 4)
+
+        # Confidence based on how much data we have
+        if scenes_list and narration.get("word_count", 0) > 0:
+            confidence = "high"
+        elif scenes_list or narration.get("word_count", 0) > 0:
+            confidence = "medium"
+        else:
+            confidence = "low"
+
+        return {
+            "line_items": line_items,
+            "total_usd": subtotal,
+            "total_range_usd": {"low": low_total, "high": high_total},
+            "sample_cost_usd": sample_cost,
+            "confidence": confidence,
+            "assumptions": assumptions,
+            "estimated_scenes": estimated_scenes,
+            "estimated_images": estimated_images,
+            "estimated_clips": clips_needed_for_coverage,
+            "estimated_words": estimated_words,
+            "motion_ratio": round(motion_ratio, 2),
+            "cuts_per_minute": round(cuts_per_minute, 1),
+            "target_duration_seconds": target_duration_seconds,
+        }
+
+    def _estimate_motion_ratio(
+        self,
+        *,
+        video_analysis_brief: dict,
+        scenes_list: list[dict[str, Any]],
+        pacing_style: str,
+    ) -> tuple[float, str]:
+        """Estimate how much of the target treatment truly needs motion."""
+        motion_weights = {
+            "animation": 1.0,
+            "b_roll": 1.0,
+            "stock_footage": 1.0,
+            "product_shot": 0.9,
+            "transition": 0.6,
+            "screen_recording": 0.45,
+            "talking_head": 0.35,
+            "diagram": 0.25,
+            "chart": 0.25,
+            "text_card": 0.2,
+        }
+        classified_weights = [
+            motion_weights[visual_type]
+            for scene in scenes_list
+            if (visual_type := scene.get("visual_type")) in motion_weights
+        ]
+        if classified_weights:
+            ratio = sum(classified_weights) / len(classified_weights)
+            unknown_count = max(0, len(scenes_list) - len(classified_weights))
+            if unknown_count:
+                fallback_ratio, _ = self._fallback_motion_ratio(
+                    video_analysis_brief=video_analysis_brief,
+                    pacing_style=pacing_style,
+                )
+                ratio = (
+                    (sum(classified_weights) + fallback_ratio * unknown_count)
+                    / len(scenes_list)
+                )
+                basis = (
+                    "motion ratio blended from classified scene types and "
+                    "reference-style fallback for unclassified scenes"
+                )
+            else:
+                basis = "motion ratio derived from classified scene types"
+            return round(min(max(ratio, 0.0), 0.95), 2), basis
+
+        return self._fallback_motion_ratio(
+            video_analysis_brief=video_analysis_brief,
+            pacing_style=pacing_style,
+        )
+
+    def _fallback_motion_ratio(
+        self,
+        *,
+        video_analysis_brief: dict,
+        pacing_style: str,
+    ) -> tuple[float, str]:
+        """Fallback heuristic for motion ratio before scene vision enrichment."""
+        source_type = video_analysis_brief.get("source", {}).get("type", "")
+        replication = video_analysis_brief.get("replication_guidance", {})
+        motion_required = bool(replication.get("motion_required"))
+        suggested_pipeline = replication.get("suggested_pipeline", "")
+
+        base_by_pacing = {
+            "rapid_fire": 0.8,
+            "dynamic_social": 0.65,
+            "steady_educational": 0.35,
+            "slow_contemplative": 0.2,
+            "variable": 0.5,
+        }
+        ratio = base_by_pacing.get(pacing_style, 0.5)
+
+        if source_type in ("shorts", "instagram", "tiktok"):
+            ratio = max(ratio, 0.7)
+        if motion_required:
+            ratio = max(ratio, 0.6)
+        if suggested_pipeline == "cinematic":
+            ratio = max(ratio, 0.55)
+
+        ratio = round(min(max(ratio, 0.1), 0.95), 2)
+        basis = (
+            "motion ratio inferred from pacing/style because scene visual types "
+            "have not been enriched yet"
+        )
+        return ratio, basis
+
     # ---- Persistence ----
 
     def _save(self) -> None:

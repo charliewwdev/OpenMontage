@@ -31,9 +31,11 @@ from lib.pipeline_loader import (
     get_required_tools,
     get_stage_order,
     get_stage_skill,
+    get_stage_sub_stages,
     get_stage_review_focus,
     list_pipelines,
     load_pipeline,
+    pipeline_supports_reference_input,
 )
 from tools.base_tool import BaseTool, ToolResult, ToolTier, ToolStatus
 from tools.tool_registry import ToolRegistry
@@ -201,6 +203,49 @@ def sample_artifact(name: str) -> dict:
                 }
             ],
         }
+    if name == "video_analysis_brief":
+        return {
+            "version": "1.0",
+            "source": {
+                "type": "youtube",
+                "url": "https://example.com/watch?v=abc123def45",
+                "title": "Reference Video",
+                "duration_seconds": 60,
+            },
+            "content_analysis": {
+                "summary": "A fast explainer reference.",
+                "topics": ["quantum computing"],
+                "target_audience": "general",
+            },
+            "structure_analysis": {
+                "total_scenes": 3,
+                "scenes": [
+                    {
+                        "scene_index": 0,
+                        "start_time": 0,
+                        "end_time": 5,
+                        "description": "Hook",
+                    },
+                    {
+                        "scene_index": 1,
+                        "start_time": 5,
+                        "end_time": 20,
+                        "description": "Setup",
+                    },
+                    {
+                        "scene_index": 2,
+                        "start_time": 20,
+                        "end_time": 60,
+                        "description": "Payoff",
+                    },
+                ],
+                "pacing_profile": {
+                    "avg_scene_duration_seconds": 20,
+                    "cuts_per_minute": 3,
+                    "pacing_style": "steady_educational",
+                },
+            },
+        }
     raise KeyError(f"Unknown artifact sample: {name}")
 
 
@@ -234,6 +279,9 @@ class TestSchemas:
     def test_brief_rejects_invalid(self):
         with pytest.raises(Exception):
             validate_artifact("brief", {"version": "1.0"})
+
+    def test_video_analysis_brief_validates(self):
+        validate_artifact("video_analysis_brief", sample_artifact("video_analysis_brief"))
 
 
 # ---- Checkpoint ----
@@ -289,6 +337,21 @@ class TestCheckpoint:
                 {"research_brief": sample_artifact("research_brief")},
             )
 
+    def test_supplementary_video_analysis_brief_is_validated(self, tmp_path):
+        write_checkpoint(
+            tmp_path,
+            "proj",
+            "proposal",
+            "completed",
+            {
+                "proposal_packet": sample_artifact("proposal_packet"),
+                "video_analysis_brief": sample_artifact("video_analysis_brief"),
+            },
+        )
+        cp = read_checkpoint(tmp_path, "proj", "proposal")
+        assert cp is not None
+        assert "video_analysis_brief" in cp["artifacts"]
+
 
 # ---- Pipeline manifests ----
 
@@ -301,6 +364,22 @@ class TestPipelineManifests:
 
     def test_framework_smoke_manifest_listed(self):
         assert "framework-smoke" in list_pipelines()
+
+    def test_reference_sub_stage_helpers(self):
+        manifest = load_pipeline("animated-explainer")
+        assert pipeline_supports_reference_input(manifest) is True
+        assert "video_analyzer" in get_required_tools(manifest)
+
+        all_units = get_stage_order(manifest, include_sub_stages=True)
+        assert "proposal.sample" in all_units
+
+        active_sub_stages = get_stage_sub_stages(
+            manifest,
+            "proposal",
+            context={"video_analysis_brief_exists": True},
+            include_inactive=False,
+        )
+        assert any(s["name"] == "sample" for s in active_sub_stages)
 
 
 # ---- BaseTool ----
@@ -424,6 +503,34 @@ class TestCostTracker:
 
         t2 = CostTracker(cost_log_path=log_path)
         assert t2.budget_spent_usd == 0.08
+
+    def test_reference_estimate_falls_back_when_scene_types_are_unclassified(self):
+        tracker = CostTracker(mode=BudgetMode.OBSERVE)
+        brief = {
+            "source": {"type": "shorts", "duration_seconds": 60},
+            "structure_analysis": {
+                "total_scenes": 12,
+                "pacing_profile": {"pacing_style": "rapid_fire"},
+                "scenes": [{"visual_type": "other"} for _ in range(12)],
+            },
+            "narration_transcript": {"word_count": 180},
+            "replication_guidance": {"motion_required": True, "suggested_pipeline": "animation"},
+        }
+        plan = {
+            "video_generation": {"tool": "kling_fal", "cost_per_unit": 0.3, "clip_duration_seconds": 5},
+            "image_generation": {"tool": "flux_fal", "cost_per_unit": 0.05},
+            "tts": {"tool": "elevenlabs_tts", "cost_per_word": 0.00003},
+            "music": {"tool": "music_gen", "cost_per_track": 0.1},
+        }
+
+        estimate = tracker.estimate_from_reference(brief, 60, plan)
+
+        assert estimate["motion_ratio"] >= 0.6
+        assert estimate["estimated_clips"] >= 7
+        assert any(
+            "scene visual types have not been enriched yet" in note
+            for note in estimate["assumptions"]
+        )
 
 
 # ---- Pipeline Instruction Architecture ----

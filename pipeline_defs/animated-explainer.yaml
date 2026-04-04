@@ -9,6 +9,17 @@ stability: production
 
 default_checkpoint_policy: guided
 
+# Reference video input support
+reference_input:
+  supported: true
+  analysis_depth: standard
+  analysis_tools:
+    - video_analyzer
+    - transcript_fetcher
+    - video_downloader
+    - scene_detect
+    - frame_sampler
+
 extensions:
   custom_scripts: true
   custom_playbooks: true
@@ -83,11 +94,22 @@ stages:
       - Cost estimate is itemized and honest
       - Quality/cost tradeoffs are clearly presented
       - Alternative production paths shown at different price points
+      - "Concept differentiation from reference (if reference-driven)"
     success_criteria:
       - Schema-valid proposal_packet with at least 3 concept_options
       - selected_concept references a valid concept_id
       - cost_estimate has itemized line_items with per-tool costs
       - approval.status is "approved" or "approved_with_changes" before proceeding
+    sub_stages:
+      - name: sample
+        description: "10-15 second preview clip for reference-driven productions"
+        condition: "video_analysis_brief_exists"
+        human_approval_default: true
+        tools_available: [tts_selector, image_selector, video_selector, video_compose, audio_mixer]
+        review_focus:
+          - "Sample represents the approved concept faithfully"
+          - "Audio levels and voice match approved direction"
+          - "Visual style matches approved playbook"
 
   # ── Production ──────────────────────────────────────────────────
 

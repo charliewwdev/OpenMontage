@@ -22,6 +22,36 @@ Think of yourself as a creative agency pitching to a client: you present concept
 
 ## Process
 
+### Step 0: Check for Reference Video Context
+
+Before starting proposal work, check if a VideoAnalysisBrief exists for this project.
+
+**When a VideoAnalysisBrief is present — Reference-Aware Concept Design:**
+
+**HARD RULE: No carbon copies.** Each concept option MUST:
+1. Name at least ONE element it keeps from the reference (pacing, structure, tone, hook style)
+2. Name at least ONE element it changes (topic angle, visual treatment, narration approach)
+3. Explain WHY the change makes the output better, not just different
+
+**Differentiation patterns:**
+
+| Pattern | Example |
+|---------|---------|
+| **Same structure, different subject** | Reference: "How black holes work" → Ours: "How neutron stars work" with same pacing |
+| **Same subject, different angle** | Reference: "Kubernetes explained" → Ours: "Kubernetes from a security engineer's POV" |
+| **Same tone, different visual treatment** | Reference: stock footage + voiceover → Ours: animated motion graphics + voiceover |
+| **Same content, different platform** | Reference: 10-min YouTube → Ours: 60-sec Shorts version with faster pacing |
+| **Counter-take** | Reference: "Why AI will replace jobs" → Ours: "Why AI won't replace YOUR job" |
+
+**Mandatory Sample Protocol:** After the user approves a concept, BEFORE entering the
+script stage, produce a 10-15 second sample:
+1. The opening hook (first 5-7 seconds) + one representative middle scene
+2. Actual TTS voice, actual visual style, music bed snippet
+3. Present with: "Here's a preview. Does this feel right?"
+4. Iterate until approved, then proceed to full production
+
+**When no VideoAnalysisBrief is present:** Skip this step and proceed normally.
+
 ### Step 1: Absorb the Research
 
 Read the `research_brief` thoroughly. Extract:

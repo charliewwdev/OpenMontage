@@ -56,18 +56,89 @@ def list_pipelines(defs_dir: Optional[Path] = None) -> list[str]:
     return [p.stem for p in defs_dir.glob("*.yaml")]
 
 
-def get_stage_order(manifest: dict) -> list[str]:
-    """Extract the ordered list of stage names from a manifest."""
-    return [stage["name"] for stage in manifest["stages"]]
+def _condition_is_active(condition: Optional[str], context: Optional[dict[str, Any]]) -> bool:
+    """Evaluate a simple manifest condition against runtime context."""
+    if not condition:
+        return True
+    if not context:
+        return False
+    return bool(context.get(condition))
+
+
+def get_reference_input_config(manifest: dict) -> dict[str, Any]:
+    """Return reference-input configuration, defaulting to disabled."""
+    return manifest.get("reference_input", {}) or {}
+
+
+def pipeline_supports_reference_input(manifest: dict) -> bool:
+    """Whether the manifest declares support for reference-video input."""
+    return bool(get_reference_input_config(manifest).get("supported", False))
+
+
+def get_stage_sub_stages(
+    manifest: dict,
+    stage_name: str,
+    *,
+    context: Optional[dict[str, Any]] = None,
+    include_inactive: bool = True,
+) -> list[dict[str, Any]]:
+    """Return sub-stage definitions for a stage.
+
+    By default this returns all declared sub-stages so agents can inspect the
+    full workflow shape. Pass ``include_inactive=False`` with context to filter
+    to active sub-stages only.
+    """
+    for stage in manifest["stages"]:
+        if stage["name"] != stage_name:
+            continue
+        sub_stages = list(stage.get("sub_stages", []))
+        if include_inactive:
+            return sub_stages
+        return [
+            sub_stage
+            for sub_stage in sub_stages
+            if _condition_is_active(sub_stage.get("condition"), context)
+        ]
+    return []
+
+
+def get_stage_order(
+    manifest: dict,
+    *,
+    include_sub_stages: bool = False,
+    context: Optional[dict[str, Any]] = None,
+) -> list[str]:
+    """Extract the ordered list of stage names from a manifest.
+
+    ``include_sub_stages=True`` exposes declarative sample/preview units to the
+    agent without turning them into mandatory checkpoint stages. Sub-stages are
+    emitted as ``<stage>.<sub_stage>``.
+    """
+    order: list[str] = []
+    for stage in manifest["stages"]:
+        order.append(stage["name"])
+        if not include_sub_stages:
+            continue
+        for sub_stage in get_stage_sub_stages(
+            manifest,
+            stage["name"],
+            context=context,
+            include_inactive=context is None,
+        ):
+            order.append(f"{stage['name']}.{sub_stage['name']}")
+    return order
 
 
 def get_required_tools(manifest: dict) -> set[str]:
-    """Collect all preferred + fallback + available tools across all stages."""
+    """Collect tools across stages, sub-stages, and reference-input analysis."""
     tools: set[str] = set()
     for stage in manifest["stages"]:
         tools.update(stage.get("preferred_tools", []))
         tools.update(stage.get("fallback_tools", []))
         tools.update(stage.get("tools_available", []))
+        for sub_stage in stage.get("sub_stages", []):
+            tools.update(sub_stage.get("tools_available", []))
+    tools.update(get_reference_input_config(manifest).get("analysis_tools", []))
     return tools
 
 

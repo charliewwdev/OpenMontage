@@ -132,10 +132,18 @@ hardcode key names or setup URLs.
 Before proposing, gather what the VideoAnalysisBrief doesn't tell you:
 
 1. "Do you want narration in your version, or visuals-only with music?"
-2. "How long should your video be? The reference is [X] seconds."
-3. "Is there a specific topic/subject you want, or should I riff on the
+2. **If narration: lock the audio architecture now.** Ask:
+   "How should the story be told? Options:
+   • **Single narrator** — one voice tells the whole story (like a Pixar short)
+   • **Character dialogue** — characters speak to each other, no narrator
+   • **Narrator + character voices** — narrator drives the story, characters
+     have occasional dialogue lines"
+   This decision shapes the script, voice casting, and budget. It MUST be
+   resolved before proposals — do not defer it to the script or compose stage.
+3. "How long should your video be? The reference is [X] seconds."
+4. "Is there a specific topic/subject you want, or should I riff on the
    same theme as the reference?"
-4. "Any elements from the reference you specifically love or hate?"
+5. "Any elements from the reference you specifically love or hate?"
 
 Do NOT ask all at once. Lead with the most important gap. If the user's initial
 message already answers some of these, skip those.
@@ -195,7 +203,9 @@ Use this structure for each variant:
 - Motion: [video gen clips / Remotion spring animations on stills / etc.]
 
 **Audio plan:**
-- Narration: [yes/no, which TTS provider, voice style]
+- Audio architecture: [single narrator / character dialogue / narrator + characters]
+- Voice casting: [voice name + ID for each role — narrator, character A, etc.]
+- TTS provider: [ElevenLabs / other]
 - Music: [library track / generated / none]
 - Sound design: [any special audio needs]
 

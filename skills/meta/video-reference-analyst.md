@@ -210,9 +210,11 @@ Use this structure for each variant:
 - Audio architecture: [single narrator / character dialogue / narrator + characters]
 - Voice casting: [voice name + ID for each role — narrator, character A, etc.]
 - TTS provider: [selected from available providers via tts_selector preflight —
-  ElevenLabs (premium), Google TTS (affordable, multilingual), OpenAI TTS
-  (solid fallback), Piper (offline/free). Do NOT hardcode a provider — run
-  preflight to check what's configured and recommend the best available.]
+  Google Chirp3-HD (best value: near-free, expressive, 24kHz),
+  ElevenLabs (voice cloning only), OpenAI gpt-4o-mini-tts (good with
+  instructions param), Piper (offline/free). Do NOT hardcode a provider —
+  run preflight to check what's configured and recommend the best available.
+  **Default recommendation: Google Chirp3-HD** unless voice cloning is needed.]
 - Music: [library track / generated / none]
 - Sound design: [any special audio needs]
 

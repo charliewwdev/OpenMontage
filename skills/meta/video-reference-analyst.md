@@ -199,8 +199,12 @@ Use this structure for each variant:
 **Visual plan:**
 - Playbook: [closest match + customizations]
 - Visual treatment: [how visuals will be created — which tools, which providers]
-- Composition: [Remotion (preferred when available) / FFmpeg (fallback only)]
+- Composition: [Remotion (default when available) / FFmpeg (fallback only)]
 - Motion: [video gen clips / Remotion spring animations on stills / etc.]
+- Clip duration strategy: [maximize clip duration to minimize API calls and cost.
+  Most providers support 5s and 10s clips. Prefer 10s clips and consolidate
+  adjacent scenes into single clips where narratively coherent. A 60s video
+  needs 6×10s clips, not 12×5s — half the cost, fewer cuts, smoother motion.]
 
 **Audio plan:**
 - Audio architecture: [single narrator / character dialogue / narrator + characters]
@@ -221,6 +225,13 @@ Use this structure for each variant:
 - Total: $X.XX
 
 **Honest assessment:** [What this will look like realistically — don't oversell]
+
+**Layer 3 skills:** [List the agent_skills from each tool that will be used.
+  These MUST be read before writing any generation prompts. E.g.:
+  - Video gen: `ai-video-gen` skill for provider-specific prompt patterns
+  - Image gen: `flux-best-practices` for FLUX prompt engineering
+  - TTS: `elevenlabs` or `openai-docs` for voice tuning
+  Skipping Layer 3 skills is a governance violation.]
 ```
 
 **Differentiation patterns:**

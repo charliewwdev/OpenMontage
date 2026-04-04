@@ -426,6 +426,17 @@ class VideoAnalyzer(BaseTool):
                     "pacing_style": self._classify_pacing(durations),
                 }
 
+        # ─── STEP 3b: Motion classification per scene ───
+        if video_path and scenes:
+            try:
+                motion_results = self._classify_scene_motion(video_path, scenes)
+                for bs, mr in zip(brief["structure_analysis"]["scenes"], motion_results):
+                    bs["motion_type"] = mr["motion_type"]
+                    bs["flow_variance"] = mr["flow_variance"]
+                steps_completed.append("motion_classification")
+            except Exception as e:
+                steps_failed.append(f"motion_classification: {e}")
+
         # ─── STEP 4: Keyframe extraction (scene-guided) ───
         keyframes = []
         keyframe_dir = output_dir / "keyframes"
@@ -666,8 +677,117 @@ class VideoAnalyzer(BaseTool):
 
     def _needs_motion(self, brief: dict) -> bool:
         """Determine if motion (video gen or Remotion) is required."""
+        # If we have per-scene motion data, use it — majority motion_clip = motion required
+        scenes = brief["structure_analysis"].get("scenes", [])
+        motion_scenes = [s for s in scenes if s.get("motion_type") == "motion_clip"]
+        if scenes and motion_scenes:
+            return len(motion_scenes) / len(scenes) >= 0.3
+        # Fallback to pacing heuristic
         pacing = brief["structure_analysis"].get("pacing_profile", {}).get("pacing_style", "")
         return pacing in ("dynamic_social", "rapid_fire")
+
+    def _classify_scene_motion(
+        self, video_path: str, scenes: list[dict]
+    ) -> list[dict]:
+        """Classify each scene as static_image, animated_still, or motion_clip.
+
+        Samples 2-3 frame pairs per scene and computes dense optical flow
+        variance using Farneback. Low uniform flow = pan/zoom on a still.
+        High heterogeneous flow = real character/object motion.
+        """
+        import numpy as np
+
+        try:
+            import cv2
+        except ImportError:
+            return [{"motion_type": "unknown", "flow_variance": -1}] * len(scenes)
+
+        cap = cv2.VideoCapture(video_path)
+        if not cap.isOpened():
+            return [{"motion_type": "unknown", "flow_variance": -1}] * len(scenes)
+
+        fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+        results = []
+
+        for scene in scenes:
+            start = scene.get("start_seconds", 0)
+            end = scene.get("end_seconds", 0)
+            duration = end - start
+
+            if duration < 0.3:
+                results.append({"motion_type": "static_image", "flow_variance": 0.0})
+                continue
+
+            # Sample 2-3 frame pairs spaced across the scene
+            gap = min(0.4, duration / 3)
+            sample_times = [start + duration * p for p in (0.25, 0.5, 0.75) if start + duration * p + gap <= end]
+            if not sample_times:
+                sample_times = [start + 0.1]
+
+            flow_variances = []
+            flow_mag_means = []
+
+            for t in sample_times:
+                frame_a = self._read_frame_at(cap, t, fps)
+                frame_b = self._read_frame_at(cap, t + gap, fps)
+                if frame_a is None or frame_b is None:
+                    continue
+
+                # Downscale to 360p height for speed
+                h, w = frame_a.shape[:2]
+                scale = 360 / h if h > 360 else 1.0
+                if scale < 1.0:
+                    dim = (int(w * scale), 360)
+                    frame_a = cv2.resize(frame_a, dim)
+                    frame_b = cv2.resize(frame_b, dim)
+
+                gray_a = cv2.cvtColor(frame_a, cv2.COLOR_BGR2GRAY)
+                gray_b = cv2.cvtColor(frame_b, cv2.COLOR_BGR2GRAY)
+
+                flow = cv2.calcOpticalFlowFarneback(
+                    gray_a, gray_b, None,
+                    pyr_scale=0.5, levels=3, winsize=15,
+                    iterations=3, poly_n=5, poly_sigma=1.2, flags=0,
+                )
+
+                mag = np.sqrt(flow[..., 0] ** 2 + flow[..., 1] ** 2)
+                flow_mag_means.append(float(np.mean(mag)))
+                # Variance of magnitude = heterogeneity of motion
+                flow_variances.append(float(np.var(mag)))
+
+            if not flow_variances:
+                results.append({"motion_type": "unknown", "flow_variance": -1})
+                continue
+
+            avg_variance = sum(flow_variances) / len(flow_variances)
+            avg_magnitude = sum(flow_mag_means) / len(flow_mag_means)
+
+            # Classification thresholds (tuned for 360p, 0.4s gap):
+            # - static_image: near-zero flow (no motion at all)
+            # - animated_still: uniform flow (pan/zoom on a still image)
+            # - motion_clip: heterogeneous flow (objects moving independently)
+            if avg_magnitude < 0.5:
+                motion_type = "static_image"
+            elif avg_variance < 2.0:
+                motion_type = "animated_still"
+            else:
+                motion_type = "motion_clip"
+
+            results.append({
+                "motion_type": motion_type,
+                "flow_variance": round(avg_variance, 3),
+            })
+
+        cap.release()
+        return results
+
+    def _read_frame_at(self, cap, timestamp: float, fps: float):
+        """Read a single frame at the given timestamp."""
+        import cv2
+        frame_num = int(timestamp * fps)
+        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_num)
+        ret, frame = cap.read()
+        return frame if ret else None
 
     def _save_brief(self, brief: dict, output_dir: Path) -> None:
         """Save the VideoAnalysisBrief to disk."""

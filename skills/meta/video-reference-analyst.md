@@ -46,11 +46,26 @@ user. This is NOT a raw dump. It's a conversational interpretation:
 **Content:** [2-sentence summary of what the video is about]
 **Style:** [1 sentence — pacing, visual treatment, energy]
 **Structure:** [X scenes over Y seconds, pacing style]
+**Motion:** [N of M scenes are motion clips / animated stills / static images.
+This video uses [AI-generated video clips / still images with pan-zoom / a mix].]
 **What makes it work:** [2-3 specific things — the hook technique, the pacing,
 the visual transitions, the narration style]
 
 Now let me check what I can do with your current setup..."
 ```
+
+**Motion classification is critical.** The VideoAnalysisBrief now includes per-scene
+`motion_type` ("motion_clip", "animated_still", "static_image") and `flow_variance`.
+Use this to determine the production approach:
+
+- If most scenes are `motion_clip` → the reference uses **video generation** (Kling,
+  MiniMax, etc.) → plan around video gen tools, not image gen
+- If most scenes are `animated_still` → the reference uses **still images with
+  Ken Burns / pan-zoom** → image gen + Remotion/FFmpeg composition is appropriate
+- If mixed → note which sections use motion and which use stills
+
+**Never guess** whether a reference uses images or video. Read the `motion_type` field.
+Getting this wrong leads to proposing the wrong pipeline and wrong tool path.
 
 **Vision analysis:** After presenting the structural data, examine the extracted
 keyframes yourself. You ARE a multimodal model — look at the keyframe images and

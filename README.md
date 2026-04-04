@@ -34,7 +34,7 @@ Turn your AI coding assistant into a full video production studio. Describe what
 
 ## Start From A Video You Already Love
 
-Most people are bad at prompting from scratch. They are much better at saying: "I want something like this."
+Starting from a reference video is often faster than starting from a blank prompt.
 
 OpenMontage can start from a **YouTube video, Short, Reel, TikTok, or local clip** and turn it into a grounded production plan:
 

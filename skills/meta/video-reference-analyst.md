@@ -140,6 +140,41 @@ Before proposing, gather what the VideoAnalysisBrief doesn't tell you:
 Do NOT ask all at once. Lead with the most important gap. If the user's initial
 message already answers some of these, skip those.
 
+### Step 3b: Lightweight Research
+
+**This step is mandatory.** Even with a clear reference video and user direction,
+the agent must do targeted research before proposing concepts. Do NOT skip this
+and rely solely on the reference analysis + your own knowledge.
+
+Research scope (keep it focused — this is not the full research-director stage):
+
+1. **Content landscape:** Search for 3-5 existing videos similar to what the user
+   wants. What works? What's been overdone? What angles are fresh? This grounds
+   your proposals in what's actually out there, not just what you imagine.
+
+2. **Style/technique research:** Search for best practices relevant to the
+   production approach:
+   - If AI video gen: which models handle this subject best? Known prompting
+     patterns? Character consistency techniques?
+   - If animation: what animation styles suit this content?
+   - If the reference has a distinctive technique: how is it achieved?
+
+3. **Subject-matter research:** If the user's topic has factual content (science,
+   history, how-things-work), gather 3-5 specific data points or facts that could
+   make the video more interesting. Even for entertainment/comedy videos, research
+   what makes similar content engaging (tropes, hooks, payoff patterns).
+
+**How to present:** Don't dump raw research. Weave findings into your proposals:
+- "I looked at similar channels — most food personification videos use X, so our
+  twist of Y would stand out"
+- "Kling handles anthropomorphic characters well when you use [specific technique]"
+- "The top-performing 60-second comedy shorts all use a 3-beat structure: setup,
+  escalation, unexpected payoff"
+
+**Time budget:** 2-3 minutes of web search. This is a lightweight pass, not a
+deep investigation. The full research-director stage runs later inside the
+pipeline if needed.
+
 ### Step 4: Creative Proposals (2-3 variants)
 
 MANDATORY: The agent must NEVER propose a carbon copy. The reference is inspiration,

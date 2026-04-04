@@ -115,6 +115,40 @@ If a checkpoint exists with status `"awaiting_human"`:
 2. Present the checkpoint data for review
 3. Wait for approval before proceeding
 
+### Sample Checkpoint (Reference-Driven Productions)
+
+When a production is reference-driven (VideoAnalysisBrief exists), there is an
+additional checkpoint between proposal approval and full production:
+
+| Stage | checkpoint_required | human_approval_default | Notes |
+|-------|--------------------|-----------------------|-------|
+| `sample` | true | true | Always requires human approval |
+
+The sample checkpoint:
+1. Presents: rendered sample clip (10-15 seconds)
+2. Cost: sample cost vs. projected full-video cost
+3. Action: approve (→ proceed to script), revise (→ re-generate sample), abort
+
+The sample checkpoint is NOT a pipeline stage — it's a sub-checkpoint within the
+proposal stage. It does not produce a canonical artifact. It produces a rendered
+preview clip stored at `projects/<name>/assets/sample/sample_v{N}.mp4`.
+
+**Presentation format:**
+```
+## Sample Preview Ready
+
+**Sample clip:** [path to sample_v1.mp4]
+- Duration: [X] seconds (hook + 1 middle scene)
+- Voice: [TTS provider + voice name]
+- Visuals: [description — AI images, Remotion animations, etc.]
+- Music: [source]
+
+**Sample cost:** $[X.XX]
+**Projected full video cost:** $[X.XX]
+
+Does this feel right? I can adjust: voice, visual style, pacing, music, colors.
+```
+
 ## Key Principles
 
 1. **Always checkpoint completed work.** Even if `checkpoint_required: false`, consider checkpointing anyway if the stage took significant time or cost. Losing work is worse than an extra file on disk.

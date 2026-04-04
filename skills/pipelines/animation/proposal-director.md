@@ -22,6 +22,31 @@ Animation proposals have a unique dimension: **animation mode selection**. Unlik
 
 ## Process
 
+### Step 0: Check for Reference Video Context
+
+Before starting proposal work, check if a VideoAnalysisBrief exists for this project.
+
+**When a VideoAnalysisBrief is present — Reference-Aware Animation Concept Design:**
+
+**HARD RULE: No carbon copies.** Each concept option MUST:
+1. Name at least ONE animation element it keeps from the reference (pacing, motion style, narrative structure)
+2. Name at least ONE element it changes (animation mode, visual identity, topic angle)
+3. Explain WHY the change makes the output more engaging or clearer
+
+**Animation differentiation patterns:**
+
+| Pattern | Example |
+|---------|---------|
+| **Same topic, different animation mode** | Reference: stock footage → Ours: Manim mathematical visualization |
+| **Same style, different complexity** | Reference: simple diagrams → Ours: progressive build with layers |
+| **Same pacing, different visual identity** | Reference: corporate blue → Ours: vibrant neon-on-black |
+| **Same narrative, different interactivity** | Reference: linear → Ours: data-driven with animated charts |
+
+**Mandatory Sample Protocol:** After concept approval, produce a 10-15 second sample
+to validate the animation style before full production.
+
+**When no VideoAnalysisBrief is present:** Skip this step and proceed normally.
+
 ### Step 1: Absorb the Research (or Direct Brief)
 
 **If a `research_brief` artifact exists:** Read it thoroughly. Extract:

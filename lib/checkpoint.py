@@ -44,6 +44,7 @@ CANONICAL_STAGE_ARTIFACTS = {
 SUPPLEMENTARY_ARTIFACTS = {
     "source_media_review",  # Required before first planning stage when user media exists
     "final_review",         # Required by compose stage before presenting to user
+    "video_analysis_brief", # Reference-video grounding artifact carried alongside stages
 }
 
 

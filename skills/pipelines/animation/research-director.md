@@ -18,6 +18,40 @@ Animation videos differ from general explainers: the research must cover both **
 
 ## Process
 
+### Step 0: Check for Reference Video Context
+
+Before starting research, check if a VideoAnalysisBrief exists for this project. If it
+does, this is a reference-driven production — the user provided a video they want to
+riff on.
+
+**When a VideoAnalysisBrief is present:**
+
+1. Read it thoroughly. Extract:
+   - `content_analysis.topics` — research these topics for accuracy
+   - `content_analysis.key_claims` — verify these claims via web search
+   - `style_profile` — note the animation style (motion type, color palette, transitions)
+   - `structure_analysis.pacing_profile` — understand the rhythm
+   - `replication_guidance.creative_differentiation_seeds` — these are your concept seeds
+   - `replication_guidance.key_elements_to_replicate` — preserve these in proposals
+
+2. Your research focus SHIFTS:
+   - Standard research: "What topic + animation technique fits?"
+   - Reference-driven research: "What animation approach would DIFFERENTIATE us from the
+     reference while keeping the elements the user loved?" + "What animation techniques
+     exist for this topic that the reference DIDN'T use?"
+
+3. In the research_brief, add a `reference_context` section:
+   - The reference's animation style and technique
+   - What animation modes it used (motion graphics, manim, illustrative, etc.)
+   - Alternative animation approaches we could try instead
+   - What the reference did well vs. where we can improve
+
+4. The `angles_discovered` should explicitly position against the reference:
+   - "The reference used X animation style. We could try Y which is [more engaging/clearer/
+     more novel] because [technique research finding]."
+
+**When no VideoAnalysisBrief is present:** Skip this step and proceed normally.
+
 ### Step 1: Scope the Research
 
 Before searching anything, establish boundaries:

@@ -10,6 +10,17 @@ category: animation
 stability: production
 default_checkpoint_policy: guided
 
+# Reference video input support
+reference_input:
+  supported: true
+  analysis_depth: standard
+  analysis_tools:
+    - video_analyzer
+    - transcript_fetcher
+    - video_downloader
+    - scene_detect
+    - frame_sampler
+
 extensions:
   custom_scripts: true
   custom_playbooks: true
@@ -89,6 +100,16 @@ stages:
       - selected_concept includes animation_mode and reuse_strategy
       - cost_estimate has itemized line_items with per-tool costs
       - approval.status is "approved" or "approved_with_changes" before proceeding
+    sub_stages:
+      - name: sample
+        description: "10-15 second animation preview for reference-driven productions"
+        condition: "video_analysis_brief_exists"
+        human_approval_default: true
+        tools_available: [tts_selector, image_selector, video_selector, video_compose, audio_mixer, math_animate, diagram_gen]
+        review_focus:
+          - "Sample represents the approved animation mode faithfully"
+          - "Visual identity matches approved playbook and style"
+          - "Pacing matches reference inspiration"
 
   # ── Production ──────────────────────────────────────────────────
 

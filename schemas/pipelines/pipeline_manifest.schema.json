@@ -95,6 +95,22 @@
           "success_criteria": {
             "type": "array",
             "items": { "type": "string" }
+          },
+          "sub_stages": {
+            "type": "array",
+            "description": "Optional sub-stages within a stage (e.g., sample preview for reference-driven productions)",
+            "items": {
+              "type": "object",
+              "required": ["name"],
+              "properties": {
+                "name": { "type": "string" },
+                "description": { "type": "string" },
+                "condition": { "type": "string", "description": "When this sub-stage activates (e.g., video_analysis_brief_exists)" },
+                "human_approval_default": { "type": "boolean", "default": true },
+                "tools_available": { "type": "array", "items": { "type": "string" } },
+                "review_focus": { "type": "array", "items": { "type": "string" } }
+              }
+            }
           }
         },
         "additionalProperties": false
@@ -105,6 +121,15 @@
       "type": "string",
       "enum": ["guided", "manual_all", "auto_noncreative"],
       "default": "guided"
+    },
+    "reference_input": {
+      "type": "object",
+      "description": "Configuration for reference video input support",
+      "properties": {
+        "supported": { "type": "boolean", "default": false },
+        "analysis_depth": { "type": "string", "enum": ["transcript_only", "standard", "deep"], "default": "standard" },
+        "analysis_tools": { "type": "array", "items": { "type": "string" } }
+      }
     },
     "metadata": { "type": "object" },
     "orchestration": {

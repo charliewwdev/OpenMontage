@@ -18,6 +18,38 @@ This stage is what separates an OpenMontage video from generic AI slop. Without 
 
 ## Process
 
+### Step 0: Check for Reference Video Context
+
+Before starting research, check if a VideoAnalysisBrief exists for this project. If it
+does, this is a reference-driven production — the user provided a video they want to
+riff on.
+
+**When a VideoAnalysisBrief is present:**
+
+1. Read it thoroughly. Extract:
+   - `content_analysis.topics` — research these topics for accuracy
+   - `content_analysis.key_claims` — verify these claims via web search
+   - `style_profile` — note this for the proposal stage (do not research style)
+   - `replication_guidance.creative_differentiation_seeds` — these are your concept seeds
+   - `replication_guidance.key_elements_to_replicate` — preserve these in proposals
+
+2. Your research focus SHIFTS:
+   - Standard research: "What is interesting about this topic?"
+   - Reference-driven research: "What is interesting about this topic that the
+     reference video DIDN'T cover?" + "What would make our version DIFFERENT and BETTER?"
+
+3. In the research_brief, add a `reference_context` section:
+   - What the reference covered
+   - What it missed (your differentiation opportunity)
+   - What claims it made that you can verify or update
+   - How the landscape has changed since the reference was published
+
+4. The `angles_discovered` should explicitly position against the reference:
+   - "The reference took angle X. We could take angle Y which is [fresher/deeper/more
+     surprising] because [research finding]."
+
+**When no VideoAnalysisBrief is present:** Skip this step and proceed normally.
+
 ### Step 1: Scope the Research
 
 Before searching anything, establish boundaries:

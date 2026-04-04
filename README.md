@@ -7,6 +7,7 @@
 <p align="center"><strong>The first open-source, agentic video production system.</strong></p>
 
 <p align="center">
+  <a href="#start-from-a-video-you-already-love">Paste A Video</a> &nbsp;·&nbsp;
   <a href="#quick-start">Quick Start</a> &nbsp;·&nbsp;
   <a href="#try-these-prompts">Try These Prompts</a> &nbsp;·&nbsp;
   <a href="#pipelines">Pipelines</a> &nbsp;·&nbsp;
@@ -28,6 +29,35 @@ Turn your AI coding assistant into a full video production studio. Describe what
 </div>
 
 > **"SIGNAL FROM TOMORROW"** — a cinematic sci-fi trailer fully produced through OpenMontage: concept, script, scene plan, Veo-generated motion clips, soundtrack, and Remotion composition.
+
+---
+
+## Start From A Video You Already Love
+
+Most people are bad at prompting from scratch. They are much better at saying: "I want something like this."
+
+OpenMontage can start from a **YouTube video, Short, Reel, TikTok, or local clip** and turn it into a grounded production plan:
+
+1. **Paste a reference video**
+2. **The agent analyzes transcript, pacing, scenes, keyframes, and style**
+3. **You get 2-3 differentiated concepts, an honest tool path, cost estimates, and a sample before full production**
+
+```text
+"Here's a YouTube Short I love. Make me something like this, but about quantum computing."
+```
+
+What you get back is not "best guess prompt spaghetti." You get:
+
+- **What it keeps** from the reference: pacing, hook style, structure, tone
+- **What it changes**: topic, visual treatment, angle, narration approach
+- **What it will cost** at your target duration, before asset generation starts
+- **What it will actually look like** with your currently available tools
+
+**Why this matters:** the reference-video path is the easiest way into OpenMontage. You do not need to reverse-engineer prompts, name camera moves, or describe an aesthetic perfectly. Just point at something that works.
+
+**Guardrail:** OpenMontage does not aim for carbon copies. The agent is instructed to propose original, creatively differentiated variants of the reference.
+
+**Free-first workflow:** the reference analysis path is designed around local/free tooling for transcript extraction, scene detection, frame sampling, and structure analysis. Paid providers only enter once you approve a production direction.
 
 <div align="center">
   <video src="https://github.com/user-attachments/assets/8a6d2cc3-7ad2-46f5-922f-a8e3e5848d9f" width="100%" controls></video>
@@ -146,6 +176,14 @@ You don't need any API keys to make real videos. Out of the box, `make setup` gi
 
 Copy any of these into your AI coding assistant after setup. Each one runs a full production pipeline.
 
+### Start from a reference video
+
+> "Here's a YouTube short I love. Make me something like this, but about CRISPR for high school students."
+
+> "Analyze this Reel and give me 3 original variants I could make for my own product launch."
+
+> "I like the pacing and hook in this video. Keep that energy, but turn it into a 45-second explainer about black holes."
+
 ### Zero keys needed
 
 > "Make a 45-second animated explainer about why the sky is blue"
@@ -212,6 +250,7 @@ Edit your own talking-head footage. Generate a fully animated explainer from scr
 - **11 production pipelines** — explainers, talking heads, screen demos, cinematic trailers, animations, podcasts, localization, and more
 - **49 production tools** — spanning video generation, image creation, text-to-speech, music, audio mixing, subtitles, enhancement, and analysis
 - **400+ agent skills** — production skills, pipeline directors, creative techniques, quality checklists, and deep technology knowledge packs that teach the agent how to use every tool like an expert
+- **Reference-driven creation** — paste a video you like and the agent turns it into a grounded, differentiated production plan instead of forcing you to invent the perfect prompt from scratch
 - **Live web research built in** — before writing a single word of script, the agent runs 15-25+ web searches across YouTube, Reddit, news sites, and academic sources to ground your video in real, current data
 - **Both free/local AND cloud providers** — every capability supports open-source local alternatives alongside premium APIs. Use what you have.
 - **No vendor lock-in** — swap providers freely. The scored selector ranks every provider across 7 dimensions (task fit, output quality, control, reliability, cost efficiency, latency, continuity) and picks the best match automatically.

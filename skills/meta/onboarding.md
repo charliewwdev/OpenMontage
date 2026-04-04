@@ -105,12 +105,23 @@ Based on the user's tier, present **3 ready-to-use prompts** they can copy right
 
 > **Or:** "I recorded a founder update on my webcam — make it feel polished, confident, and premium without looking fake" *(Talking Head pipeline)*
 
+**Reference-based prompts (all tiers):**
+
+> **Have a video you love?** Paste a YouTube link and say "make me something like this"
+> — I'll analyze the style, pacing, and structure, then propose 2-3 creative variants
+> you can choose from. Works with YouTube, Shorts, Instagram Reels, and TikTok.
+> All analysis runs locally and free — no API keys needed.
+
+> **Got your own footage?** Drop in a video file and say "I want to make a video using
+> this footage" — I'll transcribe it, detect scenes, and propose an edit plan.
+
 **Rules for prompt suggestions:**
 - Present exactly 3 prompts.
 - The first prompt should be the most impressive thing their setup can produce.
 - Each prompt should target a different pipeline or style.
 - Include a brief note explaining what makes this prompt a good fit for their setup.
 - Use blockquote formatting so prompts are visually distinct and easy to copy.
+- Always include the reference-based prompts above — they work at every tier.
 
 ### Step 5: Explain the Workflow (Briefly)
 

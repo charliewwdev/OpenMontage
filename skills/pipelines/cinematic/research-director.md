@@ -18,6 +18,40 @@ Unlike explainer research (which focuses on facts, data, and content gaps), cine
 
 ## Process
 
+### Step 0: Check for Reference Video Context
+
+Before starting research, check if a VideoAnalysisBrief exists for this project. If it
+does, this is a reference-driven production — the user provided a video they want to
+riff on.
+
+**When a VideoAnalysisBrief is present:**
+
+1. Read it thoroughly. Extract:
+   - `content_analysis.topics` — research these topics for accuracy
+   - `content_analysis.key_claims` — verify these claims via web search
+   - `style_profile` — note the cinematic language (color palette, camera movements, lighting)
+   - `structure_analysis.scenes` — understand the shot language and emotional arc
+   - `replication_guidance.creative_differentiation_seeds` — these are your concept seeds
+   - `replication_guidance.key_elements_to_replicate` — preserve these in proposals
+
+2. Your research focus SHIFTS:
+   - Standard research: "What visual/emotional language fits this subject?"
+   - Reference-driven research: "What cinematic approach would DIFFERENTIATE us from the
+     reference while keeping the elements the user loved?" + "What mood/tone territory
+     is adjacent but unexplored?"
+
+3. In the research_brief, add a `reference_context` section:
+   - The reference's cinematic language (shot types, pacing, color palette)
+   - What emotional territory it occupies
+   - Adjacent emotional territories we could explore instead
+   - How the reference's visual approach could be evolved or reinterpreted
+
+4. The `angles_discovered` should explicitly position against the reference:
+   - "The reference uses X mood/palette/pacing. We could try Y which creates
+     [different emotional impact] because [research finding]."
+
+**When no VideoAnalysisBrief is present:** Skip this step and proceed normally.
+
 ### Step 1: Classify the Brief
 
 Before searching, extract from the user's request:

@@ -263,6 +263,32 @@ costs, recommend one with a brief reason, and let them decide.
 **Recommendation:** Always recommend one option with a brief reason why. Don't leave
 the user paralyzed with equal choices.
 
+### Step 4b: Layer 3 Skill Gate (MANDATORY)
+
+**Before ANY asset generation** (sample or full production), the agent MUST:
+
+1. Check the `agent_skills` field on every tool that will be used
+2. Read each referenced skill in `.agents/skills/`
+3. Apply the provider-specific prompting guidance to all generation prompts
+
+This is NOT optional. The AGENT_GUIDE says: *"Layer 3 is not optional.
+Every generation tool has an agent_skills field. Read them before writing
+prompts."*
+
+Example checklist before generating:
+```
+Tool              agent_skills              Read?
+────────────      ────────────────────      ─────
+video_selector    ai-video-gen              [ ]
+flux_image        flux-best-practices       [ ]
+elevenlabs_tts    elevenlabs, text-to-speech [ ]
+video_compose     remotion-best-practices   [ ]
+```
+
+Do NOT proceed to Step 5 until all relevant Layer 3 skills are read.
+The difference between a generic prompt and a skill-informed prompt is
+the difference between "usable" and "cinematic."
+
 ### Step 5: Sample-First Production (MANDATORY)
 
 After the user picks a variant, ALWAYS say:

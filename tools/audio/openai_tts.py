@@ -132,13 +132,18 @@ class OpenAITTS(BaseTool):
         output_path = Path(inputs.get("output_path", f"openai_tts.{fmt}"))
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with client.audio.speech.with_streaming_response.create(
-            model=model,
-            voice=voice,
-            input=text,
-            response_format=fmt,
-            instructions=inputs.get("instructions"),
-        ) as response:
+        kwargs: dict[str, Any] = {
+            "model": model,
+            "voice": voice,
+            "input": text,
+            "response_format": fmt,
+        }
+        if inputs.get("instructions"):
+            kwargs["instructions"] = inputs["instructions"]
+        if inputs.get("speed") and inputs["speed"] != 1.0:
+            kwargs["speed"] = inputs["speed"]
+
+        with client.audio.speech.with_streaming_response.create(**kwargs) as response:
             response.stream_to_file(output_path)
 
         audio_duration = probe_duration(output_path)

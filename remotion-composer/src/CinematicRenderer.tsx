@@ -24,6 +24,7 @@ function resolveAsset(src: string): string {
   return staticFile(clean);
 }
 import { CinematicRendererProps, CinematicTone, CinematicVideoScene } from "./cinematic/types";
+import { CaptionOverlay } from "./components/CaptionOverlay";
 
 const FPS = 30;
 
@@ -339,19 +340,34 @@ export const CinematicRenderer: React.FC<CinematicRendererProps> = ({
   titleWidth = 1320,
   signalLineCount = 18,
   soundtrack,
+  music,
+  captions,
 }) => {
   return (
     <AbsoluteFill style={{ backgroundColor: "#000000" }}>
+      {/* Layer 1: Narration audio */}
       {soundtrack ? (
         <Soundtrack
           src={soundtrack.src}
-          volume={soundtrack.volume ?? 0.45}
+          volume={soundtrack.volume ?? 1}
           trimBeforeSeconds={soundtrack.trimBeforeSeconds}
           trimAfterSeconds={soundtrack.trimAfterSeconds}
-          fadeInSeconds={soundtrack.fadeInSeconds ?? 1.5}
-          fadeOutSeconds={soundtrack.fadeOutSeconds ?? 2}
+          fadeInSeconds={soundtrack.fadeInSeconds ?? 0.3}
+          fadeOutSeconds={soundtrack.fadeOutSeconds ?? 0.5}
         />
       ) : null}
+      {/* Layer 2: Music bed (separate track, ducked) */}
+      {music ? (
+        <Soundtrack
+          src={music.src}
+          volume={music.volume ?? 0.15}
+          trimBeforeSeconds={music.trimBeforeSeconds}
+          trimAfterSeconds={music.trimAfterSeconds}
+          fadeInSeconds={music.fadeInSeconds ?? 2}
+          fadeOutSeconds={music.fadeOutSeconds ?? 3}
+        />
+      ) : null}
+      {/* Layer 3: Video scenes */}
       {scenes.map((scene) => (
         <Sequence
           key={scene.id}
@@ -372,6 +388,17 @@ export const CinematicRenderer: React.FC<CinematicRendererProps> = ({
           )}
         </Sequence>
       ))}
+      {/* Layer 4: TikTok-style captions */}
+      {captions?.words ? (
+        <CaptionOverlay
+          words={captions.words}
+          wordsPerPage={captions.wordsPerPage ?? 5}
+          fontSize={captions.fontSize ?? 48}
+          color={captions.color ?? "#F8FAFC"}
+          highlightColor={captions.highlightColor ?? "#FBBF24"}
+          backgroundColor={captions.backgroundColor ?? "rgba(0, 0, 0, 0.6)"}
+        />
+      ) : null}
     </AbsoluteFill>
   );
 };

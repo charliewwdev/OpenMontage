@@ -198,6 +198,7 @@ stages:
       - "Layer 3 skills read for EVERY generation tool before writing prompts (check agent_skills field)"
       - "Clip duration maximized (prefer 10s over 5s) to reduce API calls and cost"
       - "Use selector tools (video_selector, tts_selector, image_selector) — never call provider tools directly"
+      - "Read Layer 2 skills for each tool BEFORE reading source code — skills contain usage guidance, source code is implementation detail"
     success_criteria:
       - Schema-valid asset_manifest artifact
       - All referenced asset files exist on disk

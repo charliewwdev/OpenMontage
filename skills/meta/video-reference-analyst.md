@@ -269,9 +269,14 @@ the user paralyzed with equal choices.
 
 **Before ANY asset generation** (sample or full production), the agent MUST:
 
-1. Check the `agent_skills` field on every tool that will be used
-2. Read each referenced skill in `.agents/skills/`
-3. Apply the provider-specific prompting guidance to all generation prompts
+1. Read the **Layer 2 skill** for each tool from `skills/` directory (usage guidance, input schemas, best practices)
+2. Check the `agent_skills` field on every tool that will be used
+3. Read each referenced **Layer 3 skill** in `.agents/skills/` (provider-specific prompting)
+4. Apply the provider-specific prompting guidance to all generation prompts
+
+**NEVER read tool source code (*.py) to understand how to use a tool.**
+Skills exist precisely so the agent doesn't need to read implementation code.
+Layer 2 skills describe *what* and *when*. Layer 3 skills describe *how*.
 
 This is NOT optional. The AGENT_GUIDE says: *"Layer 3 is not optional.
 Every generation tool has an agent_skills field. Read them before writing

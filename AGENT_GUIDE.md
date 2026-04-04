@@ -580,8 +580,10 @@ OpenMontage has three instruction layers:
 Reading order:
 
 1. registry / tool contract — discover what's available
-2. relevant pipeline or creative skill — know HOW to use it in this context
-3. underlying vendor skill — **mandatory before calling any generation tool**
+2. relevant pipeline or creative skill (Layer 2) — know HOW to use it in this context
+3. underlying vendor skill (Layer 3) — **mandatory before calling any generation tool**
+
+**NEVER read tool source code (`tools/*.py`) to understand how to use a tool.** Skills exist precisely so you don't need implementation details. Layer 2 tells you *what* and *when*. Layer 3 tells you *how*. If you're reading `.py` files to figure out input schemas or provider options, you're doing it wrong — that information belongs in the skill layer.
 
 **Layer 3 is not optional.** Every generation tool (video, image, TTS, music) has an `agent_skills` field listing its Layer 3 skills. These skills contain provider-specific prompt engineering, parameter tuning, and quality techniques. Read them before writing prompts. The difference between a generic prompt and a skill-informed prompt is the difference between "usable" and "cinematic."
 

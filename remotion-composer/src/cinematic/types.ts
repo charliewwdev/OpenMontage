@@ -35,6 +35,21 @@ export interface CinematicSoundtrack {
   fadeOutSeconds?: number;
 }
 
+export interface CinematicWordCaption {
+  word: string;
+  startMs: number;
+  endMs: number;
+}
+
+export interface CinematicCaptionConfig {
+  words: CinematicWordCaption[];
+  wordsPerPage?: number;
+  fontSize?: number;
+  color?: string;
+  highlightColor?: string;
+  backgroundColor?: string;
+}
+
 export interface CinematicRendererProps {
   [key: string]: unknown;
   scenes: CinematicScene[];
@@ -42,4 +57,6 @@ export interface CinematicRendererProps {
   titleWidth?: number;
   signalLineCount?: number;
   soundtrack?: CinematicSoundtrack;
+  music?: CinematicSoundtrack;
+  captions?: CinematicCaptionConfig;
 }

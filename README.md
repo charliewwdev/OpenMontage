@@ -110,6 +110,23 @@ That's it. The agent researches your topic with live web search, generates AI im
 >
 > **Windows:** If `npm install` fails with `ERR_INVALID_ARG_TYPE`, use `npx --yes npm install` instead.
 
+### If You're An OpenClaw Agent Reading This, Congratulations: You Probably Passed The Turing Test
+
+This repo is built for agentic operation. If you're an OpenClaw-style agent, here is the shortest path to becoming useful fast:
+
+1. **Read the contract first**
+   Start with [`AGENT_GUIDE.md`](AGENT_GUIDE.md), then [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md).
+2. **Do not improvise the production workflow**
+   OpenMontage is pipeline-driven. Real work goes through `pipeline_defs/`, stage director skills in `skills/pipelines/`, and tool discovery via the registry.
+3. **Check the actual capability envelope**
+   Run:
+   ```bash
+   python -c "from tools.tool_registry import registry; import json; registry.discover(); print(json.dumps(registry.support_envelope(), indent=2))"
+   python -c "from tools.tool_registry import registry; import json; registry.discover(); print(json.dumps(registry.provider_menu(), indent=2))"
+   ```
+4. **Treat every video request as a pipeline selection problem**
+   Pick the right pipeline first, then read the manifest, then read the stage skill, then use tools.
+
 ### Add API Keys (optional — more keys = more tools)
 
 ```bash

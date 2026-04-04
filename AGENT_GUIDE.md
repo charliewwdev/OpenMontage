@@ -14,6 +14,38 @@ This skill teaches you to run discovery, classify the user's setup, present capa
 
 **Skip onboarding** when the user arrives with a specific, actionable request (e.g., "Make a 60-second explainer about black holes"). Go directly to Rule Zero.
 
+## Reference Video Entry Point
+
+When the user provides a **video URL or local video file as inspiration** — for example:
+
+- "Can you make a video like this?"
+- "I love this YouTube Short. Make me something similar."
+- "Use this Reel as a reference."
+
+— do **not** treat this as a generic web-search or prompt-writing request.
+
+This is a first-class workflow in OpenMontage.
+
+### Required behavior
+
+1. **Read:** `skills/meta/video-reference-analyst.md`
+2. **Run the reference analysis workflow** using the local analysis tools (`video_analyzer`, transcript extraction, scene detection, frame sampling)
+3. **Produce a grounded summary** of what the reference is doing:
+   - content
+   - pacing
+   - structure
+   - style
+   - what makes it work
+4. **Then** run normal capability audit and pipeline selection
+5. Present **2-3 differentiated concepts** for the user's version — not a carbon copy
+
+### Important distinction
+
+- **Reference-driven request:** "make me something like this" -> use `video-reference-analyst.md`
+- **Source-footage request:** "edit this footage" / "cut this into clips" -> use `source_media_review` and the appropriate footage-led pipeline
+
+If a model misses this distinction, it will often fall back to plain search + guesswork. That is incorrect for OpenMontage.
+
 ## Rule Zero — All Production Goes Through a Pipeline
 
 **Every video production request MUST go through the pipeline system. No exceptions.**

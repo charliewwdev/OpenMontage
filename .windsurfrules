@@ -1,7 +1,9 @@
-# OpenMontage - Windsurf Rules
+# OpenMontage
 
-OpenMontage is an AI-orchestrated video production platform.
+MANDATORY: Read `AGENT_GUIDE.md` before responding to ANY user message.
 
-See `AGENT_GUIDE.md` for the complete operating guide and agent contract, and `PROJECT_CONTEXT.md` for architecture and conventions.
+Do not act on the user's request until you have read AGENT_GUIDE.md.
+It contains routing rules that determine your first action based on what the user asked.
+Skipping it WILL cause you to take the wrong action.
 
-Key patterns: ToolContract (`tools/base_tool.py`), pipeline manifests (`pipeline_defs/`), canonical artifact schemas (`schemas/artifacts/`).
+There are no instructions in this file. All instructions are in AGENT_GUIDE.md.

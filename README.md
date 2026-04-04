@@ -30,35 +30,6 @@ Turn your AI coding assistant into a full video production studio. Describe what
 
 > **"SIGNAL FROM TOMORROW"** — a cinematic sci-fi trailer fully produced through OpenMontage: concept, script, scene plan, Veo-generated motion clips, soundtrack, and Remotion composition.
 
----
-
-## Start From A Video You Already Love
-
-Starting from a reference video is often faster than starting from a blank prompt.
-
-OpenMontage can start from a **YouTube video, Short, Reel, TikTok, or local clip** and turn it into a grounded production plan:
-
-1. **Paste a reference video**
-2. **The agent analyzes transcript, pacing, scenes, keyframes, and style**
-3. **You get 2-3 differentiated concepts, an honest tool path, cost estimates, and a sample before full production**
-
-```text
-"Here's a YouTube Short I love. Make me something like this, but about quantum computing."
-```
-
-What you get back is not "best guess prompt spaghetti." You get:
-
-- **What it keeps** from the reference: pacing, hook style, structure, tone
-- **What it changes**: topic, visual treatment, angle, narration approach
-- **What it will cost** at your target duration, before asset generation starts
-- **What it will actually look like** with your currently available tools
-
-**Why this matters:** the reference-video path is the easiest way into OpenMontage. You do not need to reverse-engineer prompts, name camera moves, or describe an aesthetic perfectly. Just point at something that works.
-
-**Guardrail:** OpenMontage does not aim for carbon copies. The agent is instructed to propose original, creatively differentiated variants of the reference.
-
-**Free-first workflow:** the reference analysis path is designed around local/free tooling for transcript extraction, scene detection, frame sampling, and structure analysis. Paid providers only enter once you approve a production direction.
-
 <div align="center">
   <video src="https://github.com/user-attachments/assets/8a6d2cc3-7ad2-46f5-922f-a8e3e5848d9f" width="100%" controls></video>
 </div>
@@ -82,6 +53,29 @@ What you get back is not "best guess prompt spaghetti." You get:
 </div>
 
 > **"Into the Abyss"** — a deep ocean exploration rendered in anime style. Bioluminescent gardens, coral cathedrals, and creatures of light — 12 FLUX-generated images with sparkle and mist particle overlays, light-ray effects, smooth camera motion, and ambient oceanic soundtrack. Total cost: **$0.15**. Zero video generation APIs needed.
+
+---
+
+## Start From A Video You Already Love
+
+Starting from a reference video is often faster than starting from a blank prompt.
+
+OpenMontage can start from a **YouTube video, Short, Reel, TikTok, or local clip** and turn it into a grounded production plan:
+
+1. **Paste a reference video**
+2. **The agent analyzes transcript, pacing, scenes, keyframes, and style**
+3. **You get 2-3 differentiated concepts, an honest tool path, cost estimates, and a sample before full production**
+
+```text
+"Here's a YouTube Short I love. Make me something like this, but about quantum computing."
+```
+
+What you get back is not "best guess prompt spaghetti." You get:
+
+- **What it keeps** from the reference: pacing, hook style, structure, tone
+- **What it changes**: topic, visual treatment, angle, narration approach
+- **What it will cost** at your target duration, before asset generation starts
+- **What it will actually look like** with your currently available tools
 
 Works with **Claude Code, Cursor, Copilot, Windsurf, Codex** — any AI coding assistant that can read files and run code.
 

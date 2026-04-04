@@ -205,7 +205,10 @@ Use this structure for each variant:
 **Audio plan:**
 - Audio architecture: [single narrator / character dialogue / narrator + characters]
 - Voice casting: [voice name + ID for each role — narrator, character A, etc.]
-- TTS provider: [ElevenLabs / other]
+- TTS provider: [selected from available providers via tts_selector preflight —
+  ElevenLabs (premium), Google TTS (affordable, multilingual), OpenAI TTS
+  (solid fallback), Piper (offline/free). Do NOT hardcode a provider — run
+  preflight to check what's configured and recommend the best available.]
 - Music: [library track / generated / none]
 - Sound design: [any special audio needs]
 

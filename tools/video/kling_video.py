@@ -189,13 +189,21 @@ class KlingVideo(BaseTool):
         except Exception as e:
             return ToolResult(success=False, error=f"Kling video generation failed: {e}")
 
+        from tools.video._shared import probe_output
+
+        probed = probe_output(output_path)
         return ToolResult(
             success=True,
             data={
                 "provider": "kling",
                 "model": f"fal-ai/{model_path}",
                 "prompt": inputs["prompt"],
+                "operation": operation,
+                "aspect_ratio": inputs.get("aspect_ratio", "16:9"),
                 "output": str(output_path),
+                "output_path": str(output_path),
+                "format": "mp4",
+                **probed,
             },
             artifacts=[str(output_path)],
             cost_usd=self.estimate_cost(inputs),

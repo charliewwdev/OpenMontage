@@ -50,6 +50,28 @@ class VideoSelector(BaseTool):
             },
             "allowed_providers": {"type": "array", "items": {"type": "string"}},
             "operation": {"type": "string", "enum": ["text_to_video", "image_to_video", "rank"], "default": "text_to_video"},
+            "aspect_ratio": {
+                "type": "string",
+                "enum": ["16:9", "9:16", "1:1"],
+                "default": "16:9",
+                "description": "Video aspect ratio. Passed through to the selected provider.",
+            },
+            "duration": {
+                "type": "string",
+                "description": "Duration hint (e.g., '5', '10'). Passed through to the selected provider.",
+            },
+            "reference_image_path": {
+                "type": "string",
+                "description": "Local path to a reference image for image_to_video. Auto-uploaded if the provider requires a URL.",
+            },
+            "reference_image_url": {
+                "type": "string",
+                "description": "URL of a reference image for image_to_video.",
+            },
+            "image_url": {
+                "type": "string",
+                "description": "Alias for reference_image_url (used by some providers like Kling via fal.ai).",
+            },
             "output_path": {"type": "string"},
         },
     }
@@ -122,6 +144,17 @@ class VideoSelector(BaseTool):
             required = tool.input_schema.get("properties", {})
             if "query" in required and "query" not in adapted:
                 adapted["query"] = adapted.get("prompt", "")
+
+        # Auto-resolve reference_image_path to a URL for providers that need it
+        if adapted.get("operation") == "image_to_video" and adapted.get("reference_image_path"):
+            tool_props = getattr(tool, "input_schema", {}).get("properties", {})
+            # If the provider uses image_url (not reference_image_path), upload and convert
+            if "image_url" in tool_props and "image_url" not in adapted:
+                try:
+                    from tools.video._shared import upload_image_fal
+                    adapted["image_url"] = upload_image_fal(adapted["reference_image_path"])
+                except Exception as e:
+                    return ToolResult(success=False, error=f"Failed to upload reference image: {e}")
 
         result = tool.execute(adapted)
         if result.success:

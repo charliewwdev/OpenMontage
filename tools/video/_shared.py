@@ -355,22 +355,82 @@ def poll_heygen(execution_id: str, api_key: str, timeout: int = 600) -> str:
     raise TimeoutError(f"HeyGen execution {execution_id} timed out after {timeout}s")
 
 
+def upload_image_fal(image_path: str) -> str:
+    """Upload a local image to fal.ai storage and return a public URL."""
+    import requests
+
+    api_key = os.environ.get("FAL_KEY") or os.environ.get("FAL_AI_API_KEY")
+    if not api_key:
+        raise RuntimeError("FAL_KEY or FAL_AI_API_KEY required for image upload")
+
+    path = Path(image_path)
+    if not path.exists():
+        raise FileNotFoundError(f"Image not found: {image_path}")
+
+    suffix = path.suffix.lower()
+    content_type = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg", "webp": "image/webp"}.get(
+        suffix.lstrip("."), "image/png"
+    )
+
+    # Initiate upload
+    init_resp = requests.post(
+        "https://rest.alpha.fal.ai/storage/upload/initiate",
+        headers={"Authorization": f"Key {api_key}", "Content-Type": "application/json"},
+        json={"content_type": content_type, "file_name": path.name},
+        timeout=30,
+    )
+    init_resp.raise_for_status()
+    data = init_resp.json()
+
+    # Upload file content
+    put_resp = requests.put(
+        data["upload_url"],
+        headers={"Content-Type": content_type},
+        data=path.read_bytes(),
+        timeout=60,
+    )
+    put_resp.raise_for_status()
+
+    return data["file_url"]
+
+
 def upload_image_heygen(image_path: str, api_key: str) -> str:
+    """Upload a local image to HeyGen and return a public URL.
+
+    Tries the v2 presigned-upload endpoint first, falls back to fal.ai storage.
+    """
     import requests
 
     path = Path(image_path)
     if not path.exists():
         raise FileNotFoundError(f"Image not found: {image_path}")
 
-    with path.open("rb") as handle:
-        response = requests.post(
-            "https://api.heygen.com/v1/asset",
-            headers={"X-Api-Key": api_key},
-            files={"file": (path.name, handle, "image/png")},
-            timeout=60,
+    # Try HeyGen v2 presigned upload
+    try:
+        resp = requests.post(
+            "https://api.heygen.com/v2/assets/upload",
+            headers={"X-Api-Key": api_key, "Content-Type": "application/json"},
+            json={"content_type": "image/png", "file_name": path.name},
+            timeout=30,
         )
-    response.raise_for_status()
-    return response.json().get("data", {}).get("url", "")
+        if resp.status_code == 200:
+            data = resp.json().get("data", {})
+            upload_url = data.get("upload_url")
+            file_url = data.get("url") or data.get("file_url")
+            if upload_url and file_url:
+                put_resp = requests.put(
+                    upload_url,
+                    headers={"Content-Type": "image/png"},
+                    data=path.read_bytes(),
+                    timeout=60,
+                )
+                put_resp.raise_for_status()
+                return file_url
+    except Exception:
+        pass
+
+    # Fallback to fal.ai storage upload
+    return upload_image_fal(image_path)
 
 
 def generate_heygen_video(inputs: dict[str, Any]) -> ToolResult:

@@ -1,23 +1,33 @@
 ---
 name: ai-video-gen
 description: |
-  Generate AI videos from text prompts using the HeyGen API. Use when: (1) Generating videos from text descriptions, (2) Creating AI-generated video clips for content production, (3) Image-to-video generation with a reference image, (4) Choosing between video generation providers (VEO, Kling, Sora, Runway, Seedance), (5) Working with HeyGen's /v1/workflows/executions endpoint for video generation.
+  Generate AI videos from text prompts using multiple provider gateways. Use when: (1) Generating videos from text descriptions, (2) Creating AI-generated video clips for content production, (3) Image-to-video generation with a reference image, (4) Choosing between video generation providers (VEO, Kling, Sora, Runway, Seedance, MiniMax). Supports two gateways: HeyGen API and fal.ai API.
 allowed-tools: mcp__heygen__*
 metadata:
   openclaw:
     requires:
-      env:
+      env_any:
         - HEYGEN_API_KEY
-    primaryEnv: HEYGEN_API_KEY
+        - FAL_KEY
+    primaryEnv: FAL_KEY
 ---
 
-# Video Generation (HeyGen API)
+# Video Generation (Multi-Gateway)
 
-Generate AI videos from text prompts. Supports multiple providers (VEO 3.1, Kling, Sora, Runway, Seedance), configurable aspect ratios, and optional reference images for image-to-video generation.
+Generate AI videos from text prompts. Supports multiple providers via two API gateways:
+
+| Gateway | Env Variable | Providers | Tool |
+|---------|-------------|-----------|------|
+| **fal.ai** | `FAL_KEY` | Kling v3/v2.1, MiniMax, VEO | `kling_video`, `minimax_video`, `veo_video` |
+| **HeyGen** | `HEYGEN_API_KEY` | VEO 3.1, Kling Pro, Sora v2, Runway Gen-4, Seedance | `heygen_video` |
+
+**IMPORTANT:** Always use `video_selector` instead of calling provider tools directly. The selector handles availability checks, cost comparison, and automatic fallback.
 
 ## Authentication
 
-All requests require the `X-Api-Key` header. Set the `HEYGEN_API_KEY` environment variable.
+**fal.ai (recommended primary):** Set `FAL_KEY` environment variable. Get a key at https://fal.ai/dashboard/keys
+
+**HeyGen (secondary):** Set `HEYGEN_API_KEY` environment variable.
 
 ```bash
 curl -X POST "https://api.heygen.com/v1/workflows/executions" \

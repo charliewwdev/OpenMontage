@@ -197,6 +197,7 @@ stages:
       - Total cost within approved budget from proposal_packet
       - "Layer 3 skills read for EVERY generation tool before writing prompts (check agent_skills field)"
       - "Clip duration maximized (prefer 10s over 5s) to reduce API calls and cost"
+      - "Use selector tools (video_selector, tts_selector, image_selector) — never call provider tools directly"
     success_criteria:
       - Schema-valid asset_manifest artifact
       - All referenced asset files exist on disk
@@ -249,9 +250,11 @@ stages:
       - Motion timing survives the final render
       - Audio sync matches the animatic intent
       - Duration within +/-5% of target
+      - "Post-render self-review MANDATORY: extract keyframes, visually inspect each scene, flag weak frames before presenting to user"
     success_criteria:
       - Schema-valid render_report artifact
       - Output file exists and passes ffprobe validation
+      - self_review_completed is true with per-scene quality notes
 
   - name: publish
     skill: pipelines/animation/publish-director

@@ -8,9 +8,21 @@ import {
   Sequence,
   interpolate,
   spring,
+  staticFile,
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
+
+function resolveAsset(src: string): string {
+  if (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("data:")) {
+    return src;
+  }
+  const clean = src.replace(/^file:\/\/\/?/, "");
+  if (clean.startsWith("/") || /^[A-Za-z]:[/\\]/.test(clean)) {
+    return `file:///${clean.replace(/\\/g, "/")}`;
+  }
+  return staticFile(clean);
+}
 import { CinematicRendererProps, CinematicTone, CinematicVideoScene } from "./cinematic/types";
 
 const FPS = 30;
@@ -74,7 +86,7 @@ const SceneVideo: React.FC<{ scene: CinematicVideoScene }> = ({ scene }) => {
     <AbsoluteFill style={{ backgroundColor: "#020407", opacity }}>
       <OffthreadVideo
         muted
-        src={scene.src}
+        src={resolveAsset(scene.src)}
         trimBefore={trimBefore}
         trimAfter={trimAfter}
         style={{
@@ -296,7 +308,7 @@ const Soundtrack: React.FC<{
 
   return (
     <Audio
-      src={src}
+      src={resolveAsset(src)}
       trimBefore={trimBefore}
       trimAfter={trimAfter}
       volume={() => Math.min(fadeIn, fadeOut)}

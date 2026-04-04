@@ -217,12 +217,22 @@ Use this structure for each variant:
 - Sound design: [any special audio needs]
 
 **Duration:** [X seconds]
-**Estimated cost:** $[X.XX] breakdown:
-- Image generation: $X.XX (N images × $X.XX each via [provider])
-- Video generation: $X.XX (N clips × $X.XX each via [provider])
-- TTS narration: $X.XX (N words via [provider])
-- Music: $X.XX ([source])
-- Total: $X.XX
+**Estimated cost per provider option:**
+Present a provider comparison table so the user can choose:
+```
+Provider        Quality    Speed      Cost (N clips)    Total
+─────────      ────────   ─────      ──────────────    ─────
+VEO 3.1        Highest    Slow       $X.XX             $X.XX
+Kling Pro      High       Medium     $X.XX             $X.XX
+Sora V2        High       Medium     $X.XX             $X.XX
+LTX Distilled  Lower      Fastest    $X.XX             $X.XX
+```
++ Image generation: $X.XX (N images × $X.XX each via [provider])
++ TTS narration: $X.XX (N words via [provider])
++ Music: $X.XX ([source])
+
+**Do NOT pick the provider for the user.** Present the options with
+costs, recommend one with a brief reason, and let them decide.
 
 **Honest assessment:** [What this will look like realistically — don't oversell]
 

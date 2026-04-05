@@ -20,6 +20,13 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPLv3-blue.svg" alt="License"></a>
 </p>
 
+<p align="center"><strong>Follow The Build</strong></p>
+
+<p align="center">
+  <a href="https://x.com/charliewwdevailabs"><img src="https://img.shields.io/badge/X-%40charliewwdevailabs-111111?style=for-the-badge&logo=x&logoColor=white" alt="X"></a>
+  <a href="https://github.com/charliewwdev/OpenMontage/discussions"><img src="https://img.shields.io/badge/Community-GitHub%20Discussions-0b1220?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Discussions"></a>
+</p>
+
 ---
 
 Turn your AI coding assistant into a full video production studio. Describe what you want in plain language — your agent handles research, scripting, asset generation, editing, and final composition.
@@ -583,6 +590,14 @@ We use [GitHub Discussions](https://github.com/charliewwdev/OpenMontage/discussi
 - **[Q&A](https://github.com/charliewwdev/OpenMontage/discussions/categories/q-a)** — Ask questions about setup, pipelines, or troubleshooting
 
 Made something cool? Post it in Show and Tell — we'd love to see what you build.
+
+---
+
+## Contact
+
+For updates, releases, and behind-the-scenes build notes, follow [@charliewwdevailabs](https://x.com/charliewwdevailabs).
+
+For bugs, feature requests, and workflow discussions, use [GitHub Issues](https://github.com/charliewwdev/OpenMontage/issues) and [GitHub Discussions](https://github.com/charliewwdev/OpenMontage/discussions) so everything stays visible and actionable.
 
 ---
 

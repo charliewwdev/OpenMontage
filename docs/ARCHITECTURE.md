@@ -143,8 +143,8 @@ Three selector tools abstract multi-provider capabilities:
 | Selector | Capability | Providers (priority order) |
 |----------|-----------|---------------------------|
 | `tts_selector` | Text-to-speech | ElevenLabs > Google TTS > OpenAI > Piper (offline) |
-| `image_selector` | Image generation | FLUX > Google Imagen > DALL-E > Recraft > LocalDiffusion > Pexels/Pixabay (stock) |
-| `video_selector` | Video generation | Kling > Runway > VEO > MiniMax > HeyGen > LTX (modal) > LTX (local) > CogVideo > Hunyuan > WAN > Pexels/Pixabay (stock) |
+| `image_selector` | Image generation | FLUX > Grok > Google Imagen > DALL-E > Recraft > LocalDiffusion > Pexels/Pixabay (stock) |
+| `video_selector` | Video generation | Grok > Kling > Runway > VEO > MiniMax > HeyGen > LTX (modal) > LTX (local) > CogVideo > Hunyuan > WAN > Pexels/Pixabay (stock) |
 
 Selectors route based on: user preference > availability > fallback order. They adapt input schemas between providers transparently.
 
@@ -158,11 +158,11 @@ Selectors route based on: user preference > availability > fallback order. They 
 
 **Enhancement (5):** upscale (Real-ESRGAN), bg_remove (rembg/U2Net), face_enhance, face_restore (CodeFormer/GFPGAN), color_grade (FFmpeg LUTs)
 
-**Graphics (12):** flux_image, google_imagen, openai_image, recraft_image, local_diffusion, pexels_image, pixabay_image, image_selector, code_snippet, diagram_gen, math_animate (ManimCE), image_gen (deprecated)
+**Graphics (13):** flux_image, grok_image, google_imagen, openai_image, recraft_image, local_diffusion, pexels_image, pixabay_image, image_selector, code_snippet, diagram_gen, math_animate (ManimCE), image_gen (deprecated)
 
 **Subtitle (1):** subtitle_gen
 
-**Video (17):** heygen_video, veo_video, kling_video, runway_video, minimax_video, wan_video, hunyuan_video, cogvideo_video, ltx_video_local, ltx_video_modal, pexels_video, pixabay_video, video_selector, video_compose (FFmpeg), video_stitch, video_trimmer
+**Video (17):** grok_video, heygen_video, veo_video, kling_video, runway_video, minimax_video, wan_video, hunyuan_video, cogvideo_video, ltx_video_local, ltx_video_modal, pexels_video, pixabay_video, video_selector, video_compose (FFmpeg), video_stitch, video_trimmer
 
 ---
 
@@ -378,6 +378,7 @@ All config is validated via Pydantic models in `lib/config_model.py`.
 |----------|---------|---------|
 | `ELEVENLABS_API_KEY` | elevenlabs_tts, music_gen | TTS, music, sound effects |
 | `OPENAI_API_KEY` | openai_tts, openai_image | TTS fallback, DALL-E 3 |
+| `XAI_API_KEY` | grok_image, grok_video | Grok image editing/generation, Grok video generation |
 | `FAL_KEY` | flux_image, kling_video, veo_video, minimax_video, recraft_image | fal.ai hosted models (FLUX, Veo, Kling, MiniMax, Recraft) |
 | `HEYGEN_API_KEY` | heygen_video | Multi-provider video generation |
 | `PEXELS_API_KEY` | pexels_image, pexels_video | Stock media |

@@ -52,6 +52,33 @@ class ImageSelector(BaseTool):
             "width": {"type": "integer", "description": "Image width in pixels"},
             "height": {"type": "integer", "description": "Image height in pixels"},
             "seed": {"type": "integer", "description": "Random seed for reproducibility (generation providers only)"},
+            "n": {"type": "integer", "description": "Number of image variations to request when supported."},
+            "aspect_ratio": {
+                "type": "string",
+                "description": "Aspect ratio hint for providers that support ratio-based generation.",
+            },
+            "resolution": {
+                "type": "string",
+                "description": "Resolution tier for providers that support named resolutions.",
+            },
+            "generation_mode": {
+                "type": "string",
+                "enum": ["generate", "edit"],
+                "default": "generate",
+                "description": "Use 'edit' when providing one or more source images.",
+            },
+            "image_url": {"type": "string", "description": "Single source image URL for edit-capable providers."},
+            "image_path": {"type": "string", "description": "Single local source image path for edit-capable providers."},
+            "image_urls": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Multiple source image URLs for compositing edits.",
+            },
+            "image_paths": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Multiple local source image paths for compositing edits.",
+            },
             "preferred_provider": {
                 "type": "string",
                 "description": "Provider name or 'auto'. Valid values are discovered at runtime from the registry.",
@@ -101,7 +128,7 @@ class ImageSelector(BaseTool):
         candidates = self._providers()
         if not candidates:
             return 0.0
-        tool, _ = self._select_best_tool(inputs, candidates, inputs.get("task_context", {}))
+        tool, _ = self._select_best_tool(inputs, candidates, self._prepare_task_context(inputs))
         return tool.estimate_cost(inputs) if tool else 0.0
 
     def execute(self, inputs: dict[str, Any]) -> ToolResult:
@@ -109,8 +136,8 @@ class ImageSelector(BaseTool):
         from lib.scoring import rank_providers
 
         logger = logging.getLogger(__name__)
-        task_context = inputs.get("task_context", {})
-        candidates = self._providers()
+        task_context = self._prepare_task_context(inputs)
+        candidates = self._filter_candidates(inputs, self._providers())
 
         # Rank mode — return scored provider rankings without generating
         if inputs.get("operation") == "rank":
@@ -118,8 +145,9 @@ class ImageSelector(BaseTool):
             return ToolResult(
                 success=True,
                 data={
-                    "rankings": [r.to_dict() for r in rankings],
+                    "rankings": self._serialize_rankings(candidates, rankings),
                     "explanation": "\n".join(r.explain() for r in rankings[:5]),
+                    "normalized_task_context": task_context,
                 },
             )
 
@@ -143,7 +171,20 @@ class ImageSelector(BaseTool):
         if hasattr(tool, 'input_schema'):
             props = tool.input_schema.get("properties", {})
             stripped = []
-            for passthrough_key in ("negative_prompt", "width", "height", "seed"):
+            for passthrough_key in (
+                "negative_prompt",
+                "width",
+                "height",
+                "seed",
+                "n",
+                "aspect_ratio",
+                "resolution",
+                "generation_mode",
+                "image_url",
+                "image_path",
+                "image_urls",
+                "image_paths",
+            ):
                 if passthrough_key in adapted and passthrough_key not in props:
                     stripped.append(f"{passthrough_key}={adapted.pop(passthrough_key)}")
             if stripped:
@@ -155,9 +196,11 @@ class ImageSelector(BaseTool):
         result = tool.execute(adapted)
         if result.success:
             result.data.setdefault("selected_tool", tool.name)
+            result.data["selected_provider"] = tool.provider
             result.data["selection_reason"] = score.explain() if score else f"Selected {tool.provider} ({tool.name})"
             if score:
                 result.data["provider_score"] = score.to_dict()
+            result.data.update(self._tool_context_payload(tool))
             result.data["alternatives_considered"] = [
                 t.name for t in candidates
                 if t.name != tool.name and t.get_status().value == "available"
@@ -177,6 +220,7 @@ class ImageSelector(BaseTool):
         allowed = set(inputs.get("allowed_providers") or [])
         if allowed:
             candidates = [tool for tool in candidates if tool.provider in allowed]
+        candidates = self._filter_candidates(inputs, candidates)
 
         rankings = rank_providers(candidates, task_context)
 
@@ -195,3 +239,60 @@ class ImageSelector(BaseTool):
                 return tool_by_provider[score_item.provider], score_item
 
         return None, None
+
+    def _prepare_task_context(self, inputs: dict[str, Any]) -> dict[str, Any]:
+        from lib.scoring import normalize_task_context
+
+        return normalize_task_context(
+            inputs.get("task_context", {}),
+            prompt=inputs.get("prompt", ""),
+            capability=self.capability,
+            operation=inputs.get("generation_mode", inputs.get("operation", "generate")),
+        )
+
+    @staticmethod
+    def _tool_context_payload(tool: BaseTool) -> dict[str, Any]:
+        info = tool.get_info()
+        return {
+            "selected_tool_agent_skills": info.get("agent_skills", []),
+            "required_agent_skills": info.get("agent_skills", []),
+            "selected_tool_usage_location": info.get("usage_location"),
+            "selected_tool_best_for": info.get("best_for", []),
+        }
+
+    def _serialize_rankings(self, candidates: list[BaseTool], rankings: list[object]) -> list[dict[str, Any]]:
+        tool_by_name = {tool.name: tool for tool in candidates}
+        serialized: list[dict[str, Any]] = []
+        for score in rankings:
+            item = score.to_dict()
+            tool = tool_by_name.get(score.tool_name)
+            if tool:
+                info = tool.get_info()
+                item["agent_skills"] = info.get("agent_skills", [])
+                item["usage_location"] = info.get("usage_location")
+                item["best_for"] = info.get("best_for", [])
+                item["supports"] = info.get("supports", {})
+                item["status"] = str(tool.get_status())
+            serialized.append(item)
+        return serialized
+
+    def _filter_candidates(self, inputs: dict[str, Any], candidates: list[BaseTool]) -> list[BaseTool]:
+        wants_edit = (
+            inputs.get("generation_mode") == "edit"
+            or inputs.get("image_url")
+            or inputs.get("image_path")
+            or inputs.get("image_urls")
+            or inputs.get("image_paths")
+        )
+        if not wants_edit:
+            return candidates
+
+        filtered: list[BaseTool] = []
+        for tool in candidates:
+            props = getattr(tool, "input_schema", {}).get("properties", {})
+            supports = getattr(tool, "supports", {})
+            if supports.get("image_edit") or any(
+                key in props for key in ("image", "images", "image_url", "image_path", "image_urls", "image_paths")
+            ):
+                filtered.append(tool)
+        return filtered or candidates

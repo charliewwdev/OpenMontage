@@ -49,7 +49,11 @@ class VideoSelector(BaseTool):
                 "default": "auto",
             },
             "allowed_providers": {"type": "array", "items": {"type": "string"}},
-            "operation": {"type": "string", "enum": ["text_to_video", "image_to_video", "rank"], "default": "text_to_video"},
+            "operation": {
+                "type": "string",
+                "enum": ["text_to_video", "image_to_video", "reference_to_video", "rank"],
+                "default": "text_to_video",
+            },
             "aspect_ratio": {
                 "type": "string",
                 "enum": ["16:9", "9:16", "1:1"],
@@ -68,9 +72,23 @@ class VideoSelector(BaseTool):
                 "type": "string",
                 "description": "URL of a reference image for image_to_video.",
             },
+            "reference_image_urls": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Reference image URLs for providers that support reference-conditioned video.",
+            },
+            "reference_image_paths": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Local reference image paths for providers that support reference-conditioned video.",
+            },
             "image_url": {
                 "type": "string",
                 "description": "Alias for reference_image_url (used by some providers like Kling via fal.ai).",
+            },
+            "resolution": {
+                "type": "string",
+                "description": "Resolution hint for providers that support named output resolutions.",
             },
             "output_path": {"type": "string"},
         },
@@ -103,23 +121,23 @@ class VideoSelector(BaseTool):
         return ToolStatus.UNAVAILABLE
 
     def estimate_cost(self, inputs: dict[str, object]) -> float:
-        candidates = self._providers()
+        candidates = self._filter_candidates(inputs, self._providers())
         if not candidates:
             return 0.0
-        tool, _ = self._select_best_tool(inputs, candidates, inputs.get("task_context", {}))
+        tool, _ = self._select_best_tool(inputs, candidates, self._prepare_task_context(inputs))
         return tool.estimate_cost(inputs) if tool else 0.0
 
     def estimate_runtime(self, inputs: dict[str, object]) -> float:
         candidates = self._providers()
         if not candidates:
             return 0.0
-        tool, _ = self._select_best_tool(inputs, candidates, inputs.get("task_context", {}))
+        tool, _ = self._select_best_tool(inputs, candidates, self._prepare_task_context(inputs))
         return tool.estimate_runtime(inputs) if tool else 0.0
 
     def execute(self, inputs: dict[str, object]) -> ToolResult:
         from lib.scoring import rank_providers
 
-        task_context = inputs.get("task_context", {})
+        task_context = self._prepare_task_context(inputs)
         candidates = self._providers()
 
         # Rank mode — return scored provider rankings without generating
@@ -128,8 +146,9 @@ class VideoSelector(BaseTool):
             return ToolResult(
                 success=True,
                 data={
-                    "rankings": [r.to_dict() for r in rankings],
+                    "rankings": self._serialize_rankings(candidates, rankings),
                     "explanation": "\n".join(r.explain() for r in rankings[:5]),
+                    "normalized_task_context": task_context,
                 },
             )
 
@@ -159,9 +178,11 @@ class VideoSelector(BaseTool):
         result = tool.execute(adapted)
         if result.success:
             result.data.setdefault("selected_tool", tool.name)
+            result.data["selected_provider"] = tool.provider
             result.data["selection_reason"] = score.explain() if score else f"Selected {tool.provider} ({tool.name})"
             if score:
                 result.data["provider_score"] = score.to_dict()
+            result.data.update(self._tool_context_payload(tool))
             result.data["alternatives_considered"] = [
                 t.name for t in candidates
                 if t.name != tool.name and t.get_status().value == "available"
@@ -185,6 +206,7 @@ class VideoSelector(BaseTool):
         allowed = set(inputs.get("allowed_providers") or [])
         if allowed:
             candidates = [tool for tool in candidates if tool.provider in allowed]
+        candidates = self._filter_candidates(inputs, candidates)
 
         env_hint = os.environ.get("VIDEO_GEN_LOCAL_MODEL", "").lower()
         env_map = {
@@ -219,3 +241,67 @@ class VideoSelector(BaseTool):
                 return tool_by_provider[score.provider], score
 
         return None, None
+
+    def _prepare_task_context(self, inputs: dict[str, object]) -> dict[str, object]:
+        from lib.scoring import normalize_task_context
+
+        return normalize_task_context(
+            inputs.get("task_context", {}),
+            prompt=str(inputs.get("prompt", "")),
+            capability=self.capability,
+            operation=str(inputs.get("operation", "text_to_video")),
+        )
+
+    @staticmethod
+    def _tool_context_payload(tool: BaseTool) -> dict[str, object]:
+        info = tool.get_info()
+        return {
+            "selected_tool_agent_skills": info.get("agent_skills", []),
+            "required_agent_skills": info.get("agent_skills", []),
+            "selected_tool_usage_location": info.get("usage_location"),
+            "selected_tool_best_for": info.get("best_for", []),
+        }
+
+    def _serialize_rankings(self, candidates: list[BaseTool], rankings: list[object]) -> list[dict[str, object]]:
+        tool_by_name = {tool.name: tool for tool in candidates}
+        serialized: list[dict[str, object]] = []
+        for score in rankings:
+            item = score.to_dict()
+            tool = tool_by_name.get(score.tool_name)
+            if tool:
+                info = tool.get_info()
+                item["agent_skills"] = info.get("agent_skills", [])
+                item["usage_location"] = info.get("usage_location")
+                item["best_for"] = info.get("best_for", [])
+                item["supports"] = info.get("supports", {})
+                item["status"] = str(tool.get_status())
+            serialized.append(item)
+        return serialized
+
+    def _filter_candidates(
+        self,
+        inputs: dict[str, object],
+        candidates: list[BaseTool],
+    ) -> list[BaseTool]:
+        operation = inputs.get("operation", "text_to_video")
+        if operation == "rank":
+            return candidates
+
+        filtered: list[BaseTool] = []
+        for tool in candidates:
+            supports = getattr(tool, "supports", {})
+            props = getattr(tool, "input_schema", {}).get("properties", {})
+
+            if operation == "image_to_video":
+                if supports.get("image_to_video") or "image_url" in props or "reference_image_url" in props:
+                    filtered.append(tool)
+                continue
+
+            if operation == "reference_to_video":
+                if supports.get("reference_to_video") or "reference_image_urls" in props:
+                    filtered.append(tool)
+                continue
+
+            filtered.append(tool)
+
+        return filtered or candidates

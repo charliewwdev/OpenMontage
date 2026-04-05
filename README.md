@@ -151,6 +151,7 @@ SUNO_API_KEY=your-key          # Full songs, instrumentals, any genre
 # Voice & images:
 ELEVENLABS_API_KEY=your-key    # Premium TTS, AI music, sound effects
 OPENAI_API_KEY=your-key        # OpenAI TTS, DALL-E 3 images
+XAI_API_KEY=your-key           # xAI Grok image edits/generation + Grok video generation
 GOOGLE_API_KEY=your-key        # Google Imagen images, Google TTS (700+ voices)
 
 # More video providers:
@@ -265,7 +266,7 @@ Most AI video tools give you a single clip from a prompt. OpenMontage gives you 
 Edit your own talking-head footage. Generate a fully animated explainer from scratch. Cut a 2-hour podcast into a dozen social clips. Translate and dub your content into 10 languages. Build a cinematic brand teaser from stock footage and AI-generated scenes. **If a production team can make it, OpenMontage can orchestrate it.**
 
 - **11 production pipelines** — explainers, talking heads, screen demos, cinematic trailers, animations, podcasts, localization, and more
-- **49 production tools** — spanning video generation, image creation, text-to-speech, music, audio mixing, subtitles, enhancement, and analysis
+- **51 production tools** — spanning video generation, image creation, text-to-speech, music, audio mixing, subtitles, enhancement, and analysis
 - **400+ agent skills** — production skills, pipeline directors, creative techniques, quality checklists, and deep technology knowledge packs that teach the agent how to use every tool like an expert
 - **Reference-driven creation** — paste a video you like and the agent turns it into a grounded, differentiated production plan instead of forcing you to invent the perfect prompt from scratch
 - **Live web research built in** — before writing a single word of script, the agent runs 15-25+ web searches across YouTube, Reddit, news sites, and academic sources to ground your video in real, current data
@@ -323,9 +324,9 @@ Final video output -- only if self-review passes
 ```
 OpenMontage/
 ├── tools/              # 48 Python tools (the agent's hands)
-│   ├── video/          # 12 video gen providers + compose, stitch, trim
+│   ├── video/          # 13 video gen tools + compose, stitch, trim
 │   ├── audio/          # 4 TTS providers + Suno/ElevenLabs music, mixing, enhancement
-│   ├── graphics/       # 8 image gen providers + diagrams, code snippets, math
+│   ├── graphics/       # 9 image/graphics generation tools + diagrams, code snippets, math
 │   ├── enhancement/    # Upscale, bg remove, face enhance, color grade
 │   ├── analysis/       # Transcription, scene detect, frame sampling
 │   ├── avatar/         # Talking head, lip sync
@@ -369,6 +370,7 @@ Each tool declares which Layer 3 skills it relies on. The agent reads Layer 1 to
 | **Kling** | Cloud API | High quality, fast |
 | **Runway Gen-4** | Cloud API | Cinematic quality |
 | **Google Veo 3** | Cloud API | Long-form, cinematic. Via fal.ai or HeyGen. |
+| **Grok Imagine Video** | Cloud API | Strong reference-image video and xAI-native short-form generation |
 | **MiniMax** | Cloud API | Cost-effective |
 | **HeyGen** | Cloud API | Multi-model gateway |
 | **WAN 2.1** | Local GPU | Free, 1.3B and 14B variants |
@@ -381,12 +383,13 @@ Each tool declares which Layer 3 skills it relies on. The agent reads Layer 1 to
 </details>
 
 <details>
-<summary><strong>Image Generation — 8 providers</strong></summary>
+<summary><strong>Image Generation — 9 tools/providers</strong></summary>
 
 | Provider | Type | Notes |
 |----------|------|-------|
 | **FLUX** | Cloud API | State-of-the-art quality |
 | **Google Imagen** | Cloud API | Imagen 4 — high-quality, multiple aspect ratios |
+| **Grok Imagine Image** | Cloud API | Strong image edits, style transfer, and multi-image compositing |
 | **DALL-E 3** | Cloud API | OpenAI's image model |
 | **Recraft** | Cloud API | Design-focused generation |
 | **Local Diffusion** | Local GPU | Stable Diffusion, free |
@@ -512,6 +515,10 @@ OpenMontage treats video production like real engineering — with quality gates
 ### Scored Provider Selection
 
 Every tool selection (video generation, image generation, TTS, music) runs through a 7-dimension scoring engine: task fit (30%), output quality (20%), control features (15%), reliability (15%), cost efficiency (10%), latency (5%), continuity (5%). The winning provider and its score are logged in the decision trail with all alternatives considered.
+
+Selectors normalize loose brief context before scoring. If the agent only knows something like "Pixar-style animated short with character consistency," the selector expands that into scorer-friendly intent and style signals instead of requiring a perfectly pre-shaped `task_context`.
+
+Selector outputs also surface the chosen provider's `agent_skills`, so the agent can immediately read the right Layer 3 provider skill before writing prompts.
 
 ### Decision Audit Trail
 

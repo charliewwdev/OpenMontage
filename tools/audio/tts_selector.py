@@ -114,13 +114,13 @@ class TTSSelector(BaseTool):
         candidates = self._providers()
         if not candidates:
             return 0.0
-        tool, _ = self._select_best_tool(inputs, candidates, inputs.get("task_context", {}))
+        tool, _ = self._select_best_tool(inputs, candidates, self._prepare_task_context(inputs))
         return tool.estimate_cost(inputs) if tool else 0.0
 
     def execute(self, inputs: dict[str, Any]) -> ToolResult:
         from lib.scoring import rank_providers
 
-        task_context = inputs.get("task_context", {})
+        task_context = self._prepare_task_context(inputs)
         candidates = self._providers()
 
         # Rank mode — return scored provider rankings without generating
@@ -129,8 +129,9 @@ class TTSSelector(BaseTool):
             return ToolResult(
                 success=True,
                 data={
-                    "rankings": [r.to_dict() for r in rankings],
+                    "rankings": self._serialize_rankings(candidates, rankings),
                     "explanation": "\n".join(r.explain() for r in rankings[:5]),
+                    "normalized_task_context": task_context,
                 },
             )
 
@@ -142,9 +143,11 @@ class TTSSelector(BaseTool):
         result = tool.execute(inputs)
         if result.success:
             result.data.setdefault("selected_tool", tool.name)
+            result.data["selected_provider"] = tool.provider
             result.data["selection_reason"] = score.explain() if score else f"Selected {tool.provider} ({tool.name})"
             if score:
                 result.data["provider_score"] = score.to_dict()
+            result.data.update(self._tool_context_payload(tool))
             result.data["alternatives_considered"] = [
                 t.name for t in candidates
                 if t.name != tool.name and t.get_status().value == "available"
@@ -182,3 +185,38 @@ class TTSSelector(BaseTool):
                 return tool_by_provider[score_item.provider], score_item
 
         return None, None
+
+    def _prepare_task_context(self, inputs: dict[str, Any]) -> dict[str, Any]:
+        from lib.scoring import normalize_task_context
+
+        return normalize_task_context(
+            inputs.get("task_context", {}),
+            prompt=inputs.get("text", ""),
+            capability=self.capability,
+            operation=inputs.get("operation", "generate"),
+        )
+
+    @staticmethod
+    def _tool_context_payload(tool: BaseTool) -> dict[str, Any]:
+        info = tool.get_info()
+        return {
+            "selected_tool_agent_skills": info.get("agent_skills", []),
+            "required_agent_skills": info.get("agent_skills", []),
+            "selected_tool_usage_location": info.get("usage_location"),
+            "selected_tool_best_for": info.get("best_for", []),
+        }
+
+    def _serialize_rankings(self, candidates: list[BaseTool], rankings: list[object]) -> list[dict[str, Any]]:
+        tool_by_name = {tool.name: tool for tool in candidates}
+        serialized: list[dict[str, Any]] = []
+        for score in rankings:
+            item = score.to_dict()
+            tool = tool_by_name.get(score.tool_name)
+            if tool:
+                info = tool.get_info()
+                item["agent_skills"] = info.get("agent_skills", [])
+                item["usage_location"] = info.get("usage_location")
+                item["best_for"] = info.get("best_for", [])
+                item["status"] = str(tool.get_status())
+            serialized.append(item)
+        return serialized

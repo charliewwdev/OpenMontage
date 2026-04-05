@@ -10,6 +10,7 @@ Scores are normalized 0-1. Higher is better.
 from __future__ import annotations
 
 from dataclasses import dataclass, asdict, field
+import re
 from typing import Any
 
 
@@ -129,12 +130,59 @@ _SYNONYM_CLUSTERS: list[set[str]] = [
     {"corporate", "business", "professional", "enterprise"},
     {"social", "tiktok", "instagram", "reels", "shorts", "viral"},
     {"animation", "animated", "motion-graphics", "motion", "kinetic"},
+    {"pixar", "animation", "animated", "stylized", "storybook", "character"},
     {"realistic", "photorealistic", "lifelike", "natural"},
     {"stock", "footage", "b-roll", "library"},
     {"avatar", "presenter", "talking-head", "spokesperson"},
     {"voiceover", "narration", "speech", "voice"},
     {"music", "soundtrack", "background-music", "score", "ambient"},
 ]
+
+_TOKEN_RE = re.compile(r"[a-z0-9][a-z0-9+._-]*")
+_GENERATED_VISUAL_TERMS = {
+    "animated",
+    "animation",
+    "anime",
+    "cartoon",
+    "character",
+    "cinematic",
+    "concept",
+    "fantasy",
+    "ghibli",
+    "illustration",
+    "pixar",
+    "render",
+    "scifi",
+    "short",
+    "story",
+    "stylized",
+    "surreal",
+}
+_REFERENCE_TERMS = {
+    "character",
+    "consistency",
+    "identity",
+    "preserve",
+    "product",
+    "reference",
+    "subject",
+    "wardrobe",
+}
+_IMAGE_EDIT_TERMS = {
+    "combine",
+    "composite",
+    "edit",
+    "merge",
+    "modify",
+    "repaint",
+    "replace",
+    "style-transfer",
+    "transfer",
+}
+
+
+def _tokenize_text(value: str) -> list[str]:
+    return _TOKEN_RE.findall((value or "").lower())
 
 def _expand_synonyms(words: set[str]) -> set[str]:
     """Expand a word set with synonyms from known clusters."""
@@ -235,6 +283,82 @@ def _compute_continuity(
     return 0.4  # Different provider = possible style break
 
 
+def normalize_task_context(
+    task_context: dict[str, Any] | None,
+    *,
+    prompt: str = "",
+    capability: str = "",
+    operation: str = "",
+) -> dict[str, Any]:
+    """Normalize loose task context into the scorer's expected shape."""
+    context = dict(task_context or {})
+
+    needs = context.get("needs") or []
+    if isinstance(needs, str):
+        needs = [needs]
+
+    text_fragments: list[str] = []
+    for key in ("intent", "style", "brief", "goal", "platform"):
+        value = context.get(key)
+        if isinstance(value, str) and value.strip():
+            text_fragments.append(value.strip())
+    text_fragments.extend(str(item).strip() for item in needs if str(item).strip())
+    if prompt.strip():
+        text_fragments.append(prompt.strip())
+
+    combined_text = " ".join(text_fragments).strip()
+    if not context.get("intent"):
+        context["intent"] = combined_text
+
+    style_keywords = {
+        str(item).lower().strip()
+        for item in (context.get("style_keywords") or [])
+        if str(item).strip()
+    }
+    for source in [context.get("style"), context.get("platform"), *needs]:
+        if isinstance(source, str):
+            style_keywords.update(_tokenize_text(source))
+    context["style_keywords"] = sorted(style_keywords)
+
+    if not context.get("asset_type"):
+        asset_type_map = {
+            "video_generation": "video",
+            "image_generation": "image",
+            "tts": "voice",
+            "music_generation": "music",
+        }
+        if capability in asset_type_map:
+            context["asset_type"] = asset_type_map[capability]
+
+    if "motion_required" not in context and capability == "video_generation":
+        context["motion_required"] = True
+
+    if "budget_remaining_usd" not in context and context.get("budget_usd") is not None:
+        context["budget_remaining_usd"] = context["budget_usd"]
+
+    text_tokens = set(_tokenize_text(combined_text))
+    context["prefers_generated_visuals"] = bool(text_tokens & _GENERATED_VISUAL_TERMS)
+    context["wants_reference_conditioning"] = (
+        operation == "reference_to_video" or bool(text_tokens & _REFERENCE_TERMS)
+    )
+    context["wants_image_editing"] = (
+        operation == "edit" or bool(text_tokens & _IMAGE_EDIT_TERMS)
+    )
+
+    return context
+
+
+def _is_stock_like_provider(info: dict[str, Any]) -> bool:
+    provider = str(info.get("provider", "")).lower()
+    if provider in {"pexels", "pixabay"}:
+        return True
+
+    words = set()
+    for desc in info.get("best_for", []):
+        words.update(_tokenize_text(str(desc)))
+    return bool(words & {"stock", "footage", "b-roll", "library"})
+
+
 def score_provider(tool, task_context: dict[str, Any]) -> ProviderScore:
     """Score a provider against a task context.
 
@@ -248,6 +372,7 @@ def score_provider(tool, task_context: dict[str, Any]) -> ProviderScore:
             - motion_required (bool): Whether motion is a hard requirement
             - asset_type (str): "image", "video", "audio", "music", "voice"
     """
+    task_context = normalize_task_context(task_context)
     info = tool.get_info()
     status = str(tool.get_status())
 
@@ -329,6 +454,28 @@ def score_provider(tool, task_context: dict[str, Any]) -> ProviderScore:
         cap = info.get("capability", "")
         if "video" not in cap:
             task_fit *= 0.2  # Heavy penalty
+
+    supports = info.get("supports", {})
+    stock_like = _is_stock_like_provider(info)
+    asset_type = task_context.get("asset_type")
+
+    if task_context.get("prefers_generated_visuals") and stock_like and asset_type in {"video", "image"}:
+        task_fit *= 0.55
+        output_quality *= 0.85
+
+    if task_context.get("wants_reference_conditioning") and asset_type == "video":
+        if supports.get("reference_to_video") or supports.get("reference_image") or supports.get("multiple_reference_images"):
+            task_fit = min(1.0, task_fit + 0.18)
+            control = min(1.0, control + 0.12)
+        else:
+            task_fit *= 0.7
+
+    if task_context.get("wants_image_editing") and asset_type == "image":
+        if supports.get("image_edit") or supports.get("style_transfer") or supports.get("multiple_reference_images"):
+            task_fit = min(1.0, task_fit + 0.18)
+            control = min(1.0, control + 0.10)
+        else:
+            task_fit *= 0.7
 
     return ProviderScore(
         tool_name=info.get("name", "unknown"),

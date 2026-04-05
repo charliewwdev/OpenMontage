@@ -38,6 +38,7 @@ GOOGLE_API_KEY=              # Google TTS + Google Imagen
 # VOICE + MUSIC
 ELEVENLABS_API_KEY=          # TTS, music, sound effects (10K chars/month free)
 OPENAI_API_KEY=              # OpenAI TTS + DALL-E 3 images
+XAI_API_KEY=                 # xAI Grok image generation/editing + Grok video generation
 
 # MULTI-MODEL GATEWAY (one key, 6+ tools)
 FAL_KEY=                     # FLUX, Recraft, Kling, Veo, MiniMax video
@@ -55,6 +56,41 @@ VIDEO_GEN_LOCAL_MODEL=       # wan2.1-1.3b, wan2.1-14b, hunyuan-1.5, ltx2-local,
 ---
 
 ## Cloud Providers
+
+### xAI — Grok Image + Video
+
+> **Best if you want one provider for image edits and reference-conditioned short video.** Grok covers both image generation/editing and video generation under one key.
+
+**Tools unlocked:** `grok_image`, `grok_video`
+**Env var:** `XAI_API_KEY`
+
+#### Setup
+
+1. Create an xAI developer account
+2. Generate an API key in the xAI developer console
+3. Add to `.env`: `XAI_API_KEY=xai-...`
+
+#### What it's best for
+
+- Image editing and style transfer
+- Multi-image composites into one generated frame
+- Short reference-image videos where a person, garment, or product must carry into motion
+
+#### Pricing
+
+Current xAI docs pricing for the Grok media models:
+
+| Model | Price |
+|------|-------|
+| `grok-imagine-image` | $0.02 per generated image |
+| `grok-imagine-image` input images (edits/composites) | $0.002 per input image |
+| `grok-imagine-video` at 480p | $0.05/sec |
+| `grok-imagine-video` at 720p | $0.07/sec |
+| `grok-imagine-video` input images | $0.002 per input image |
+
+OpenMontage now uses those published rates in the Grok tool estimators.
+
+---
 
 ### fal.ai — Multi-Model Gateway
 
@@ -565,6 +601,7 @@ These tools require only FFmpeg or Python packages — no GPU, no API key.
 | **ElevenLabs** | `ELEVENLABS_API_KEY` | `elevenlabs_tts`, `music_gen` | Free tier + paid |
 | **fal.ai** | `FAL_KEY` | `flux_image`, `recraft_image`, `kling_video`, `veo_video`, `minimax_video` | Pay-as-you-go |
 | **OpenAI** | `OPENAI_API_KEY` | `openai_tts`, `openai_image` | Paid only |
+| **xAI** | `XAI_API_KEY` | `grok_image`, `grok_video` | Paid only |
 | **Runway** | `RUNWAY_API_KEY` | `runway_video` | Free trial + paid |
 | **HeyGen** | `HEYGEN_API_KEY` | `heygen_video` | Pay-as-you-go |
 | **Suno** | `SUNO_API_KEY` | `suno_music` | Pay-as-you-go |
@@ -580,8 +617,8 @@ How many providers cover each capability:
 
 | Capability | Cloud Providers | Local Providers | Free Options |
 |-----------|----------------|-----------------|--------------|
-| **Image Generation** | FLUX, Google Imagen, DALL-E 3, Recraft | Local Diffusion | Pexels, Pixabay (stock) |
-| **Video Generation** | Kling, Runway, Veo, MiniMax, HeyGen | WAN, Hunyuan, CogVideo, LTX | Pexels, Pixabay (stock) |
+| **Image Generation** | FLUX, Grok, Google Imagen, DALL-E 3, Recraft | Local Diffusion | Pexels, Pixabay (stock) |
+| **Video Generation** | Grok, Kling, Runway, Veo, MiniMax, HeyGen | WAN, Hunyuan, CogVideo, LTX | Pexels, Pixabay (stock) |
 | **Text-to-Speech** | ElevenLabs, Google TTS, OpenAI | Piper | Piper, Google free tier, ElevenLabs free tier |
 | **Music Generation** | ElevenLabs, Suno | — | ElevenLabs free tier |
 | **Post-Production** | — | FFmpeg (compose, stitch, trim, mix, enhance, grade) | All free |

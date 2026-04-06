@@ -12,7 +12,7 @@
 | `flux_image` | FLUX 2 Pro via fal.ai | ~$0.03-0.05 | ~5-10s | Photorealism, general purpose, workhorse |
 | `grok_image` | Grok Imagine Image (xAI) | $0.02/output + $0.002/input edit image | ~5-15s | Image edits, style transfer, multi-image compositing |
 | `openai_image` | GPT Image 1 (OpenAI) | ~$0.01-0.17 | ~5-15s | Complex instructions, text in images, multi-element |
-| `recraft_image` | Recraft V4 via fal.ai | ~$0.04-0.25 | ~5-10s | Logos, SVG vectors, brand assets, text rendering |
+| `recraft_image` | Recraft V4 via fal.ai | ~$0.04-0.25 | ~5-10s | Logos, SVG vectors, brand assets, text rendering (see caveat below) |
 | `local_diffusion` | Stable Diffusion (local) | Free | ~30s+ | Offline, privacy, free |
 | `image_gen` | Multi (legacy, deprecated) | Varies | Varies | **Deprecated** — use `image_selector` or per-provider tools |
 
@@ -45,6 +45,12 @@
 | **Thumbnail** | `flux_image` or `recraft_image` | Needs to be eye-catching | — |
 | **Budget/free project** | `pexels_image` or `pixabay_image` | Free, immediate | `local_diffusion` |
 | **Offline/air-gapped** | `local_diffusion` | No network needed | — |
+
+## Provider-Specific Caveats
+
+### Recraft V4 via fal.ai
+- **`style` parameter causes 422 errors** (as of 2026-04). The `style` enum values (`digital_illustration`, `realistic_image`, etc.) are rejected by fal.ai's Recraft V4 endpoint. **Workaround:** encode style direction in the prompt text instead (e.g. "digital illustration of a tooth cross-section" rather than `style="digital_illustration"`). The `image_size` and `colors` parameters work fine.
+- **Text rendering is unreliable for exact business names.** Recraft (like all AI image models) may hallucinate wrong text. For any scene where text must be verbatim (CTA screens, business names, phone numbers), use Remotion `text_card` instead of generating an image with text.
 
 ## Cost-Quality Tradeoff
 

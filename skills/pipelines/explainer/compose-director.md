@@ -22,19 +22,24 @@ This is the last technical stage before the video exists as a playable file. Eve
 
 Based on the edit decisions, pick the rendering approach:
 
-**FFmpeg pipeline** (simpler videos):
+**Remotion render** (DEFAULT — use this unless explicitly overridden):
+- Animated text cards, stat cards, chart scenes
+- Complex transitions (morph, zoom, ken-burns)
+- Programmatic motion graphics
+- Audio embedding (narration + music with fade/volume)
+- Word-level captions via CaptionOverlay component
+- Best for: ALL explainer videos, both image-based and animation-heavy
+
+**FFmpeg pipeline** (FALLBACK — only when Remotion is unavailable):
 - Static images with Ken Burns
 - Audio layering
-- Subtitle burn-in
-- Best for: diagram-heavy, image-based explainers
+- SRT subtitle burn-in
+- Best for: environments without Node.js/Remotion installed
 
-**Remotion render** (motion-heavy videos):
-- Animated text cards, stat cards
-- Complex transitions (morph, zoom)
-- Programmatic motion graphics
-- Best for: flat-motion-graphics playbook, animation-heavy plans
-
-You can combine both: Remotion for animated segments, FFmpeg for final assembly.
+**IMPORTANT: When using Remotion, ALL of these go through Remotion — not FFmpeg:**
+- Audio (narration + music) → Remotion `audio` prop, NOT external audio_mixer
+- Subtitles → Remotion `captions` prop (word-level), NOT SRT burn via FFmpeg
+- Text overlays (CTA, titles) → Remotion `text_card` cut type, NOT AI-generated images
 
 ### Step 2: Audio Acquisition (Narration, Music, Subtitles)
 
@@ -170,18 +175,33 @@ for the proven formula — especially the all-dark-background rule for visual co
 
 ### Step 5: Audio Post-Processing
 
+**Remotion path (DEFAULT):** Skip external audio mixing entirely. Remotion handles all audio
+natively via `<Audio>` components. Pass audio sources in the composition props:
+```json
+{
+  "audio": {
+    "narration": { "src": "project/narration.mp3", "volume": 1.0 },
+    "music": { "src": "project/music.mp3", "volume": 0.12, "fadeInSeconds": 1.5, "fadeOutSeconds": 2.5 }
+  }
+}
+```
+Remotion renders audio and video in a single pass — no external muxing needed.
+Do NOT use `audio_mixer` for ducking/mixing when rendering via Remotion.
+
+**FFmpeg fallback (ONLY when Remotion is unavailable):**
 Call the `audio_mixer` tool to:
 1. Layer narration segments in order
 2. Mix background music at playbook volume
 3. Apply ducking (music dips during narration)
 4. Normalize overall audio levels
 5. Output the final mixed audio track
-
 The video_compose tool will mux this with the video.
 
 ### Step 5b: Generate Subtitles (Mandatory)
 
 Subtitles are mandatory for all explainer content. Generate them from the narration audio — do NOT skip this step.
+
+**Remotion path (DEFAULT — when using Remotion render):**
 
 1. **Transcribe** the full narration using the `transcriber` tool (whisperx):
    ```python
@@ -195,39 +215,50 @@ Subtitles are mandatory for all explainer content. Generate them from the narrat
    # result.data contains segments with word-level timestamps
    ```
 
-2. **Generate SRT** from the transcription using `subtitle_gen`:
+2. **Convert to Remotion WordCaption format** (NOT SRT):
+   ```python
+   captions = []
+   for segment in result.data['segments']:
+       for word_info in segment.get('words', []):
+           captions.append({
+               'word': word_info['word'],
+               'startMs': int(word_info['start'] * 1000),
+               'endMs': int(word_info['end'] * 1000),
+           })
+   ```
+
+3. **Add captions to composition props** — they go in the `captions` array alongside `cuts` and `audio`:
+   ```json
+   {
+     "cuts": [...],
+     "audio": {...},
+     "captions": [
+       { "word": "Root", "startMs": 120, "endMs": 340 },
+       { "word": "canals", "startMs": 340, "endMs": 680 }
+     ]
+   }
+   ```
+
+   Remotion's CaptionOverlay renders these as word-by-word highlighted captions with the theme's
+   `captionHighlightColor` and `captionBackgroundColor`. This is superior to FFmpeg SRT burn because
+   it produces animated word-level highlighting synchronized to narration.
+
+**FFmpeg fallback (ONLY when Remotion is unavailable):**
+
+If Remotion is not available, fall back to SRT generation + FFmpeg burn:
    ```python
    from tools.subtitle.subtitle_gen import SubtitleGen
-   result = SubtitleGen().execute({
+   SubtitleGen().execute({
        'segments': transcription_data['segments'],
        'format': 'srt',
        'output_path': 'projects/<project>/assets/subtitles.srt',
        'max_words_per_cue': 8,
        'max_chars_per_line': 42
    })
+   # Then burn with video_compose operation='burn_subtitles'
    ```
 
-3. **Burn subtitles** into the video using `video_compose`:
-   ```python
-   from tools.video.video_compose import VideoCompose
-   result = VideoCompose().execute({
-       'operation': 'burn_subtitles',
-       'input_path': 'projects/<project>/renders/output.mp4',
-       'output_path': 'projects/<project>/renders/final.mp4',
-       'subtitle_path': 'projects/<project>/assets/subtitles.srt',
-       'subtitle_style': {
-           'font': '<from playbook typography.headings.font or Arial>',
-           'font_size': 22,
-           'primary_color': '&HFFFFFF',
-           'outline_color': '&H000000',
-           'outline_width': 2,
-           'margin_v': 50,
-           'alignment': 2
-       }
-   })
-   ```
-
-**The final deliverable is the subtitled version**, not the pre-subtitle render.
+**The final deliverable MUST have subtitles** — either via Remotion captions or FFmpeg burn.
 
 ### Step 5c: Pre-Render Validation (Mandatory)
 
@@ -250,14 +281,30 @@ Common catches:
 
 **Do not skip this step.** If validation fails, fix the issue and re-validate before rendering.
 
-### Step 6: Post-Render Self-Review (Mandatory)
+### Step 6: Post-Render Self-Review (Mandatory — ALL steps required)
 
 After rendering, the agent **must review its own output** before presenting to the user. This catches issues the validator can't see (visual quality, audio sync, subtitle readability).
 
-**6a. Extract review frames:**
+**CRITICAL: You MUST complete ALL of steps 6a through 6e. Do NOT skip any step.
+The most common agent failure is doing 6a (frames) and 6c (visual) while skipping
+6b (audio transcription) — which misses catastrophic issues like missing audio entirely.**
+
+**6a. Probe rendered file (FIRST — gate for all other checks):**
+```bash
+ffprobe -v quiet -print_format json -show_format -show_streams rendered_video.mp4
+```
+Verify:
+- Video stream exists (codec_type: "video") with correct resolution
+- **Audio stream exists (codec_type: "audio")** — if NO audio stream, STOP and fix immediately
+- Duration is within ±5% of target
+- File size is reasonable (not 0 bytes)
+
+**If audio stream is missing: the render did not embed audio. Do NOT proceed to present
+the video to the user. Fix the audio configuration and re-render.**
+
+**6b. Extract review frames:**
 ```python
 from tools.analysis.frame_sampler import FrameSampler
-# Extract one frame per scene at the midpoint
 midpoints = [(cut['in_seconds'] + cut['out_seconds']) / 2 for cut in cuts]
 FrameSampler().execute({
     'input_path': 'path/to/rendered_video.mp4',
@@ -268,37 +315,41 @@ FrameSampler().execute({
 })
 ```
 
-**6b. Transcribe rendered audio:**
+**6c. Transcribe rendered audio (MANDATORY — do NOT skip):**
 ```python
 from tools.analysis.transcriber import Transcriber
-Transcriber().execute({
+result = Transcriber().execute({
     'input_path': 'path/to/rendered_video.mp4',
     'model_size': 'base',
     'language': 'en',
     'output_dir': 'path/to/review-frames',
 })
-# Verify all narration words are present and not cut off
+# If result returns 0 words: audio is silent/missing — STOP and fix
+# If word count < 80% of script word count: audio is cut off — investigate
 ```
 
-**6c. Visual inspection — review each frame:**
+**6d. Visual inspection — review each frame:**
 - Does the background color/gradient match intent? (watch for white backgrounds on dark-themed videos)
 - Are images rendering correctly? (not blank, not stretched)
-- Are subtitles visible and properly spaced?
+- Are subtitles/captions visible and properly spaced?
 - Are overlays (section titles, stat reveals) positioned correctly?
 - Is the opening scene visually strong? (important for social media thumbnails)
+- Does the CTA/closing screen show correct text? (AI-generated text in images frequently hallucinates — use Remotion text_card for any text that must be exact)
 
-**6d. Audio inspection — check transcript:**
+**6e. Audio inspection — check transcript against script:**
 - Is the full narration captured? (compare last transcribed word to last scripted word)
 - Any words cut off at the end? (narration exceeding video duration)
 - Timing alignment — do narration segments roughly match their intended scenes?
+- Is background music audible? (transcriber may not capture music, but ffprobe confirms audio stream)
 
-**6e. Compile and present review to user:**
+**6f. Compile and present review to user:**
 
 > **Post-render review for "[Video Title]":**
 >
-> **Audio:** [Complete/Cut off at Xs] — all N words captured / last sentence missing
+> **File:** [duration]s, [resolution], [file size] — audio stream: [present/MISSING]
+> **Audio:** [Complete/Cut off at Xs] — [N]/[M] words transcribed from rendered output
 > **Visuals:** [N scenes inspected] — [issues or "all scenes rendering correctly"]
-> **Subtitles:** [Present/Missing] — [spacing ok / words running together]
+> **Captions:** [Remotion CaptionOverlay / FFmpeg SRT / MISSING] — [word-level highlight working / issues]
 > **Issues found:** [list any issues with severity]
 >
 > **Recommendations:** [what to fix, if anything]

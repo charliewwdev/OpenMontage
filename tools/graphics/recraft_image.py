@@ -144,6 +144,14 @@ class RecraftImage(BaseTool):
         if inputs.get("image_size"):
             payload["image_size"] = inputs["image_size"]
         if inputs.get("style"):
+            # NOTE: As of 2026-04, fal.ai's Recraft V4 endpoint rejects the
+            # `style` parameter with a 422 Unprocessable Entity error. The
+            # style enum values (digital_illustration, realistic_image, etc.)
+            # are NOT accepted by the /fal-ai/recraft/v4/text-to-image route.
+            # Workaround: encode the style direction in the prompt text instead
+            # (e.g. "digital illustration of..." rather than style="digital_illustration").
+            # We still pass the parameter through in case fal.ai re-enables it,
+            # but callers should be aware this may fail.
             payload["style"] = inputs["style"]
         if inputs.get("colors"):
             payload["colors"] = inputs["colors"]

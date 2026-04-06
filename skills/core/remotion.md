@@ -30,8 +30,10 @@ simple standalone operations that don't benefit from React rendering.
 | Video-only cuts with transitions | **Remotion** | Native `<OffthreadVideo>` + transitions |
 | Animated diagrams/text cards | **Remotion** | Frame-by-frame control |
 | Data-driven batch videos | **Remotion** | Zod props + parametric renders |
+| Word-level captions (in composition) | **Remotion** | CaptionOverlay with word highlight — superior to SRT |
+| Audio embedding (narration + music) | **Remotion** | Native `<Audio>` components with volume/fade |
 | Simple trim, concat (no composition) | FFmpeg | Instant, no Node dependency |
-| Subtitle burn-in (standalone) | FFmpeg | Proven, fast |
+| Subtitle burn-in (standalone, post-hoc) | FFmpeg | Only for adding subs to an already-rendered video without re-rendering |
 | Face enhance, color grade | FFmpeg | Filter-based, deterministic |
 | Remotion unavailable | FFmpeg | Automatic fallback |
 
@@ -328,13 +330,47 @@ Remotion renders are CPU-intensive but $0 API cost. Track via cost_tracker:
 - **Node.js 18+ required** — listed as optional in minimum system, required in recommended.
 - **Render in series, not parallel** — unless the machine has enough RAM. Each render spawns a Chromium instance.
 
+## Post-Render Verification Protocol (ALL pipelines)
+
+**Every Remotion render MUST be verified before presenting to the user.** This protocol applies
+to ALL pipelines, not just explainer. Pipeline-specific compose-directors may extend it but
+must not skip any step.
+
+**Step 1: Probe the output file (GATE — blocks all other steps):**
+```bash
+ffprobe -v quiet -print_format json -show_format -show_streams rendered_video.mp4
+```
+Verify ALL of:
+- [ ] Video stream exists with correct resolution and FPS
+- [ ] **Audio stream exists** — if missing, STOP immediately, fix audio config, re-render
+- [ ] Duration within ±5% of target
+- [ ] File size is reasonable (not 0 bytes, not suspiciously small)
+
+**If audio stream is missing, do NOT proceed.** This means narration/music were not embedded.
+The most common cause: audio sources were mixed externally but never passed in the Remotion
+`audio` prop. Fix: add `audio.narration` and `audio.music` to composition props and re-render.
+
+**Step 2: Extract review frames** at scene midpoints and visually inspect each one.
+
+**Step 3: Transcribe the rendered video's audio** using WhisperX/transcriber tool.
+- If 0 words returned → audio is silent despite stream existing → investigate
+- If word count < 80% of script → audio is cut off → investigate
+- Compare last transcribed word to last scripted word
+
+**Step 4: Present structured review** to user with file stats, audio verification results,
+visual findings, and caption status before declaring the video complete.
+
 ## Quality Checklist
 
 - [ ] Composition duration matches sum of scene durations minus transition overlaps
 - [ ] All `staticFile()` references resolve to existing assets
 - [ ] Transitions don't cut off content (account for overlap in timing)
+- [ ] **Audio stream present in rendered output** (ffprobe confirms codec_type: "audio")
+- [ ] **Narration words verified via transcription** (not just assumed from props)
 - [ ] Audio layers are in sync with visual scenes
+- [ ] Captions/subtitles rendering correctly (Remotion CaptionOverlay preferred over FFmpeg SRT)
 - [ ] Theme colors match the active style playbook
 - [ ] Output resolution and FPS match the target media profile
 - [ ] Render completes without Chromium timeout errors
 - [ ] Final output plays correctly on target platform
+- [ ] Text-bearing scenes (CTA, titles) use Remotion text_card, NOT AI-generated images with text

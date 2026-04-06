@@ -134,12 +134,21 @@ class GoogleTTS(BaseTool):
             return ToolStatus.AVAILABLE
         return ToolStatus.UNAVAILABLE
 
+    # Voices requiring the v1beta1 endpoint (Chirp 3 HD, Journey)
+    _BETA_VOICE_PREFIXES = ("Chirp", "Journey")
+
+    def _needs_beta_api(self, voice: str) -> bool:
+        """Check if voice requires the v1beta1 endpoint."""
+        return any(prefix in voice for prefix in self._BETA_VOICE_PREFIXES)
+
     def estimate_cost(self, inputs: dict[str, Any]) -> float:
         text = inputs.get("text", "")
         char_count = len(text)
         voice = inputs.get("voice", "en-US-Neural2-D")
         # Pricing per million characters (approximate)
-        if "Studio" in voice:
+        if "Chirp3-HD" in voice:
+            rate_per_char = 0.000030  # $30/1M chars
+        elif "Studio" in voice:
             rate_per_char = 0.000160  # $160/1M chars
         elif "Neural2" in voice or "Journey" in voice:
             rate_per_char = 0.000016  # $16/1M chars
@@ -190,8 +199,12 @@ class GoogleTTS(BaseTool):
             },
         }
 
+        # Chirp 3 HD and Journey voices require the v1beta1 endpoint
+        api_version = "v1beta1" if self._needs_beta_api(voice_name) else "v1"
+        url = f"https://texttospeech.googleapis.com/{api_version}/text:synthesize"
+
         response = requests.post(
-            "https://texttospeech.googleapis.com/v1/text:synthesize",
+            url,
             headers={"Content-Type": "application/json"},
             params={"key": api_key},
             json=payload,

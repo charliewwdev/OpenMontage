@@ -9,7 +9,6 @@ metadata:
       env_any:
         - HEYGEN_API_KEY
         - FAL_KEY
-    primaryEnv: FAL_KEY
 ---
 
 # Video Generation (Multi-Gateway)
@@ -25,9 +24,12 @@ Generate AI videos from text prompts. Supports multiple providers via two API ga
 
 ## Authentication
 
-**fal.ai (recommended primary):** Set `FAL_KEY` environment variable. Get a key at https://fal.ai/dashboard/keys
+Use whichever configured gateway best matches the user's available providers and cost/quality goals.
 
-**HeyGen (secondary):** Set `HEYGEN_API_KEY` environment variable.
+- **HeyGen:** Set `HEYGEN_API_KEY` to access the multi-model gateway.
+- **fal.ai:** Set `FAL_KEY` to access Kling, MiniMax, and Veo through fal.ai.
+
+Do not describe either gateway as the default or top choice without checking the registry and current task fit first.
 
 ```bash
 curl -X POST "https://api.heygen.com/v1/workflows/executions" \

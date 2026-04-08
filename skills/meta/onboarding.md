@@ -41,7 +41,7 @@ Based on discovery, classify the setup:
 | Tier | What's Available | Best Pipelines |
 |------|-----------------|----------------|
 | **Zero-key** | Piper TTS + Pexels/Pixabay stock (if keys added) + Remotion + FFmpeg | Animated Explainer (stock visuals + free narration) |
-| **Starter** | One image gen provider (e.g., FLUX via FAL_KEY) + free TTS + Remotion | Animated Explainer, Animation (AI-generated visuals) |
+| **Starter** | One configured image generation provider + free TTS + Remotion | Animated Explainer, Animation (AI-generated visuals) |
 | **Standard** | Image gen + TTS + music gen | Animated Explainer, Animation, Screen Demo, Hybrid |
 | **Full** | Video gen + image gen + premium TTS + music | All pipelines including Cinematic, Avatar, Talking Head |
 | **Full + GPU** | Cloud APIs + local video gen models | All pipelines with free local fallbacks |
@@ -61,7 +61,7 @@ Present a **short, friendly capability summary**. Do NOT dump the raw provider m
 
 **Available pipelines:** [List the pipelines that work with their setup, with one-line descriptions]
 
-**Quick upgrades:** [If applicable — "Add `FAL_KEY` to your `.env` to unlock AI-generated images (FLUX) and video (Veo, Kling, MiniMax) — one key, five tools."]
+**Quick upgrades:** [If applicable — summarize the best 1-2 unlocks from `provider_menu()` based on the user's missing capabilities and actual install instructions. Do not hardcode `FAL_KEY` or any provider as the default suggestion.]
 
 ---
 
@@ -89,7 +89,7 @@ Based on the user's tier, present **3 ready-to-use prompts** they can copy right
 
 > **Try this:** "Create an animated explainer about how CRISPR gene editing works, with AI-generated visuals"
 >
-> I'll use FLUX to generate custom images for each scene — much more visually striking than stock.
+> I'll use your configured image generator to create custom visuals for each scene — much more visually striking than stock.
 
 > **Also try:** "Make a short documentary-style video about urban beekeeping — keep it grounded and textural, not flashy" *(Hybrid pipeline — source + generated support)*
 
@@ -137,7 +137,7 @@ Common questions and how to respond:
 
 **"What does it cost?"**
 - Zero-key path: $0
-- With FAL_KEY: typically $0.30–$1.50 per video depending on image count
+- With one paid image/video provider configured: typically $0.30–$1.50 per video depending on asset count
 - Full setup: $1–$3 for most videos
 - Always: "I'll show you exact cost estimates before spending anything."
 

@@ -116,8 +116,8 @@ Be honest about gaps. If video generation is needed but unavailable, say so clea
 "This reference uses generated sci-fi footage. Right now you don't have any video
 generation providers configured. Here are your options:
 
-• Add FAL_KEY to .env → unlocks Kling 3.0, MiniMax, Wan (best for cinematic/sci-fi)
-• Add REPLICATE_API_TOKEN → unlocks LTX Video (good for short clips)
+• Add the gateway or provider key recommended by `provider_menu()` for video generation
+• If multiple provider options are available, summarize the tradeoffs and recommend one based on the user's brief
 • Proceed without video gen → I'll use stock footage + Remotion animations instead
   (different feel, but still works)
 
@@ -125,7 +125,7 @@ Which would you prefer?"
 ```
 
 Read install_instructions from the registry for each unavailable tool — do NOT
-hardcode key names or setup URLs.
+hardcode key names, provider names, or setup URLs.
 
 ### Step 3: Ask Critical Questions
 

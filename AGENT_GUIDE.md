@@ -257,7 +257,7 @@ This returns every capability grouped by status — how many providers the user 
 ```
 YOUR CAPABILITIES
 
-  Video Generation:  0/12 configured
+  Video Generation:  0/13 configured
   Image Generation:  1/7 configured
   Text-to-Speech:    1/3 configured
   Music Generation:  1/1 configured
@@ -272,7 +272,7 @@ For EACH capability with unavailable providers, read the `install_instructions` 
 ```
 QUICK SETUP OPTIONS (1-minute each — set an env var in .env)
 
-  Video Generation (0/12 -> unlock the biggest upgrade):
+  Video Generation (0/13 -> unlock the biggest upgrade):
     Each unavailable provider lists its own install_instructions.
     Read them from the provider_menu output and present grouped by env var.
     Example: if 3 tools need FAL_KEY, group them: "FAL_KEY unlocks 3 providers"

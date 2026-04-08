@@ -259,20 +259,19 @@ Google TTS offers 700+ voices across 50+ languages. Voice names follow the patte
 
 ---
 
-### Runway — Gen-4 Video
+### Runway — Gen-3/Gen-4 Video
 
-> **Highest-rated AI video quality.** #1 on Elo rankings. Professional-grade video generation.
+> **Highest-rated AI video quality.** #1 on Elo rankings. Professional-grade video generation with Gen-3 Alpha Turbo, Gen-4 Turbo, and Gen-4 Aleph models.
 
 **Tools unlocked:** `runway_video`
 **Env var:** `RUNWAY_API_KEY`
 
 #### Setup
 
-1. Go to [app.runwayml.com/signup](https://app.runwayml.com/signup) and create an account
+1. Go to [dev.runwayml.com](https://dev.runwayml.com/) and create a developer account
 2. Subscribe to a paid plan (Standard or above — API requires subscription)
-3. Go to **Settings > API Keys** at [app.runwayml.com/settings/api-keys](https://app.runwayml.com/settings/api-keys)
-4. Click **Create API Key**, copy it
-5. Add to `.env`: `RUNWAY_API_KEY=key_...`
+3. Generate an API key from the developer portal
+4. Add to `.env`: `RUNWAY_API_KEY=key_...`
 
 #### Pricing
 
@@ -287,11 +286,53 @@ Google TTS offers 700+ voices across 50+ languages. Voice names follow the patte
 
 | Model | Price per second |
 |-------|-----------------|
+| Gen-3 Alpha Turbo | ~$0.05 |
 | Gen-4 Turbo | ~$0.05 |
-| Gen-4 | ~$0.10 |
-| Gen-4.5 | ~$0.25 |
+| Gen-4 Aleph | ~$0.15 |
 
 **Free tier:** 125 one-time credits (no monthly renewal). Enough for about 5 seconds of Gen-4 video. API access requires a paid subscription.
+
+---
+
+### Higgsfield — Multi-Model Video Orchestrator
+
+> **Multi-model video platform.** Routes to Kling 3.0, Veo 3.1, Sora 2, WAN 2.5, and proprietary Soul Cinema through a single API. Includes Soul ID for character consistency across clips.
+
+**Tools unlocked:** `higgsfield_video`
+**Env vars:** `HIGGSFIELD_API_KEY` + `HIGGSFIELD_API_SECRET` (or combined `HIGGSFIELD_KEY=key:secret`)
+
+#### Setup
+
+1. Go to [cloud.higgsfield.ai](https://cloud.higgsfield.ai/) and create an account
+2. Subscribe to a plan (Starter or above for API access)
+3. Navigate to API Keys section at [cloud.higgsfield.ai/api-keys](https://cloud.higgsfield.ai/api-keys)
+4. Generate an API key and secret
+5. Add to `.env`:
+   ```
+   HIGGSFIELD_API_KEY=your-api-key
+   HIGGSFIELD_API_SECRET=your-api-secret
+   ```
+
+#### Pricing
+
+| Plan | Price | Notes |
+|------|-------|-------|
+| Free | $0 | Limited credits |
+| Starter | $15/mo | Basic allocation |
+| Plus | $34/mo | Mid-tier, ~33-56 Kling 3.0 clips |
+| Ultra | $84/mo | High volume |
+
+**Per-generation costs (approximate, via credits):**
+
+| Model | Cost per clip |
+|-------|--------------|
+| Kling 3.0 | ~$0.10 (cheapest) |
+| WAN 2.5 | ~$0.10 |
+| Soul Cinema | ~$0.15 |
+| Veo 3.1 | ~$0.50 |
+| Sora 2 | ~$0.50 |
+
+**Free tier:** Limited credits on signup. No monthly renewal on free plan.
 
 ---
 
@@ -603,6 +644,7 @@ These tools require only FFmpeg or Python packages — no GPU, no API key.
 | **OpenAI** | `OPENAI_API_KEY` | `openai_tts`, `openai_image` | Paid only |
 | **xAI** | `XAI_API_KEY` | `grok_image`, `grok_video` | Paid only |
 | **Runway** | `RUNWAY_API_KEY` | `runway_video` | Free trial + paid |
+| **Higgsfield** | `HIGGSFIELD_API_KEY` + `HIGGSFIELD_API_SECRET` | `higgsfield_video` | Subscription ($15-84/mo) |
 | **HeyGen** | `HEYGEN_API_KEY` | `heygen_video` | Pay-as-you-go |
 | **Suno** | `SUNO_API_KEY` | `suno_music` | Pay-as-you-go |
 | **Local GPU** | `VIDEO_GEN_LOCAL_ENABLED` | `wan_video`, `hunyuan_video`, `cogvideo_video`, `ltx_video_local` | Free (GPU required) |
@@ -618,7 +660,7 @@ How many providers cover each capability:
 | Capability | Cloud Providers | Local Providers | Free Options |
 |-----------|----------------|-----------------|--------------|
 | **Image Generation** | FLUX, Grok, Google Imagen, DALL-E 3, Recraft | Local Diffusion | Pexels, Pixabay (stock) |
-| **Video Generation** | Grok, Kling, Runway, Veo, MiniMax, HeyGen | WAN, Hunyuan, CogVideo, LTX | Pexels, Pixabay (stock) |
+| **Video Generation** | Grok, Kling, Runway, Veo, Higgsfield, MiniMax, HeyGen | WAN, Hunyuan, CogVideo, LTX | Pexels, Pixabay (stock) |
 | **Text-to-Speech** | ElevenLabs, Google TTS, OpenAI | Piper | Piper, Google free tier, ElevenLabs free tier |
 | **Music Generation** | ElevenLabs, Suno | — | ElevenLabs free tier |
 | **Post-Production** | — | FFmpeg (compose, stitch, trim, mix, enhance, grade) | All free |

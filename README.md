@@ -145,7 +145,7 @@ This repo is built for agentic operation. If you're an OpenClaw-style agent, her
 ```bash
 # .env — every key is optional, add what you have
 
-# Best bang for buck — one key unlocks 5 tools:
+# Image + video gateway:
 FAL_KEY=your-key               # FLUX images + Google Veo, Kling, MiniMax video + Recraft images
 
 # Free stock media:
@@ -217,7 +217,7 @@ Copy any of these into your AI coding assistant after setup. Each one runs a ful
 
 > "Make a data-driven explainer about coffee consumption around the world"
 
-### With FAL_KEY (~$0.15–$1.50)
+### With an image/video provider configured (~$0.15–$1.50)
 
 > "Create a 30-second Ghibli-style animated video of a magical floating library in the clouds at golden hour"
 

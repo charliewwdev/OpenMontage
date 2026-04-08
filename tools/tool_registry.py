@@ -242,6 +242,10 @@ class ToolRegistry:
                 menu[cap]["unavailable"].append(entry)
             menu[cap]["total"] += 1
 
+        for bucket in menu.values():
+            bucket["available"].sort(key=lambda entry: (entry["provider"], entry["name"]))
+            bucket["unavailable"].sort(key=lambda entry: (entry["provider"], entry["name"]))
+
         return dict(sorted(menu.items()))
 
     def gpu_required_tools(self) -> list[str]:

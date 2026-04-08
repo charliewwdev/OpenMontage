@@ -140,13 +140,13 @@ Key queries:
 
 Three selector tools abstract multi-provider capabilities:
 
-| Selector | Capability | Providers (priority order) |
-|----------|-----------|---------------------------|
-| `tts_selector` | Text-to-speech | ElevenLabs > Google TTS > OpenAI > Piper (offline) |
-| `image_selector` | Image generation | FLUX > Grok > Google Imagen > DALL-E > Recraft > LocalDiffusion > Pexels/Pixabay (stock) |
-| `video_selector` | Video generation | Grok > Kling > Runway > VEO > MiniMax > HeyGen > LTX (modal) > LTX (local) > CogVideo > Hunyuan > WAN > Pexels/Pixabay (stock) |
+| Selector | Capability | How selection works |
+|----------|-----------|---------------------|
+| `tts_selector` | Text-to-speech | Ranks discovered providers by task fit, quality, control, reliability, cost, latency, and continuity |
+| `image_selector` | Image generation | Ranks discovered providers from the live registry; no hardcoded provider order |
+| `video_selector` | Video generation | Ranks discovered providers from the live registry; user preference is respected when explicitly provided |
 
-Selectors route based on: user preference > availability > fallback order. They adapt input schemas between providers transparently.
+Selectors route based on: user preference when explicitly set, then scored ranking across available providers. They adapt input schemas between providers transparently.
 
 ### Tool Inventory by Category
 

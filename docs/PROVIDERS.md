@@ -14,7 +14,7 @@ Everything you need to know about every provider in OpenMontage — setup instru
 | 2 | **$0** | Google API key | TTS with 700+ voices (1M chars/month free) + $300 new account credit |
 | 3 | **$0** | ElevenLabs | Premium TTS + music + SFX (10K chars/month free) |
 | 4 | **$0** | Piper (local install) | Fully offline TTS — no API key, no cost, no network |
-| 5 | **~$0.03/image** | fal.ai | FLUX images + Kling/Veo/MiniMax video + Recraft — one key unlocks 6 tools |
+| 5 | **~$0.03/image** | fal.ai | FLUX images + Kling/Veo/MiniMax video + Recraft — broad single-key image + video coverage |
 | 6 | **~$0.04/image** | OpenAI | DALL-E 3 images + OpenAI TTS |
 | 7 | **~$0.04/image** | Google Imagen | Imagen 4 images (shares the Google API key) |
 | 8 | **$12/month** | Runway | Gen-4 video — highest quality AI video |
@@ -94,7 +94,7 @@ OpenMontage now uses those published rates in the Grok tool estimators.
 
 ### fal.ai — Multi-Model Gateway
 
-> **Best bang for buck.** One API key unlocks 6 tools across image and video generation.
+> **Broad single-key coverage.** One API key unlocks image and video providers across multiple models.
 
 **Tools unlocked:** `flux_image`, `recraft_image`, `kling_video`, `veo_video`, `minimax_video`
 **Env var:** `FAL_KEY`
@@ -678,8 +678,8 @@ A: FFmpeg + Node.js (both free, local). FFmpeg handles video assembly, audio mix
 **Q: I don't have any video generation providers. Can I still make videos?**
 A: Yes. The agent generates still images (via any image provider — even free stock from Pexels/Pixabay) and Remotion composes them into animated video with spring physics transitions, text cards, stat cards, and charts. This is the default path for explainer and animation pipelines when no video gen is configured.
 
-**Q: What's the cheapest way to get AI-generated images and video?**
-A: fal.ai (`FAL_KEY`). One key unlocks FLUX images at ~$0.03/image and multiple video providers. No subscription — pay only for what you generate.
+**Q: What's one low-friction way to get AI-generated images and video?**
+A: fal.ai (`FAL_KEY`) is one pay-as-you-go option with broad single-key coverage. It unlocks FLUX images plus multiple video providers. No subscription — pay only for what you generate.
 
 **Q: I have a GPU. What can I run locally for free?**
 A: Set `VIDEO_GEN_LOCAL_ENABLED=true` and install `diffusers`. You get WAN 2.1, Hunyuan, CogVideo, and LTX video generation plus Stable Diffusion image generation — all free, all offline.

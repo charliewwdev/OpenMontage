@@ -273,7 +273,7 @@ Most AI video tools give you a single clip from a prompt. OpenMontage gives you 
 Edit your own talking-head footage. Generate a fully animated explainer from scratch. Cut a 2-hour podcast into a dozen social clips. Translate and dub your content into 10 languages. Build a cinematic brand teaser from stock footage and AI-generated scenes. **If a production team can make it, OpenMontage can orchestrate it.**
 
 - **11 production pipelines** — explainers, talking heads, screen demos, cinematic trailers, animations, podcasts, localization, and more
-- **51 production tools** — spanning video generation, image creation, text-to-speech, music, audio mixing, subtitles, enhancement, and analysis
+- **52 production tools** — spanning video generation, image creation, text-to-speech, music, audio mixing, subtitles, enhancement, and analysis
 - **400+ agent skills** — production skills, pipeline directors, creative techniques, quality checklists, and deep technology knowledge packs that teach the agent how to use every tool like an expert
 - **Reference-driven creation** — paste a video you like and the agent turns it into a grounded, differentiated production plan instead of forcing you to invent the perfect prompt from scratch
 - **Live web research built in** — before writing a single word of script, the agent runs 15-25+ web searches across YouTube, Reddit, news sites, and academic sources to ground your video in real, current data
@@ -370,14 +370,15 @@ Each tool declares which Layer 3 skills it relies on. The agent reads Layer 1 to
 > **Full setup guide with pricing and free tiers:** [`docs/PROVIDERS.md`](docs/PROVIDERS.md)
 
 <details>
-<summary><strong>Video Generation — 12 providers</strong></summary>
+<summary><strong>Video Generation — 13 providers</strong></summary>
 
 | Provider | Type | Notes |
 |----------|------|-------|
 | **Kling** | Cloud API | High quality, fast |
-| **Runway Gen-4** | Cloud API | Cinematic quality |
+| **Runway Gen-4** | Cloud API | Cinematic quality, Gen-3 Alpha Turbo / Gen-4 Turbo / Gen-4 Aleph |
 | **Google Veo 3** | Cloud API | Long-form, cinematic. Via fal.ai or HeyGen. |
 | **Grok Imagine Video** | Cloud API | Strong reference-image video and xAI-native short-form generation |
+| **Higgsfield** | Cloud API | Multi-model orchestrator with Soul ID for character consistency |
 | **MiniMax** | Cloud API | Cost-effective |
 | **HeyGen** | Cloud API | Multi-model gateway |
 | **WAN 2.1** | Local GPU | Free, 1.3B and 14B variants |

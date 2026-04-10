@@ -34,6 +34,10 @@ The enemy is "slideshow" — a sequence of clips played back-to-back
 with the same hold length and no sound design. If it feels like a
 slideshow, the edit has failed, regardless of how good the clips are.
 
+This stage also locks the render grammar. For documentary montage,
+set `renderer_family` to `documentary-montage` so compose stays on the
+approved Remotion-first path.
+
 ## Process
 
 ### 0. Guardrails — No Silent Major Changes
@@ -228,6 +232,7 @@ Canonical shape for this pipeline:
 ```json
 {
   "version": "1.0",
+  "renderer_family": "documentary-montage",
   "cuts": [
     {
       "id": "cut_01",
@@ -284,6 +289,7 @@ Canonical shape for this pipeline:
 
 - `sum(out - in for cut in cuts)` is within ±10% of
   `brief.duration_seconds`.
+- `renderer_family = "documentary-montage"` is present and unchanged.
 - Hero slots have the longest holds.
 - No two adjacent cuts share subject AND scale.
 - The transition vocabulary is at most 4 distinct values.

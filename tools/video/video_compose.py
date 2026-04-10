@@ -554,6 +554,7 @@ class VideoCompose(BaseTool):
         "explainer-data": "Explainer",
         "explainer-teacher": "Explainer",
         "cinematic-trailer": "CinematicRenderer",
+        "documentary-montage": "CinematicRenderer",
         "product-reveal": "Explainer",
         "screen-demo": "Explainer",
         "presenter": "TalkingHead",
@@ -691,12 +692,11 @@ class VideoCompose(BaseTool):
         component types, transitions, and mixed content — all in a single
         React-based render pass.
 
-        Returns False (i.e. use FFmpeg) ONLY when ALL of these are true:
-          1. Every cut source is a video file (no images, no component types)
-          2. No cut requests animations or transitions
-          3. No cut uses a Remotion scene type
-          4. The edit_decisions explicitly set renderer_family to "ffmpeg-only"
-             OR Remotion is not available
+        Returns False (i.e. use FFmpeg) only when Remotion is not
+        available. For `operation="render"` the governance default is
+        Remotion-first: the renderer family was chosen earlier, and the
+        tool should preserve that decision instead of silently
+        downgrading to FFmpeg.
 
         This "Remotion-first" policy means mixed content (video clips +
         animated stills + text cards) is always composed in Remotion, which

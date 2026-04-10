@@ -55,7 +55,7 @@ before starting the stage.
 
 | Tool | Role |
 |------|------|
-| `corpus_builder` | Fans out across Pexels/Archive.org/NASA, downloads + embeds + indexes |
+| `corpus_builder` | Fans out across Pexels/Archive.org/NASA/Wikimedia/Unsplash, downloads + embeds + indexes |
 | `clip_search` | Ranks clips for a slot, finds similar sets, diversifies selections |
 | `video_compose` / Remotion | Renders the final timeline |
 

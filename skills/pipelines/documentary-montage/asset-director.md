@@ -6,7 +6,7 @@ The shot list exists. You now have to actually go out and find the
 clips that fill each slot. This is a two-step operation:
 
 1. **Build the corpus** — fan the scene director's queries out across
-   Pexels / Archive.org / NASA and download/embed the candidates.
+   Pexels / Archive.org / NASA / Wikimedia / Unsplash and download/embed the candidates.
 2. **Pick per slot** — run CLIP retrieval against the corpus with each
    slot description and choose one winner per slot.
 
@@ -71,7 +71,7 @@ corpus_builder.execute({
         {"query": "taxi heavy rain yellow",           "kind": "video", "per_source": 6},
         # ... one entry per unique slot query
     ],
-    "sources": ["pexels", "archive_org"],   # from preferred_sources union
+    "sources": ["pexels", "archive_org", "wikimedia"],   # from preferred_sources union
     "filters": {
         "min_duration": 3,
         "max_duration": 40,
@@ -85,6 +85,9 @@ corpus_builder.execute({
 
 **Rules for the fan-out:**
 
+- If the brief pins a source and `corpus_builder.source_provider_menu`
+  says that source is unavailable, STOP and surface it. Do not silently
+  drop to the remaining sources.
 - Budget the corpus for 8-12x the slot count. A 15-slot montage wants
   ~150 candidates so retrieval has real choices.
 - `per_source` of 4-8 per query is usually enough. Pushing to 20+
@@ -94,6 +97,8 @@ corpus_builder.execute({
   is slow — don't interleave it with the modern Pexels batch.
 - If any slot has `nasa` in `preferred_sources`, run ONE small
   `nasa`-only batch. NASA is slow and its results are niche.
+- `unsplash` is image-only. Use it as a support source, not the
+  backbone of a motion-led documentary cut.
 
 ### 3. Sanity-Check The Corpus Before Retrieval
 

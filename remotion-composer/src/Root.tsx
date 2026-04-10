@@ -6,6 +6,10 @@ import {
 } from "./CinematicRenderer";
 import { signalFromTomorrowWithMusicFixture } from "./cinematic/fixtures";
 import { TalkingHead, TalkingHeadProps } from "./TalkingHead";
+import {
+  TitledVideo,
+  calculateTitledVideoMetadata,
+} from "./TitledVideo";
 
 // ---------------------------------------------------------------------------
 // Theme System — prevents every video from looking like dark fintech
@@ -180,6 +184,24 @@ export const Root: React.FC = () => {
           fontSize: 52,
           highlightColor: "#22D3EE",
         }}
+      />
+      <Composition
+        id="TitledVideo"
+        component={TitledVideo}
+        durationInFrames={30 * 60}
+        fps={30}
+        width={1920}
+        height={1080}
+        defaultProps={{
+          videoSrc: "",
+          tagline: "home is a verb.",
+          taglineInSeconds: 53.5,
+          taglineOutSeconds: undefined,
+          topPx: 150,
+          fontSize: 148,
+          accentColor: "#F5C470",
+        }}
+        calculateMetadata={calculateTitledVideoMetadata}
       />
     </>
   );

@@ -5,7 +5,7 @@
 The brief exists. You now have to turn a thematic question into a
 concrete list of SLOTS the retrieval layer can fill. Each slot is an
 intention ("a silhouette at a doorway at dusk") plus the queries that
-will find it in the real world (Pexels/Archive.org/NASA).
+will find it in the real world (Pexels/Archive.org/NASA/Wikimedia/Unsplash).
 
 This is the most creative stage in the pipeline. Retrieval is only as
 good as the slot descriptions you write.
@@ -147,6 +147,8 @@ based on what footage lives where:
 | `pexels` | Modern HD footage, clean shots, people, cities, nature | Default for modern/any era |
 | `archive_org` | Prelinger home movies, mid-century educational film, 1940s-1980s texture | Vintage, wry, dreamlike, anything nostalgic |
 | `nasa` | Earth-from-orbit, astronomy, flight, scale imagery | Reverent, anything about scale, space, planet, flight |
+| `wikimedia` | Commons photos and CC video, civic/documentary/public-event coverage | Public spaces, landmarks, protests, city texture, educational footage |
+| `unsplash` | Polished editorial stills, lifestyle, product-adjacent photography | Modern still-image support shots when motion footage is thin |
 
 If `era_mix = "vintage"`, bias slots toward `archive_org` and write
 queries in period-appropriate vocabulary ("commuter", "housewife",

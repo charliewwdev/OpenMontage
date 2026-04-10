@@ -94,7 +94,8 @@ class CorpusBuilder(BaseTool):
         "pip install opencv-python numpy requests pillow transformers torch\n"
         "At least one stock source must be configured:\n"
         "  PEXELS_API_KEY for Pexels (free at https://www.pexels.com/api/)\n"
-        "  archive.org and nasa work without API keys"
+        "  UNSPLASH_ACCESS_KEY for Unsplash (see https://unsplash.com/documentation)\n"
+        "  archive.org, nasa, and wikimedia work without API keys"
     )
     agent_skills = []
 
@@ -201,10 +202,32 @@ class CorpusBuilder(BaseTool):
 
     def get_status(self) -> ToolStatus:
         try:
-            from tools.video.stock_sources import available_sources
+            from tools.video.stock_sources import all_sources, available_sources
         except Exception:
             return ToolStatus.UNAVAILABLE
-        return ToolStatus.AVAILABLE if available_sources() else ToolStatus.UNAVAILABLE
+        total = len(all_sources())
+        available = len(available_sources())
+        if available == 0:
+            return ToolStatus.UNAVAILABLE
+        if available < total:
+            return ToolStatus.DEGRADED
+        return ToolStatus.AVAILABLE
+
+    def get_info(self) -> dict[str, Any]:
+        info = super().get_info()
+        try:
+            from tools.video.stock_sources import source_catalog, source_summary
+            info["source_provider_menu"] = source_catalog()
+            info["source_provider_summary"] = source_summary()
+        except Exception:
+            info["source_provider_menu"] = []
+            info["source_provider_summary"] = {
+                "configured": 0,
+                "total": 0,
+                "available_source_names": [],
+                "unavailable_source_names": [],
+            }
+        return info
 
     def estimate_cost(self, inputs: dict[str, Any]) -> float:
         return 0.0  # all sources are free-tier
@@ -219,8 +242,10 @@ class CorpusBuilder(BaseTool):
             from lib.corpus import Corpus
             from tools.video.stock_sources import (
                 SearchFilters,
+                all_sources,
                 available_sources,
                 get_source,
+                source_summary,
             )
 
             corpus_dir = Path(inputs["corpus_dir"])
@@ -232,17 +257,36 @@ class CorpusBuilder(BaseTool):
             thumbs_per_video = int(inputs.get("thumbs_per_video", 5))
 
             # Resolve sources. If the caller passed an explicit list we
-            # respect it even if some are unavailable — their search
-            # calls will simply fail and be logged.
+            # must not silently degrade: pinned-but-unavailable sources
+            # are a provider substitution the agent needs to surface.
             if source_names:
                 requested: list = []
+                unavailable_requested: list[str] = []
+                known_sources = {src.name: src for src in all_sources()}
                 for name in source_names:
-                    try:
-                        s = get_source(name)
-                    except KeyError as e:
-                        return ToolResult(success=False, error=str(e))
+                    s = known_sources.get(name)
+                    if s is None:
+                        try:
+                            s = get_source(name)
+                        except KeyError as e:
+                            return ToolResult(success=False, error=str(e))
                     if s.is_available():
                         requested.append(s)
+                    else:
+                        unavailable_requested.append(name)
+                if unavailable_requested:
+                    summary = source_summary()
+                    return ToolResult(
+                        success=False,
+                        error=(
+                            "Requested stock sources are unavailable: "
+                            f"{', '.join(unavailable_requested)}. "
+                            "Available now: "
+                            f"{', '.join(summary['available_source_names']) or 'none'}. "
+                            "Check corpus_builder.source_provider_menu during preflight "
+                            "before rerunning."
+                        ),
+                    )
                 sources = requested
             else:
                 sources = available_sources()
@@ -344,6 +388,9 @@ class CorpusBuilder(BaseTool):
                     "per_source_counts": per_source_counts,
                     "added_ids": added_ids,
                     "total_corpus_size": len(corp),
+                    "requested_sources": source_names or [],
+                    "resolved_sources": [s.name for s in sources],
+                    "source_provider_summary": source_summary(),
                     "errors": errors[:25],  # cap log noise
                 },
                 cost_usd=0.0,

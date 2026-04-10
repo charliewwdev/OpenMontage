@@ -16,7 +16,7 @@ The output is a single mp4 plus a `render_report` artifact.
 | Schema | `schemas/artifacts/render_report.schema.json` | Artifact validation |
 | Prior artifact | `state.artifacts["edit"]["edit_decisions"]` | Cuts, transitions, music, metadata hints |
 | Prior artifact | `state.artifacts["assets"]["asset_manifest"]` | File paths, durations, providers |
-| Tool | `video_compose` (FFmpeg + Remotion) | Primary render engine |
+| Tool | `video_compose` (Remotion-first + FFmpeg fallback) | Primary render engine |
 | Tool | `audio_mixer` | Music fade, silence window, L-cuts |
 | Tool (optional) | `color_grade` | Uniform LUT across mixed-era clips |
 | Tool (optional) | `video_trimmer`, `video_stitch` | Lower-level helpers if needed |
@@ -47,11 +47,16 @@ If the brief said "no narration" and a narration track somehow
 appeared in the edit, STOP and ask. Do not render over a contract
 violation.
 
-Also confirm the render engine you intend to use is actually
-available — `video_compose` in FFmpeg-only mode is fine for this
-pipeline (the whole piece is footage-led, no Remotion scenes needed
-unless the user asked for title cards). FFmpeg alone can render this
-pipeline end to end.
+Also confirm that `edit_decisions.renderer_family` is locked to
+`documentary-montage` and that the chosen render engine preserves that
+decision. For this repo's governance model, `video_compose` is
+Remotion-first on `operation="render"`, even for footage-led pieces.
+
+- If Remotion is available, use the normal `render` path and keep the
+  approved renderer family.
+- If Remotion is unavailable, do NOT quietly drop to FFmpeg. Surface
+  the engine change and get approval before using a lower-level
+  FFmpeg-only path.
 
 ### 1. Resolve The Canvas
 
@@ -83,38 +88,17 @@ For a pipeline this simple, the cleanest path is:
 video_compose.execute({
     "operation": "render",
     "output_path": "projects/<name>/renders/final.mp4",
-    "canvas": { "width": 1920, "height": 1080, "fps": 24 },
-    "cuts": [
-        {
-            "source": "<resolved file path>",
-            "in": 1.2,
-            "out": 5.2,
-            "scale": "fit_canvas_center_crop",
-            "transition_in": "fade",
-            "transition_in_duration": 0.8,
-        },
-        # ... more cuts
-    ],
-    "audio": {
-        "music_path": "<resolved music path>",
-        "music_volume": 0.7,
-        "music_fade_in": 1.0,
-        "music_fade_out": 4.0,
-        "silence_windows": [{"start": 54.0, "end": 56.0}],
-        "sfx_layers": [
-            {"source": "<rain carry clip>", "start": 20.8, "duration": 1.2, "volume": 0.6}
-        ],
-    },
-    "frame_treatment": {
-        "lut_path": "styles/luts/warm_film_100.cube",
-        "letterbox": "2.35:1"
-    }
+    "edit_decisions": edit_decisions_with_renderer_family,
+    "asset_manifest": asset_manifest,
 })
 ```
 
 The exact field names come from the live `video_compose` schema at
 render time — consult the tool's `agent_skills` if available before
 writing the call. Do not invent parameters.
+
+`edit_decisions_with_renderer_family` means the normal edit artifact
+with `renderer_family = "documentary-montage"` preserved intact.
 
 ### 3. Apply Grade Via LUT, Not Per Clip
 
@@ -163,8 +147,8 @@ Recommended encoder settings for doc montage:
 | Audio codec | `aac` | Universal |
 | Audio bitrate | `192k` | Music-bed friendly |
 
-If the source clips are 30fps and the canvas is 24fps, let FFmpeg
-drop frames evenly — don't blend. Motion interpolation on
+If the source clips are 30fps and the canvas is 24fps, let the render
+pipeline drop frames evenly — don't blend. Motion interpolation on
 mixed-source footage looks awful.
 
 ### 6. Post-Render Verification
@@ -210,7 +194,7 @@ Record verifications in `render_report.verification_notes`.
     "Silence window 54-56s confirmed (music -60dB)",
     "Last frame fades to black at 89.0s"
   ],
-  "render_grammar": "cinematic-trailer",
+  "render_grammar": "documentary-montage",
   "metadata": {
     "pipeline": "documentary-montage",
     "canvas": { "width": 1920, "height": 1080 },
@@ -247,10 +231,9 @@ Record verifications in `render_report.verification_notes`.
 - **Per-clip color grading.** One LUT across the whole piece. Do
   not try to balance each clip individually — it takes 10x the time
   and makes the register LESS consistent, not more.
-- **Quiet render engine swap.** If `video_compose` routes through
-  Remotion for some reason and the aesthetic changes, stop and
-  surface. This pipeline is FFmpeg-friendly and shouldn't need
-  Remotion unless the user asked for title cards.
+- **Quiet FFmpeg downgrade.** If Remotion is blocked and you route to
+  FFmpeg without surfacing it, you've changed the approved render path.
+  Stop and surface that downgrade before rendering.
 - **Overriding edit decisions at render time.** If you find yourself
   adjusting volumes, fades, or trims in the render call, you're
   editing during compose. Go back to the edit stage, fix the

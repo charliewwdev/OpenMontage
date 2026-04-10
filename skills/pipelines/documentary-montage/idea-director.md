@@ -113,8 +113,9 @@ open for the scene director to decide per slot.
 - Tone is ONE register from the fixed list.
 - Duration and shape are concrete numbers / enum values.
 - Music source is named OR the brief explicitly says "no music".
-- Sources list is non-empty and at least one is `available` per the
-  tool registry.
+- Sources list is non-empty and at least one requested source is
+  `available` per `corpus_builder.source_provider_menu` surfaced in
+  preflight.
 
 ## Common Pitfalls
 

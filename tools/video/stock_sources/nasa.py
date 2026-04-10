@@ -55,6 +55,14 @@ class NasaSource:
     """
 
     name = "nasa"
+    display_name = "NASA"
+    provider = "nasa"
+    priority = 30
+    install_instructions = (
+        "No setup required. NASA media search works without an API key; "
+        "NASA_API_KEY is optional for higher rate limits."
+    )
+    supports = {"video": True, "image": True}
 
     def is_available(self) -> bool:
         # The public API is unauthenticated; as long as the network is

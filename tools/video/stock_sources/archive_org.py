@@ -70,6 +70,13 @@ class ArchiveOrgSource:
     """
 
     name = "archive_org"
+    display_name = "Archive.org"
+    provider = "archive_org"
+    priority = 20
+    install_instructions = (
+        "No setup required. Archive.org is available without API keys."
+    )
+    supports = {"video": True, "image": False}
 
     def is_available(self) -> bool:
         # No API key, no config. As long as the network is up, we're

@@ -36,6 +36,14 @@ class PexelsSource:
     """
 
     name = "pexels"
+    display_name = "Pexels"
+    provider = "pexels"
+    priority = 10
+    install_instructions = (
+        "Set PEXELS_API_KEY in .env to enable Pexels stock search "
+        "(free key at https://www.pexels.com/api/)."
+    )
+    supports = {"video": True, "image": True}
 
     def is_available(self) -> bool:
         return bool(os.environ.get("PEXELS_API_KEY"))

@@ -29,8 +29,9 @@ Adding a new source
    field the corpus might later want to display or attribute (creator,
    licence, source URL, description/tags for the text channel of the
    CLIP fused ranking).
-3. Register the class so `corpus_builder` can discover it. The
-   registration pattern lives alongside the first concrete adapter.
+3. Give the class a stable `name` attribute and optional discoverability
+   metadata such as `display_name`, `install_instructions`, `supports`,
+   and `priority`. The package auto-discovers concrete adapters.
 """
 from __future__ import annotations
 

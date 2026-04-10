@@ -2,7 +2,8 @@ name: documentary-montage
 version: "1.0"
 description: >
   Retrieval-first thematic montage pipeline. Builds a semantic corpus of real-world
-  footage from Pexels, Archive.org (Prelinger et al.), and NASA, then uses CLIP-based
+  footage from Pexels, Archive.org (Prelinger et al.), NASA, Wikimedia Commons, and
+  Unsplash, then uses CLIP-based
   retrieval to fill slot descriptions from a thematic brief. The edit arranges clips
   by narrative beat with music sync and uniform color grade across mixed-era footage.
   Inspired by Adam Curtis / Chris Marker / Errol Morris tone poems.
@@ -120,6 +121,7 @@ stages:
     checkpoint_required: true
     human_approval_default: true
     review_focus:
+      - renderer_family is locked to documentary-montage
       - Hero slots hold longest; mid-sequence cutaways shortest
       - No two adjacent cuts share subject AND scale
       - Transition vocabulary is at most 4 distinct values

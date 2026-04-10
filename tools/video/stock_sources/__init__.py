@@ -5,44 +5,69 @@ NASA, ...) used by `corpus_builder` to populate the local clip corpus.
 See `base.py` for the protocol contract and the "adding a new source"
 checklist.
 
-Registry
---------
-`all_sources()` returns one instance of every adapter known to the
-package, in a stable order. `available_sources()` filters to the ones
-whose `is_available()` returns True right now. The corpus builder
-queries the latter during fan-out; it never imports adapters directly.
+Discovery
+---------
+Adapters are auto-discovered from this package. `all_sources()` returns
+one instance of every concrete adapter class found under
+`tools.video.stock_sources`, ordered by each class's optional
+`priority` and then by name. `available_sources()` filters to the ones
+whose `is_available()` returns True right now.
 
-To register a new adapter: add its class to the `_REGISTRY` tuple
-below. Order matters only as a tiebreak when two sources return
-matching clips.
+This keeps source discoverability aligned with the rest of the repo:
+adding a new adapter file is enough to make it visible to
+`corpus_builder` and to preflight metadata.
 """
 from __future__ import annotations
 
-from .archive_org import ArchiveOrgSource
+import importlib
+import inspect
+import pkgutil
+
 from .base import Candidate, SearchFilters, StockSource
-from .nasa import NasaSource
-from .pexels import PexelsSource
 
 __all__ = [
     "Candidate",
     "SearchFilters",
     "StockSource",
-    "PexelsSource",
-    "ArchiveOrgSource",
-    "NasaSource",
     "all_sources",
     "available_sources",
     "get_source",
+    "source_catalog",
+    "source_summary",
 ]
 
-# Explicit, ordered list of every adapter class the package exposes.
-# The corpus builder iterates this (filtered by availability) during
-# fan-out. Order matters only as a tiebreak for identical clip ids.
-_REGISTRY: tuple[type, ...] = (
-    PexelsSource,
-    ArchiveOrgSource,
-    NasaSource,
-)
+def _is_source_adapter_class(cls: type) -> bool:
+    """Return True for concrete source adapters in this package."""
+    return (
+        inspect.isclass(cls)
+        and cls.__module__.startswith(f"{__name__}.")
+        and cls.__module__ != f"{__name__}.base"
+        and isinstance(getattr(cls, "name", None), str)
+        and bool(getattr(cls, "name", None))
+        and callable(getattr(cls, "is_available", None))
+        and callable(getattr(cls, "search", None))
+        and callable(getattr(cls, "download", None))
+    )
+
+
+def _source_classes() -> list[type]:
+    """Auto-discover stock source classes under this package."""
+    discovered: dict[str, type] = {}
+    for module_info in pkgutil.iter_modules(__path__, f"{__name__}."):
+        if module_info.ispkg or module_info.name.endswith(".base"):
+            continue
+        module = importlib.import_module(module_info.name)
+        for _, cls in inspect.getmembers(module, inspect.isclass):
+            if not _is_source_adapter_class(cls):
+                continue
+            discovered[getattr(cls, "name")] = cls
+    return sorted(
+        discovered.values(),
+        key=lambda cls: (
+            int(getattr(cls, "priority", 100)),
+            getattr(cls, "display_name", getattr(cls, "name")).lower(),
+        ),
+    )
 
 
 def all_sources() -> list[StockSource]:
@@ -53,7 +78,7 @@ def all_sources() -> list[StockSource]:
     want to show the user what sources exist regardless of whether
     their credentials are configured.
     """
-    return [cls() for cls in _REGISTRY]
+    return [cls() for cls in _source_classes()]
 
 
 def available_sources() -> list[StockSource]:
@@ -65,6 +90,40 @@ def available_sources() -> list[StockSource]:
     an empty corpus.
     """
     return [s for s in all_sources() if s.is_available()]
+
+
+def source_catalog() -> list[dict[str, object]]:
+    """Return discoverability metadata for every stock source."""
+    catalog: list[dict[str, object]] = []
+    for source in all_sources():
+        cls = source.__class__
+        available = bool(source.is_available())
+        catalog.append({
+            "name": source.name,
+            "display_name": getattr(cls, "display_name", source.name),
+            "provider": getattr(cls, "provider", source.name),
+            "status": "available" if available else "unavailable",
+            "install_instructions": getattr(
+                cls,
+                "install_instructions",
+                "See the source adapter docs for setup details.",
+            ),
+            "supports": getattr(cls, "supports", {}),
+        })
+    return catalog
+
+
+def source_summary() -> dict[str, object]:
+    """Summarize source availability for preflight and tool contracts."""
+    catalog = source_catalog()
+    available = [entry["name"] for entry in catalog if entry["status"] == "available"]
+    unavailable = [entry["name"] for entry in catalog if entry["status"] != "available"]
+    return {
+        "configured": len(available),
+        "total": len(catalog),
+        "available_source_names": available,
+        "unavailable_source_names": unavailable,
+    }
 
 
 def get_source(name: str) -> StockSource:

@@ -1,0 +1,165 @@
+name: documentary-montage
+version: "1.0"
+description: >
+  Retrieval-first thematic montage pipeline. Builds a semantic corpus of real-world
+  footage from Pexels, Archive.org (Prelinger et al.), and NASA, then uses CLIP-based
+  retrieval to fill slot descriptions from a thematic brief. The edit arranges clips
+  by narrative beat with music sync and uniform color grade across mixed-era footage.
+  Inspired by Adam Curtis / Chris Marker / Errol Morris tone poems.
+category: documentary
+stability: beta
+default_checkpoint_policy: guided
+
+# Reference video input support
+reference_input:
+  supported: false
+
+orchestration:
+  mode: executive-producer
+  skill: pipelines/documentary-montage/executive-producer
+  budget_default_usd: 1.00
+  max_revisions_per_stage: 3
+  max_send_backs: 2
+  max_wall_time_minutes: 60
+
+extensions:
+  custom_scripts: true
+  custom_playbooks: true
+  custom_skills: true
+  custom_tools: false
+
+required_skills:
+  - pipelines/documentary-montage/executive-producer
+  - pipelines/documentary-montage/idea-director
+  - pipelines/documentary-montage/scene-director
+  - pipelines/documentary-montage/asset-director
+  - pipelines/documentary-montage/edit-director
+  - pipelines/documentary-montage/compose-director
+  - meta/reviewer
+  - meta/checkpoint-protocol
+
+compatible_playbooks:
+  custom_allowed: true
+
+stages:
+  - name: idea
+    skill: pipelines/documentary-montage/idea-director
+    produces:
+      - brief
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: true
+    review_focus:
+      - Thematic question is ONE sentence
+      - Tone register is ONE value from the fixed list
+      - Duration and shape are concrete
+      - Music plan is resolved or explicitly silent
+    success_criteria:
+      - Schema-valid brief artifact
+      - thematic_question present in metadata
+      - music_plan present in metadata
+
+  - name: scene_plan
+    skill: pipelines/documentary-montage/scene-director
+    required_artifacts_in:
+      - brief
+    produces:
+      - scene_plan
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: true
+    review_focus:
+      - Slot descriptions use concrete noun-and-adjective language
+      - Every slot has 2-3 short search queries
+      - At least 2 slots are marked hero
+      - Slot count and target holds match the tone/duration math
+      - era_mix is reflected in preferred_sources distribution
+    success_criteria:
+      - Schema-valid scene_plan artifact
+      - metadata.slots[] present with per-slot queries and preferred_sources
+      - Sum of target_hold_seconds within 10% of brief.duration_seconds
+
+  - name: assets
+    skill: pipelines/documentary-montage/asset-director
+    required_artifacts_in:
+      - scene_plan
+      - brief
+    produces:
+      - asset_manifest
+    required_tools:
+      - corpus_builder
+      - clip_search
+    optional_tools:
+      - music_gen
+    tools_available:
+      - corpus_builder
+      - clip_search
+      - music_gen
+    checkpoint_required: true
+    human_approval_default: false
+    review_focus:
+      - Corpus size is at least 8x the slot count
+      - Every slot has exactly one picked clip with score >= 0.22
+      - No clip_id is picked for two slots (exclude_ids enforced)
+      - diversify ran clean on the final timeline
+      - rejected_picks log has reasons for passes
+      - Provenance (provider, original_url, license) present on every asset
+    success_criteria:
+      - Schema-valid asset_manifest artifact
+      - One video asset per scene slot
+      - metadata.corpus_stats present
+
+  - name: edit
+    skill: pipelines/documentary-montage/edit-director
+    required_artifacts_in:
+      - scene_plan
+      - asset_manifest
+    produces:
+      - edit_decisions
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: true
+    review_focus:
+      - Hero slots hold longest; mid-sequence cutaways shortest
+      - No two adjacent cuts share subject AND scale
+      - Transition vocabulary is at most 4 distinct values
+      - Music config is present OR brief explicitly says no music
+      - total_duration_seconds matches sum of cut durations
+      - Every cut has a reason
+    success_criteria:
+      - Schema-valid edit_decisions artifact
+      - Timeline duration within 10% of brief.duration_seconds
+
+  - name: compose
+    skill: pipelines/documentary-montage/compose-director
+    required_artifacts_in:
+      - edit_decisions
+      - asset_manifest
+      - brief
+    produces:
+      - render_report
+    required_tools:
+      - video_compose
+    optional_tools:
+      - audio_mixer
+      - color_grade
+      - video_trimmer
+      - video_stitch
+    tools_available:
+      - video_compose
+      - audio_mixer
+      - color_grade
+      - video_trimmer
+      - video_stitch
+    checkpoint_required: true
+    human_approval_default: false
+    review_focus:
+      - Output duration matches planned within 1s
+      - Resolution matches target_platform canvas
+      - Uniform LUT applied across the timeline
+      - Music present iff brief planned for it
+      - First and last frames verified
+      - No silent fallback from a motion-led promise
+    success_criteria:
+      - Schema-valid render_report artifact
+      - Output file exists and passes ffprobe validation

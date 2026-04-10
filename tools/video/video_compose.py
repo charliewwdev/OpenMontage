@@ -247,6 +247,32 @@ class VideoCompose(BaseTool):
         """Check if a file is a still image (routes to Remotion, not FFmpeg)."""
         return path.suffix.lower() in VideoCompose._IMAGE_EXTENSIONS
 
+    @staticmethod
+    def _has_audio_stream(path: Path) -> bool:
+        """Return True iff ffprobe reports at least one audio stream.
+
+        Many stock video clips (especially from Pexels) ship with no audio
+        stream at all. If we blindly tell ffmpeg to transcode the 0:a stream
+        on such a file it errors out. This helper lets the segment builder
+        branch on stream presence so it can synthesize a silent track when
+        needed, keeping the concat segment layout consistent.
+        """
+        try:
+            out = subprocess.check_output(
+                [
+                    "ffprobe", "-v", "error",
+                    "-select_streams", "a",
+                    "-show_entries", "stream=codec_type",
+                    "-of", "default=nw=1:nk=1",
+                    str(path),
+                ],
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
+            return "audio" in out
+        except Exception:
+            return False
+
     def _compose(self, inputs: dict[str, Any]) -> ToolResult:
         """FFmpeg composition: concat video cuts, add audio, burn subtitles.
 
@@ -326,23 +352,98 @@ class VideoCompose(BaseTool):
                     )
                 else:
                     # Video source: trim to segment.
-                    # -ss before -i for input-level seeking — more reliable
-                    # with -c copy when stream order is non-standard (e.g.
-                    # audio-first containers from Kling/fal.ai).
+                    #
+                    # Semantics:
+                    #   -ss BEFORE -i   → fast input-level seek to in_s
+                    #   -t  AFTER  -i   → "play for `duration` seconds"
+                    #                     (unambiguous regardless of seek mode)
+                    #
+                    # We MUST re-encode here — `-c copy` cannot do frame-accurate
+                    # cuts because it snaps to keyframes. With sparse GOPs (common
+                    # in Pexels / AI-generated clips), stream-copy can produce
+                    # segments significantly longer than `duration`, breaking the
+                    # target timeline. Re-encoding with libx264/AAC is slower but
+                    # gives exact cut boundaries. Same resolution in → same
+                    # resolution out, so same-res inputs concat cleanly.
                     cmd = [
                         "ffmpeg", "-y",
                         "-ss", str(in_s),
+                        "-t", str(duration),
                         "-i", str(source),
-                        "-to", str(out_s - in_s),
                     ]
 
+                    # Normalize every segment to a consistent container so the
+                    # concat-copy step is always safe. The concat demuxer with
+                    # `-c copy` requires identical codec / resolution / fps /
+                    # pix_fmt / sar across ALL segments — otherwise it throws
+                    # "Non-monotonous DTS" or silently produces corrupt output.
+                    #
+                    # Default target is 1920x1080 @ 30fps, yuv420p, sar=1. If the
+                    # source is smaller it letterboxes; if larger it downscales.
+                    # Callers can override via edit_decisions.metadata.compose_target
+                    # (future extension) but the defaults match the most common
+                    # delivery profile (YouTube landscape).
+                    vf_parts: list[str] = [
+                        "scale=1920:1080:force_original_aspect_ratio=decrease",
+                        "pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black",
+                        "setsar=1",
+                        "fps=30",
+                    ]
+                    af_parts: list[str] = []
                     if speed != 1.0:
-                        vf = f"setpts={1.0/speed}*PTS"
-                        af = self._build_atempo(speed)
-                        cmd.extend(["-filter:v", vf, "-filter:a", af])
-                        cmd.extend(["-c:v", codec, "-crf", str(crf), "-c:a", "aac"])
+                        vf_parts.append(f"setpts={1.0/speed}*PTS")
+                        af_parts.append(self._build_atempo(speed))
+
+                    cmd.extend(["-filter:v", ",".join(vf_parts)])
+                    if af_parts:
+                        cmd.extend(["-filter:a", ",".join(af_parts)])
+
+                    cmd.extend([
+                        "-c:v", codec,
+                        "-crf", str(crf),
+                        "-preset", preset,
+                        "-pix_fmt", "yuv420p",
+                        "-r", "30",
+                    ])
+
+                    # Audio handling: some source clips have no audio stream
+                    # (Pexels stock often ships silent). If we unconditionally
+                    # ask ffmpeg to copy/encode the 0:a stream it errors out.
+                    # Probe for an audio stream first — if present, transcode
+                    # to AAC; if absent, synthesize a silent stereo track so
+                    # concat segments have a consistent stream layout.
+                    has_audio = self._has_audio_stream(source)
+                    if has_audio:
+                        cmd.extend(["-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2"])
                     else:
-                        cmd.extend(["-c", "copy"])
+                        # Inject silent audio via lavfi before the output.
+                        # We have to rebuild cmd to add the lavfi input
+                        # before the output path and map streams explicitly.
+                        cmd = [
+                            "ffmpeg", "-y",
+                            "-ss", str(in_s),
+                            "-t", str(duration),
+                            "-i", str(source),
+                            "-f", "lavfi",
+                            "-t", str(duration),
+                            "-i", "anullsrc=channel_layout=stereo:sample_rate=48000",
+                            "-filter:v", ",".join(vf_parts),
+                        ]
+                        if af_parts:
+                            cmd.extend(["-filter:a", ",".join(af_parts)])
+                        cmd.extend([
+                            "-map", "0:v:0",
+                            "-map", "1:a:0",
+                            "-c:v", codec,
+                            "-crf", str(crf),
+                            "-preset", preset,
+                            "-pix_fmt", "yuv420p",
+                            "-r", "30",
+                            "-c:a", "aac",
+                            "-b:a", "192k",
+                            "-ar", "48000",
+                            "-ac", "2",
+                        ])
 
                     cmd.append(str(seg_path))
                     self.run_command(cmd)

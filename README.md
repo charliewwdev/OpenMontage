@@ -248,6 +248,7 @@ Each pipeline is a complete production workflow, from idea to finished video.
 | **Avatar Spokesperson** | Avatar-driven presenter videos | Corporate comms, training, announcements |
 | **Cinematic** | Trailer, teaser, and mood-driven edits | Brand films, teasers, promotional content |
 | **Clip Factory** | Batch of ranked short-form clips from one long source | Repurposing long content for social media |
+| **Documentary Montage** | Thematic montage cut from a CLIP-indexed corpus of free stock footage (Pexels, Archive.org, NASA) | Video essays, mood pieces, retrieval-first B-roll edits |
 | **Hybrid** | Source footage + AI-generated support visuals | Enhancing existing footage with graphics |
 | **Localization & Dub** | Subtitle, dub, and translate existing video | Multi-language distribution |
 | **Podcast Repurpose** | Podcast highlights to video | Podcast marketing, audiogram videos |
@@ -272,7 +273,7 @@ Most AI video tools give you a single clip from a prompt. OpenMontage gives you 
 
 Edit your own talking-head footage. Generate a fully animated explainer from scratch. Cut a 2-hour podcast into a dozen social clips. Translate and dub your content into 10 languages. Build a cinematic brand teaser from stock footage and AI-generated scenes. **If a production team can make it, OpenMontage can orchestrate it.**
 
-- **11 production pipelines** — explainers, talking heads, screen demos, cinematic trailers, animations, podcasts, localization, and more
+- **12 production pipelines** — explainers, talking heads, screen demos, cinematic trailers, animations, podcasts, localization, documentary montages, and more
 - **52 production tools** — spanning video generation, image creation, text-to-speech, music, audio mixing, subtitles, enhancement, and analysis
 - **400+ agent skills** — production skills, pipeline directors, creative techniques, quality checklists, and deep technology knowledge packs that teach the agent how to use every tool like an expert
 - **Reference-driven creation** — paste a video you like and the agent turns it into a grounded, differentiated production plan instead of forcing you to invent the perfect prompt from scratch

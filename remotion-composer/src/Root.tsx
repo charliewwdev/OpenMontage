@@ -10,6 +10,7 @@ import {
   TitledVideo,
   calculateTitledVideoMetadata,
 } from "./TitledVideo";
+import { EndTag, EndTagProps } from "./components/EndTag";
 
 // ---------------------------------------------------------------------------
 // Theme System — prevents every video from looking like dark fintech
@@ -202,6 +203,22 @@ export const Root: React.FC = () => {
           accentColor: "#F5C470",
         }}
         calculateMetadata={calculateTitledVideoMetadata}
+      />
+      <Composition
+        id="EndTag"
+        component={EndTag}
+        // 5.5s at 30fps = 165 frames. Render CLI can override via --props.
+        durationInFrames={165}
+        fps={30}
+        width={1920}
+        height={1080}
+        defaultProps={{
+          text: "THE CITY KEEPS ITS OWN VIGIL.",
+          palette: "cool_offwhite_on_black",
+          fadeInSeconds: 0.6,
+          holdSeconds: 4.3,
+          fadeOutSeconds: 0.6,
+        } as EndTagProps}
       />
     </>
   );

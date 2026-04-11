@@ -131,8 +131,60 @@ and L-cut sfx layers. Your job is to execute them faithfully:
 - L-cut SFX layers = mix at 0.5-0.7 volume, under music.
 - No narration unless explicitly present in `edit_decisions.audio.narration`.
 
+**Music is MANDATORY.** If the edit has no music entry, check the brief:
+
+- `brief.metadata.music_plan.source == "none"` with an `opt_out_reason` →
+  the user explicitly opted out. Render silent and note it in
+  `render_report.warnings`.
+- Anything else → STOP. This is a contract violation. Surface it to
+  the user before rendering. A silent render on a music-mandatory brief
+  is the loudest failure mode in this pipeline.
+
+Do NOT add ambient noise "to fill the gap".
+
+### 4b. Render The End-Tag Via Remotion, Concatenate After Body
+
+The end-tag is rendered **separately** from the FFmpeg body and
+concatenated at the tail. This is deliberate — it sidesteps the
+`video_compose.render` scene-adapter mismatch and keeps the two
+render engines (FFmpeg for footage, Remotion for typography) cleanly
+separated.
+
+Read `brief.metadata.end_tag_plan`:
+
+```json
+{
+  "text": "WE BUILT BOTH WITH THE SAME HANDS.",
+  "palette": "warm_ivory_on_black",
+  "duration_seconds": 5.5,
+  "render_engine": "remotion",
+  "component": "EndTag"
+}
+```
+
+Execution path:
+
+1. Compose the body via FFmpeg (cuts + LUT + music + silence window).
+   Save as `projects/<name>/renders/body.mp4`.
+2. Render the end-tag via Remotion CLI with component-specific props:
+   `npx remotion render EndTag --props='{"text":"...", "palette":"...","durationInFrames":132}' projects/<name>/renders/end_tag.mp4`
+   (5.5s at 24fps = 132 frames). Canvas must match body canvas.
+3. Concat body + end_tag with `ffmpeg -f concat -safe 0 -i list.txt -c copy final.mp4`
+   or, if encoders don't match, re-encode with the documentary spec.
+
+**End-tag is MANDATORY.** The ONLY way to skip it is an explicit user
+opt-out recorded as `end_tag_plan: null` with an `end_tag_opt_out_reason`.
+If the brief has an end-tag plan but you skipped rendering it, that is
+a contract violation. Stop and surface before finalizing.
+
+Record in `render_report`:
+- `end_tag_rendered: true | false`
+- `end_tag_path: "projects/<name>/renders/end_tag.mp4"`
+- `end_tag_text: "..."` (for audit trail)
+
 If the brief says "no music" and the edit correctly has no music
-entry, render silent. Do NOT add ambient noise "to fill the gap".
+entry AND `music_plan.source == "none"` with an opt-out reason, render
+silent. Do NOT add ambient noise "to fill the gap".
 
 ### 5. Render At Documentary Spec
 
@@ -208,14 +260,16 @@ Record verifications in `render_report.verification_notes`.
 ### 8. Quality Gate
 
 - Output file exists and plays.
-- Duration within ±1s of `brief.duration_seconds`.
+- Duration within ±1s of `brief.duration_seconds` (body + end-tag inclusive).
 - Resolution matches `target_platform` canvas.
 - LUT was applied (or a warning logged).
-- Music is present iff the brief planned for it.
+- **Music is present** unless `brief.metadata.music_plan.source == "none"` with an explicit opt-out reason.
+- **End-tag MP4 was rendered and concatenated** unless `brief.metadata.end_tag_plan` is null with an explicit opt-out reason. Last frame of final MP4 must be the end-tag card in that case.
 - First and last frames verified.
 - Silence window (if any) verified in the waveform.
 - No narration unless brief-approved.
 - `render_report.warnings` lists every substitution.
+- `render_report.metadata.music_mixed = true` and `render_report.metadata.end_tag_rendered = true` (or explicit opt-out recorded).
 
 ## Common Pitfalls
 

@@ -240,6 +240,7 @@ class CorpusBuilder(BaseTool):
         start = time.time()
         try:
             from lib.corpus import Corpus
+            from tools.video.clip_cache import get_default_cache
             from tools.video.stock_sources import (
                 SearchFilters,
                 all_sources,
@@ -301,6 +302,14 @@ class CorpusBuilder(BaseTool):
             corp.load()
             corp.ensure_dirs()
 
+            # Shared clip bytes cache (Phase 1). Hits hard-link blobs
+            # from a previous run's download into this corpus dir so we
+            # don't re-hit the source API or re-download megabytes.
+            # Faults never block the pipeline — a cache miss just means
+            # we download like before.
+            cache = get_default_cache()
+            run_cache_stats = {"hits": 0, "misses": 0, "bytes_saved": 0}
+
             per_source_counts: dict[str, int] = {s.name: 0 for s in sources}
             added_ids: list[str] = []
             errors: list[dict] = []
@@ -354,6 +363,8 @@ class CorpusBuilder(BaseTool):
                                 corp=corp,
                                 query=query,
                                 thumbs_per_video=thumbs_per_video,
+                                cache=cache,
+                                run_cache_stats=run_cache_stats,
                             )
                         except Exception as e:
                             failed += 1
@@ -376,6 +387,11 @@ class CorpusBuilder(BaseTool):
             corp.save()
 
             elapsed = time.time() - start
+            try:
+                cache_snapshot = cache.stats()
+            except Exception as e:
+                cache_snapshot = {"error": f"{type(e).__name__}: {e}"}
+
             return ToolResult(
                 success=True,
                 data={
@@ -391,6 +407,13 @@ class CorpusBuilder(BaseTool):
                     "requested_sources": source_names or [],
                     "resolved_sources": [s.name for s in sources],
                     "source_provider_summary": source_summary(),
+                    # Shared clip bytes cache (Phase 1): per-run
+                    # counters plus a full stats snapshot for the
+                    # agent to display in the production report.
+                    "cache_hits": run_cache_stats["hits"],
+                    "cache_misses": run_cache_stats["misses"],
+                    "cache_bytes_saved": run_cache_stats["bytes_saved"],
+                    "cache_stats": cache_snapshot,
                     "errors": errors[:25],  # cap log noise
                 },
                 cost_usd=0.0,
@@ -414,12 +437,23 @@ class CorpusBuilder(BaseTool):
         corp,
         query: str,
         thumbs_per_video: int,
+        cache,
+        run_cache_stats: dict,
     ):
         """Download → thumb → embed → add one Candidate to the corpus.
 
         Returns the created `ClipRecord` on success, None if the clip
         was rejected (download empty, thumb extraction failed, etc.).
         Raises on unexpected errors (the caller logs them).
+
+        Before downloading, consults the shared clip bytes cache at
+        ``~/.openmontage/clips_cache/``: if the file is already on
+        disk from a previous run (the same clip surfaced for a
+        different project), the cache hard-links it straight into
+        ``local_abs`` and we skip the network fetch entirely. On a
+        miss we download as before and ingest the fresh file so the
+        next run benefits. Cache faults never block the pipeline —
+        they degrade gracefully to normal downloads.
         """
         import cv2
 
@@ -432,18 +466,58 @@ class CorpusBuilder(BaseTool):
         local_rel = Path("clips") / f"{cand.clip_id}{ext}"
         local_abs = corp.corpus_dir / local_rel
 
-        # Download. Any HTTP/IO exception propagates up to the
-        # per-candidate try in execute().
-        src.download(cand, local_abs)
-        if not local_abs.exists() or local_abs.stat().st_size < 1024:
-            # Empty / near-empty file = bad download. Clean up so a
-            # retry doesn't mistake it for success.
+        # Try the shared cache first. A hit links the cached blob
+        # into local_abs (same filesystem → hard link, cross-drive
+        # → copy) and we skip the source fetch entirely.
+        cache_hit = False
+        try:
+            cache_hit = cache.try_link(cand.clip_id, local_abs)
+        except Exception:
+            # Never let a cache fault block the pipeline — fall
+            # through to a fresh download. The cache surfaces faults
+            # via its own stats counters.
+            cache_hit = False
+
+        if cache_hit:
+            run_cache_stats["hits"] += 1
             try:
-                if local_abs.exists():
-                    local_abs.unlink()
+                run_cache_stats["bytes_saved"] += local_abs.stat().st_size
             except OSError:
                 pass
-            return None
+        else:
+            run_cache_stats["misses"] += 1
+            # Download. Any HTTP/IO exception propagates up to the
+            # per-candidate try in execute().
+            src.download(cand, local_abs)
+            if not local_abs.exists() or local_abs.stat().st_size < 1024:
+                # Empty / near-empty file = bad download. Clean up so a
+                # retry doesn't mistake it for success.
+                try:
+                    if local_abs.exists():
+                        local_abs.unlink()
+                except OSError:
+                    pass
+                return None
+
+            # Ingest the fresh file into the shared cache so the
+            # next run can hit it. Swallow ingest failures — the
+            # current run already has the bytes locally, which is
+            # what matters for this build.
+            try:
+                cache.ingest(
+                    cand.clip_id,
+                    local_abs,
+                    metadata={
+                        "source": cand.source,
+                        "source_id": cand.source_id,
+                        "source_url": cand.source_url,
+                        "license": cand.license,
+                        "creator": cand.creator,
+                        "source_tags": cand.source_tags,
+                    },
+                )
+            except Exception:
+                pass
 
         thumb_dir_rel = Path("thumbnails") / cand.clip_id
         thumb_dir_abs = corp.corpus_dir / thumb_dir_rel

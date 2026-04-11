@@ -52,7 +52,7 @@ _DEFAULT_COLLECTIONS = ("prelinger", "opensource_movies", "home_movies")
 
 # File formats we accept, in preference order. Archive.org runs every
 # upload through a derivative pipeline so most items have multiple
-# renditions — we want the best mp4.
+# renditions — we want the best mp4 we can afford under the size cap.
 _VIDEO_FORMAT_PRIORITY = (
     "h.264",                  # mp4, usually 480p or 720p
     "MPEG4",                  # older mp4 encoding
@@ -61,6 +61,37 @@ _VIDEO_FORMAT_PRIORITY = (
     "Matroska",               # mkv
     "WebM",                   # webm
 )
+
+# Skip any rendition bigger than this at pick time so we never queue
+# a multi-hundred-megabyte download. Archive.org hosts full-length
+# films routinely and even one 2 GB Prelinger master poisons a corpus
+# build on wall-time and disk. Lives in this adapter (not in
+# corpus_builder) because only archive.org's multi-rendition
+# derivative pipeline needs the within-item size shopping this
+# resolves against.
+_MAX_FILE_SIZE_BYTES = 150 * 1024 * 1024  # 150 MB
+
+# Archive.org is the only source that routinely hosts multi-hour
+# material, so we apply a duration ceiling even when the caller did
+# not set `filters.max_duration`. Other adapters can stay loose.
+_DEFAULT_MAX_DURATION_SECONDS = 180.0
+
+# Stop words and very short tokens are dropped from the user query
+# before the query cascade so they don't dilute Solr relevance. Kept
+# small and deliberate — we're only killing words that reliably hurt
+# documentary-style searches.
+_STOP_WORDS = frozenset({
+    "the", "and", "for", "with", "that", "this", "from", "into",
+    "its", "their", "about", "over", "under", "while", "during",
+    "your", "you", "our", "are", "was", "were", "have", "has",
+})
+
+# Tokens that are redundant with the collection filter — including them
+# in the search body just matches item descriptions that happen to say
+# "from the prelinger archives" and not much else. Strip them.
+_SOURCE_HINT_TOKENS = frozenset({
+    "prelinger", "archive", "archives", "stock", "footage",
+})
 
 
 class ArchiveOrgSource:
@@ -96,6 +127,13 @@ class ArchiveOrgSource:
         adapter returns an empty list for `kind="image"` since
         Archive.org's image collections are a separate ecosystem (see
         `nasa.py` for astronomy imagery instead).
+
+        Query strategy is a 3-stage cascade (`_build_queries`). We walk
+        the cascade in order and return the first strategy whose
+        hydrated candidate list is non-empty. See `_build_queries` for
+        why a cascade is needed — pure OR-join is too noisy, pure
+        phrase-proximity is too strict, no single strategy wins across
+        the documentary query space.
         """
         kind = (filters.kind or "video").lower()
         if kind not in ("video", "any"):
@@ -103,33 +141,43 @@ class ArchiveOrgSource:
 
         import requests  # lazy
 
-        q = self._build_query(query)
-        params = [
-            ("q", q),
-            ("fl[]", "identifier"),
-            ("fl[]", "title"),
-            ("fl[]", "description"),
-            ("fl[]", "creator"),
-            ("fl[]", "date"),
-            ("fl[]", "subject"),
-            ("fl[]", "licenseurl"),
-            ("fl[]", "collection"),
-            ("rows", str(max(1, min(filters.per_page, 50)))),
-            ("page", str(max(1, filters.page))),
-            ("output", "json"),
-        ]
+        for _label, solr_q in self._build_queries(query):
+            params = [
+                ("q", solr_q),
+                ("fl[]", "identifier"),
+                ("fl[]", "title"),
+                ("fl[]", "description"),
+                ("fl[]", "creator"),
+                ("fl[]", "date"),
+                ("fl[]", "subject"),
+                ("fl[]", "licenseurl"),
+                ("fl[]", "collection"),
+                ("rows", str(max(1, min(filters.per_page, 50)))),
+                ("page", str(max(1, filters.page))),
+                ("output", "json"),
+            ]
 
-        r = requests.get(_SEARCH_URL, params=params, timeout=30)
-        r.raise_for_status()
-        data = r.json()
-        docs = (data.get("response") or {}).get("docs", []) or []
+            try:
+                r = requests.get(_SEARCH_URL, params=params, timeout=30)
+                r.raise_for_status()
+                data = r.json()
+            except Exception:
+                # One strategy's network/parse error shouldn't kill the
+                # whole cascade — try the next one.
+                continue
+            docs = (data.get("response") or {}).get("docs", []) or []
+            if not docs:
+                continue
 
-        out: list[Candidate] = []
-        for doc in docs:
-            cand = self._hydrate_candidate(doc, filters)
-            if cand is not None:
-                out.append(cand)
-        return out
+            out: list[Candidate] = []
+            for doc in docs:
+                cand = self._hydrate_candidate(doc, filters)
+                if cand is not None:
+                    out.append(cand)
+            if out:
+                return out
+
+        return []
 
     def download(self, candidate: Candidate, out_path: Path) -> Path:
         """Stream the candidate's file to `out_path`.
@@ -161,20 +209,103 @@ class ArchiveOrgSource:
     # Internals
     # ------------------------------------------------------------------
 
-    def _build_query(self, user_query: str) -> str:
-        """Wrap the user's query with mediatype + collection filters.
+    def _build_queries(self, user_query: str) -> list[tuple[str, str]]:
+        """Build a cascade of Solr queries to try in preference order.
 
-        Archive.org's query language is Solr-style — parentheses and
-        booleans work, and spaces default to AND. We quote the user
-        query so multi-word phrases stay intact.
+        Archive.org's Solr index behaves badly for natural-language
+        documentary queries. The obvious strategies fail in different
+        ways and no single strategy wins across the query space, so we
+        try several and return the first one whose results aren't
+        empty:
+
+        1. **phrase_prox_10** — ``"{phrase}"~10`` proximity match.
+           Finds items whose title/description contains all the query
+           tokens within 10 positions of each other. Best for
+           name-dropped items ("duck and cover drill" ->
+           ``DuckandC1951``). Returns 0 for descriptive queries that
+           don't correspond to a real item title.
+
+        2. **distinctive_and** — top-2 longest non-year tokens joined
+           with AND. Catches items that have the distinctive tokens in
+           the same record without requiring proximity. Finds Prelinger
+           gems like "Frigidaire Imperial Line 1956" when the query is
+           "1955 refrigerator kitchen", or "To New Horizons" (1940)
+           when the query is "suburban optimism suburbia".
+
+        3. **distinctive_or** — top-3 longest tokens OR-joined. Last
+           resort. Noisy — we sacrifice precision for non-empty results
+           and rely on the downstream CLIP retrieval filter to reject
+           junk at clip_search time. Much narrower than OR-joining all
+           tokens because longer words are more discriminative.
+
+        Year tokens ("1950s", "1955") are excluded from the
+        distinctive-token picks because Prelinger titles rarely encode
+        years in text. Including "1950s" in an AND join almost always
+        zeros the result set.
+
+        Source-hint tokens ("prelinger", "archive", "footage") are
+        stripped entirely — they're redundant with the collection
+        filter and match junk descriptions.
+
+        Stop words and short tokens are dropped before everything to
+        keep the proximity phrase meaningful.
         """
         coll = " OR ".join(f"collection:{c}" for c in _DEFAULT_COLLECTIONS)
         user = user_query.strip()
         if not user:
-            return f"mediatype:movies AND ({coll})"
-        # Quote the user query as a phrase AND a loose-term search so
-        # we get both precise matches and relevance-ranked hits.
-        return f'mediatype:movies AND ({coll}) AND ({user})'
+            return [("default", f"mediatype:movies AND ({coll})")]
+
+        tokens = [
+            t for t in re.split(r"\s+", user)
+            if len(t) >= 3
+            and t.lower() not in _STOP_WORDS
+            and t.lower() not in _SOURCE_HINT_TOKENS
+        ]
+        if not tokens:
+            # Nothing meaningful survived filtering — fall back to a
+            # quoted phrase search so we don't ship an empty query.
+            return [(
+                "quoted_fallback",
+                f'mediatype:movies AND ({coll}) AND ("{user}")',
+            )]
+
+        queries: list[tuple[str, str]] = []
+
+        # Strategy 1: phrase proximity ~10. Uses the stripped token
+        # sequence (not the raw query) so stop words don't pollute the
+        # phrase match.
+        clean_phrase = " ".join(tokens)
+        queries.append((
+            "phrase_prox_10",
+            f'mediatype:movies AND ({coll}) AND ("{clean_phrase}"~10)',
+        ))
+
+        # Strategy 2: top-2 longest non-year tokens AND-joined.
+        non_year = [t for t in tokens if not _looks_like_year(t)]
+        if len(non_year) >= 2:
+            distinctive = sorted(non_year, key=lambda t: -len(t))[:2]
+            and_q = " AND ".join(distinctive)
+            queries.append((
+                "distinctive_and",
+                f"mediatype:movies AND ({coll}) AND ({and_q})",
+            ))
+        elif len(non_year) == 1:
+            # Single non-year token — wrap in a simple term query.
+            queries.append((
+                "single_term",
+                f"mediatype:movies AND ({coll}) AND ({non_year[0]})",
+            ))
+
+        # Strategy 3: top-3 longest tokens OR-joined. Last-resort
+        # fallback that accepts noise in exchange for non-empty results.
+        top_tokens = sorted(tokens, key=lambda t: -len(t))[:3]
+        or_q = " OR ".join(top_tokens)
+        queries.append((
+            "distinctive_or",
+            f"mediatype:movies AND ({coll}) AND ({or_q})",
+        ))
+
+        return queries
 
     def _hydrate_candidate(
         self, doc: dict, filters: SearchFilters
@@ -208,12 +339,26 @@ class ArchiveOrgSource:
             return None
 
         duration = _parse_length(picked.get("length"))
-        if filters.min_duration is not None and duration < filters.min_duration:
+
+        # Apply a default max-duration ceiling if the caller didn't set
+        # one. Archive.org is the only source that routinely hosts
+        # multi-hour material, and without a default cap a naive
+        # fan-out pulls feature-length items into a corpus that only
+        # ever wants a few seconds per clip.
+        effective_max_duration = filters.max_duration
+        if effective_max_duration is None:
+            effective_max_duration = _DEFAULT_MAX_DURATION_SECONDS
+
+        if (
+            filters.min_duration is not None
+            and duration
+            and duration < filters.min_duration
+        ):
             return None
-        if filters.max_duration is not None and 0 < duration < filters.max_duration:
-            # 0 means "unknown" — keep those, reject only known-too-long
-            pass
-        if filters.max_duration is not None and duration > filters.max_duration:
+        # duration == 0 means "unknown" — pass through and let the
+        # corpus builder's post-download ffprobe decide. Known-too-long
+        # items are rejected here before the download queue.
+        if duration and duration > effective_max_duration:
             return None
 
         width = _safe_int(picked.get("width"))
@@ -271,12 +416,31 @@ class ArchiveOrgSource:
 # ----------------------------------------------------------------------
 
 
+def _looks_like_year(token: str) -> bool:
+    """True if token is a bare year or year-with-decade-suffix.
+
+    Examples: ``"1950"``, ``"1950s"``, ``"2026"``. Used by
+    ``_build_queries`` to exclude year tokens from the distinctive-
+    token picks, since Prelinger item titles rarely carry the year as
+    a searchable token.
+    """
+    bare = token.rstrip("s")
+    return bare.isdigit() and len(bare) == 4
+
+
 def _pick_video_file(files: list[dict]) -> Optional[dict]:
     """Pick the best playable video file from an Archive.org files list.
 
     Preference order is defined by `_VIDEO_FORMAT_PRIORITY`. Within a
-    format, we prefer the largest file (size as a quality proxy), and
-    reject obvious thumbnails / derivative animations.
+    format we first drop renditions that exceed `_MAX_FILE_SIZE_BYTES`,
+    then pick the largest of the survivors — size is a decent bitrate
+    proxy, so biggest-under-budget = best quality we can afford.
+
+    If no rendition in the preferred format fits the budget we fall
+    through to the next format, so a 2 GB h.264 master gracefully
+    degrades to a 40 MB 512Kb MPEG4 derivative rather than having the
+    whole item dropped from the corpus. Thumbnails and preview GIFs
+    are skipped regardless of format.
     """
     if not files:
         return None
@@ -297,8 +461,18 @@ def _pick_video_file(files: list[dict]) -> Optional[dict]:
         bucket = by_format.get(fmt)
         if not bucket:
             continue
-        bucket.sort(key=lambda f: _safe_int(f.get("size")), reverse=True)
-        return bucket[0]
+        affordable = [
+            f for f in bucket
+            if 0 < _safe_int(f.get("size")) <= _MAX_FILE_SIZE_BYTES
+        ]
+        if not affordable:
+            # Every rendition in this format is either too big or has
+            # no reported size. Fall through to the next format.
+            continue
+        affordable.sort(
+            key=lambda f: _safe_int(f.get("size")), reverse=True
+        )
+        return affordable[0]
     return None
 
 

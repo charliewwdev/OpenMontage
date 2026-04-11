@@ -973,6 +973,8 @@ class VideoCompose(BaseTool):
 
         output_path = Path(inputs.get("output_path", "renders/remotion_output.mp4"))
         output_path.parent.mkdir(parents=True, exist_ok=True)
+        # Absolutise so the CLI can resolve the output regardless of cwd.
+        output_path = output_path.resolve()
 
         # Deep-copy props so we don't mutate the original
         props = json.loads(json.dumps(composition_data))
@@ -1037,7 +1039,11 @@ class VideoCompose(BaseTool):
                 pass
 
         try:
-            self.run_command(cmd, timeout=600)
+            # Invoke from inside the composer dir so npx can resolve the
+            # local remotion binary via node_modules/.bin. Without this,
+            # Windows npx cannot locate the CLI and returns "could not
+            # determine executable to run".
+            self.run_command(cmd, timeout=600, cwd=composer_dir)
         except Exception as e:
             return ToolResult(success=False, error=f"Remotion render failed: {e}")
         finally:

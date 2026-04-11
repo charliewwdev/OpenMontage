@@ -24,6 +24,13 @@ tests/qa/output/
 # Project workspaces (generated assets, renders — all regenerable)
 projects/
 
+# Corpus directories (downloaded stock clips, thumbnails, embeddings —
+# regenerable from source APIs via corpus_builder). Explicit rule even
+# though most corpora live under projects/ since agents sometimes
+# build scratch corpora at the repo root.
+corpus/
+**/corpus/
+
 # User music library (personal royalty-free tracks — not part of repo)
 music_library/
 

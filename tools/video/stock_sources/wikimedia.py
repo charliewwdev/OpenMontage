@@ -20,6 +20,23 @@ _USER_AGENT = "OpenMontageBot/0.1 (https://github.com/charliewwdev/OpenMontage)"
 _COMMONS_LICENSE = "Wikimedia Commons (verify per-file license)"
 _HTML_TAG_RE = re.compile(r"<[^>]+>")
 
+# Stop words stripped from multi-term queries before the cascade runs.
+# Commons' CirrusSearch defaults to AND semantics across multi-word
+# queries, so each extra common token shrinks the result set fast.
+_STOP_WORDS = frozenset({
+    "the", "and", "for", "with", "that", "this", "from", "into",
+    "its", "their", "about", "over", "under", "while", "during",
+    "your", "you", "our", "are", "was", "were", "have", "has",
+})
+
+# Tokens that refer to other stock archives — useless on Commons and
+# will poison the cascade if they end up in top2_or because Commons
+# file names don't reference Prelinger or other archives. Keeps the
+# cascade parallel to ``archive_org.py``'s own source-hint stripping.
+_SOURCE_HINT_TOKENS = frozenset({
+    "prelinger", "archive", "archives", "stock", "footage",
+})
+
 
 class WikimediaSource:
     """Adapter for Wikimedia Commons media search."""
@@ -37,39 +54,59 @@ class WikimediaSource:
         return True
 
     def search(self, query: str, filters: SearchFilters) -> list[Candidate]:
+        """Search Commons via CirrusSearch, cascading from precise to broad.
+
+        Commons' search defaults to AND across multi-word queries, so
+        our first diagnostic pass against the P2 query set returned 0
+        video results for 10/10 queries — every query was too specific
+        to intersect Commons' relatively sparse video holdings.
+
+        The cascade (see ``_build_search_queries``) tries strict first,
+        then narrows to 2 distinctive tokens, then to 1 — returning the
+        first non-empty video result set.
+        """
         import requests  # lazy
 
-        params = {
-            "action": "query",
-            "format": "json",
-            "generator": "search",
-            "gsrsearch": _build_search_query(query, filters.kind),
-            "gsrnamespace": 6,
-            "gsrlimit": max(1, min(filters.per_page, 50)),
-            "gsroffset": max(0, (max(filters.page, 1) - 1) * max(1, min(filters.per_page, 50))),
-            "prop": "imageinfo|info",
-            "iiprop": "url|size|mime|extmetadata|mediatype",
-            "iiurlwidth": 640,
-            "inprop": "url",
-        }
+        for _label, search_text in _build_search_queries(query, filters.kind):
+            params = {
+                "action": "query",
+                "format": "json",
+                "generator": "search",
+                "gsrsearch": search_text,
+                "gsrnamespace": 6,
+                "gsrlimit": max(1, min(filters.per_page, 50)),
+                "gsroffset": max(0, (max(filters.page, 1) - 1) * max(1, min(filters.per_page, 50))),
+                "prop": "imageinfo|info",
+                "iiprop": "url|size|mime|extmetadata|mediatype",
+                "iiurlwidth": 640,
+                "inprop": "url",
+            }
 
-        r = requests.get(
-            _API_URL,
-            params=params,
-            headers={"User-Agent": _USER_AGENT},
-            timeout=30,
-        )
-        r.raise_for_status()
-        data = r.json()
-        pages = list(((data.get("query") or {}).get("pages") or {}).values())
-        pages.sort(key=lambda page: int(page.get("index", 0)))
+            try:
+                r = requests.get(
+                    _API_URL,
+                    params=params,
+                    headers={"User-Agent": _USER_AGENT},
+                    timeout=30,
+                )
+                r.raise_for_status()
+                data = r.json()
+            except Exception:
+                continue
+            pages = list(((data.get("query") or {}).get("pages") or {}).values())
+            if not pages:
+                continue
+            pages.sort(key=lambda page: int(page.get("index", 0)))
 
-        out: list[Candidate] = []
-        for page in pages:
-            cand = _page_to_candidate(page, filters)
-            if cand is not None:
-                out.append(cand)
-        return out
+            out: list[Candidate] = []
+            for page in pages:
+                cand = _page_to_candidate(page, filters)
+                if cand is not None:
+                    out.append(cand)
+            if out:
+                return out
+
+        return []
 
     def download(self, candidate: Candidate, out_path: Path) -> Path:
         import requests  # lazy
@@ -94,14 +131,65 @@ class WikimediaSource:
         return out_path
 
 
-def _build_search_query(query: str, kind: str) -> str:
+def _build_search_queries(query: str, kind: str) -> list[tuple[str, str]]:
+    """Return a cascade of search queries to try in preference order.
+
+    Commons' CirrusSearch defaults to AND semantics for multi-word
+    queries, so a 4-word descriptive query like
+    "1950s family watching television" intersects to 0 video hits.
+    We walk from specific to loose:
+
+    1. **full** — ``filetype:video <full query>``. Works when Commons
+       has a file whose name/description contains all the tokens
+       (e.g. "atomic bomb test civil defense" finds
+       "Operation Cue 1955").
+    2. **top2_or** — ``filetype:video <token1> <token2>`` using the
+       two longest non-year tokens. AND-combines at the query level
+       but with only 2 terms, it's loose enough to hit most
+       documentary queries.
+    3. **single_best** — ``filetype:video <longest_token>``.
+       Last-resort single-token search. Noisy but non-empty.
+
+    Year tokens are excluded from the distinctive-token picks — they
+    rarely correlate with file name matches on Commons.
+    """
     user_query = query.strip()
-    kind = (kind or "video").lower()
-    if kind == "video":
-        return f"filetype:video {user_query}".strip()
-    if kind == "image":
-        return f"filetype:image {user_query}".strip()
-    return user_query
+    kind_l = (kind or "video").lower()
+
+    prefix = "filetype:video" if kind_l == "video" else (
+        "filetype:image" if kind_l == "image" else ""
+    )
+
+    def _wrap(text: str) -> str:
+        return f"{prefix} {text}".strip() if prefix else text
+
+    if not user_query:
+        return [("default", _wrap(""))]
+
+    tokens = [
+        t for t in user_query.split()
+        if len(t) >= 3
+        and t.lower() not in _STOP_WORDS
+        and t.lower() not in _SOURCE_HINT_TOKENS
+    ]
+    non_year = [t for t in tokens if not _looks_like_year(t)]
+
+    queries: list[tuple[str, str]] = [("full", _wrap(user_query))]
+
+    if len(non_year) >= 2:
+        top2 = sorted(non_year, key=lambda t: -len(t))[:2]
+        queries.append(("top2_or", _wrap(f"{top2[0]} {top2[1]}")))
+
+    if non_year:
+        best = max(non_year, key=len)
+        queries.append(("single_best", _wrap(best)))
+
+    return queries
+
+
+def _looks_like_year(token: str) -> bool:
+    bare = token.rstrip("s")
+    return bare.isdigit() and len(bare) == 4
 
 
 def _page_to_candidate(page: dict[str, Any], filters: SearchFilters) -> Candidate | None:

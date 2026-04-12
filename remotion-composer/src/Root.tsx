@@ -220,6 +220,24 @@ export const Root: React.FC = () => {
           fadeOutSeconds: 0.6,
         } as EndTagProps}
       />
+      <Composition
+        id="EndTagOverlay"
+        component={EndTag}
+        // 8.19s at 30fps = 246 frames. Render CLI can override via --props.
+        // Intended to be composited on top of body footage, not concat'd.
+        durationInFrames={246}
+        fps={30}
+        width={1920}
+        height={1080}
+        defaultProps={{
+          text: "EARN THE LIGHT.",
+          palette: "cool_offwhite_on_black",
+          fadeInSeconds: 1.0,
+          holdSeconds: 5.69,
+          fadeOutSeconds: 1.5,
+          overlay: true,
+        } as EndTagProps}
+      />
     </>
   );
 };

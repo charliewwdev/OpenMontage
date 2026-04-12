@@ -13,6 +13,12 @@ export interface EndTagProps {
   fadeInSeconds?: number;
   holdSeconds?: number;
   fadeOutSeconds?: number;
+  // Overlay mode: render on a transparent background so the tag can be
+  // composited on top of the body footage in post, instead of being
+  // concatenated as a standalone black card. When `overlay=true` the
+  // AbsoluteFill drops its background fill — caller is responsible for
+  // rendering with an alpha-capable codec (VP9/WebM or ProRes 4444).
+  overlay?: boolean;
 }
 
 const PALETTES = {
@@ -49,6 +55,7 @@ export const EndTag: React.FC<EndTagProps> = ({
   fadeInSeconds = 0.6,
   holdSeconds = 4.3,
   fadeOutSeconds = 0.6,
+  overlay = false,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -113,7 +120,7 @@ export const EndTag: React.FC<EndTagProps> = ({
   return (
     <AbsoluteFill
       style={{
-        backgroundColor: pal.background,
+        backgroundColor: overlay ? "transparent" : pal.background,
         justifyContent: "center",
         alignItems: "center",
       }}

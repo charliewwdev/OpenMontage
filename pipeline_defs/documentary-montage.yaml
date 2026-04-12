@@ -55,13 +55,13 @@ stages:
       - Tone register is ONE value from the fixed list
       - Duration and shape are concrete
       - Music plan is present (MANDATORY — silent only if user explicitly opted out)
-      - End-tag plan is present (MANDATORY — one philosophical closing line, rendered as Remotion end-card, unless user explicitly opted out)
+      - End-tag plan is present (MANDATORY — one philosophical closing line, rendered as Remotion end-card, default mode "overlay" on final scenes, unless user explicitly opted out)
       - Narration plan is present (narration itself is OPTIONAL — absence is fine if music + visuals + end-tag carry the register)
     success_criteria:
       - Schema-valid brief artifact
       - thematic_question present in metadata
       - music_plan present in metadata (source may be `none` ONLY with explicit user opt-out note)
-      - end_tag_plan present in metadata (text, palette, duration — may be `null` ONLY with explicit user opt-out note)
+      - end_tag_plan present in metadata (text, palette, duration, mode — may be `null` ONLY with explicit user opt-out note)
 
   - name: scene_plan
     skill: pipelines/documentary-montage/scene-director
@@ -129,8 +129,8 @@ stages:
       - No two adjacent cuts share subject AND scale
       - Transition vocabulary is at most 4 distinct values
       - Music config is present (MANDATORY — silent only if brief.metadata.music_plan.source=none with explicit opt-out note)
-      - End-tag cut is present at the tail (MANDATORY — rendered separately via Remotion, concatenated after body, unless brief.metadata.end_tag_plan is null with explicit opt-out note)
-      - total_duration_seconds matches sum of cut durations INCLUDING the end-tag hold
+      - "End-tag timing is present (MANDATORY — overlay mode: end_tag.offset_seconds in edit_decisions; concat mode: end-tag appended after body. Unless brief.metadata.end_tag_plan is null with explicit opt-out note)"
+      - total_duration_seconds matches sum of cut durations (body only — end-tag overlay does not extend duration; concat mode adds tag duration)
       - Every cut has a reason
     success_criteria:
       - Schema-valid edit_decisions artifact
@@ -160,15 +160,16 @@ stages:
     checkpoint_required: true
     human_approval_default: false
     review_focus:
-      - Output duration matches planned within 1s (body + end-tag inclusive)
+      - Output duration matches planned within 1s (body duration for overlay mode; body + tag for concat mode)
       - Resolution matches target_platform canvas
       - Uniform LUT applied across the timeline
       - Music is mixed in (MANDATORY — silent output only with explicit user opt-out recorded in brief)
-      - End-tag MP4 rendered via Remotion and concatenated at the tail (MANDATORY — absence only with explicit opt-out)
-      - First and last frames verified (last frame must be the end-tag card unless opted out)
+      - "End-tag rendered via Remotion (MANDATORY — absence only with explicit opt-out). Default mode: overlay (ProRes 4444 with alpha composited on final scenes). Fallback: concat (opaque card appended after body)."
+      - "Overlay mode: extract a frame from the overlay region and verify text is visible over footage, not over black. Concat mode: last frame must be the end-tag card."
       - No silent fallback from a motion-led promise
     success_criteria:
       - Schema-valid render_report artifact
       - Output file exists and passes ffprobe validation
       - render_report.end_tag_rendered = true (or explicit opt-out)
+      - render_report.end_tag_mode = "overlay" or "concat"
       - render_report.music_mixed = true (or explicit opt-out)

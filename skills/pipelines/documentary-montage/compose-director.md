@@ -142,13 +142,12 @@ and L-cut sfx layers. Your job is to execute them faithfully:
 
 Do NOT add ambient noise "to fill the gap".
 
-### 4b. Render The End-Tag Via Remotion, Concatenate After Body
+### 4b. Render The End-Tag Via Remotion
 
-The end-tag is rendered **separately** from the FFmpeg body and
-concatenated at the tail. This is deliberate — it sidesteps the
-`video_compose.render` scene-adapter mismatch and keeps the two
-render engines (FFmpeg for footage, Remotion for typography) cleanly
-separated.
+The end-tag is rendered **separately** from the FFmpeg body via
+Remotion. This keeps the two render engines (FFmpeg for footage,
+Remotion for typography) cleanly separated. The compositing method
+depends on `brief.metadata.end_tag_plan.mode`.
 
 Read `brief.metadata.end_tag_plan`:
 
@@ -158,19 +157,79 @@ Read `brief.metadata.end_tag_plan`:
   "palette": "warm_ivory_on_black",
   "duration_seconds": 5.5,
   "render_engine": "remotion",
-  "component": "EndTag"
+  "component": "EndTag",
+  "mode": "overlay"
 }
 ```
 
-Execution path:
+#### Path A — Overlay Mode (default)
+
+The tag fades in over the final scenes of the body footage. This is
+the default and produces a more cinematic result — the typography
+appears on top of live footage rather than cutting to a black card.
+
+**Execution:**
 
 1. Compose the body via FFmpeg (cuts + LUT + music + silence window).
-   Save as `projects/<name>/renders/body.mp4`.
-2. Render the end-tag via Remotion CLI with component-specific props:
-   `npx remotion render EndTag --props='{"text":"...", "palette":"...","durationInFrames":132}' projects/<name>/renders/end_tag.mp4`
+   Save as `projects/<name>/renders/body.mp4`. Note the body fps.
+2. Compute `durationInFrames = round(duration_seconds × body_fps)`.
+3. Render the end-tag with alpha via Remotion CLI:
+   ```bash
+   npx remotion render src/index.tsx EndTagOverlay \
+     projects/<name>/renders/end_tag_overlay.mov \
+     --codec=prores --prores-profile=4444 \
+     --pixel-format=yuva444p10le --image-format=png \
+     --props='{"text":"...","palette":"...","overlay":true,
+               "fadeInSeconds":1.0,"holdSeconds":3.0,"fadeOutSeconds":1.5}'
+   ```
+   Use the `EndTagOverlay` composition with `overlay: true`. This
+   produces a ProRes 4444 MOV with a real alpha channel
+   (pix_fmt=yuva444p12le). Canvas must match body canvas.
+4. Compute the overlay offset:
+   - Read `edit_decisions.end_tag.offset_seconds` if present.
+   - Otherwise auto-compute: `offset = body_duration - tag_duration`.
+     The tag's fade-out should align with the body's closing fade-out.
+5. Composite via FFmpeg overlay with `-itsoffset`:
+   ```bash
+   ffmpeg -y \
+     -i body.mp4 \
+     -itsoffset {offset} -i end_tag_overlay.mov \
+     -filter_complex "[0:v][1:v]overlay=0:0:format=auto:eof_action=pass[v]" \
+     -map "[v]" -map "0:a" \
+     -c:v libx264 -preset medium -crf 18 -pix_fmt yuv420p \
+     -c:a aac -b:a 192k \
+     projects/<name>/renders/final.mp4
+   ```
+   `eof_action=pass` means the body video continues after the overlay
+   ends. The overlay's own alpha handles the fade-in/hold/fade-out.
+
+**Verification:** Extract a frame from the overlay region (e.g.
+`offset + 2s`) and confirm text is visible over footage, not over
+black. If the frame shows a black background behind the text, the
+alpha channel was lost — re-render with `--image-format=png`.
+
+#### Path B — Concat Mode
+
+Classic tail-card: opaque black card appended after the body. Use
+this only when `end_tag_plan.mode == "concat"`.
+
+**Execution:**
+
+1. Compose the body as above.
+2. Render the end-tag as opaque MP4:
+   ```bash
+   npx remotion render src/index.tsx EndTag \
+     projects/<name>/renders/end_tag.mp4 \
+     --props='{"text":"...","palette":"...","durationInFrames":132}'
+   ```
    (5.5s at 24fps = 132 frames). Canvas must match body canvas.
-3. Concat body + end_tag with `ffmpeg -f concat -safe 0 -i list.txt -c copy final.mp4`
-   or, if encoders don't match, re-encode with the documentary spec.
+3. Concat body + end_tag:
+   ```bash
+   ffmpeg -f concat -safe 0 -i list.txt -c copy final.mp4
+   ```
+   Or re-encode if codecs don't match.
+
+#### Common Rules (Both Modes)
 
 **End-tag is MANDATORY.** The ONLY way to skip it is an explicit user
 opt-out recorded as `end_tag_plan: null` with an `end_tag_opt_out_reason`.
@@ -179,7 +238,9 @@ a contract violation. Stop and surface before finalizing.
 
 Record in `render_report`:
 - `end_tag_rendered: true | false`
-- `end_tag_path: "projects/<name>/renders/end_tag.mp4"`
+- `end_tag_mode: "overlay" | "concat"`
+- `end_tag_path: "projects/<name>/renders/end_tag_overlay.mov"` (or `.mp4` for concat)
+- `end_tag_offset_seconds: <number>` (overlay mode only)
 - `end_tag_text: "..."` (for audit trail)
 
 If the brief says "no music" and the edit correctly has no music

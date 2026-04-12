@@ -225,6 +225,32 @@ by layering the outgoing clip's audio as an SFX entry in
 Documentary montages with L-cuts feel 50% more coherent than ones
 without. Use them on the 3-4 hardest transitions in the piece.
 
+### 8b. Place The End-Tag Overlay
+
+If `brief.metadata.end_tag_plan.mode == "overlay"` (the default), the
+end-tag will be composited on top of the final body footage at compose
+time. The edit director's job is to decide **when** the tag appears.
+
+Compute the offset: `offset_seconds = body_duration - tag_duration`.
+This makes the tag's fade-out align with the body's closing fade-out
+(the last cut's `transition_out: fade_out`). If the final cut's hold
+is shorter than the tag duration, start the tag earlier so it overlaps
+the second-to-last cut as well — this is fine and often looks better.
+
+Record in `edit_decisions.end_tag`:
+
+```json
+{
+  "end_tag": {
+    "offset_seconds": 84.5,
+    "notes": "Tag starts at body_duration - tag_duration. Aligns tag fade-out with final cut fade-out."
+  }
+}
+```
+
+If `mode == "concat"`, omit this section — the compose-director will
+append the tag after the body without needing a timing offset.
+
 ### 9. Emit The Edit Decisions
 
 Canonical shape for this pipeline:
@@ -265,6 +291,10 @@ Canonical shape for this pipeline:
       "fade_out_seconds": 4.0,
       "ducking": false
     }
+  },
+  "end_tag": {
+    "offset_seconds": 84.5,
+    "notes": "Tag starts at body_duration - tag_duration. Aligns tag fade-out with final cut fade-out."
   },
   "metadata": {
     "pipeline": "documentary-montage",

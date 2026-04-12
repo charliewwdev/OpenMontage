@@ -95,7 +95,14 @@ defer this — it becomes an expensive surprise at the asset stage.
 Every documentary-montage film closes on a philosophical end-tag — one
 short, abstract line that gives the whole thing meaning. It is rendered
 as a Remotion end-card ("shining underlined tag" register — bold weight,
-letter-spaced, animated underline) and concatenated after the last clip.
+letter-spaced, animated underline).
+
+**Default mode is `"overlay"`** — the tag fades in over the final scenes
+of the body footage, so it feels like part of the film rather than a
+separate card tacked on at the end. The alternative is `"concat"` which
+appends a standalone black-card after the body. Use concat only when the
+user explicitly asks for a separated title card, or when the final
+footage is too visually busy for legible text overlay.
 
 **End-tag is MANDATORY.** The ONLY way out is an explicit user opt-out
 recorded as `end_tag_plan: null` with an `end_tag_opt_out_reason` field.
@@ -110,12 +117,26 @@ Expected shape:
     "palette": "warm_ivory_on_black",
     "duration_seconds": 5.5,
     "render_engine": "remotion",
-    "component": "EndTag"
+    "component": "EndTag",
+    "mode": "overlay"
   }
 }
 ```
 
-Keep the copy to 3-9 words. It must be a thesis, not a summary.
+Fields:
+- `text` — 3-9 words. A thesis, not a summary.
+- `palette` — `"cool_offwhite_on_black"` or `"warm_ivory_on_black"`.
+- `duration_seconds` — total tag screen time (fade-in + hold + fade-out).
+  5-8s is the sweet spot.
+- `render_engine` — always `"remotion"`.
+- `component` — always `"EndTag"`.
+- `mode` — `"overlay"` (default) or `"concat"`.
+  - **overlay**: tag rendered as ProRes 4444 with alpha → composited on
+    final body footage via FFmpeg overlay filter. Tag fades appear over
+    the last N seconds of live footage. The body's own fade-out and the
+    tag's fade-out should align.
+  - **concat**: tag rendered as opaque MP4 → appended after body via
+    FFmpeg concat. Total output duration = body + tag.
 
 ### 6. Note Narration Intent (OPTIONAL)
 

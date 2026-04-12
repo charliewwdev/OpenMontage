@@ -34,10 +34,17 @@ corpus/
 # User music library (personal royalty-free tracks — not part of repo)
 music_library/
 
-# Environment
+# Environment & credentials
 .env
 .env.local
 *.env
+.youtube-token.json
+
+# Stray media downloads (test/scratch clips left in repo root)
+pexels_video_*.mp4
+
+# Scratch/debug scripts
+scratch/
 
 # Internal docs (strategy, handoffs, playbooks — not shipped)
 internal/

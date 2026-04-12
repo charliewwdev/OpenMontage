@@ -11,6 +11,7 @@ import {
   calculateTitledVideoMetadata,
 } from "./TitledVideo";
 import { EndTag, EndTagProps } from "./components/EndTag";
+import { HeroTitle } from "./components/HeroTitle";
 
 // ---------------------------------------------------------------------------
 // Theme System — prevents every video from looking like dark fintech
@@ -203,6 +204,18 @@ export const Root: React.FC = () => {
           accentColor: "#F5C470",
         }}
         calculateMetadata={calculateTitledVideoMetadata}
+      />
+      <Composition
+        id="HeroTitle"
+        component={HeroTitle}
+        durationInFrames={30 * 17}
+        fps={30}
+        width={1920}
+        height={1080}
+        defaultProps={{
+          title: "THE CALIBRATORS",
+          subtitle: "The People Who Define Reality",
+        }}
       />
       <Composition
         id="EndTag"

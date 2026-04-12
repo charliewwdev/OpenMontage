@@ -23,6 +23,7 @@
 <p align="center"><strong>Follow The Build</strong></p>
 
 <p align="center">
+  <a href="https://www.youtube.com/@OpenMontage"><img src="https://img.shields.io/badge/YouTube-%40OpenMontage-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube"></a>
   <a href="https://x.com/charliewwdevailabs"><img src="https://img.shields.io/badge/X-%40charliewwdevailabs-111111?style=for-the-badge&logo=x&logoColor=white" alt="X"></a>
   <a href="https://github.com/charliewwdev/OpenMontage/discussions"><img src="https://img.shields.io/badge/Community-GitHub%20Discussions-0b1220?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Discussions"></a>
 </p>
@@ -68,6 +69,10 @@ Turn your AI coding assistant into a full video production studio. Describe what
 </div>
 
 > **"Into the Abyss"** — a deep ocean exploration rendered in anime style. Bioluminescent gardens, coral cathedrals, and creatures of light — 12 FLUX-generated images with sparkle and mist particle overlays, light-ray effects, smooth camera motion, and ambient oceanic soundtrack. Total cost: **$0.15**. Zero video generation APIs needed.
+
+<p align="center">
+  <a href="https://www.youtube.com/@OpenMontage?sub_confirmation=1"><strong>Subscribe to @OpenMontage on YouTube</strong></a> to see new videos as they ship — every video includes the full prompt, pipeline, tools used, and cost so you can reproduce it yourself.
+</p>
 
 ---
 

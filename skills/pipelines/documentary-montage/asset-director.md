@@ -3,12 +3,44 @@
 ## When To Use
 
 The shot list exists. You now have to actually go out and find the
-clips that fill each slot. This is a two-step operation:
+clips that fill each slot. There are two paths:
+
+### Standard Path: Corpus + CLIP Retrieval
 
 1. **Build the corpus** — fan the scene director's queries out across
    Pexels / Archive.org / NASA / Wikimedia / Unsplash and download/embed the candidates.
 2. **Pick per slot** — run CLIP retrieval against the corpus with each
    slot description and choose one winner per slot.
+
+Best for: 50+ slot productions, automated diversification, hands-off
+slot filling where CLIP similarity ranking matters.
+
+### Fast Path: Direct Search (Recommended for act-by-act production)
+
+1. **Search and download** — use `direct_clip_search` to fan out
+   across all available providers and download 2-3 clips per query.
+   No CLIP embeddings, no corpus index, no .npy files.
+2. **Inspect thumbnails** — browse the extracted thumbnails (or use a
+   sub-agent) to verify visual matches against slot descriptions.
+3. **Map clips to slots** — manually assign the best clip to each slot
+   based on visual inspection.
+
+Best for: act-by-act production with user review between acts, fast
+iteration, productions under 30 slots per act.
+
+**Cross-act reuse:** When producing act-by-act, clips downloaded for
+earlier acts can fill slots in later acts. Point the agent at
+previously downloaded directories and reuse clips that match new slot
+descriptions. This saved 40-50% of download time in production.
+
+**Parallel workflow:** While `direct_clip_search` runs in background,
+simultaneously generate TTS narration, build audio mixes, create
+subtitles, and search for music. This dramatically reduces total
+production time.
+
+**Fallback:** If the fast path yields poor visual matches for specific
+slots, use `corpus_builder` + `clip_search` for just those slots.
+The two approaches are not mutually exclusive.
 
 The output is an `asset_manifest` mapping every slot to exactly one
 clip with full provenance.
@@ -20,8 +52,9 @@ clip with full provenance.
 | Schema | `schemas/artifacts/asset_manifest.schema.json` | Artifact validation |
 | Prior artifact | `state.artifacts["scene_plan"]["scene_plan"]` | Slot descriptions + queries + preferred_sources |
 | Prior artifact | `state.artifacts["idea"]["brief"]` | `era_mix`, `sources_allowed`, `music_plan` |
-| Tool | `corpus_builder` | Populates the retrieval index |
-| Tool | `clip_search` | Ranks clips against slot descriptions |
+| Tool (fast path) | `direct_clip_search` | Lightweight multi-provider search + download |
+| Tool (standard path) | `corpus_builder` | Populates the retrieval index with CLIP embeddings |
+| Tool (standard path) | `clip_search` | Ranks clips against slot descriptions |
 | Tool (optional) | `music_gen`, user's `music_library/` | Score bed |
 
 ## Mental Model
@@ -39,7 +72,79 @@ Three rules that follow from that:
 3. **Pick per slot, not per clip.** Every clip only belongs to one
    slot in the final edit. Use `exclude_ids` to prevent double-use.
 
-## Process
+## Process — Fast Path (Direct Search)
+
+Use this when producing act-by-act with user review between acts, or
+when the total slot count is under ~30.
+
+### F1. Run `direct_clip_search` In Background
+
+Fire off the search while you work on narration/audio/subtitles in
+parallel:
+
+```python
+direct_clip_search.execute({
+    "output_dir": "projects/<name>/assets/video/raw_act2",
+    "queries": [
+        {"query": "cesium atomic clock laboratory", "slot_id": "slot_01"},
+        {"query": "laser beam laboratory optics",   "slot_id": "slot_02"},
+        {"query": "satellite dish night sky",        "slot_id": "slot_03"},
+        # ... one per slot
+    ],
+    "sources": ["pexels", "archive_org", "wikimedia"],  # or omit for all available
+    "clips_per_query": 3,
+    "filters": {
+        "min_duration": 3,
+        "max_duration": 40,
+        "orientation": "landscape",
+        "min_width": 1280,
+    },
+})
+```
+
+**Key parameters:**
+- `clips_per_query=3` is the sweet spot. Enough choice, fast download.
+- Omit `sources` to search all available providers automatically.
+- Set `skip_existing=true` (default) to avoid re-downloading on retry.
+
+### F2. Inspect Thumbnails
+
+Browse `<output_dir>/thumbnails/` to verify each clip. Use a sub-agent
+to read thumbnail images for visual confirmation if needed.
+
+For each slot, pick the best-matching clip from the downloaded set.
+
+### F3. Cross-Act Reuse
+
+When working on Acts 2-5, check clips from earlier acts before
+downloading new ones. Many thematic overlaps exist across acts:
+
+- Laboratory footage (microscopes, lasers, scientists)
+- Technology shots (servers, satellites, circuits)
+- Nature/abstract footage (mountains, space, time-lapse)
+
+Point the agent at previous act directories and map existing clips
+to new slots before running new searches.
+
+### F4. Fill Gaps With Targeted Searches
+
+If specific slots have no good match after the initial search:
+1. Rewrite the query (more concrete nouns, different vocabulary).
+2. Run `direct_clip_search` with just those queries.
+3. If still no match, fall back to `corpus_builder` + `clip_search`
+   for those specific slots only.
+
+### F5. Record The Asset Manifest
+
+Same format as the standard path (see step 9 below). The `source_tool`
+field should be `"direct_clip_search"` instead of `"corpus_builder"`.
+
+---
+
+## Process — Standard Path (Corpus + CLIP Retrieval)
+
+Use this for large productions (50+ slots), when you need automated
+CLIP-based ranking, or when the fast path yields poor matches.
 
 ### 1. Resolve The Corpus Directory
 

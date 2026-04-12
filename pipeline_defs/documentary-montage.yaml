@@ -90,28 +90,30 @@ stages:
       - brief
     produces:
       - asset_manifest
-    required_tools:
+    required_tools: []  # fast path needs only direct_clip_search; standard path needs corpus_builder + clip_search
+    optional_tools:
+      - direct_clip_search
       - corpus_builder
       - clip_search
-    optional_tools:
       - music_gen
     tools_available:
+      - direct_clip_search
       - corpus_builder
       - clip_search
       - music_gen
     checkpoint_required: true
     human_approval_default: false
     review_focus:
-      - Corpus size is at least 8x the slot count
-      - Every slot has exactly one picked clip with score >= 0.22
-      - No clip_id is picked for two slots (exclude_ids enforced)
-      - diversify ran clean on the final timeline
-      - rejected_picks log has reasons for passes
+      - Every slot has exactly one picked clip
+      - No clip_id is picked for two slots
       - Provenance (provider, original_url, license) present on every asset
+      - "Standard path: corpus size >= 8x slot count, scores >= 0.22, diversify ran clean"
+      - "Fast path: thumbnails inspected, cross-act reuse noted, gaps filled"
+      - rejected_picks log has reasons for passes (standard path)
     success_criteria:
       - Schema-valid asset_manifest artifact
       - One video asset per scene slot
-      - metadata.corpus_stats present
+      - metadata.corpus_stats present (standard path) OR metadata.search_stats present (fast path)
 
   - name: edit
     skill: pipelines/documentary-montage/edit-director

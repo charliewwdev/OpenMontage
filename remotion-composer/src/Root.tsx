@@ -13,6 +13,7 @@ import {
 import { EndTag, EndTagProps } from "./components/EndTag";
 import { HeroTitle } from "./components/HeroTitle";
 import { ProductReveal, ProductRevealProps } from "./components/ProductReveal";
+import { CaptionOverlay, WordCaption } from "./components/CaptionOverlay";
 
 // ---------------------------------------------------------------------------
 // Theme System — prevents every video from looking like dark fintech
@@ -249,6 +250,21 @@ export const Root: React.FC = () => {
           closer: "Less is nothing.",
           accentColor: "#00D4FF",
         } as ProductRevealProps}
+      />
+      <Composition
+        id="CaptionOverlayOnly"
+        component={CaptionOverlay}
+        durationInFrames={30 * 300}
+        fps={30}
+        width={1920}
+        height={1080}
+        defaultProps={{
+          words: [] as WordCaption[],
+          wordsPerPage: 3,
+          fontSize: 58,
+          highlightColor: "#FACC15",
+          backgroundColor: "rgba(15, 23, 42, 0.75)",
+        }}
       />
       <Composition
         id="EndTag"

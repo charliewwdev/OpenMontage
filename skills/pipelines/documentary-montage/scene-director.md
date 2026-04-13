@@ -168,6 +168,41 @@ queries in period-appropriate vocabulary ("commuter", "housewife",
 If `era_mix = "any"`, mix sources per slot — the scene director
 decides which slot gets which source based on the beat's meaning.
 
+#### Children's / Fairy-Tale Content
+
+When the brief's `tone` or `target_audience` indicates children's
+content (fairy tale, bedtime story, kids' explainer, animated story),
+**switch the visual strategy from real footage to AI-generated fantasy
+clips on Pixabay**.
+
+Pixabay's community library contains thousands of AI-generated fantasy
+animations (glowing forests, enchanted landscapes, magical creatures)
+that dramatically outperform real footage for children's engagement.
+
+**Query rewriting rules for children's content:**
+
+| Slot intent | Real-footage query | Fantasy rewrite |
+|-------------|-------------------|-----------------|
+| Garden / nature | `garden flowers morning` | `enchanted fairy tale garden glowing magical` |
+| Insects / creatures | `caterpillar leaf close up` | `fairy tale caterpillar magical forest glowing` |
+| Transformation / cocoon | `chrysalis butterfly cocoon` | `magical chrysalis enchanted tree glowing` |
+| Butterfly / flight | `butterfly flying sky` | `fantasy butterfly glowing magical wings` |
+| Sunset / landscape | `sunset landscape golden` | `enchanted fantasy landscape magical sunset` |
+| Rain / weather | `rain leaves gentle` | `fairy tale rain magical forest enchanted` |
+| Night sky / stars | `milky way timelapse` | `fantasy night sky magical stars enchanted` |
+| Ocean / water | `river water golden` | `magical underwater world fairy tale` |
+| Mountains / aerial | `mountain peaks golden` | `fantasy mountain castle fairy tale magical` |
+| Forest / trees | `forest path morning` | `fairy tale mushroom forest glowing enchanted` |
+
+**Source routing:** Set `preferred_sources: ["pixabay_video"]` for ALL
+slots. Pixabay is the only free source with a deep AI-generated fantasy
+library. Do not mix real footage with fantasy — the style clash breaks
+immersion for children.
+
+**Keywords that surface AI fantasy content:** `fairy tale`, `fantasy`,
+`enchanted`, `magical`, `glowing`, `dreamy`, `mystical`, `fairy`,
+`enchanted forest`, `magical world`.
+
 ### 6. Mark Hero Slots
 
 Every montage has 2-3 slots the whole piece depends on: the opening

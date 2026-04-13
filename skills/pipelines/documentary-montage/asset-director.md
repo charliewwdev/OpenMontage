@@ -74,6 +74,46 @@ Three rules that follow from that:
 3. **Pick per slot, not per clip.** Every clip only belongs to one
    slot in the final edit. Use `exclude_ids` to prevent double-use.
 
+## Children's / Fairy-Tale Content — Source Override
+
+When the scene plan's `metadata.tone` or `metadata.target_audience`
+indicates children's content (fairy tale, bedtime story, kids'
+explainer, animated story), **override normal source routing** and
+acquire exclusively from Pixabay Video.
+
+### Why Pixabay Video Only
+
+Pixabay's community library contains thousands of AI-generated fantasy
+animations — glowing forests, enchanted landscapes, magical creatures —
+uploaded by creators using Midjourney/Stable Diffusion video workflows.
+These dramatically outperform real footage for children's engagement.
+No other free source has comparable depth in this style.
+
+### Acquisition Rules
+
+1. **Source lock.** Set `sources: ["pixabay_video"]` for ALL queries.
+   Do not mix real footage providers (Pexels, Dareful, etc.) with
+   fantasy clips — the style clash breaks immersion for children.
+
+2. **Query rewriting.** The scene director will have already rewritten
+   slot descriptions for fantasy style. If you need to write fallback
+   queries, prepend fantasy keywords:
+   - Magic keywords: `fairy tale`, `fantasy`, `enchanted`, `magical`,
+     `glowing`, `dreamy`, `mystical`, `fairy`, `enchanted forest`,
+     `magical world`
+   - Example: slot needs "caterpillar on leaf" → query
+     `"fairy tale caterpillar magical forest glowing"`
+
+3. **Visual consistency check.** After downloading, verify that ALL
+   clips share the AI-generated fantasy aesthetic. Reject any clip
+   that looks like real footage — even if the CLIP score is higher.
+   A single real clip in a fantasy montage breaks the spell.
+
+4. **Fallback.** If Pixabay returns no fantasy results for a slot,
+   rewrite the query with different fantasy keywords before trying
+   broader terms. Two rewrites per slot. If still empty, flag the
+   slot to the user — do not silently substitute real footage.
+
 ## Process — Fast Path (Direct Search)
 
 Use this when producing act-by-act with user review between acts, or

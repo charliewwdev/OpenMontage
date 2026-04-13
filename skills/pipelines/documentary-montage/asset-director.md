@@ -8,7 +8,9 @@ clips that fill each slot. There are two paths:
 ### Standard Path: Corpus + CLIP Retrieval
 
 1. **Build the corpus** — fan the scene director's queries out across
-   Pexels / Archive.org / NASA / Wikimedia / Unsplash and download/embed the candidates.
+   all available stock sources (Pexels, Pixabay Video, Coverr, Mixkit,
+   Archive.org, NARA, Library of Congress, Pond5 PD, Videvo, NASA, ESA,
+   JAXA, NOAA, Dareful, Wikimedia, Unsplash) and download/embed the candidates.
 2. **Pick per slot** — run CLIP retrieval against the corpus with each
    slot description and choose one winner per slot.
 
@@ -91,7 +93,7 @@ direct_clip_search.execute({
         {"query": "satellite dish night sky",        "slot_id": "slot_03"},
         # ... one per slot
     ],
-    "sources": ["pexels", "archive_org", "wikimedia"],  # or omit for all available
+    "sources": ["pexels", "pixabay_video", "coverr", "mixkit", "archive_org"],  # or omit for all available
     "clips_per_query": 3,
     "filters": {
         "min_duration": 3,

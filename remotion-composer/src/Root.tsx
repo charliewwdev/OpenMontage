@@ -12,6 +12,7 @@ import {
 } from "./TitledVideo";
 import { EndTag, EndTagProps } from "./components/EndTag";
 import { HeroTitle } from "./components/HeroTitle";
+import { ProductReveal, ProductRevealProps } from "./components/ProductReveal";
 
 // ---------------------------------------------------------------------------
 // Theme System — prevents every video from looking like dark fintech
@@ -216,6 +217,38 @@ export const Root: React.FC = () => {
           title: "THE CALIBRATORS",
           subtitle: "The People Who Define Reality",
         }}
+      />
+      <Composition
+        id="ProductReveal"
+        component={ProductReveal}
+        durationInFrames={30 * 8}
+        fps={30}
+        width={1280}
+        height={720}
+        defaultProps={{
+          productImage: "airnothing/product.png",
+          productName: "AirNothing Pro Max Ultra",
+          price: "Starting at $999",
+          tagline: "Nothing included.",
+          closer: "Less is nothing.",
+          accentColor: "#00D4FF",
+        } as ProductRevealProps}
+      />
+      <Composition
+        id="ProductRevealVertical"
+        component={ProductReveal}
+        durationInFrames={30 * 8}
+        fps={30}
+        width={720}
+        height={1280}
+        defaultProps={{
+          productImage: "airnothing/product.png",
+          productName: "AirNothing Pro Max Ultra",
+          price: "Starting at $999",
+          tagline: "Nothing included.",
+          closer: "Less is nothing.",
+          accentColor: "#00D4FF",
+        } as ProductRevealProps}
       />
       <Composition
         id="EndTag"

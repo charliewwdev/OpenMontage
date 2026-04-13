@@ -145,8 +145,19 @@ based on what footage lives where:
 | Source | Strengths | Use when |
 |--------|-----------|----------|
 | `pexels` | Modern HD footage, clean shots, people, cities, nature | Default for modern/any era |
+| `pixabay_video` | Large community library, nature, people, technology, lifestyle | Gap-fills when Pexels misses; broad general footage |
+| `coverr` | Curated cinematic B-roll, nature, urban, abstract backgrounds | High-quality establishing shots, mood-setters, modern lifestyle |
+| `mixkit` | Curated HD/4K by Envato, nature, business, technology | Premium-feel B-roll, clean nature footage, no attribution needed |
 | `archive_org` | Prelinger home movies, mid-century educational film, 1940s-1980s texture | Vintage, wry, dreamlike, anything nostalgic |
+| `nara` | U.S. National Archives — WWII, Cold War, Apollo, civil rights, presidential | Historical American documentary, military, government, space race |
+| `loc` | Library of Congress — early cinema, newsreels, cultural recordings | Pre-1928 public domain footage, American history, folk traditions |
+| `pond5_pd` | Pond5 Public Domain — WWI/WWII, early cinema, historical speeches | Archival/vintage footage, Méliès, Edison, newsreels |
+| `videvo` | 90K+ free clips, nature, aerial, city, abstract, time-lapses | Large free library, complements Pexels with different contributors |
 | `nasa` | Earth-from-orbit, astronomy, flight, scale imagery | Reverent, anything about scale, space, planet, flight |
+| `esa` | European space missions, Hubble/Webb imagery, Earth observation | European space content, complements NASA for non-U.S. missions |
+| `jaxa` | Japanese space missions, Hayabusa, ISS Kibo module, H-IIA rockets | Asian space content, unique angle on space exploration |
+| `noaa` | Deep-sea ROV footage, marine life, coral reefs, weather, hurricanes | Ocean/underwater, unique deep-sea content, weather phenomena |
+| `dareful` | Boutique 4K nature — mountains, forests, waterfalls, time-lapses | High-quality nature B-roll, consistent visual style, aerial shots |
 | `wikimedia` | Commons photos and CC video, civic/documentary/public-event coverage | Public spaces, landmarks, protests, city texture, educational footage |
 | `unsplash` | Polished editorial stills, lifestyle, product-adjacent photography | Modern still-image support shots when motion footage is thin |
 

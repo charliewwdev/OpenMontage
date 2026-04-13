@@ -156,7 +156,7 @@ Minimum fields the brief must carry:
   "tone": "elegiac",
   "duration_seconds": 90,
   "shape": "list",
-  "sources_allowed": ["pexels", "archive_org", "nasa"],
+  "sources_allowed": ["pexels", "pixabay_video", "coverr", "mixkit", "archive_org", "nara", "nasa"],
   "generated_clips_allowed": false,
   "narration": "none",
   "music_plan": {

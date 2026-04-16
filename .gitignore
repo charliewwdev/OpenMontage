@@ -93,3 +93,4 @@ remotion-composer/public/demo-props/talking-head-*
 remotion-composer/public/demo-props/caption-burn-*
 
 venv/
+.venv/

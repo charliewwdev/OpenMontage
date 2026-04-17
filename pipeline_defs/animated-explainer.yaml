@@ -39,6 +39,7 @@ required_skills:
   - meta/reviewer
   - meta/checkpoint-protocol
   - meta/skill-creator
+  - meta/animation-runtime-selector
 
 orchestration:
   mode: executive-producer

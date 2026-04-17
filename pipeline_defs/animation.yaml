@@ -39,6 +39,7 @@ required_skills:
   - pipelines/animation/publish-director
   - meta/reviewer
   - meta/checkpoint-protocol
+  - meta/animation-runtime-selector
 
 orchestration:
   mode: executive-producer

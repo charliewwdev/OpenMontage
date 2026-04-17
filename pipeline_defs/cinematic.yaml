@@ -46,6 +46,7 @@ required_skills:
   - pipelines/cinematic/publish-director
   - meta/reviewer
   - meta/checkpoint-protocol
+  - meta/animation-runtime-selector
 
 compatible_playbooks:
   recommended:

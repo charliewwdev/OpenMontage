@@ -65,6 +65,7 @@ required_skills:
   - pipelines/screen-demo/publish-director
   - meta/reviewer
   - meta/checkpoint-protocol
+  - meta/animation-runtime-selector
 
 compatible_playbooks:
   recommended:

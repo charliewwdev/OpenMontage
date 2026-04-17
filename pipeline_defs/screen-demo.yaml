@@ -1,13 +1,44 @@
 name: screen-demo
-version: "2.0"
+version: "2.1"
 description: >
-  Screen recording pipeline. Takes raw screen capture (app demo, browser walkthrough,
-  coding tutorial) and produces a polished demo video with callouts, zoom crops,
-  subtitles, and cleaned audio. EP orchestration adds quality gates for legibility,
-  audio clarity, and pacing.
+  Screen recording pipeline. Two production modes:
+    1. REAL CAPTURE — takes raw screen capture (app demo, browser walkthrough,
+       coding tutorial) via screen_recorder, cap_recorder, or playwright-recording
+       and produces a polished demo video with callouts, zoom crops, subtitles,
+       and cleaned audio.
+    2. SYNTHETIC (Remotion TerminalScene) — for CLI/terminal/install-flow demos,
+       renders a deterministic terminal animation with typed commands, scrolling
+       output, floating command pills, and blinking cursor. See
+       .agents/skills/synthetic-screen-recording/SKILL.md. Preferred when the
+       demo content is predictable (install walkthroughs, make targets, git clone,
+       API key config) because it's faster to iterate, privacy-safe, pixel-perfect,
+       and frame-accurate to narration cues.
+  The idea-director picks the mode at brief time based on whether the demo surface
+  is a real app UI (real capture) or a scriptable terminal session (synthetic).
 category: screen_recording
 stability: production
 default_checkpoint_policy: guided
+
+# Production modes this pipeline supports
+production_modes:
+  - name: real_capture
+    description: "OS screen recording of a real desktop/browser session"
+    required_tools: [screen_recorder]
+    optional_tools: [cap_recorder]
+    best_for:
+      - Real app UIs (Figma, Photoshop, web apps with live state)
+      - Demos that depend on unpredictable live behavior
+      - User explicitly asked for a recording of their own screen
+  - name: synthetic_terminal
+    description: "Remotion TerminalScene — synthesized terminal animation"
+    required_tools: [video_compose]  # Remotion path
+    scene_type: terminal_scene
+    agent_skills: [synthetic-screen-recording]
+    best_for:
+      - CLI / terminal / coding session demos
+      - Install walkthroughs, setup demos, config flows
+      - Tight narration-synced pacing where every command lands on a beat
+      - Reproducible renders (same input = identical pixels)
 
 orchestration:
   mode: executive-producer

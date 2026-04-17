@@ -4,6 +4,23 @@
 
 This stage produces the minimal but high-leverage assets that make a screen demo easier to follow: subtitles, audio cleanup, reusable overlays, masks, and optional light-weight support cards.
 
+## Two production modes — pick before generating assets
+
+**Read the brief's `production_mode` field.** If `idea` didn't set one, decide here:
+
+| Mode | When | Asset production looks like |
+|---|---|---|
+| **`real_capture`** | Real app UI (browser, design tool, IDE with plugins); live behavior; user asked for their own screen recorded | Clean audio + subtitles + callout overlays (arrows, highlight masks) applied on top of the captured MP4 |
+| **`synthetic_terminal`** | CLI, terminal, install flow, make targets, git/npm commands, `.env` config — anything scriptable | **No capture at all.** Author a `terminal_scene` cut for `video_compose` (Remotion). Commands type char-by-char, output scrolls, pills announce completions. See `.agents/skills/synthetic-screen-recording/SKILL.md`. |
+
+**Mode selection heuristic:** *"Can I predict every command and its output before shooting?"* If yes → synthetic. If no → real capture.
+
+For synthetic mode, the asset stage produces:
+- **narration (tts_selector)** aligned to the exact video-time each command should type
+- **a `steps` list** (cmd/out/pause/pill primitives) that paces with narration cues
+- **a pacing verification** via `lib.verify_scene_pacing.assert_alignment(...)` — must pass before render
+- **no** screen-recorder footage, no callout arrows, no zoom-crop regions (those are real-capture concepts)
+
 ## Prerequisites
 
 | Layer | Resource | Purpose |

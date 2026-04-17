@@ -2,9 +2,20 @@
 
 ## When To Use
 
-Use this pipeline when the source is already a screen recording: product walkthrough, software tutorial, coding demo, browser flow, or troubleshooting capture.
+Use this pipeline whenever the deliverable is a screen-recording-style demo. There are **two production modes** — pick one in the brief:
 
-Your job is to turn raw capture into a clear procedural video. The main deliverable at this stage is a schema-valid `brief`, with pipeline-specific detail stored in `brief.metadata`.
+| Mode | Source material | Pick when |
+|---|---|---|
+| **`real_capture`** | An actual screen recording (MP4) captured via `screen_recorder`, `cap_recorder`, or `playwright-recording` | Real app UI, live behavior, browser flows, IDE plugins, user asked for their own screen |
+| **`synthetic_terminal`** | None — nothing is captured. You author a `terminal_scene` cut for Remotion | CLI / terminal / install flow / make targets / git clone / API key config — anything scriptable where every command and output is predictable |
+
+**Decision question:** *"Can I predict every command and its output before shooting?"* If yes → synthetic. If no → real capture.
+
+**Record the mode in `brief.metadata.production_mode`.** The asset-director reads this field to choose between capture+overlay assets vs a `steps` list paced with narration.
+
+For `synthetic_terminal`, also read `.agents/skills/synthetic-screen-recording/SKILL.md` before proceeding — it encodes the pacing rule that killed an earlier showcase render (commands burned through in 40% of scene time, then terminal froze for the remaining 60%).
+
+Your job at this stage is to turn the user's request into a clear procedural video plan. The main deliverable is a schema-valid `brief`, with pipeline-specific detail stored in `brief.metadata`.
 
 ## Operating Principles
 

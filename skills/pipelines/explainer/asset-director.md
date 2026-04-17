@@ -6,6 +6,24 @@ You are the Asset Producer for a generated explainer video. You have a `scene_pl
 
 This is where plans become real files. A missing or low-quality asset will torpedo the final video.
 
+## Animation authoring — which runtime
+
+Before authoring any animated Remotion component for this pipeline, read **`skills/meta/animation-runtime-selector.md`**. It's the routing authority for deciding between Remotion primitives and GSAP plugins.
+
+Quick routing for common explainer needs:
+
+| Scene type | Recommended approach |
+|---|---|
+| Title card, fade, slide, scale | Remotion primitives — `interpolate()` + `spring()` |
+| Word-level caption highlight synced to narration | Existing `CaptionOverlay` component (already in `remotion-composer/src/components/`) |
+| Per-character kinetic typography ("words explode in one letter at a time") | GSAP SplitText — read `.agents/skills/gsap-plugins/SKILL.md` |
+| Multi-step choreography across 4+ tweens | GSAP timeline — read `.agents/skills/gsap-timeline/SKILL.md` |
+| Logo build (line drawing, stroke reveal) | GSAP DrawSVG — read `.agents/skills/gsap-plugins/SKILL.md` |
+| Data chart (bar/line/pie/KPI) | Remotion built-in chart components — see `remotion-composer/SCENE_TYPES.md` |
+| Terminal or CLI demo | Remotion TerminalScene — read `.agents/skills/synthetic-screen-recording/SKILL.md` |
+
+**The keep-it-simple bias:** if Remotion primitives solve a scene in ≤ 20 lines, use them. Only pull in GSAP when the plugin genuinely earns its bundle weight.
+
 ## Prerequisites
 
 | Layer | Resource | Purpose |

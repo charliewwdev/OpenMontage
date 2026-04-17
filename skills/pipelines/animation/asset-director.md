@@ -4,6 +4,27 @@
 
 This stage prepares the actual animated ingredients: narration, diagrams, math renders, motion backgrounds, code visuals, and reusable type or layout systems.
 
+## Animation authoring — which runtime
+
+Before authoring motion-graphics components, read **`skills/meta/animation-runtime-selector.md`** for runtime routing. Animation is the pipeline most likely to justify GSAP plugins — logo morphs, curved camera paths, kinetic type, FLIP transitions.
+
+Quick routing for common animation-pipeline needs:
+
+| Motion type | Recommended approach |
+|---|---|
+| SVG logo morph between two shapes | GSAP MorphSVG — read `.agents/skills/gsap-plugins/SKILL.md` |
+| Line drawing / stroke reveal on SVG | GSAP DrawSVG — read `.agents/skills/gsap-plugins/SKILL.md` |
+| Object following a curved path | GSAP MotionPath — read `.agents/skills/gsap-plugins/SKILL.md` |
+| Per-character / per-word title reveals | GSAP SplitText — read `.agents/skills/gsap-plugins/SKILL.md` |
+| Custom bezier or elastic easing | GSAP CustomEase — read `.agents/skills/gsap-plugins/SKILL.md` |
+| Layout-to-layout element flight (FLIP) | GSAP Flip — read `.agents/skills/gsap-plugins/SKILL.md` |
+| Multi-step sequence across many elements | GSAP timeline — read `.agents/skills/gsap-timeline/SKILL.md` |
+| Particle overlay / background motion | Remotion `ParticleOverlay` component (already exists) |
+| Mathematical animation (graphs, equations) | Manim — read `.agents/skills/manim-composer`, `.agents/skills/manimce-best-practices` |
+| Ghibli / anime-style still-driven scene | Remotion `AnimeScene` component + FLUX image gen |
+
+**Remotion determinism rule:** every GSAP use inside a Remotion component must drive timeline progress from `useCurrentFrame()` — never `requestAnimationFrame`. Pattern examples in `.agents/skills/gsap-react/SKILL.md`.
+
 ## Prerequisites
 
 | Layer | Resource | Purpose |

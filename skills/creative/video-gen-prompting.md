@@ -2,9 +2,11 @@
 
 ## When to Use
 
-When writing prompts for the video generation family (`video_selector`, `heygen_video`,
-`wan_video`, `hunyuan_video`, `ltx_video_local`, `ltx_video_modal`, `cogvideo_video`).
-This skill covers the universal prompt vocabulary that works across all video generation models.
+When writing prompts for the video generation family (`video_selector`, `seedance_video`,
+`heygen_video`, `wan_video`, `hunyuan_video`, `ltx_video_local`, `ltx_video_modal`,
+`cogvideo_video`). This skill covers the universal prompt vocabulary that works across all
+video generation models. For the **preferred premium default**, see the Seedance 2.0 row
+in the table below.
 
 For model-specific tips, see the linked guides below.
 
@@ -12,6 +14,7 @@ For model-specific tips, see the linked guides below.
 
 | Model | Guide | Key Insight |
 |-------|-------|-------------|
+| **Seedance 2.0 (standard / fast)** | `creative/prompting/seedance-prompting.md` + Layer 3 `.agents/skills/seedance-2-0/` | **Preferred premium default** when `FAL_KEY` or HeyGen is configured. Single-pass synced audio, multi-shot generation, director-level camera, lip-sync from quoted dialogue, reference-to-video (9 img + 3 vid + 3 audio). Elo 1269 (#1 on Artificial Analysis). |
 | **Sora 2 / Sora 2 Pro** | [OpenAI Sora 2 Cookbook](https://developers.openai.com/cookbook/examples/sora/sora2_prompting_guide) | Richest structured template. Advanced fields: lenses, filtration, grade, diegetic sound, wardrobe, finishing. |
 | **VEO 3.1 / VEO 3** | [Vertex AI Prompt Guide](https://cloud.google.com/vertex-ai/generative-ai/docs/video/video-gen-prompt-guide) | Best vocabulary reference tables. 14-component prompt structure. |
 | **Grok Imagine Video** | `creative/prompting/grok-prompting.md` | Best when prompts need reference-image placeholders like `<IMAGE_1>` and identity/product carryover. |

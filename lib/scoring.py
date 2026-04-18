@@ -112,14 +112,23 @@ class ProductionPathScore:
 # ---------------------------------------------------------------------------
 
 def _keyword_overlap(set_a: set[str], set_b: set[str]) -> float:
-    """Jaccard-like overlap score between two keyword sets."""
+    """Overlap coefficient between two keyword sets.
+
+    Uses |A ∩ B| / min(|A|, |B|) rather than Jaccard. Jaccard over-penalizes
+    tools whose best_for describes many strengths — a premium provider with
+    seven rich bullets ends up with a smaller Jaccard than a narrowly-scoped
+    provider with one bullet, even when the premium provider fully covers the
+    intent. Overlap coefficient answers the relevant question: "is the intent
+    a subset of what this tool advertises?" which is what we actually care
+    about for provider scoring.
+    """
     if not set_a or not set_b:
         return 0.0
     a = {s.lower().strip() for s in set_a}
     b = {s.lower().strip() for s in set_b}
     intersection = len(a & b)
-    union = len(a | b)
-    return intersection / union if union > 0 else 0.0
+    smaller = min(len(a), len(b))
+    return intersection / smaller if smaller > 0 else 0.0
 
 
 # Semantic synonym clusters: when intent says "cinematic" and tool says
@@ -200,16 +209,18 @@ def _compute_task_fit(
 ) -> float:
     """Score how well a tool's best_for matches the task intent and style.
 
-    Uses synonym expansion so that semantic near-misses (e.g. "cinematic"
-    vs "film") still score well, not just literal keyword overlap.
+    Uses synonym expansion and a real tokenizer so that semantic near-misses
+    (e.g. "cinematic" vs "film") and punctuation-adjacent tokens (e.g.
+    "trailers," vs "trailer") still score well, not just literal whitespace
+    splits.
     """
     if not best_for:
         return 0.3  # Unknown capability — modest default
 
-    intent_words = _expand_synonyms(set(intent.lower().split()))
-    best_for_words = set()
+    intent_words = _expand_synonyms(set(_tokenize_text(intent)))
+    best_for_words: set[str] = set()
     for desc in best_for:
-        best_for_words.update(desc.lower().split())
+        best_for_words.update(_tokenize_text(desc))
     best_for_words = _expand_synonyms(best_for_words)
 
     intent_score = _keyword_overlap(intent_words, best_for_words)
@@ -374,7 +385,11 @@ def score_provider(tool, task_context: dict[str, Any]) -> ProviderScore:
     """
     task_context = normalize_task_context(task_context)
     info = tool.get_info()
-    status = str(tool.get_status())
+    # .value on the ToolStatus enum returns "available" / "degraded" / "unavailable".
+    # str() on the enum returns "ToolStatus.AVAILABLE", which never matches the
+    # lowercase branches below — older code had every available tool scoring 0.0
+    # on reliability.
+    status = tool.get_status().value
 
     best_for = set(info.get("best_for", []))
     intent = task_context.get("intent", "")
@@ -476,6 +491,31 @@ def score_provider(tool, task_context: dict[str, Any]) -> ProviderScore:
             control = min(1.0, control + 0.10)
         else:
             task_fit *= 0.7
+
+    # Premium-cinematic bonus: when a video task has cinematic/trailer intent,
+    # reward providers that ship the premium feature set — native synchronized
+    # audio, multi-shot single-generation, director-level camera control,
+    # lip-sync from quoted dialogue. This is what makes Seedance 2.0 (and
+    # peer premium APIs) meaningfully better than generic clip providers.
+    if asset_type == "video":
+        intent_words = _expand_synonyms(set(intent.lower().split())) | set(style_keywords)
+        cinematic_signal = bool(
+            intent_words & {"cinematic", "film", "movie", "trailer", "teaser", "dramatic", "epic", "premium"}
+        )
+        if cinematic_signal:
+            premium_features = [
+                supports.get("native_audio"),
+                supports.get("multi_shot"),
+                supports.get("camera_direction"),
+                supports.get("lip_sync"),
+                supports.get("cinematic_quality"),
+            ]
+            matched = sum(1 for f in premium_features if f)
+            if matched >= 3:
+                task_fit = min(1.0, task_fit + 0.15)
+                output_quality = min(1.0, output_quality + 0.10)
+            elif matched >= 1:
+                task_fit = min(1.0, task_fit + 0.05)
 
     return ProviderScore(
         tool_name=info.get("name", "unknown"),

@@ -24,6 +24,20 @@ If the approved brief or scene plan makes motion a hard requirement, verify that
 - Do not convert the piece into an animatic unless the user explicitly approves that downgrade.
 - If the render engine changes materially, tell the user before rendering and explain why.
 
+**Mandatory Remotion preflight (run before every render when the scene plan includes any Remotion scene type — title cards, stat cards, anime/hero_title, end-tag, overlays):**
+
+```bash
+python -c "
+from tools.tool_registry import registry
+registry.discover()
+info = registry.get('video_compose').get_info()
+print('Render engines:', info.get('render_engines'))
+print('Remotion note:', info.get('remotion_note'))
+"
+```
+
+If Remotion is not in the available render engines, stop and report to the user per the Decision Communication Contract. Do not substitute a reduced-fidelity render path without approval.
+
 ### 1. Use Frame Treatment Deliberately
 
 Only use letterbox, 24fps intent, or heavy grading if they help the piece. Do not apply them because the pipeline name says cinematic.

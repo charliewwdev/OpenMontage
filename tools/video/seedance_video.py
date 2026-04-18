@@ -27,11 +27,11 @@ from tools.base_tool import (
 
 class SeedanceVideo(BaseTool):
     name = "seedance_video"
-    version = "0.1.0"
+    version = "0.2.0"
     tier = ToolTier.GENERATE
     capability = "video_generation"
     provider = "seedance"
-    stability = ToolStability.EXPERIMENTAL
+    stability = ToolStability.BETA
     execution_mode = ExecutionMode.SYNC
     determinism = Determinism.STOCHASTIC
     runtime = ToolRuntime.API
@@ -41,25 +41,36 @@ class SeedanceVideo(BaseTool):
         "Set FAL_KEY to your fal.ai API key.\n"
         "  Get one at https://fal.ai/dashboard/keys"
     )
-    agent_skills = ["ai-video-gen"]
+    agent_skills = ["seedance-2-0", "ai-video-gen"]
 
-    capabilities = ["text_to_video", "image_to_video"]
+    capabilities = ["text_to_video", "image_to_video", "reference_to_video"]
     supports = {
         "text_to_video": True,
         "image_to_video": True,
+        "reference_to_video": True,
+        "multiple_reference_images": True,
+        "reference_image": True,
         "native_audio": True,
         "cinematic_quality": True,
         "camera_direction": True,
         "lip_sync": True,
+        "multi_shot": True,
+        "aspect_ratio": True,
+        "seed": True,
     }
     best_for = [
-        "cinematic clips with native synchronized audio",
-        "director-level camera control and multi-shot editing",
+        "preferred premium video gen when FAL_KEY is available",
+        "cinematic trailers, teasers, and high-fidelity clips with native synchronized audio",
+        "director-level camera control and multi-shot editing in a single generation",
         "lip-sync from quoted dialogue in prompts",
-        "high-fidelity motion with real-world physics",
+        "reference-conditioned generation (up to 9 images + 3 video clips + 3 audio clips)",
+        "consistent character identity across shots",
     ]
     not_good_for = ["offline generation", "budget-constrained projects"]
-    fallback_tools = ["kling_video", "minimax_video", "veo_video"]
+    fallback_tools = ["veo_video", "kling_video", "minimax_video"]
+    # Premium model — beat out "experimental stability" baseline. The scoring
+    # engine reads quality_score directly when present (see lib/scoring.py).
+    quality_score = 0.95
 
     input_schema = {
         "type": "object",
@@ -68,7 +79,7 @@ class SeedanceVideo(BaseTool):
             "prompt": {"type": "string"},
             "operation": {
                 "type": "string",
-                "enum": ["text_to_video", "image_to_video"],
+                "enum": ["text_to_video", "image_to_video", "reference_to_video"],
                 "default": "text_to_video",
             },
             "model_variant": {
@@ -102,9 +113,33 @@ class SeedanceVideo(BaseTool):
                 "type": "string",
                 "description": "Start frame image URL for image_to_video (jpg, png, webp)",
             },
+            "image_path": {
+                "type": "string",
+                "description": "Local start-frame path for image_to_video. Auto-uploaded to fal.ai storage.",
+            },
             "end_image_url": {
                 "type": "string",
                 "description": "Optional end frame URL for image_to_video",
+            },
+            "reference_image_urls": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Up to 9 reference image URLs for reference_to_video (identity / wardrobe / setting / style anchors).",
+            },
+            "reference_image_paths": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Local reference image paths for reference_to_video. Auto-uploaded to fal.ai storage.",
+            },
+            "reference_video_urls": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Up to 3 reference video clip URLs for reference_to_video (motion / camera / pacing anchors).",
+            },
+            "reference_audio_urls": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Up to 3 reference audio clip URLs for reference_to_video (voice / music / ambience anchors).",
             },
             "seed": {
                 "type": "integer",
@@ -180,10 +215,40 @@ class SeedanceVideo(BaseTool):
             if inputs.get("image_url"):
                 payload["image_url"] = inputs["image_url"]
             elif inputs.get("image_path"):
-                from tools.video._shared import upload_image_to_fal
+                from tools.video._shared import upload_image_fal
                 payload["image_url"] = upload_image_to_fal(inputs["image_path"])
             if inputs.get("end_image_url"):
                 payload["end_image_url"] = inputs["end_image_url"]
+
+        if operation == "reference_to_video":
+            ref_image_urls = list(inputs.get("reference_image_urls") or [])
+            for local_path in inputs.get("reference_image_paths") or []:
+                from tools.video._shared import upload_image_fal
+                ref_image_urls.append(upload_image_to_fal(local_path))
+            # Seedance 2.0 reference-to-video ceilings: 9 images + 3 video + 3 audio.
+            if len(ref_image_urls) > 9:
+                return ToolResult(
+                    success=False,
+                    error=f"Seedance 2.0 reference_to_video accepts at most 9 reference images; got {len(ref_image_urls)}",
+                )
+            ref_video_urls = list(inputs.get("reference_video_urls") or [])
+            if len(ref_video_urls) > 3:
+                return ToolResult(
+                    success=False,
+                    error=f"Seedance 2.0 reference_to_video accepts at most 3 reference videos; got {len(ref_video_urls)}",
+                )
+            ref_audio_urls = list(inputs.get("reference_audio_urls") or [])
+            if len(ref_audio_urls) > 3:
+                return ToolResult(
+                    success=False,
+                    error=f"Seedance 2.0 reference_to_video accepts at most 3 reference audio clips; got {len(ref_audio_urls)}",
+                )
+            if ref_image_urls:
+                payload["reference_image_urls"] = ref_image_urls
+            if ref_video_urls:
+                payload["reference_video_urls"] = ref_video_urls
+            if ref_audio_urls:
+                payload["reference_audio_urls"] = ref_audio_urls
 
         headers = {
             "Authorization": f"Key {api_key}",

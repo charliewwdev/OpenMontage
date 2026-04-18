@@ -17,10 +17,12 @@ Generate AI videos from text prompts. Supports multiple providers via two API ga
 
 | Gateway | Env Variable | Providers | Tool |
 |---------|-------------|-----------|------|
-| **fal.ai** | `FAL_KEY` | Kling v3/v2.1, MiniMax, VEO | `kling_video`, `minimax_video`, `veo_video` |
-| **HeyGen** | `HEYGEN_API_KEY` | VEO 3.1, Kling Pro, Sora v2, Runway Gen-4, Seedance | `heygen_video` |
+| **fal.ai** | `FAL_KEY` | **Seedance 2.0** (standard + fast), Kling v3/v2.1, MiniMax, VEO | `seedance_video`, `kling_video`, `minimax_video`, `veo_video` |
+| **HeyGen** | `HEYGEN_API_KEY` | VEO 3.1, Kling Pro, Sora v2, Runway Gen-4, Seedance Pro / Lite (1.x) | `heygen_video` |
 
-**IMPORTANT:** Always use `video_selector` instead of calling provider tools directly. The selector handles availability checks, cost comparison, and automatic fallback.
+**Preferred premium default — Seedance 2.0.** When any premium gateway is configured (`FAL_KEY` → `seedance_video`, or HeyGen's Video Agent / Avatar Shots path), Seedance 2.0 is the preferred default for cinematic, trailer, and high-fidelity clip work. It is the only model in the fleet with **single-pass native synchronized audio, multi-shot generation, director-level camera control, and lip-sync from quoted dialogue**, and it ranks #1 on Artificial Analysis Elo as of early 2026. Switch off it only when the user has a specific reason (budget, provider preference, stylistic fit like VEO for photoreal landscape or Kling for specific anime look). See Layer 3 `seedance-2-0` for the authoritative prompting and parameter guide.
+
+**IMPORTANT:** Always use `video_selector` instead of calling provider tools directly. The selector handles availability checks, cost comparison, and automatic fallback, and its scoring engine already biases toward Seedance 2.0 for cinematic intent.
 
 ## Authentication
 
@@ -312,7 +314,7 @@ curl -X POST "https://api.heygen.com/v1/workflows/executions" \
 ## Best Practices
 
 1. **Be descriptive in prompts** — include camera movement, lighting, style, and mood details
-2. **Default to VEO 3.1** for highest quality; use `ltx_distilled` or `veo3_fast` when speed matters
+2. **Default to Seedance 2.0 (via `seedance_video`) for cinematic and motion-led work** when `FAL_KEY` is set — single-pass synced audio, multi-shot, lip-sync, director-level camera. Use VEO 3.1 / Sora V2 Pro when the user specifically wants Google or OpenAI motion character; use `ltx_distilled` or `veo3_fast` only when speed is the hard constraint
 3. **Use reference images** for image-to-video generation — great for animating product photos or still images
 4. **Video generation is the slowest workflow** — allow up to 5 minutes, poll every 10 seconds
 5. **Aspect ratio matters** — use `9:16` for social media stories/reels, `16:9` for landscape, `1:1` for square

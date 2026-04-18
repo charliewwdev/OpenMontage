@@ -181,6 +181,14 @@ class BaseTool(ABC):
     # --- Verification ---
     user_visible_verification: list[str] = []
 
+    # --- Optional telemetry / quality hints for the scoring engine ---
+    # If set (0.0-1.0), lib/scoring.py uses these directly instead of falling
+    # back to stability-based heuristics. Leave unset unless the tool has a
+    # real measured or well-calibrated value.
+    quality_score: Optional[float] = None
+    historical_success_rate: Optional[float] = None
+    latency_p50_seconds: Optional[float] = None
+
     # ---- Status reporting ----
 
     def get_status(self) -> ToolStatus:
@@ -255,6 +263,9 @@ class BaseTool(ABC):
             "agent_skills": self.agent_skills,
             "related_skills": self.agent_skills,
             "user_visible_verification": self.user_visible_verification,
+            "quality_score": self.quality_score,
+            "historical_success_rate": self.historical_success_rate,
+            "latency_p50_seconds": self.latency_p50_seconds,
         }
 
     # ---- Cost estimation ----

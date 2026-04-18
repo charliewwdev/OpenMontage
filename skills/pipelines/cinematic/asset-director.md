@@ -27,7 +27,7 @@ Before authoring title cards, name plates, or SVG overlays, read **`skills/meta/
 |-------|----------|---------|
 | Schema | `schemas/artifacts/asset_manifest.schema.json` | Artifact validation |
 | Prior artifacts | `state.artifacts["scene_plan"]["scene_plan"]`, `state.artifacts["script"]["script"]`, `state.artifacts["proposal"]["proposal_packet"]` | Scene intent and beat plan |
-| Tools | `subtitle_gen`, `audio_enhance`, `image_selector`, `video_selector`, `music_gen` — selectors auto-discover all available providers from the registry | Optional support asset creation |
+| Tools | `subtitle_gen`, `audio_enhance`, `image_selector`, `video_selector`, `pixabay_music` (free, default), `freesound_music` (free), `music_gen` (ElevenLabs, paid) — selectors auto-discover all available providers from the registry. **Default to `pixabay_music` before reaching for `music_gen`.** | Optional support asset creation |
 | Playbook | Active style playbook | Brand and typography consistency |
 
 ## Process
@@ -54,7 +54,7 @@ If `proposal_packet.metadata.motion_required = true`, actual moving footage or g
 Before batch-generating support assets, produce one sample of each expensive generated type and show the user:
 
 1. **Generated insert sample** (if using `image_selector` or `video_selector`): Generate one representative visual. Confirm it complements the source footage before batching.
-2. **Music sample** (if using `music_gen`): Generate a short clip. Confirm mood and energy match the beat plan.
+2. **Music sample** (try `pixabay_music` first — free, searchable by mood/BPM; fall back to `freesound_music` for cues and ambience; only reach for `music_gen` when the search tools miss the brief): sample or retrieve a short clip. Confirm mood and energy match the beat plan.
 
 If `motion_required = true`, the representative visual must be a video clip sample, not a still image sample.
 

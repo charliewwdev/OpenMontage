@@ -23,8 +23,12 @@ HEYGEN_PROVIDERS = {
     "sora_v2": {"name": "Sora v2", "quality": "high", "speed": "slow"},
     "sora_v2_pro": {"name": "Sora v2 Pro", "quality": "highest", "speed": "slow"},
     "runway_gen4": {"name": "Runway Gen-4", "quality": "high", "speed": "medium"},
-    "seedance_lite": {"name": "Seedance Lite", "quality": "medium", "speed": "fast"},
-    "seedance_pro": {"name": "Seedance Pro", "quality": "high", "speed": "medium"},
+    # NOTE: HeyGen's `seedance_lite` / `seedance_pro` provider strings map to
+    # Seedance 1.x. Seedance 2.0 on HeyGen is exposed through Video Agent and
+    # Avatar Shots endpoints, NOT via the workflow provider parameter. For 2.0
+    # access today, use `seedance_video` (fal.ai) or `seedance_replicate`.
+    "seedance_lite": {"name": "Seedance Lite (1.x)", "quality": "medium", "speed": "fast"},
+    "seedance_pro": {"name": "Seedance Pro (1.x)", "quality": "high", "speed": "medium"},
     "ltx_distilled": {"name": "LTX Distilled", "quality": "low", "speed": "fastest"},
 }
 

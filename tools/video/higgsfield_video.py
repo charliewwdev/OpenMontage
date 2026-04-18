@@ -42,7 +42,7 @@ class HiggsFieldVideo(BaseTool):
         "  Get them at https://cloud.higgsfield.ai/api-keys\n"
         "  Alternatively, set HIGGSFIELD_KEY as a combined key:secret value."
     )
-    agent_skills = ["ai-video-gen"]
+    agent_skills = ["seedance-2-0", "ai-video-gen"]
 
     capabilities = ["text_to_video", "image_to_video"]
     supports = {
@@ -50,14 +50,23 @@ class HiggsFieldVideo(BaseTool):
         "image_to_video": True,
         "character_consistency": True,
         "multi_model_routing": True,
+        "native_audio": True,
+        "cinematic_quality": True,
+        "camera_direction": True,
+        "lip_sync": True,
+        "multi_shot": True,
     }
     best_for = [
-        "character-consistent video generation (Soul ID)",
-        "multi-model access through a single API",
-        "photorealistic and fashion-aware content",
+        "preferred premium video gen on Higgsfield (Seedance 2.0 is the default model)",
+        "cinematic trailers, teasers, and high-fidelity clips with native synchronized audio",
+        "character-consistent video generation (Soul ID + Seedance 2.0 identity consistency)",
+        "director-level camera control and multi-shot editing in a single generation",
+        "lip-sync from quoted dialogue in prompts",
+        "multi-model access through a single API (Seedance 2.0, Kling, Veo, Sora, WAN)",
     ]
     not_good_for = ["offline generation", "fine-grained model control", "budget projects without subscription"]
-    fallback_tools = ["kling_video", "veo_video", "minimax_video"]
+    fallback_tools = ["seedance_video", "seedance_replicate", "kling_video", "veo_video", "minimax_video"]
+    quality_score = 0.9
 
     input_schema = {
         "type": "object",
@@ -72,14 +81,16 @@ class HiggsFieldVideo(BaseTool):
             "model": {
                 "type": "string",
                 "enum": [
+                    "seedance_2.0",
+                    "seedance_2.0_fast",
                     "kling_3.0",
                     "veo_3.1",
                     "sora_2",
                     "wan_2.5",
                     "soul_cinema",
                 ],
-                "default": "kling_3.0",
-                "description": "Underlying model to use for generation",
+                "default": "seedance_2.0",
+                "description": "Underlying model. Defaults to Seedance 2.0 (preferred premium) — see .agents/skills/seedance-2-0/",
             },
             "duration": {
                 "type": "string",
@@ -123,10 +134,13 @@ class HiggsFieldVideo(BaseTool):
         return ToolStatus.UNAVAILABLE
 
     def estimate_cost(self, inputs: dict[str, Any]) -> float:
-        model = inputs.get("model", "kling_3.0")
+        model = inputs.get("model", "seedance_2.0")
         duration = int(inputs.get("duration", "5"))
-        # Approximate per-clip costs based on Higgsfield credit pricing
+        # Approximate per-clip costs based on Higgsfield credit pricing.
+        # Seedance 2.0 on Higgsfield runs ~50-80 credits per 5s clip ≈ $0.50-$1.20.
         base_costs = {
+            "seedance_2.0": 0.80,
+            "seedance_2.0_fast": 0.50,
             "kling_3.0": 0.10,
             "wan_2.5": 0.10,
             "veo_3.1": 0.50,
@@ -137,9 +151,11 @@ class HiggsFieldVideo(BaseTool):
         return base * (duration / 5)
 
     def estimate_runtime(self, inputs: dict[str, Any]) -> float:
-        model = inputs.get("model", "kling_3.0")
-        if model in ("veo_3.1", "sora_2"):
+        model = inputs.get("model", "seedance_2.0")
+        if model in ("veo_3.1", "sora_2", "seedance_2.0"):
             return 120.0
+        if model == "seedance_2.0_fast":
+            return 60.0
         return 60.0
 
     def execute(self, inputs: dict[str, Any]) -> ToolResult:

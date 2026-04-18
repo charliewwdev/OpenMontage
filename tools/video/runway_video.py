@@ -34,12 +34,17 @@ _COST_PER_SECOND = {
     "gen3a_turbo": 0.05,
     "gen4_turbo": 0.05,
     "gen4_aleph": 0.15,
+    # Third-party Seedance 2.0 inside Runway (Enterprise/Unlimited, non-US).
+    "seedance_2.0": 0.30,
+    "seedance_2.0_fast": 0.24,
 }
 
 _RUNTIME_SECONDS = {
     "gen3a_turbo": 25.0,
     "gen4_turbo": 30.0,
     "gen4_aleph": 60.0,
+    "seedance_2.0": 120.0,
+    "seedance_2.0_fast": 60.0,
 }
 
 
@@ -59,21 +64,29 @@ class RunwayVideo(BaseTool):
         "Set RUNWAY_API_KEY to your Runway API secret.\n"
         "  Get one at https://dev.runwayml.com/"
     )
-    agent_skills = ["ai-video-gen"]
+    agent_skills = ["seedance-2-0", "ai-video-gen"]
 
     capabilities = ["text_to_video", "image_to_video"]
     supports = {
         "text_to_video": True,
         "image_to_video": True,
         "professional_control": True,
+        "native_audio": True,
+        "cinematic_quality": True,
+        "camera_direction": True,
+        "lip_sync": True,
+        "multi_shot": True,
     }
     best_for = [
-        "highest overall video quality (#1 Elo rating)",
+        "preferred premium video gen on Runway when Seedance 2.0 model is selected",
+        "cinematic trailers, teasers, and high-fidelity clips with native synchronized audio (Seedance 2.0 path)",
+        "director-level camera control and multi-shot editing (Seedance 2.0) or Runway Gen-4 professional control",
+        "lip-sync from quoted dialogue in prompts (Seedance 2.0)",
         "professional video production",
-        "precise control over generation",
     ]
     not_good_for = ["budget projects", "offline generation", "very long clips"]
-    fallback_tools = ["kling_video", "veo_video", "minimax_video", "wan_video"]
+    fallback_tools = ["seedance_video", "seedance_replicate", "kling_video", "veo_video", "minimax_video", "wan_video"]
+    quality_score = 0.9
 
     input_schema = {
         "type": "object",
@@ -87,9 +100,16 @@ class RunwayVideo(BaseTool):
             },
             "model": {
                 "type": "string",
-                "enum": ["gen4_turbo", "gen4_aleph", "gen3a_turbo"],
-                "default": "gen4_turbo",
-                "description": "gen4_aleph is highest fidelity, gen4_turbo is balanced, gen3a_turbo is cheapest",
+                "enum": ["seedance_2.0", "seedance_2.0_fast", "gen4_turbo", "gen4_aleph", "gen3a_turbo"],
+                "default": "seedance_2.0",
+                "description": (
+                    "seedance_2.0 = preferred premium default (single-pass synced audio, multi-shot, lip-sync — "
+                    "Runway Unlimited/Enterprise plan, non-US only). "
+                    "seedance_2.0_fast = lower-cost Seedance variant. "
+                    "gen4_aleph = Runway's highest-fidelity native model. "
+                    "gen4_turbo = balanced Runway native. "
+                    "gen3a_turbo = cheapest Runway native."
+                ),
             },
             "duration": {
                 "type": "integer",

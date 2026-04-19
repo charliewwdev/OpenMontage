@@ -283,6 +283,107 @@ Same pattern as Remotion.
 
 ---
 
+## Gotchas in practice (hard-earned)
+
+Things the upstream docs don't warn about but will cost you a 60-minute
+render to discover. Fix at author time, not at render time.
+
+### Video elements need explicit size, in BOTH HTML attrs and `!important` CSS
+
+HyperFrames runtime applies inline `style="width:...px; height:...px"` to
+every `<video>` element based on the video's **intrinsic** dimensions.
+That inline style beats any class-selector CSS you write, so even a
+`video.bg-video { width: 100%; height: 100% }` rule gets silently ignored
+and the video renders at whatever size the decoded stream reports —
+usually a small centered box inside an otherwise-black clip.
+
+The bug is invisible in some scenarios:
+- Low `filter: brightness(0.25-0.35)` makes the small video box look
+  mostly black.
+- Fullscreen typography layered on top hides the problem.
+- `object-fit: cover` on a class selector does NOT fix it because the
+  inline width/height wins first.
+
+It becomes obvious the moment you go footage-forward (brightness > 0.5,
+lower-third typography) — the small centered video box appears against
+a black frame that was supposed to be full-bleed b-roll.
+
+**Correct pattern** for a full-frame background video:
+
+```html
+<video
+  class="clip bg-video"
+  data-start="0" data-duration="8" data-track-index="0"
+  src="assets/hero.mp4"
+  muted playsinline preload="metadata"
+  width="1920" height="1080"
+></video>
+```
+
+```css
+video.bg-video {
+  position: absolute !important; inset: 0 !important;
+  width: 100% !important; height: 100% !important;
+  object-fit: cover !important;
+  /* filter optional */
+}
+```
+
+Both the explicit `width="1920" height="1080"` HTML attrs AND the
+`!important` CSS are required. Either one alone isn't enough.
+
+Alternative: wrap the `<video>` in a `<div class="clip">` and put
+`data-start`/`data-duration` on the wrapper. Let the video fill its div
+via `position: absolute; inset: 0` without the framework's inline-style
+interference. Slightly more DOM but more robust.
+
+### Always preview-scrub footage-forward scenes before render
+
+60-minute renders are expensive. Before committing to a full render,
+open the Launch preview panel (or `npx hyperframes preview`) and scrub
+to at least one scene per chapter where b-roll should dominate. The
+tiny-video bug — and similar layout issues like "lower-third text sits
+off-screen at 1080p" — are 2-second visual checks at preview time and
+60-minute regression costs at render time.
+
+### Bump stock-footage legibility, not opacity
+
+When layering typography over b-roll, don't just lower video opacity —
+that muddies both layers. Instead:
+
+- Keep `filter: brightness(0.55) saturate(0.85)` on the video (visible
+  but dimmed).
+- Add a local CSS scrim (`radial-gradient` or `linear-gradient` with
+  `rgba(7,7,12,0.5)`) behind the specific text, sized to the text block.
+- Use `text-shadow: 0 2px 24px rgba(0,0,0,0.8)` on the text itself for a
+  local halo independent of the background.
+
+This keeps the footage feeling alive while ensuring captions and titles
+remain readable on any frame.
+
+### Stock clips need dense keyframes before render
+
+Render fails with `video_heavy_parallel_timeout` or produces frame
+freezes when stock clips have keyframe intervals > 5s. Always re-encode
+downloaded stock via `ffmpeg ... -c:v libx264 -r 30 -g 30 -keyint_min 30
+-sc_threshold 0 -movflags +faststart` before staging into the
+workspace. See `hyperframes_compose`'s existing workspace prep — it
+doesn't do this automatically yet.
+
+### Render with `--workers 1` for video-heavy compositions
+
+Default parallel capture overwhelms headless Chrome when many videos
+load simultaneously. For any composition with >5 background video
+elements, always pass `--workers 1` to `hyperframes render`.
+
+### Use Outfit / Inter / JetBrains Mono, not Space Grotesk
+
+HyperFrames' deterministic-font compiler only inlines fonts it has a
+mapping for. `Space Grotesk` renders as a fallback (often Arial) even
+when loaded via Google Fonts. Check the compiler's warning output or
+the `deterministicFonts.ts` mapping table. Safe bets: `Outfit`,
+`Montserrat`, `Inter`, `JetBrains Mono`, `Poppins`, `Playfair Display`.
+
 ## Anti-patterns
 
 - ❌ Forking playbook data for HyperFrames when the current schema already

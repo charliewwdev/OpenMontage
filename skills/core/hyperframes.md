@@ -288,54 +288,76 @@ Same pattern as Remotion.
 Things the upstream docs don't warn about but will cost you a 60-minute
 render to discover. Fix at author time, not at render time.
 
-### Video elements need explicit size, in BOTH HTML attrs and `!important` CSS
+### Full-frame background video: source-resolution trap (NOT a framework bug)
 
-HyperFrames runtime applies inline `style="width:...px; height:...px"` to
-every `<video>` element based on the video's **intrinsic** dimensions.
-That inline style beats any class-selector CSS you write, so even a
-`video.bg-video { width: 100%; height: 100% }` rule gets silently ignored
-and the video renders at whatever size the decoded stream reports —
-usually a small centered box inside an otherwise-black clip.
+Symptom: background video renders as a small centered box with black
+around it, even though you've told HyperFrames the clip is 1920×1080.
+Six renders of debugging revealed this is **almost always a source
+quality issue, not a HyperFrames framework bug.** Fix the input, not
+the CSS.
 
-The bug is invisible in some scenarios:
-- Low `filter: brightness(0.25-0.35)` makes the small video box look
-  mostly black.
-- Fullscreen typography layered on top hides the problem.
-- `object-fit: cover` on a class selector does NOT fix it because the
-  inline width/height wins first.
+Root cause (observed on Pexels + Pixabay stock): many free stock
+clips ship at 640×360 or 960×540 even when you ask for the "large"
+size tier. If your pre-transform does
+`scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:...`
+you'll produce a 1920×1080 file whose visible content is a centered
+640×360 rectangle with black padding. HyperFrames plays this clip
+faithfully — the small-video-in-black-frame you see is a correctly
+rendered letterboxed input.
 
-It becomes obvious the moment you go footage-forward (brightness > 0.5,
-lower-third typography) — the small centered video box appears against
-a black frame that was supposed to be full-bleed b-roll.
+Diagnostic first: before blaming CSS, run
+`ffprobe -v error -select_streams v -show_entries stream=width,height`
+on the source clip and on your pre-transformed clip. If the pre-
+transform already shows a 640×360 active region inside 1920×1080
+padding, the problem is upstream.
 
-**Correct pattern** for a full-frame background video:
+Fix the pre-transform to scale-to-COVER and crop, not scale-to-FIT
+and pad:
+
+```
+-vf "scale=1920:1080:force_original_aspect_ratio=increase,\
+     crop=1920:1080,unsharp=3:3:0.6"
+```
+
+This upscales the small clip to at least cover 1920×1080, crops the
+overflow, and sharpens (unsharp) to offset perceived softness. The
+output is full-bleed and HyperFrames will render it edge-to-edge.
+
+The canonical wrapper-div pattern (`patterns.md`) is still the right
+HTML shape for backgrounds:
 
 ```html
-<video
-  class="clip bg-video"
-  data-start="0" data-duration="8" data-track-index="0"
-  src="assets/hero.mp4"
-  muted playsinline preload="metadata"
-  width="1920" height="1080"
-></video>
+<div style="position:absolute;top:0;left:0;width:1920px;height:1080px;overflow:hidden;">
+  <video
+    data-start="0" data-duration="60" data-track-index="0"
+    src="..." muted playsinline
+    style="width:100%;height:100%;object-fit:cover;"
+  ></video>
+</div>
 ```
 
-```css
-video.bg-video {
-  position: absolute !important; inset: 0 !important;
-  width: 100% !important; height: 100% !important;
-  object-fit: cover !important;
-  /* filter optional */
-}
-```
+Use it because `overflow: hidden` on the wrapper crops gracefully when
+the video's aspect differs slightly from 16:9, and because
+`object-fit: cover` on the inner `<video>` handles the (rare) case
+where source aspect isn't 16:9. It is **not** a workaround for a
+framework layout bug — the framework will size `<video class="clip">`
+correctly too if the source file has content filling the full frame.
 
-Both the explicit `width="1920" height="1080"` HTML attrs AND the
-`!important` CSS are required. Either one alone isn't enough.
+Apply visual treatments (`filter`, `border-radius`, etc.) on the
+wrapper or on a scoped selector like `.bg-slot video { filter: ... }`.
 
-Alternative: wrap the `<video>` in a `<div class="clip">` and put
-`data-start`/`data-duration` on the wrapper. Let the video fill its div
-via `position: absolute; inset: 0` without the framework's inline-style
-interference. Slightly more DOM but more robust.
+Invisible-vs-obvious failure mode: this trap hides when you stack
+dim filters (`brightness(0.25–0.35)`) or full-bleed typography on top —
+the letterbox reads as "moody darkness." It becomes obvious the moment
+you go footage-forward (brightness > 0.5, lower-third typography). If
+you're planning footage-forward from the start, probe your source
+resolutions in the asset stage.
+
+When you truly can't source HD clips, switch pipelines: use FFmpeg
+hybrid-compositing (scale-to-cover + crop + unsharp in an external
+b-roll reel, then overlay HyperFrames typography via chromakey). That's
+the pattern `projects/quantum-willow-multiverse/` settled on after six
+HyperFrames renders with 640×360 Pexels sources.
 
 ### Always preview-scrub footage-forward scenes before render
 

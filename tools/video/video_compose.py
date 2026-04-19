@@ -105,6 +105,32 @@ class VideoCompose(BaseTool):
                     "edit_decisions.metadata.proposal_render_runtime."
                 ),
             },
+            "narration_transcript_path": {
+                "type": "string",
+                "description": (
+                    "Path to a word-level transcript JSON (from `transcriber` "
+                    "tool output). Optional but STRONGLY recommended: when "
+                    "combined with script_path/script_text, final_review "
+                    "runs transcript_comparison and catches TTS failures "
+                    "like 'Chirp3-HD reads ... as the word dot'. Without "
+                    "it, content-level audio bugs ship silently."
+                ),
+            },
+            "script_path": {
+                "type": "string",
+                "description": (
+                    "Path to the source narration script (plain text). "
+                    "Used by transcript_comparison to diff against the "
+                    "transcribed audio. Provide this OR script_text."
+                ),
+            },
+            "script_text": {
+                "type": "string",
+                "description": (
+                    "Inline source narration script. Used by "
+                    "transcript_comparison when a file path is unavailable."
+                ),
+            },
             "subtitle_path": {"type": "string"},
             "subtitle_style": {
                 "type": "object",
@@ -1043,7 +1069,13 @@ class VideoCompose(BaseTool):
         # --- Post-render: mandatory final self-review ---
         if render_result.success and output_path.exists():
             final_review = self._run_final_review(
-                output_path, edit_decisions, inputs.get("proposal_packet")
+                output_path,
+                edit_decisions,
+                inputs.get("proposal_packet"),
+                narration_transcript_path=inputs.get("narration_transcript_path"),
+                script_text=inputs.get("script_text") or self._read_text_file(
+                    inputs.get("script_path")
+                ),
             )
 
             # Attach final_review to the ToolResult data so the compose-director
@@ -1160,7 +1192,13 @@ class VideoCompose(BaseTool):
         # Post-render: mandatory final self-review (identical contract to the Remotion path).
         if output_path.exists():
             final_review = self._run_final_review(
-                output_path, edit_decisions, inputs.get("proposal_packet")
+                output_path,
+                edit_decisions,
+                inputs.get("proposal_packet"),
+                narration_transcript_path=inputs.get("narration_transcript_path"),
+                script_text=inputs.get("script_text") or self._read_text_file(
+                    inputs.get("script_path")
+                ),
             )
             if render_result.data is None:
                 render_result.data = {}
@@ -1214,7 +1252,13 @@ class VideoCompose(BaseTool):
 
         if render_result.success and output_path.exists():
             final_review = self._run_final_review(
-                output_path, edit_decisions, inputs.get("proposal_packet")
+                output_path,
+                edit_decisions,
+                inputs.get("proposal_packet"),
+                narration_transcript_path=inputs.get("narration_transcript_path"),
+                script_text=inputs.get("script_text") or self._read_text_file(
+                    inputs.get("script_path")
+                ),
             )
             if render_result.data is None:
                 render_result.data = {}
@@ -1353,11 +1397,156 @@ class VideoCompose(BaseTool):
     # Final self-review — mandatory post-render inspection
     # ------------------------------------------------------------------
 
+    # Punctuation/SSML-leak words that should NEVER appear in rendered audio.
+    # When a TTS engine reads a literal "..." as the word "dot", or a "—" as
+    # "hyphen", those leak into the transcript. Catching these in the final
+    # review is the difference between catching a bad voice render in-tool
+    # vs. shipping a video that says "dot dot dot" twelve times. CRITICAL.
+    _TTS_PUNCTUATION_LEAK_WORDS = {
+        "dot", "dots", "ellipsis", "period", "periods",
+        "comma", "commas", "semicolon", "colon",
+        "dash", "hyphen", "emdash", "endash",
+        "parenthesis", "bracket", "brace",
+        "asterisk", "slash", "backslash",
+        "exclamation", "question mark",
+    }
+
+    @staticmethod
+    def _read_text_file(path: str | Path | None) -> str | None:
+        """Read a small text file if given a path; None-safe and exception-safe."""
+        if not path:
+            return None
+        try:
+            return Path(path).read_text(encoding="utf-8")
+        except Exception:
+            return None
+
+    @classmethod
+    def _tokenize(cls, text: str) -> list[str]:
+        """Split text into comparable word tokens (lowercased, punctuation
+        stripped, numeric-word-aware). Empty tokens dropped."""
+        import re
+
+        # Preserve hyphenated words as single tokens ("many-worlds" -> "many-worlds").
+        # Drop everything except letters, digits, hyphens, apostrophes.
+        cleaned = re.sub(r"[^A-Za-z0-9\-' ]+", " ", text.lower())
+        return [t for t in cleaned.split() if t and t != "-"]
+
+    @classmethod
+    def _compare_transcript_to_script(
+        cls,
+        transcript_path: Path,
+        script_text: str,
+    ) -> dict[str, Any]:
+        """Compare a word-level transcript against the source script.
+
+        Purpose: catch TTS failures that look fine on audio-volume/duration
+        checks but produce garbage content. The canonical example is
+        Chirp3-HD reading ellipses ("...") literally as the word "dot" — our
+        volume check says "narration present, not clipped" and the video
+        ships. This check diffs the actual transcribed audio against what
+        was supposed to be said, and flags:
+
+        - Spurious punctuation-leak words ("dot", "comma", "hyphen", etc.)
+          that appear in audio but not script → CRITICAL
+        - Overall word-accuracy ratio against script → SUGGESTION if < 0.9
+
+        Returns the transcript_comparison section of final_review, or a
+        placeholder with an issue describing why the check couldn't run
+        (missing transcript, missing script) so the review never goes
+        silently quiet on this contract.
+        """
+        result: dict[str, Any] = {
+            "transcript_matches_script": False,
+            "word_accuracy": None,
+            "script_word_count": 0,
+            "transcript_word_count": 0,
+            "spurious_punctuation_words": [],
+            "issues": [],
+        }
+
+        if not transcript_path or not Path(transcript_path).is_file():
+            result["issues"].append(
+                "transcript_comparison skipped: narration_transcript not provided"
+            )
+            return result
+        if not script_text:
+            result["issues"].append(
+                "transcript_comparison skipped: script_text not provided"
+            )
+            return result
+
+        try:
+            transcript_data = json.loads(Path(transcript_path).read_text(encoding="utf-8"))
+        except Exception as e:
+            result["issues"].append(f"transcript_comparison could not parse transcript: {e}")
+            return result
+
+        transcript_words = [
+            w.get("word", "").strip() for w in transcript_data.get("word_timestamps", [])
+        ]
+        transcript_tokens = cls._tokenize(" ".join(transcript_words))
+        script_tokens = cls._tokenize(script_text)
+
+        result["script_word_count"] = len(script_tokens)
+        result["transcript_word_count"] = len(transcript_tokens)
+
+        if not script_tokens or not transcript_tokens:
+            result["issues"].append(
+                f"transcript_comparison: empty token set "
+                f"(script={len(script_tokens)}, transcript={len(transcript_tokens)})"
+            )
+            return result
+
+        # --- Punctuation-leak detection (TTS reading literal punctuation) ---
+        script_set = set(script_tokens)
+        leak_occurrences: dict[str, int] = {}
+        for token in transcript_tokens:
+            if token in cls._TTS_PUNCTUATION_LEAK_WORDS and token not in script_set:
+                leak_occurrences[token] = leak_occurrences.get(token, 0) + 1
+
+        if leak_occurrences:
+            formatted = ", ".join(
+                f"{w!r}×{n}" for w, n in sorted(leak_occurrences.items(), key=lambda x: -x[1])
+            )
+            result["spurious_punctuation_words"] = [
+                {"word": w, "count": n} for w, n in leak_occurrences.items()
+            ]
+            result["issues"].append(
+                f"TTS punctuation leak: transcript contains {formatted} — "
+                f"these words are NOT in the script, which means the voice "
+                f"engine is reading literal punctuation aloud. Rewrite the "
+                f"script to eliminate the corresponding characters (ellipses, "
+                f"em-dashes, etc.) and regenerate narration."
+            )
+
+        # --- Word accuracy via set overlap (cheap & ordering-insensitive) ---
+        # We don't penalize small word-order differences or minor TTS
+        # hallucinations; we just want to know "did 90%+ of the script's
+        # content make it into the audio." Using set overlap on the script
+        # side is robust to transcription noise.
+        matched = sum(1 for t in script_tokens if t in set(transcript_tokens))
+        accuracy = matched / max(1, len(script_tokens))
+        result["word_accuracy"] = round(accuracy, 3)
+        result["transcript_matches_script"] = accuracy >= 0.9 and not leak_occurrences
+
+        if accuracy < 0.9:
+            result["issues"].append(
+                f"Low transcript-to-script match: only {accuracy:.0%} of script "
+                f"words appear in the transcribed audio ({matched}/"
+                f"{len(script_tokens)}). Narration may be truncated, mispronounced, "
+                f"or the wrong script was used."
+            )
+
+        return result
+
     def _run_final_review(
         self,
         output_path: Path,
         edit_decisions: dict[str, Any] | None = None,
         proposal_packet: dict[str, Any] | None = None,
+        narration_transcript_path: str | Path | None = None,
+        script_text: str | None = None,
     ) -> dict[str, Any]:
         """Run post-render self-review and produce a final_review artifact.
 
@@ -1706,12 +1895,24 @@ class VideoCompose(BaseTool):
 
         issues.extend(subtitle_check.get("issues", []))
 
-        # --- 6. Determine overall status ---
+        # --- 6. Transcript-vs-script comparison ---
+        # Catches content-level TTS failures (the classic "Chirp reads `...`
+        # as the word 'dot'" trap) that volume-based audio checks miss.
+        # Only runs when caller provides both the transcript and script; when
+        # skipped, issues list records that so the silence is visible.
+        transcript_comparison = self._compare_transcript_to_script(
+            Path(narration_transcript_path) if narration_transcript_path else None,
+            script_text,
+        )
+        issues.extend(transcript_comparison.get("issues", []))
+
+        # --- 7. Determine overall status ---
         critical_issues = [
             i for i in issues
             if any(kw in i.lower() for kw in [
                 "silent downgrade", "delivery promise violation",
                 "effectively silent", "ffprobe failed", "suspiciously short",
+                "tts punctuation leak",  # reading literal punctuation aloud
             ])
         ]
 
@@ -1739,6 +1940,7 @@ class VideoCompose(BaseTool):
                 "audio_spotcheck": audio_spotcheck,
                 "promise_preservation": promise_preservation,
                 "subtitle_check": subtitle_check,
+                "transcript_comparison": transcript_comparison,
             },
             "issues_found": issues,
             "recommended_action": recommended_action,

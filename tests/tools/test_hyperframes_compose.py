@@ -627,6 +627,171 @@ def test_decision_log_accepts_render_runtime_selection_with_both_options():
     jsonschema.validate(log, schema)
 
 
+def test_transcript_comparison_catches_literal_punctuation_leak(tmp_path):
+    """Regression: Chirp3-HD (and some other TTS engines) read literal `...`
+    as the word 'dot' in audio output. This failure is invisible to
+    volume-based audio spotchecks but ships audio that literally says
+    'dot dot dot' twelve times. The transcript_comparison check catches
+    this automatically before the video is marked pass."""
+    import json
+
+    # Real-world example: user's script had `...` everywhere for dramatic
+    # pause, Chirp read them all as "dot", transcript contains "dot dot dot"
+    # phrases the script never had.
+    script_text = (
+        "A computer just did in five minutes what would take every machine on Earth, "
+        "running since the Big Bang, ten septillion years to finish. "
+        "We may have gotten help from parallel universes."
+    )
+    transcript_data = {
+        "word_timestamps": [
+            {"word": "A", "start": 0.0, "end": 0.1},
+            {"word": "computer", "start": 0.1, "end": 0.5},
+            {"word": "just", "start": 0.5, "end": 0.7},
+            {"word": "did", "start": 0.7, "end": 0.9},
+            {"word": "in", "start": 0.9, "end": 1.0},
+            {"word": "five", "start": 1.0, "end": 1.3},
+            {"word": "minutes", "start": 1.3, "end": 1.7},
+            {"word": "dot", "start": 1.7, "end": 1.9},    # leak!
+            {"word": "dot", "start": 1.9, "end": 2.1},    # leak!
+            {"word": "dot", "start": 2.1, "end": 2.3},    # leak!
+            {"word": "what", "start": 2.5, "end": 2.8},
+            {"word": "would", "start": 2.8, "end": 3.0},
+            {"word": "take", "start": 3.0, "end": 3.3},
+            {"word": "every", "start": 3.3, "end": 3.6},
+            {"word": "machine", "start": 3.6, "end": 4.0},
+            {"word": "on", "start": 4.0, "end": 4.2},
+            {"word": "Earth", "start": 4.2, "end": 4.6},
+            {"word": "running", "start": 4.7, "end": 5.1},
+            {"word": "since", "start": 5.1, "end": 5.4},
+            {"word": "the", "start": 5.4, "end": 5.5},
+            {"word": "Big", "start": 5.5, "end": 5.8},
+            {"word": "Bang", "start": 5.8, "end": 6.2},
+            {"word": "ten", "start": 6.2, "end": 6.5},
+            {"word": "septillion", "start": 6.5, "end": 7.3},
+            {"word": "years", "start": 7.3, "end": 7.7},
+            {"word": "to", "start": 7.7, "end": 7.9},
+            {"word": "finish", "start": 7.9, "end": 8.3},
+            {"word": "dot", "start": 8.3, "end": 8.5},    # another leak
+            {"word": "We", "start": 9.0, "end": 9.2},
+            {"word": "may", "start": 9.2, "end": 9.4},
+            {"word": "have", "start": 9.4, "end": 9.6},
+            {"word": "gotten", "start": 9.6, "end": 9.9},
+            {"word": "help", "start": 9.9, "end": 10.3},
+            {"word": "from", "start": 10.3, "end": 10.5},
+            {"word": "parallel", "start": 10.5, "end": 11.0},
+            {"word": "universes", "start": 11.0, "end": 11.7},
+        ]
+    }
+    transcript_path = tmp_path / "transcript.json"
+    transcript_path.write_text(json.dumps(transcript_data), encoding="utf-8")
+
+    result = VideoCompose._compare_transcript_to_script(transcript_path, script_text)
+
+    # Must catch the punctuation leak
+    assert result["spurious_punctuation_words"], (
+        "transcript_comparison failed to detect the 'dot' leak from literal ... punctuation."
+    )
+    leak_counts = {
+        entry["word"]: entry["count"]
+        for entry in result["spurious_punctuation_words"]
+    }
+    assert leak_counts.get("dot") == 4, f"Expected 4 'dot' leaks, got {leak_counts}"
+
+    # Must produce a CRITICAL-severity issue message
+    issue_text = " ".join(result["issues"]).lower()
+    assert "tts punctuation leak" in issue_text
+    assert "not in the script" in issue_text
+
+    # Must NOT mark the transcript as matching
+    assert result["transcript_matches_script"] is False
+
+
+def test_transcript_comparison_passes_clean_audio(tmp_path):
+    """Clean audio with no punctuation leaks must NOT trigger a false
+    positive."""
+    import json
+
+    script_text = "The quick brown fox jumps over the lazy dog."
+    transcript_data = {
+        "word_timestamps": [
+            {"word": "The", "start": 0.0, "end": 0.1},
+            {"word": "quick", "start": 0.1, "end": 0.4},
+            {"word": "brown", "start": 0.4, "end": 0.7},
+            {"word": "fox", "start": 0.7, "end": 1.0},
+            {"word": "jumps", "start": 1.0, "end": 1.3},
+            {"word": "over", "start": 1.3, "end": 1.6},
+            {"word": "the", "start": 1.6, "end": 1.7},
+            {"word": "lazy", "start": 1.7, "end": 2.0},
+            {"word": "dog", "start": 2.0, "end": 2.3},
+        ]
+    }
+    transcript_path = tmp_path / "transcript.json"
+    transcript_path.write_text(json.dumps(transcript_data), encoding="utf-8")
+
+    result = VideoCompose._compare_transcript_to_script(transcript_path, script_text)
+    assert result["spurious_punctuation_words"] == []
+    assert result["transcript_matches_script"] is True
+    assert result["word_accuracy"] >= 0.9
+    # issues may still have informational content but no CRITICAL TTS leak
+    assert not any("tts punctuation leak" in i.lower() for i in result["issues"])
+
+
+def test_transcript_comparison_graceful_when_inputs_missing(tmp_path):
+    """When transcript or script is unavailable, the check should NOT
+    crash — it should record the skip in issues so the silence is visible."""
+    # No transcript
+    result = VideoCompose._compare_transcript_to_script(None, "some script text")
+    assert any("not provided" in i for i in result["issues"])
+
+    # No script
+    dummy = tmp_path / "t.json"
+    dummy.write_text('{"word_timestamps": []}', encoding="utf-8")
+    result = VideoCompose._compare_transcript_to_script(dummy, "")
+    assert any("not provided" in i for i in result["issues"])
+
+    # Transcript file missing
+    result = VideoCompose._compare_transcript_to_script(tmp_path / "nonexistent.json", "script")
+    assert any("not provided" in i for i in result["issues"])
+
+
+def test_run_final_review_includes_transcript_comparison_section(tmp_path):
+    """Regression: the `transcript_comparison` section must ALWAYS appear in
+    the final_review output — even when the caller doesn't provide a
+    transcript. A missing section = silent governance failure."""
+    import subprocess
+
+    # Build a minimal MP4 so _run_final_review can probe it.
+    mp4 = tmp_path / "out.mp4"
+    subprocess.run(
+        [
+            "ffmpeg", "-y",
+            "-f", "lavfi", "-i", "color=c=#000000:s=320x240:d=2",
+            "-f", "lavfi", "-i", "sine=frequency=440:duration=2",
+            "-c:v", "libx264", "-pix_fmt", "yuv420p",
+            "-c:a", "aac", "-shortest", str(mp4),
+        ],
+        capture_output=True, check=True, timeout=30,
+    )
+
+    review = VideoCompose()._run_final_review(
+        mp4,
+        edit_decisions={
+            "version": "1.0",
+            "renderer_family": "animation-first",
+            "render_runtime": "hyperframes",
+            "cuts": [{"id": "c1", "source": "x", "in_seconds": 0, "out_seconds": 2}],
+        },
+    )
+    assert "transcript_comparison" in review["checks"], (
+        "final_review must always include a transcript_comparison section. "
+        "When the caller doesn't provide a transcript, the section should "
+        "still appear with a 'skipped' issue entry — not be omitted."
+    )
+    tc = review["checks"]["transcript_comparison"]
+    assert any("not provided" in i for i in tc["issues"])
+
+
 def test_hyperframes_root_composition_has_data_start_and_duration(tmp_path):
     """Regression: the generated root composition was missing data-start
     and data-duration, violating the HyperFrames contract (SKILL.md table)."""

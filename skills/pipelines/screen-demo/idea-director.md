@@ -1,5 +1,17 @@
 # Idea Director - Screen Demo Pipeline
 
+## Runtime Selection (MANDATORY — present all viable runtimes)
+
+Lock `render_runtime` at the idea stage alongside the production mode. Which runtimes are viable depends on the mode:
+
+| Production mode | Viable runtimes |
+|-----------------|-----------------|
+| `real_capture` (actual screen recording) | `remotion` (preferred — mix capture with overlays), `ffmpeg` (pure concat/trim) |
+| `synthetic_terminal` (Remotion `TerminalScene`) | `remotion` only |
+| `synthetic_ui` (custom HTML UI demo) | `remotion` OR `hyperframes` — real choice, present both |
+
+Per AGENT_GUIDE.md → "Present Both Composition Runtimes (HARD RULE)": when the mode allows multiple runtimes AND both are available on the machine (check `video_compose.get_info()["render_engines"]`), present both to the user with brief-specific analysis, recommend one, wait for approval. Do NOT silently default. When the mode constrains the choice (e.g. `synthetic_terminal` is Remotion-only), tell the user the constraint explicitly rather than silently locking remotion. Record every choice in `decision_log` under `render_runtime_selection` with all considered options.
+
 ## When To Use
 
 Use this pipeline whenever the deliverable is a screen-recording-style demo. There are **two production modes** — pick one in the brief:

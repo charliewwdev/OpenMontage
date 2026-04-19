@@ -82,7 +82,20 @@
           "description": "Delivery promise and renderer governance checks",
           "properties": {
             "delivery_promise_honored": { "type": "boolean" },
-            "renderer_family_used": { "type": "string" },
+            "renderer_family_used": { "type": "string", "description": "Creative grammar that actually ran" },
+            "render_runtime_used": {
+              "type": "string",
+              "enum": ["remotion", "hyperframes", "ffmpeg"],
+              "description": "Technical runtime that actually executed the render. Must match the runtime locked at proposal unless a logged decision overrode it."
+            },
+            "runtime_swap_detected": {
+              "type": "boolean",
+              "description": "True if the runtime that ran differs from the runtime locked in proposal_packet. An unapproved swap is a contract violation."
+            },
+            "runtime_swap_check": {
+              "type": "string",
+              "description": "Human-readable status of the runtime-swap check: 'ok — …', 'detected — …', or 'skipped — …'. When the check was skipped, the reviewer skill is responsible for cross-artifact comparison."
+            },
             "motion_ratio_actual": { "type": "number" },
             "silent_downgrade_detected": { "type": "boolean" },
             "issues": {

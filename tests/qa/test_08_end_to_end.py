@@ -203,6 +203,7 @@ proposal_packet = {
     "production_plan": {
         "pipeline": "animated-explainer",
         "playbook": "clean-professional",
+        "render_runtime": "remotion",
         "stages": [
             {"stage": "script", "tools": [{"tool_name": "tts_selector", "role": "narration", "available": True}], "approach": "AI-written script with TTS narration"},
             {"stage": "scene_plan", "tools": [], "approach": "5 scenes with motion graphics"},

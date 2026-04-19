@@ -1,13 +1,23 @@
-"""Video composition tool — FFmpeg + Remotion.
+"""Video composition tool — FFmpeg + Remotion + HyperFrames (runtime-aware).
 
-Final composition path that takes edit decisions, assets, and audio
-and renders the complete output video. Supports subtitle burn-in,
-overlay compositing, and platform-specific encoding profiles.
+Pipeline-facing orchestration surface for composition. Takes `edit_decisions`,
+`asset_manifest`, and audio, and delegates to the technical runtime chosen
+at proposal stage.
 
-For compositions with still images, animated scenes, or component types
-(text cards, stat cards, etc.), the render operation auto-routes to
-Remotion for frame-accurate spring animations and React-based rendering.
-For pure video cuts (talking-head, etc.), FFmpeg handles trimming and concat.
+Routing is driven by `edit_decisions.render_runtime` (locked at proposal):
+
+- `remotion`   → React-based frame-accurate render via `npx remotion render`.
+                 Handles the existing scene-component stack, word-level captions,
+                 TalkingHead/CinematicRenderer. Current default.
+- `hyperframes` → HTML/CSS/GSAP render via `hyperframes_compose`.
+                 Handles kinetic typography, product promos, website-to-video,
+                 registry blocks. Added in the parallel-runtime initiative.
+- `ffmpeg`     → FFmpeg concat/trim. Used only for simple video cuts without
+                 composition, or when the approved path explicitly names FFmpeg.
+
+Silent runtime swaps are forbidden by governance. If the chosen runtime is
+unavailable or fails, this tool surfaces a structured blocker and waits for
+the agent to re-ask the user rather than substituting a different engine.
 """
 
 from __future__ import annotations
@@ -82,6 +92,17 @@ class VideoCompose(BaseTool):
                 "description": (
                     "Full asset_manifest artifact (required for render). "
                     "Used to resolve asset IDs in cuts[].source to file paths."
+                ),
+            },
+            "proposal_packet": {
+                "type": "object",
+                "description": (
+                    "Full proposal_packet artifact. Optional but STRONGLY "
+                    "recommended — when present, final_review compares "
+                    "proposal_packet.production_plan.render_runtime against "
+                    "edit_decisions.render_runtime and flags runtime_swap_detected. "
+                    "Without it, runtime-swap detection falls back to checking "
+                    "edit_decisions.metadata.proposal_render_runtime."
                 ),
             },
             "subtitle_path": {"type": "string"},
@@ -177,42 +198,85 @@ class VideoCompose(BaseTool):
             return False
         return True
 
-    def get_info(self) -> dict[str, Any]:
-        """Extend base get_info to surface Remotion sub-capability.
+    def _hyperframes_available(self) -> bool:
+        """Check if HyperFrames rendering is available.
 
-        This lets preflight report 'video_compose: AVAILABLE (FFmpeg + Remotion)'
-        so the agent knows Remotion is usable for motion graphics, animated text
-        cards, stat cards, charts, and image-to-video rendering — rather than
-        falling back to Ken Burns pan-and-zoom over still images.
+        Delegates to the dedicated tool so the availability check stays in
+        one place (node 22 floor, ffmpeg + npx on PATH).
+        """
+        try:
+            from tools.video.hyperframes_compose import HyperFramesCompose
+            return bool(HyperFramesCompose()._runtime_check()["runtime_available"])
+        except Exception:
+            return False
+
+    def get_info(self) -> dict[str, Any]:
+        """Extend base get_info to surface all available render runtimes.
+
+        Preflight reports each runtime's availability separately so the agent
+        can choose an appropriate `render_runtime` at proposal stage. Silent
+        fallback between runtimes is forbidden.
         """
         info = super().get_info()
         remotion_ok = self._remotion_available()
+        hyperframes_ok = self._hyperframes_available()
         info["render_engines"] = {
             "ffmpeg": True,
             "remotion": remotion_ok,
+            "hyperframes": hyperframes_ok,
         }
+        # Backwards-compat alias — some proposal skills inspect this name.
+        info["render_runtimes"] = info["render_engines"]
+
         if remotion_ok:
             info["remotion_components"] = self._REMOTION_COMPONENTS
             info["remotion_note"] = (
                 "Remotion is available for React-based rendering. Use it for "
                 "image-to-video with spring animations, animated text/stat cards, "
-                "charts, callouts, comparisons, and complex transitions. "
+                "charts, callouts, comparisons, and word-level caption burn. "
                 "Prefer Remotion over Ken Burns pan-and-zoom for explainer "
-                "and motion-graphics pipelines."
+                "and motion-graphics pipelines that already use the scene-component stack."
             )
         else:
             composer_dir = Path(__file__).resolve().parent.parent.parent / "remotion-composer"
             if composer_dir.exists() and (composer_dir / "package.json").exists() and not (composer_dir / "node_modules").exists():
                 info["remotion_note"] = (
                     "Remotion project exists but node_modules are NOT installed. "
-                    "Run 'cd remotion-composer && npm install' to enable Remotion rendering. "
-                    "Falling back to FFmpeg Ken Burns for image-based compositions."
+                    "Run 'cd remotion-composer && npm install' to enable Remotion rendering."
                 )
             else:
                 info["remotion_note"] = (
-                    "Remotion is NOT available (needs Node.js/npx + remotion-composer). "
-                    "Falling back to FFmpeg Ken Burns for image-based compositions."
+                    "Remotion is NOT available (needs Node.js/npx + remotion-composer + node_modules)."
                 )
+
+        if hyperframes_ok:
+            info["hyperframes_note"] = (
+                "HyperFrames is available for HTML/CSS/GSAP composition. Use it "
+                "for kinetic typography, product promos, launch reels, "
+                "website-to-video, and registry-block-driven scenes. Consumed via "
+                "'npx hyperframes' (npm package: 'hyperframes'). "
+                "Before locking render_runtime='hyperframes' at the proposal stage, "
+                "verify the runtime with `hyperframes_compose` operation='doctor' "
+                "or `make hyperframes-doctor`. An 'available' flag from the runtime "
+                "check means node + ffmpeg + the npm package all resolve; it does "
+                "not guarantee a render will succeed on the first specific "
+                "composition."
+            )
+        else:
+            info["hyperframes_note"] = (
+                "HyperFrames is NOT available. Requires Node.js >= 22, FFmpeg, "
+                "npx on PATH, and the 'hyperframes' npm package to be resolvable. "
+                "Run `make hyperframes-doctor` to see the specific missing piece, "
+                "or call `hyperframes_compose` operation='doctor' directly."
+            )
+
+        # Governance note — agents and reviewers consume this.
+        info["runtime_governance"] = (
+            "render_runtime is locked at proposal stage and carried unchanged "
+            "through edit_decisions. Silent swaps are forbidden. If the "
+            "chosen runtime fails, surface a structured blocker and wait for "
+            "user approval before switching."
+        )
         return info
 
     def execute(self, inputs: dict[str, Any]) -> ToolResult:
@@ -784,7 +848,10 @@ class VideoCompose(BaseTool):
         if scenes:
             try:
                 from lib.slideshow_risk import score_slideshow_risk
-                risk = score_slideshow_risk(scenes, edit_decisions, renderer_family)
+                render_runtime = edit_decisions.get("render_runtime")
+                risk = score_slideshow_risk(
+                    scenes, edit_decisions, renderer_family, render_runtime
+                )
                 if risk["verdict"] == "fail":
                     blocks.append(
                         f"Slideshow risk score {risk['average']:.1f}/5.0 (verdict: fail). "
@@ -875,7 +942,55 @@ class VideoCompose(BaseTool):
         # Also accept profile as "output_profile" (skill convention) or "profile"
         profile = inputs.get("profile") or inputs.get("output_profile")
 
-        # --- Route: Remotion by default, FFmpeg only when Remotion unavailable ---
+        # --- Runtime routing: honor render_runtime locked at proposal ---
+        # Silent swaps are forbidden by governance. If the chosen runtime
+        # is unavailable, surface a structured blocker rather than quietly
+        # picking a different engine. Missing render_runtime is itself a
+        # governance violation — edit_decisions.schema.json requires it.
+        render_runtime = (edit_decisions.get("render_runtime") or "").strip().lower()
+
+        if not render_runtime:
+            return ToolResult(
+                success=False,
+                error=(
+                    "render_runtime is not set in edit_decisions. Per governance, "
+                    "it MUST be locked at proposal stage (proposal_packet."
+                    "production_plan.render_runtime) and carried forward through "
+                    "edit_decisions.render_runtime. Valid values: 'remotion', "
+                    "'hyperframes', 'ffmpeg'. Re-run the proposal stage with an "
+                    "explicit runtime choice — do NOT default this field."
+                ),
+            )
+
+        if render_runtime == "hyperframes":
+            return self._render_via_hyperframes(
+                inputs=inputs,
+                edit_decisions=edit_decisions,
+                asset_manifest=asset_manifest,
+                resolved_cuts=resolved_cuts,
+                output_path=output_path,
+                profile=profile,
+            )
+        if render_runtime == "ffmpeg":
+            # Caller explicitly asked for FFmpeg — don't auto-upgrade to Remotion.
+            return self._render_via_ffmpeg(
+                inputs=inputs,
+                edit_decisions=edit_decisions,
+                resolved_cuts=resolved_cuts,
+                output_path=output_path,
+                profile=profile,
+            )
+        if render_runtime != "remotion":
+            return ToolResult(
+                success=False,
+                error=(
+                    f"Unknown render_runtime {render_runtime!r}. "
+                    f"Valid values: remotion, hyperframes, ffmpeg. "
+                    f"render_runtime must be set at proposal stage."
+                ),
+            )
+
+        # --- Explicit Remotion path (render_runtime == 'remotion') ---
         if self._needs_remotion(resolved_cuts):
             remotion_inputs: dict[str, Any] = {
                 "edit_decisions": dict(edit_decisions, cuts=resolved_cuts),
@@ -927,7 +1042,9 @@ class VideoCompose(BaseTool):
 
         # --- Post-render: mandatory final self-review ---
         if render_result.success and output_path.exists():
-            final_review = self._run_final_review(output_path, edit_decisions)
+            final_review = self._run_final_review(
+                output_path, edit_decisions, inputs.get("proposal_packet")
+            )
 
             # Attach final_review to the ToolResult data so the compose-director
             # skill can include it in the checkpoint alongside the render_report.
@@ -942,6 +1059,172 @@ class VideoCompose(BaseTool):
                     success=False,
                     error=(
                         "Post-render self-review FAILED. The output is not presentable.\n"
+                        + "\n".join(f"  • {i}" for i in final_review.get("issues_found", []))
+                    ),
+                    data=render_result.data,
+                )
+
+        return render_result
+
+    def _render_via_hyperframes(
+        self,
+        *,
+        inputs: dict[str, Any],
+        edit_decisions: dict[str, Any],
+        asset_manifest: dict[str, Any],
+        resolved_cuts: list[dict],
+        output_path: Path,
+        profile: Optional[str],
+    ) -> ToolResult:
+        """Delegate to hyperframes_compose and run the mandatory final self-review.
+
+        Governance: if HyperFrames is unavailable or fails, return a structured
+        blocker — do NOT silently route to Remotion or FFmpeg. The agent must
+        surface the blocker and get user approval before any runtime swap.
+        """
+        if not self._hyperframes_available():
+            return ToolResult(
+                success=False,
+                error=(
+                    "render_runtime='hyperframes' was locked at proposal, but "
+                    "the HyperFrames runtime is not available on this machine. "
+                    "Per governance this is a BLOCKER — surface it to the user "
+                    "per AGENT_GUIDE.md > 'Escalate Blockers Explicitly' and wait "
+                    "for approval before switching runtime. Requirements: "
+                    "Node.js >= 22, FFmpeg, and npx on PATH. See "
+                    "tools/video/hyperframes_compose.py for the specific missing piece."
+                ),
+            )
+
+        try:
+            from tools.video.hyperframes_compose import HyperFramesCompose
+        except Exception as e:
+            return ToolResult(
+                success=False,
+                error=f"Could not import hyperframes_compose: {e}",
+            )
+
+        workspace_path = (
+            inputs.get("workspace_path")
+            or str(output_path.parent.parent / "hyperframes")
+        )
+
+        # Pass the playbook through so the style bridge can emit CSS vars.
+        playbook_data = inputs.get("playbook")
+        if not playbook_data:
+            playbook_name = (
+                inputs.get("playbook_name")
+                or (edit_decisions.get("metadata") or {}).get("playbook")
+            )
+            if playbook_name:
+                try:
+                    from styles.playbook_loader import load_playbook  # type: ignore
+                    playbook_data = load_playbook(playbook_name)
+                except Exception:
+                    playbook_data = None
+
+        hf_inputs: dict[str, Any] = {
+            "operation": "render",
+            "workspace_path": workspace_path,
+            "output_path": str(output_path),
+            "edit_decisions": dict(edit_decisions, cuts=resolved_cuts),
+            "asset_manifest": asset_manifest,
+        }
+        if playbook_data:
+            hf_inputs["playbook"] = playbook_data
+        if profile:
+            hf_inputs["profile"] = profile
+        if "quality" in inputs:
+            hf_inputs["quality"] = inputs["quality"]
+        if "fps" in inputs:
+            hf_inputs["fps"] = inputs["fps"]
+        if "strict" in inputs:
+            hf_inputs["strict"] = inputs["strict"]
+        if "skip_contrast" in inputs:
+            hf_inputs["skip_contrast"] = inputs["skip_contrast"]
+
+        render_result = HyperFramesCompose().execute(hf_inputs)
+
+        if not render_result.success:
+            return ToolResult(
+                success=False,
+                error=(
+                    f"HyperFrames render failed: {render_result.error}. "
+                    "Per governance: do NOT silently fall back to Remotion or "
+                    "FFmpeg. Surface the failure to the user along with the "
+                    "hyperframes_compose step log before proposing a swap."
+                ),
+                data=render_result.data,
+            )
+
+        # Post-render: mandatory final self-review (identical contract to the Remotion path).
+        if output_path.exists():
+            final_review = self._run_final_review(
+                output_path, edit_decisions, inputs.get("proposal_packet")
+            )
+            if render_result.data is None:
+                render_result.data = {}
+            render_result.data["final_review"] = final_review
+            render_result.data["final_review_status"] = final_review["status"]
+            if final_review["status"] == "fail":
+                return ToolResult(
+                    success=False,
+                    error=(
+                        "Post-render self-review FAILED (HyperFrames). The output is not presentable.\n"
+                        + "\n".join(f"  • {i}" for i in final_review.get("issues_found", []))
+                    ),
+                    data=render_result.data,
+                )
+
+        return render_result
+
+    def _render_via_ffmpeg(
+        self,
+        *,
+        inputs: dict[str, Any],
+        edit_decisions: dict[str, Any],
+        resolved_cuts: list[dict],
+        output_path: Path,
+        profile: Optional[str],
+    ) -> ToolResult:
+        """Explicit FFmpeg-only render path.
+
+        Use when the proposal locked `render_runtime="ffmpeg"` — e.g. simple
+        source-footage concat/trim jobs that don't benefit from composition.
+        Still runs the mandatory final self-review.
+        """
+        options = inputs.get("options", {})
+        subtitle_burn = options.get("subtitle_burn", True)
+
+        subtitle_path = inputs.get("subtitle_path")
+        if subtitle_burn and not subtitle_path:
+            ed_subs = edit_decisions.get("subtitles", {})
+            if ed_subs.get("enabled") and ed_subs.get("source"):
+                subtitle_path = ed_subs["source"]
+
+        compose_inputs = dict(inputs)
+        compose_inputs["edit_decisions"] = dict(edit_decisions, cuts=resolved_cuts)
+        compose_inputs["output_path"] = str(output_path)
+        if subtitle_path:
+            compose_inputs["subtitle_path"] = subtitle_path
+        if profile:
+            compose_inputs["profile"] = profile
+
+        render_result = self._compose(compose_inputs)
+
+        if render_result.success and output_path.exists():
+            final_review = self._run_final_review(
+                output_path, edit_decisions, inputs.get("proposal_packet")
+            )
+            if render_result.data is None:
+                render_result.data = {}
+            render_result.data["final_review"] = final_review
+            render_result.data["final_review_status"] = final_review["status"]
+            if final_review["status"] == "fail":
+                return ToolResult(
+                    success=False,
+                    error=(
+                        "Post-render self-review FAILED (FFmpeg). The output is not presentable.\n"
                         + "\n".join(f"  • {i}" for i in final_review.get("issues_found", []))
                     ),
                     data=render_result.data,
@@ -1074,12 +1357,20 @@ class VideoCompose(BaseTool):
         self,
         output_path: Path,
         edit_decisions: dict[str, Any] | None = None,
+        proposal_packet: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Run post-render self-review and produce a final_review artifact.
 
         This is the governance contract: the compose runtime MUST inspect
         the actual rendered output before marking the stage complete.
         Never claim a video is ready without a real probe + frame sample.
+
+        When `proposal_packet` is provided, its
+        `production_plan.render_runtime` is compared against
+        `edit_decisions.render_runtime` so `runtime_swap_detected` can
+        actually flip. Without it, we fall back to
+        `edit_decisions.metadata.proposal_render_runtime` (which the edit
+        director can set explicitly to opt into swap detection).
 
         Returns a dict conforming to final_review.schema.json.
         """
@@ -1278,11 +1569,63 @@ class VideoCompose(BaseTool):
         promise_preservation: dict[str, Any] = {
             "delivery_promise_honored": True,
             "silent_downgrade_detected": False,
+            "runtime_swap_detected": False,
             "issues": [],
         }
         if edit_decisions:
             renderer_family = edit_decisions.get("renderer_family", "")
             promise_preservation["renderer_family_used"] = renderer_family
+
+            # Runtime governance — record what actually ran and flag a swap.
+            # Three sources of truth, in priority order:
+            #   1. proposal_packet.production_plan.render_runtime (authoritative)
+            #   2. edit_decisions.metadata.proposal_render_runtime (if edit stage
+            #      explicitly copied it to opt into in-tool swap detection)
+            #   3. edit_decisions.render_runtime itself (cannot detect a swap in
+            #      this case — reviewer does cross-artifact comparison instead)
+            render_runtime_edit = (edit_decisions.get("render_runtime") or "").strip().lower()
+            if render_runtime_edit:
+                promise_preservation["render_runtime_used"] = render_runtime_edit
+
+                proposal_runtime: str | None = None
+                runtime_source: str | None = None
+                if proposal_packet:
+                    pp_runtime = (
+                        (proposal_packet.get("production_plan") or {}).get("render_runtime")
+                        or ""
+                    ).strip().lower()
+                    if pp_runtime:
+                        proposal_runtime = pp_runtime
+                        runtime_source = "proposal_packet.production_plan.render_runtime"
+                if proposal_runtime is None:
+                    md_runtime = (
+                        (edit_decisions.get("metadata") or {}).get("proposal_render_runtime")
+                        or ""
+                    ).strip().lower()
+                    if md_runtime:
+                        proposal_runtime = md_runtime
+                        runtime_source = "edit_decisions.metadata.proposal_render_runtime"
+
+                if proposal_runtime is None:
+                    promise_preservation["runtime_swap_check"] = (
+                        "skipped — no proposal_packet or proposal_render_runtime "
+                        "metadata provided. Reviewer skill does cross-artifact "
+                        "comparison separately."
+                    )
+                elif proposal_runtime != render_runtime_edit:
+                    promise_preservation["runtime_swap_detected"] = True
+                    promise_preservation["runtime_swap_check"] = (
+                        f"detected — source: {runtime_source}"
+                    )
+                    promise_preservation["issues"].append(
+                        f"render_runtime changed between proposal ({proposal_runtime}) "
+                        f"and compose ({render_runtime_edit}) — this is a contract "
+                        f"violation unless a render_runtime_selection decision was logged."
+                    )
+                else:
+                    promise_preservation["runtime_swap_check"] = (
+                        f"ok — proposal and edit agree ({runtime_source})"
+                    )
 
             delivery_data = (
                 edit_decisions.get("metadata", {}).get("delivery_promise")

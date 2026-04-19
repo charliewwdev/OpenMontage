@@ -40,11 +40,37 @@ Based on discovery, classify the setup:
 
 | Tier | What's Available | Best Pipelines |
 |------|-----------------|----------------|
-| **Zero-key** | Piper TTS + Pexels/Pixabay stock (if keys added) + Remotion + FFmpeg | Animated Explainer (stock visuals + free narration) |
-| **Starter** | One configured image generation provider + free TTS + Remotion | Animated Explainer, Animation (AI-generated visuals) |
+| **Zero-key** | Piper TTS + Pexels/Pixabay stock (if keys added) + Remotion and/or HyperFrames + FFmpeg | Animated Explainer (stock visuals + free narration) |
+| **Starter** | One configured image generation provider + free TTS + Remotion and/or HyperFrames | Animated Explainer, Animation (AI-generated visuals) |
 | **Standard** | Image gen + TTS + music gen | Animated Explainer, Animation, Screen Demo, Hybrid |
 | **Full** | Video gen + image gen + premium TTS + music | All pipelines including Cinematic, Avatar, Talking Head |
 | **Full + GPU** | Cloud APIs + local video gen models | All pipelines with free local fallbacks |
+
+**Composition runtimes** — both are first-class and surface as distinct
+entries in the provider menu. Report each one's availability separately:
+
+- **Remotion** requires Node.js + `npx` + `remotion-composer/` + `node_modules`.
+  Best for React-based scene components (text cards, stat cards, charts),
+  word-level captions, and the `TalkingHead` avatar composition.
+- **HyperFrames** requires Node.js ≥ 22 + `npx` + FFmpeg. Consumed via
+  `npx @hyperframes/cli` (no monorepo checkout required). Best for
+  HTML/CSS/GSAP motion graphics — kinetic typography, product promos,
+  launch reels, website-to-video workflows, registry blocks.
+
+Name BOTH runtimes explicitly in the "Ready to go" summary when both are
+available — not "Remotion" alone. A fresh-session agent that doesn't
+mention HyperFrames by name will fail to present it at proposal time;
+naming it here sets the expectation that the agent is runtime-agnostic.
+
+If only one is available, note it in the summary and mention what the
+other would unlock. If neither is available, tell the user their options
+are FFmpeg-only (simple concat/trim) and what's needed to unlock HTML/React
+composition.
+
+**Do NOT pick a runtime during onboarding.** Runtime selection happens at
+the proposal stage, after the agent understands the brief. During
+onboarding you're reporting capabilities, not making production decisions.
+See `AGENT_GUIDE.md` → "Present Both Composition Runtimes (HARD RULE)".
 
 ### Step 3: Greet and Orient
 

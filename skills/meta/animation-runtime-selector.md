@@ -1,18 +1,67 @@
 # Animation Runtime Selector
 
-Meta-skill that answers: *"for the animated scene I'm about to build, which runtime + Layer 3 skills should I reach for?"*
+Meta-skill that answers two questions:
 
-Read this before authoring any animated Remotion component or HyperFrames composition. It routes you to the right Layer 3 skill so you don't waste time hand-rolling what a plugin already solves.
+1. **Which composition runtime should this video use?** — Remotion, HyperFrames, or FFmpeg.
+2. **Which animation library / Layer 3 skills should this scene reach for?** — Remotion primitives, GSAP plugins, framer-motion, Lottie, Manim, D3.
+
+Read this before authoring any animated component or composition, and whenever you're choosing `render_runtime` at proposal time. It routes you to the right Layer 3 skill so you don't waste time hand-rolling what a plugin already solves.
 
 ## When to use this skill
 
 Apply when:
+- **Proposal stage** needs to lock `render_runtime` (remotion / hyperframes / ffmpeg)
 - A stage director (asset, edit, compose) needs to author an animated component
 - An agent is about to write Remotion JSX for a scene that involves text reveals, SVG motion, curved camera paths, shape morphs, or multi-stage choreography
 - An agent is asked to build a HyperFrames composition
 - An agent is uncertain whether to reach for a GSAP plugin vs inline `interpolate()`/`spring()`
 
-## Decision matrix
+## Runtime choice (Remotion vs HyperFrames vs FFmpeg)
+
+OpenMontage separates creative grammar (`renderer_family`) from technical
+engine (`render_runtime`). Both are locked at proposal and carried through
+`edit_decisions` unchanged. Silent runtime swaps at compose time are a
+contract violation.
+
+### HARD RULE — present both runtimes, don't silently default
+
+When both Remotion AND HyperFrames are available on the machine (check
+`video_compose.get_info()["render_engines"]`), the agent MUST present both
+options to the user before locking `render_runtime`. The decision matrix
+below is the agent's input for the conversation, NOT a license to silently
+pick the "default" entry. See `AGENT_GUIDE.md` → "Present Both Composition
+Runtimes" for the full contract.
+
+Concretely, at the proposal stage:
+
+1. Query `video_compose.get_info()["render_engines"]` to find which
+   runtimes are available on this machine.
+2. If both Remotion and HyperFrames are available, present both to the
+   user with: one-line description tailored to the brief, one-line
+   honest tradeoff, agent's recommendation with reason.
+3. Wait for explicit user approval.
+4. Log the decision in `decision_log` with category
+   `render_runtime_selection` and both runtimes in `options_considered`.
+5. Only then write `render_runtime` into `proposal_packet.production_plan`.
+
+A `render_runtime_selection` decision with only one option considered
+when both were available is a CRITICAL reviewer finding.
+
+| Brief characteristic | `render_runtime` | Read |
+|---|---|---|
+| Existing React scene stack (text_card, stat_card, chart, caption overlay, TalkingHead, CinematicRenderer) | **remotion** | `skills/core/remotion.md` |
+| Word-level caption burn / karaoke captions | **remotion** | `skills/core/remotion.md` |
+| Avatar / lip-sync / presenter | **remotion** | `skills/core/remotion.md` |
+| Kinetic typography, HTML/GSAP-native motion, product promo, launch reel | **hyperframes** | `skills/core/hyperframes.md` + `.agents/skills/hyperframes/SKILL.md` |
+| Website → video, UI-driven composition | **hyperframes** | `.agents/skills/website-to-hyperframes/SKILL.md` |
+| Registry block needed (data-chart, grain-overlay, shader transitions, etc.) | **hyperframes** | `.agents/skills/hyperframes-registry/SKILL.md` |
+| Pure concat / trim of source clips, no composition needed | **ffmpeg** | `skills/core/ffmpeg.md` |
+| Selected runtime is unavailable | **escalate** — do not substitute silently | `AGENT_GUIDE.md` → Escalate Blockers |
+
+Read `skills/core/hyperframes.md` for the full Remotion-vs-HyperFrames
+decision matrix and the list of features that stay Remotion-only in Phase 1.
+
+## Animation library decision matrix
 
 | Animation need | Recommended runtime | Read first |
 |---|---|---|
@@ -32,7 +81,9 @@ Apply when:
 | Mathematical / scientific visualization | Manim | `.agents/skills/manim-composer`, `.agents/skills/manimce-best-practices` |
 | D3 data-driven visualization | D3 | `.agents/skills/d3-viz` |
 | Data chart (bar/line/pie/KPI) | Remotion built-in chart components | `remotion-composer/SCENE_TYPES.md` |
-| HyperFrames composition (any motion) | HyperFrames + GSAP (mandatory) | `.agents/skills/gsap-core`, `.agents/skills/gsap-timeline` |
+| HyperFrames composition (any motion) | HyperFrames + GSAP (mandatory) | `.agents/skills/hyperframes` + `.agents/skills/gsap-core`, `.agents/skills/gsap-timeline` |
+| HyperFrames composition CLI work (lint/validate/render) | HyperFrames CLI | `.agents/skills/hyperframes-cli` |
+| HyperFrames registry block install (`hyperframes add ...`) | HyperFrames registry | `.agents/skills/hyperframes-registry` |
 
 ## The "keep it simple" bias
 

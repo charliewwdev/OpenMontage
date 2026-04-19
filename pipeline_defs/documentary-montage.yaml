@@ -166,6 +166,7 @@ stages:
       - Resolution matches target_platform canvas
       - Uniform LUT applied across the timeline
       - Music is mixed in (MANDATORY — silent output only with explicit user opt-out recorded in brief)
+      - "render_runtime locked at proposal MUST stay 'remotion' on this pipeline until HyperFrames end-tag parity lands — the overlay/concat end-tag stack depends on Remotion CinematicRenderer components. Silent swap to hyperframes or ffmpeg is a CRITICAL governance violation."
       - "End-tag rendered via Remotion (MANDATORY — absence only with explicit opt-out). Default mode: overlay (ProRes 4444 with alpha composited on final scenes). Fallback: concat (opaque card appended after body)."
       - "Overlay mode: extract a frame from the overlay region and verify text is visible over footage, not over black. Concat mode: last frame must be the end-tag card."
       - No silent fallback from a motion-led promise

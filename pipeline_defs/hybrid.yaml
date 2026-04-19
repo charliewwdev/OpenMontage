@@ -187,6 +187,7 @@ stages:
       - audio_enhance
     tools_available:
       - video_compose
+      - hyperframes_compose
       - audio_mixer
       - video_stitch
       - video_trimmer
@@ -198,6 +199,8 @@ stages:
       - Source and support layers remain balanced
       - Aspect-ratio variants preserve readability
       - Audio stays coherent across footage and generated elements
+      - "render_runtime in edit_decisions matches proposal_packet — silent swap is a CRITICAL governance violation"
+      - "Hybrid typically uses render_runtime='remotion' so source footage and React support overlays compose in one pass; pick 'hyperframes' only when support layers are HTML/GSAP-native"
     success_criteria:
       - Schema-valid render_report artifact
       - Output file exists and passes ffprobe validation

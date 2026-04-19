@@ -98,6 +98,7 @@ stages:
       - Free/local tool options are highlighted where applicable
       - "Audio architecture decided: single narrator / character dialogue / narrator+characters"
       - "Provider choice presented as comparison table with costs — agent recommends but user decides"
+      - "render_runtime chosen explicitly — remotion for React scene stack, hyperframes for HTML/GSAP motion graphics, ffmpeg for simple concat. See skills/core/hyperframes.md and skills/meta/animation-runtime-selector.md for the decision matrix. Record in decision_log with category render_runtime_selection."
     success_criteria:
       - Schema-valid proposal_packet with at least 3 concept_options
       - selected_concept includes animation_mode and reuse_strategy
@@ -243,6 +244,7 @@ stages:
       - video_stitch
     tools_available:
       - video_compose
+      - hyperframes_compose
       - audio_mixer
       - video_stitch
     checkpoint_required: true
@@ -252,6 +254,8 @@ stages:
       - Motion timing survives the final render
       - Audio sync matches the animatic intent
       - Duration within +/-5% of target
+      - "render_runtime in edit_decisions matches render_runtime locked in proposal_packet — any swap requires a render_runtime_selection decision in decision_log"
+      - "HyperFrames renders MUST pass `hyperframes lint` and `hyperframes validate` before the render step — never skip validation"
       - "Post-render self-review MANDATORY: extract keyframes, visually inspect each scene, flag weak frames before presenting to user"
     success_criteria:
       - Schema-valid render_report artifact

@@ -1,3 +1,15 @@
+"""Render the curated zero-key Remotion demos.
+
+This script is Remotion-specific by design — the demos live in
+`remotion-composer/public/demo-props/` as JSON props for existing React
+scene components. It is NOT a cross-runtime demo harness.
+
+For a HyperFrames demo, run `make hyperframes-doctor` to verify the runtime
+floor, then either scaffold a real composition via `npx hyperframes init`
+or drive `hyperframes_compose` from the Agent SDK. HyperFrames demos are
+authored as HTML + GSAP in a project workspace, not as JSON props here.
+"""
+
 from __future__ import annotations
 
 import argparse

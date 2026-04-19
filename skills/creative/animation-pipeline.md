@@ -1,8 +1,27 @@
 # Animation & Motion Graphics Pipeline
 
 > Sources: School of Motion curriculum, After Effects documentation, Remotion documentation,
-> Disney's 12 Principles of Animation (Frank Thomas & Ollie Johnston), Motion Design School,
-> The Animator's Survival Kit (Richard Williams)
+> HyperFrames documentation, Disney's 12 Principles of Animation (Frank Thomas & Ollie
+> Johnston), Motion Design School, The Animator's Survival Kit (Richard Williams)
+
+## Runtime Choice — Remotion vs HyperFrames
+
+Animation work in OpenMontage runs on one of two composition runtimes. Both
+are first-class; the choice is creative, not a fallback:
+
+- **Remotion (React-based)** — when the scene is a React component, uses the
+  existing chart/text-card/comparison/kpi stack, or needs pixel-accurate
+  frame-level interpolation through `useCurrentFrame()` + `interpolate()`.
+  Default for data-heavy explainers.
+- **HyperFrames (HTML/GSAP)** — when the motion is expressed naturally as
+  CSS + GSAP timelines: kinetic typography, product promos, launch reels,
+  website/UI-driven compositions, registry-block-driven scenes. Default
+  when the brief is motion-graphics-led and the scene library in
+  `remotion-composer/` doesn't already cover the look.
+
+See `skills/core/hyperframes.md` and `skills/meta/animation-runtime-selector.md`
+for the full decision matrix. Whichever runtime is chosen at proposal must
+be locked in `edit_decisions.render_runtime` and preserved through compose.
 
 ## Quick Reference Card
 

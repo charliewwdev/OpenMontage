@@ -4,6 +4,18 @@
 
 Render the hybrid project so source media, support graphics, and audio all remain coherent across outputs.
 
+## Runtime Routing (MANDATORY first step)
+
+Read `edit_decisions.render_runtime`. Hybrid work typically sticks with Remotion because source footage + React support overlays compose cleanly in one pass:
+
+- **`render_runtime="remotion"`** — default. Source footage via `<OffthreadVideo>`, support graphics as React components, one render.
+- **`render_runtime="hyperframes"`** — pick only when the support layer is HTML/GSAP-native (e.g., animated text callouts, registry blocks). Source footage is still possible via `<video class="clip">` but lose some of the Remotion component stack. See `skills/core/hyperframes.md`.
+- **`render_runtime="ffmpeg"`** — rare on this pipeline; implies no generated support layer.
+
+Silent runtime swap is a CRITICAL governance violation. Escalate blockers per AGENT_GUIDE.md before substituting.
+
+**Pass `proposal_packet` to `video_compose.execute()`** so the tool's in-tool swap-detection check runs against the proposal directly instead of being `skipped`.
+
 ## Prerequisites
 
 | Layer | Resource | Purpose |

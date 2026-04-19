@@ -4,6 +4,22 @@
 
 Render the animation with an emphasis on text sharpness, timing integrity, and consistent output cadence. For `image_animation` approach, this stage also includes building the composition JSON, sourcing music, running pre-render validation, and performing post-render self-review.
 
+## Runtime Routing (MANDATORY first step)
+
+Before any other work, read `edit_decisions.render_runtime`. It was locked at proposal and MUST NOT be changed silently. The rest of this skill assumes `render_runtime="remotion"` (the default for this pipeline). If the proposal locked a different runtime:
+
+- **`render_runtime="hyperframes"`** — HTML/CSS/GSAP render. Do NOT follow the Remotion-specific sections below (public/ staging, Remotion composition JSON). Instead:
+  1. Read `skills/core/hyperframes.md` for the full routing model.
+  2. Read `.agents/skills/hyperframes/SKILL.md` and `.agents/skills/hyperframes-cli/SKILL.md` for authoring contract and CLI usage.
+  3. Call `video_compose` with `edit_decisions.render_runtime="hyperframes"` — it delegates to `hyperframes_compose`, which owns workspace materialization under `projects/<name>/hyperframes/`, runs `hyperframes lint → validate → render`, and returns the MP4 path.
+  4. `hyperframes lint` and `hyperframes validate` MUST both pass before render. Never skip validate; contrast can be deferred with `skip_contrast=true` during iteration but not for final delivery.
+- **`render_runtime="ffmpeg"`** — simple concat/trim with no composition. Call `video_compose` directly; it will not auto-upgrade to Remotion.
+- **Runtime unavailable** — do NOT silently swap to a different engine. Surface the blocker to the user per AGENT_GUIDE.md > "Escalate Blockers Explicitly" and wait for approval (recorded as a `render_runtime_selection` decision in decision_log) before switching.
+
+The post-render self-review (final_review) is identical across runtimes — same ffprobe probe, frame sampling, audio spotcheck, and promise preservation checks. `final_review.checks.promise_preservation.render_runtime_used` must equal the runtime that actually ran.
+
+**Pass `proposal_packet` to `video_compose.execute()`** when you invoke it. That lets the tool directly compare the proposal-locked runtime against the runtime recorded in `edit_decisions` and flip `runtime_swap_detected=true` if they diverge. Without it, the check is `skipped` and the reviewer skill has to catch swaps via cross-artifact comparison instead.
+
 ## Prerequisites
 
 | Layer | Resource | Purpose |

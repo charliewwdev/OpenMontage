@@ -108,7 +108,7 @@ Structure your review as:
 | Stage | What matters most |
 |-------|-----------------|
 | research | Source diversity, claim verifiability, visual reference quality |
-| proposal | Delivery promise clarity, renderer family selection, music/voice plan, decision log started |
+| proposal | Delivery promise clarity, renderer family AND render runtime selection, music/voice plan, decision log started |
 | idea | Hook uniqueness, research depth, angle diversity |
 | script | Timing accuracy, narrative arc, enhancement cue density |
 | scene_plan | Full coverage, visual variety, asset feasibility, slideshow risk score |
@@ -219,6 +219,18 @@ Run at **scene_plan** and **edit** stages. Prevents the "every video looks the s
 4. **Renderer family match** (edit stage):
    - Does `renderer_family` in edit_decisions match what was set at proposal?
    - If changed without documented reason in decision log → **CRITICAL**
+
+5. **Render runtime match** (edit and compose stages):
+   - `render_runtime` in edit_decisions must match proposal_packet.production_plan.render_runtime
+   - If changed without a `render_runtime_selection` decision logged in decision_log → **CRITICAL**
+   - At compose stage, `final_review.checks.promise_preservation.runtime_swap_detected` must be `false`. If `true` without an approved `render_runtime_selection` decision → **CRITICAL**
+   - Runtime unavailable at compose time is not an excuse for silent swap — the correct behavior is to escalate, get approval, log a decision, then run.
+
+6. **Runtime selection presented both options** (proposal stage, MANDATORY):
+   - Query `video_compose.get_info()["render_engines"]`. If both `remotion` and `hyperframes` show `True`, the `render_runtime_selection` decision in `decision_log` MUST have BOTH runtimes in `options_considered`.
+   - A `render_runtime_selection` with only one runtime in `options_considered` when both were available on the machine → **CRITICAL**. The agent silently defaulted; the user was not presented the alternative. Re-open the proposal stage and present both.
+   - If only one runtime was available, `options_considered` must still list the unavailable one with `rejected_because: "runtime not available on this machine"` — otherwise the audit trail loses the fact that the choice was constrained, not discretionary.
+   - Per AGENT_GUIDE.md > "Present Both Composition Runtimes (HARD RULE)": the pipeline's suggested "default" runtime is NOT a license to skip the conversation with the user.
 
 ## Delivery Promise Review
 

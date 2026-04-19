@@ -233,6 +233,7 @@ stages:
       - audio_enhance
     tools_available:
       - video_compose
+      - hyperframes_compose
       - audio_mixer
       - video_stitch
       - video_trimmer
@@ -245,6 +246,8 @@ stages:
       - Motion-required delivery was preserved without silent fallback
       - Audio dynamics are controlled and intelligible
       - Letterbox or frame treatment improves rather than harms the output
+      - "render_runtime in edit_decisions matches proposal_packet — silent swap is a CRITICAL governance violation"
+      - "Cinematic work typically picks render_runtime='remotion' (CinematicRenderer) for video-led pieces; render_runtime='hyperframes' for kinetic title cards and HTML/GSAP-driven trailers"
     success_criteria:
       - Schema-valid render_report artifact
       - Output file exists and passes ffprobe validation

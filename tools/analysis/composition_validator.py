@@ -59,11 +59,24 @@ class CompositionValidator(BaseTool):
         "properties": {
             "composition_path": {
                 "type": "string",
-                "description": "Path to the ExplainerProps JSON file",
+                "description": "Path to the composition JSON file",
             },
             "assets_root": {
                 "type": "string",
-                "description": "Root directory for resolving relative asset paths (defaults to composition's parent dir)",
+                "description": (
+                    "Root directory for resolving relative asset paths. "
+                    "If omitted, resolved from render_runtime (see below)."
+                ),
+            },
+            "render_runtime": {
+                "type": "string",
+                "enum": ["remotion", "hyperframes", "ffmpeg"],
+                "description": (
+                    "Which runtime will consume this composition. Drives the "
+                    "default asset root: remotion→remotion-composer/public, "
+                    "hyperframes→<workspace>/assets or composition's parent, "
+                    "ffmpeg→composition's parent. Explicit assets_root wins."
+                ),
             },
         },
     }
@@ -91,20 +104,50 @@ class CompositionValidator(BaseTool):
         except (json.JSONDecodeError, UnicodeDecodeError) as e:
             return ToolResult(success=False, error=f"Invalid JSON: {e}")
 
-        # Determine assets root (Remotion public dir)
-        assets_root = Path(inputs.get("assets_root", ""))
-        if not assets_root.is_dir():
-            # Default: look for remotion-composer/public relative to composition
-            candidate = comp_path
-            for _ in range(5):
-                candidate = candidate.parent
-                public = candidate / "remotion-composer" / "public"
-                if public.is_dir():
-                    assets_root = public
-                    break
-            else:
-                # Fall back to composition's parent
+        # Determine assets root. Explicit wins; otherwise dispatch by runtime.
+        # `render_runtime` may be passed in inputs, or extracted from the
+        # composition JSON itself (edit_decisions.render_runtime).
+        explicit_root = inputs.get("assets_root") or ""
+        assets_root = Path(explicit_root) if explicit_root else None
+        runtime = (
+            inputs.get("render_runtime")
+            or comp.get("render_runtime")
+            or ""
+        ).strip().lower()
+
+        if assets_root is None or not assets_root.is_dir():
+            if runtime == "hyperframes":
+                # HyperFrames workspaces keep assets/ alongside index.html.
+                # Composition JSON typically lives in projects/<p>/artifacts/,
+                # so the workspace is at projects/<p>/hyperframes/.
+                candidate = comp_path
+                resolved = None
+                for _ in range(5):
+                    candidate = candidate.parent
+                    hf_assets = candidate / "hyperframes" / "assets"
+                    if hf_assets.is_dir():
+                        resolved = hf_assets
+                        break
+                    local_assets = candidate / "assets"
+                    if local_assets.is_dir() and (candidate / "index.html").is_file():
+                        resolved = local_assets
+                        break
+                assets_root = resolved or comp_path.parent
+            elif runtime == "ffmpeg":
+                # FFmpeg jobs reference files by absolute path; fall back to
+                # the composition's parent for any bare-name references.
                 assets_root = comp_path.parent
+            else:
+                # Remotion (default): remotion-composer/public
+                candidate = comp_path
+                resolved = None
+                for _ in range(5):
+                    candidate = candidate.parent
+                    public = candidate / "remotion-composer" / "public"
+                    if public.is_dir():
+                        resolved = public
+                        break
+                assets_root = resolved or comp_path.parent
 
         errors: list[str] = []
         warnings: list[str] = []
@@ -125,6 +168,7 @@ class CompositionValidator(BaseTool):
             if out_s > video_duration:
                 video_duration = out_s
         info.append(f"Video duration: {video_duration}s ({len(cuts)} cuts)")
+        info.append(f"Render runtime: {runtime or 'default (remotion)'}; assets root: {assets_root}")
 
         # --- Check 3: Cut ordering and gaps ---
         sorted_cuts = sorted(cuts, key=lambda c: c.get("in_seconds", 0))

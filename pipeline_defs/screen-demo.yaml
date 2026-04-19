@@ -209,6 +209,7 @@ stages:
       - audio_enhance
     tools_available:
       - video_compose
+      - hyperframes_compose
       - audio_mixer
       - video_trimmer
       - audio_enhance
@@ -218,6 +219,8 @@ stages:
       - Output video is playable and crisp at target resolution
       - UI text remains readable after crops and scaling
       - Audio is clear with no keyboard/click noise
+      - "render_runtime in edit_decisions matches proposal_packet — silent swap is a CRITICAL governance violation"
+      - "For synthetic UI/terminal demos, render_runtime='remotion' (TerminalScene) is preferred; render_runtime='hyperframes' is valid for custom HTML UIs — in that case, lint+validate must pass before render"
     success_criteria:
       - Schema-valid render_report artifact
       - Output file exists and passes ffprobe validation

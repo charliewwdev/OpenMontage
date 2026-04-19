@@ -105,6 +105,7 @@ def sample_artifact(name: str) -> dict:
             "selected_concept": {"concept_id": "c1", "rationale": "Strongest research backing"},
             "production_plan": {
                 "pipeline": "animated-explainer",
+                "render_runtime": "remotion",
                 "stages": [
                     {"stage": "script", "tools": [], "approach": "Write from research"},
                     {"stage": "assets", "tools": [{"tool_name": "tts_selector", "role": "narration", "available": True}], "approach": "Generate assets"},

@@ -1,7 +1,7 @@
-"""Remotion caption burn tool.
+"""Remotion caption burn tool — **runtime-specific (Remotion-only)**.
 
 Renders animated word-by-word captions onto a talking-head video using
-the Remotion CaptionOverlay component.  Falls back to FFmpeg subtitle
+the Remotion CaptionOverlay component. Falls back to FFmpeg subtitle
 burning if Remotion is not available.
 
 The tool:
@@ -12,6 +12,20 @@ The tool:
 
 Fallback: if Remotion is unavailable, burns subtitles at the bottom of
 the frame using FFmpeg's ``subtitles`` filter with bold styling.
+
+## Runtime scope
+
+This tool is **Remotion-specific** and deliberately has no HyperFrames
+counterpart in Phase 1. Word-level caption burn parity on the HyperFrames
+runtime is explicitly deferred work (see ``skills/core/hyperframes.md`` →
+"What stays Remotion-only in Phase 1").
+
+If a brief requires word-level/karaoke captions, lock
+``render_runtime="remotion"`` at proposal even if the rest of the
+composition would otherwise be a good fit for HyperFrames. Do NOT attempt
+to bolt this tool onto a HyperFrames workspace — the TalkingHead
+composition ID and ``WordCaption`` prop shape it emits are tied to the
+React scene stack in ``remotion-composer/``.
 """
 
 from __future__ import annotations

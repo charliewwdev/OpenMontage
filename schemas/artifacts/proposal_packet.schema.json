@@ -66,7 +66,7 @@
     },
     "production_plan": {
       "type": "object",
-      "required": ["pipeline", "stages"],
+      "required": ["pipeline", "stages", "render_runtime"],
       "properties": {
         "pipeline": { "type": "string", "description": "Pipeline manifest name, e.g., 'animated-explainer'" },
         "playbook": { "type": "string", "description": "Selected style playbook" },
@@ -148,7 +148,12 @@
         "renderer_family": {
           "type": "string",
           "enum": ["explainer-data", "explainer-teacher", "cinematic-trailer", "documentary-montage", "product-reveal", "screen-demo", "presenter", "animation-first"],
-          "description": "Locked at proposal stage — compose cannot change without logging a decision"
+          "description": "Locked at proposal stage — compose cannot change without logging a decision. This is the creative grammar, NOT the technical engine."
+        },
+        "render_runtime": {
+          "type": "string",
+          "enum": ["remotion", "hyperframes", "ffmpeg"],
+          "description": "Locked at proposal stage — the technical runtime that realizes renderer_family. remotion=React scene components, hyperframes=HTML/CSS/GSAP, ffmpeg=simple concat/trim. Must be explicit and auditable; silent swaps are forbidden."
         },
         "music_source": {
           "type": "object",

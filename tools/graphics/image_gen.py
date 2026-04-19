@@ -60,6 +60,16 @@ class ImageGen(BaseTool):
         "generate_diagram_overlay",
         "generate_illustration",
     ]
+    best_for = [
+        "DEPRECATED — prefer image_selector which routes to per-provider tools "
+        "(flux_image, openai_image, recraft_image, grok_image, local_diffusion, "
+        "pexels_image, pixabay_image).",
+        "Kept only for backwards compatibility. New code should not call this.",
+    ]
+    not_good_for = [
+        "New production code — use image_selector instead.",
+        "Picking a specific provider (use the per-provider tool directly).",
+    ]
 
     input_schema = {
         "type": "object",

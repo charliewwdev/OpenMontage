@@ -4,7 +4,7 @@
   "title": "Edit Decisions",
   "description": "Editorial decisions produced by the Edit Agent.",
   "type": "object",
-  "required": ["version", "cuts"],
+  "required": ["version", "cuts", "render_runtime"],
   "properties": {
     "version": { "type": "string", "const": "1.0" },
     "cuts": {
@@ -192,7 +192,12 @@
     "renderer_family": {
       "type": "string",
       "enum": ["explainer-data", "explainer-teacher", "cinematic-trailer", "documentary-montage", "product-reveal", "screen-demo", "presenter", "animation-first"],
-      "description": "Locked at proposal stage — determines which Remotion composition renders this video"
+      "description": "Locked at proposal stage — creative grammar for this deliverable. Preserved from proposal_packet; edit MUST NOT change without a logged decision."
+    },
+    "render_runtime": {
+      "type": "string",
+      "enum": ["remotion", "hyperframes", "ffmpeg"],
+      "description": "Locked at proposal stage — technical runtime that realizes renderer_family. Edit MUST carry this forward unchanged unless a logged render_runtime_selection decision overrides it."
     },
     "slideshow_risk_score": {
       "type": "object",

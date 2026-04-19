@@ -8,6 +8,34 @@ You are the **Proposal Director** for a generated animation video. You sit betwe
 
 Animation proposals have a unique dimension: **animation mode selection**. Unlike explainer videos where the visual approach is secondary to the narrative, animation videos ARE their visual approach. The mode choice (Manim vs Remotion vs AI video vs motion graphics) fundamentally shapes the entire production.
 
+## Runtime Selection (required field — `render_runtime`)
+
+Animation proposals must lock **both** a `renderer_family` (creative grammar) and a `render_runtime` (technical engine). These are separate concepts now that HyperFrames is a first-class runtime. Read `skills/meta/animation-runtime-selector.md` and `skills/core/hyperframes.md` for the decision matrix, and `AGENT_GUIDE.md` → "Present Both Composition Runtimes (HARD RULE)" for the governance contract.
+
+**MANDATORY workflow — present both runtimes, don't silently default:**
+
+1. Query `video_compose.get_info()["render_engines"]`. If both `remotion` and `hyperframes` are `True`, proceed to step 2. If only one is available, go to step 4 with just that one.
+2. Present both runtimes to the user with brief-specific analysis:
+   - **Remotion** — one line on fit (e.g. "your brief uses data-chart and stat_card heavily, both already exist as React components"), one line on tradeoff (e.g. "React component authoring is more rigid than HTML/CSS for custom typographic motion").
+   - **HyperFrames** — one line on fit (e.g. "the kinetic-typography opener fits HTML + GSAP better than Remotion interpolation"), one line on tradeoff (e.g. "no word-level caption burn parity yet; no access to existing Remotion chart library").
+3. Recommend one with rationale tied to the brief's `delivery_promise`, the selected animation mode, and the reuse strategy from research.
+4. Wait for explicit user approval. Do NOT write `render_runtime` into `proposal_packet.production_plan` before approval.
+5. Log a `render_runtime_selection` decision in `decision_log` with BOTH runtimes in `options_considered`, the user's pick as `selected`, and the rationale as `reason`. If a runtime was unavailable, record it as rejected with `rejected_because: "runtime not available on this machine"`.
+
+Fit cheat-sheet for the recommendation (NOT an auto-decision):
+
+| Brief characteristic | Lean toward |
+|----------------------|-------------|
+| Data-chart-heavy, text_card/stat_card/kpi_grid dominant | Remotion |
+| MathAnimate / Manim scene in the animatic | Remotion (Manim renders to a video, composed in Remotion) |
+| Kinetic typography, product promo, launch reel, HTML/GSAP-native motion | HyperFrames |
+| Website-to-video or UI-driven composition | HyperFrames |
+| Registry blocks needed (data-chart, grain-overlay, shader transitions) | HyperFrames |
+| Word-level/karaoke caption burn required | Remotion (HyperFrames caption parity deferred) |
+| Simple source-footage concat, no composition | ffmpeg |
+
+A `render_runtime_selection` decision with only one option considered when both were available is a CRITICAL reviewer finding. That's how the moat collapses into "everything looks like our chart stack."
+
 ## Prerequisites
 
 | Layer | Resource | Purpose |
@@ -95,35 +123,34 @@ This is the key differentiator from the explainer proposal. **Present the user w
 
 #### Step 3a: Tool Availability Scan
 
-Before designing concepts, scan what's available and present it honestly:
+Before designing concepts, scan what's available and present it honestly. **Do NOT hardcode provider names, costs, or key names in this output** — they drift. Read them live from the registry:
+
+```python
+from tools.tool_registry import registry
+registry.discover()
+summary = registry.provider_menu_summary()  # see AGENT_GUIDE.md > Mandatory Preflight
+```
+
+Then render the scan from `summary`, grouping by capability. Example shape you should **generate from the registry**, not copy:
 
 ```
 TOOL AVAILABILITY SCAN
 ──────────────────────
-Image generation:
-  ✅ FLUX (fal.ai)    — FAL_KEY detected       — $0.03-0.05/image
-  ❌ gpt-image-1      — OPENAI_API_KEY missing  — $0.13/image
-  ❌ Stable Diffusion  — Not installed locally   — Free
-  ❌ FLUX (local)      — Not installed locally   — Free
-
-Video generation:
-  ❌ Runway Gen-3      — No API key             — $0.50/clip
-  ❌ Kling             — No API key             — $0.10-0.30/clip
-  ❌ CogVideoX (local) — Not installed          — Free
-
-Composition:
-  ✅ Remotion           — Installed              — Free (local CPU)
-  ✅ FFmpeg             — Installed              — Free
-
-Audio:
-  ✅ Pixabay Music      — No key needed          — Free
-  ❌ OpenAI TTS         — OPENAI_API_KEY missing — $0.015/min
-  ✅ Local TTS (piper)  — Not checked            — Free
-
-Math/Diagram:
-  ❌ ManimCE            — Not installed          — Free
-  ✅ diagram_gen        — Available              — Free
+Image generation:  {configured}/{total}
+  ✅ {tool_name} ({provider}) — available
+  ❌ {tool_name} ({provider}) — {install_instructions trimmed to one line}
+Video generation:  {configured}/{total}
+  ...
+Composition runtimes:  {ffmpeg} / {remotion} / {hyperframes}
+  See AGENT_GUIDE.md > "Present Both Composition Runtimes (HARD RULE)".
+Audio: {configured}/{total}
+Math/Diagram: {configured}/{total}
 ```
+
+**Rules for this output:**
+- Every name, provider, cost, and install instruction comes from `provider_menu_summary()` or `provider_menu()`. Don't type them from memory — provider surfaces change between releases.
+- Never cite a cost that isn't live in the tool's `estimate_cost` or install metadata.
+- Composition runtimes are a separate section because the "Present Both" HARD RULE needs all three engines visible.
 
 **Present this scan to the user.** Say: "Here's what I can see right now. Based on this, here are your animation approach options."
 
@@ -131,14 +158,16 @@ Math/Diagram:
 
 Present the approaches as clear options:
 
-| Approach | What It Looks Like | Tools Required | Cost Range | Proven? |
-|----------|-------------------|----------------|------------|---------|
-| **A: Image-Based Animation (Remotion)** | AI-generated keyframes with crossfade, camera motion, particles. Looks like moving anime/illustration. | `image_selector` (any provider) + Remotion | $0.03-0.13/image × 2-3/scene | ✅ Proven (mori-no-seishin) |
-| **B: Clip-Based Video** | AI-generated video clips assembled as a story. Most cinematic but least consistent. | `video_selector` (Runway/Kling/etc.) | $0.10-0.50/clip × scenes | ❌ Not yet proven |
+| Approach | What It Looks Like | Tools Required | Cost | Proven? |
+|----------|-------------------|----------------|------|---------|
+| **A: Image-Based Animation (Remotion)** | AI-generated keyframes with crossfade, camera motion, particles. Looks like moving anime/illustration. | `image_selector` (any provider) + Remotion | Pull per-image cost from the chosen provider's `estimate_cost`; 2-3 images per scene is typical | ✅ Proven (mori-no-seishin) |
+| **B: Clip-Based Video** | AI-generated video clips assembled as a story. Most cinematic but least consistent. | `video_selector` routing to whichever provider is available | Pull per-clip cost from the chosen provider's `estimate_cost`; varies widely between providers | ❌ Not yet proven |
 | **C: Programmatic Animation (Manim)** | Code-driven math/geometry animation. Precise, clean, 3Blue1Brown style. | `math_animate` (ManimCE) | Free (local) | ❌ Not yet proven |
 | **D: Data Visualization (Remotion)** | Animated charts, KPIs, kinetic typography. Data-driven storytelling. | Remotion (built-in components) | Free (local) | ✅ Proven (zero-key formula) |
-| **E: Diagram + Image Stills** | Process flows and architecture diagrams with Ken Burns. | `diagram_gen` + `image_selector` | $0-0.05/image | ✅ Proven |
-| **F: Mixed Mode** | Combine any of the above per-scene. Most flexible. | Multiple tools | Varies | Partial |
+| **E: Diagram + Image Stills** | Process flows and architecture diagrams with Ken Burns. | `diagram_gen` + `image_selector` | `diagram_gen` is free; per-image cost from `image_selector`'s routed provider | ✅ Proven |
+| **F: Mixed Mode** | Combine any of the above per-scene. Most flexible. | Multiple tools | Sum per-scene from each tool's `estimate_cost` | Partial |
+
+**Rule:** do NOT fill in a dollar figure in the Cost column from memory. Read every cost live via `estimate_cost()` or `provider_menu_summary()` at proposal time. Provider pricing changes between releases.
 
 **For each viable approach, present to the user:**
 
@@ -150,15 +179,15 @@ camera motion (zoom, pan, ken-burns) and particle overlays (fireflies, mist,
 sparkles). Creates the illusion of movement from still frames.
 
 You need: An image generation API key.
-  → You already have: FAL_KEY (FLUX at $0.05/image)
-  → Alternative: Install Stable Diffusion locally (free, slower)
-  → Alternative: Add OPENAI_API_KEY for gpt-image-1 ($0.13/image)
+  → You already have: {from provider_menu_summary: available image_generation providers}
+  → Alternative: {from setup_offers: 1-env-var image_generation tools}
+  → Alternative: local Stable Diffusion (see local_diffusion tool install_instructions)
 
-Estimated cost for 30s video: ~$0.65 (13 images)
-Estimated cost for 5min video: ~$6.00 (120 images)
+Estimated cost for 30s video: pull per-image costs from each provider's
+`estimate_cost` (do NOT hardcode — they drift between releases).
 
-Style options: anime-ghibli, painterly, photorealistic, watercolor
-Reference: remotion-composer/public/demo-props/mori-no-seishin.json
+Style options: depend on the picked provider; read from playbook and
+  provider-specific Layer 3 skill (e.g. `.agents/skills/flux-best-practices`).
 
 APPROACH B: Clip-Based Video
 ─────────────────────────────
@@ -166,17 +195,24 @@ What it looks like: AI-generated 3-5 second video clips assembled as a story.
 Most cinematic output but hardest to maintain visual consistency across clips.
 
 You need: A video generation API key.
-  → Currently available: None detected
-  → To enable: Add RUNWAY_API_KEY, KLING_API_KEY, or install CogVideoX locally
+  → Currently available: {from provider_menu_summary: available video_generation providers}
+  → To enable: {from setup_offers: 1-env-var video_generation tools}, or
+    install a local video model (see video_selector fallback_tools).
 
-Estimated cost for 30s video: $3-15 depending on provider
-Estimated cost for 5min video: $30-150
+Estimated cost for 30s video: pull from each provider's `estimate_cost` on the
+  actual clip plan — per-clip costs range widely between providers and change
+  often. Do NOT hardcode.
 
 Note: This approach is not yet proven in the OpenMontage pipeline.
       Consistency across clips is the #1 challenge.
 ```
 
 **Critical principle: Surface capabilities, don't hide limitations.** The user should know exactly what's possible right now vs. what needs setup.
+
+**Rules for this section — same as Step 3a:**
+- Every provider name, env var, and cost comes from `provider_menu_summary()` or a tool's live `install_instructions` / `estimate_cost`.
+- The `{placeholder}` tokens above are for the agent to fill from the registry, not paste literally.
+- If you find yourself typing a specific API-key env-var name or a per-unit dollar cost into this section, stop. Those drift between releases; hardcoding them in a director skill is a governance regression (see AGENT_GUIDE.md on hardcoded provider names). Pull the same data from the registry instead.
 
 #### Step 3c: Mode Selection Rules
 
@@ -403,7 +439,7 @@ Validate the `proposal_packet` artifact against `schemas/artifacts/proposal_pack
 ## Common Pitfalls
 
 - **Not showing the Tool Availability Scan**: The user must know what's available BEFORE seeing concepts. Don't hide missing keys or tools.
-- **Ignoring animation approach feasibility**: If FLUX isn't available, don't propose image_animation without saying "you need to add FAL_KEY first." Design around constraints OR explicitly state what's needed.
+- **Ignoring animation approach feasibility**: If the routed image/video provider isn't available, don't propose that approach without explicitly telling the user what's needed. Read each missing tool's `install_instructions` from the registry (do NOT hardcode specific env var names here — they drift). Design around constraints OR explicitly state what's needed.
 - **Three versions of the same concept with different titles**: Structural diversity means different animation approaches, different narrative structures, different hooks.
 - **Not leveraging free tools**: Animation has a huge cost advantage — Manim, Remotion data-viz, and diagram_gen are free. If proposing expensive AI video, justify why free alternatives won't work.
 - **Over-promising visual complexity**: 20 unique hand-crafted scenes is not realistic. Design reuse strategies that look varied but share underlying templates.

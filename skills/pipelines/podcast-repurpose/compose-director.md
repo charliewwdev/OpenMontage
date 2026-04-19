@@ -4,6 +4,14 @@
 
 Render the podcast-derived outputs with audio fidelity as the top priority. The visuals need to support the speech, not compete with it.
 
+## Runtime Routing (HARD CONSTRAINT — Remotion or FFmpeg only)
+
+Phase 1 deferred from HyperFrames. `edit_decisions.render_runtime` must be `"remotion"` (audiograms, composed outputs) or `"ffmpeg"` (pure-audio-led clip exports). HyperFrames caption-burn parity is deferred, and podcast outputs lean on Remotion's word-level caption stack.
+
+- If `edit_decisions.render_runtime == "hyperframes"`, stop. Re-open the idea stage and surface the constraint to the user. Never silently rewrite the runtime.
+- Per AGENT_GUIDE.md → "Present Both Composition Runtimes (HARD RULE)": tell the user HyperFrames exists and why it isn't viable on this pipeline, rather than silently locking remotion. Record a `render_runtime_selection` decision with hyperframes `rejected_because: "caption-burn parity deferred on podcast-repurpose"`.
+- Pass `proposal_packet`/`brief` to `video_compose.execute()` for end-to-end runtime-swap detection.
+
 ## Prerequisites
 
 | Layer | Resource | Purpose |

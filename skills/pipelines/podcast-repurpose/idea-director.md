@@ -6,6 +6,12 @@ Use this pipeline when the source is a podcast episode, either audio-only or vid
 
 Your first responsibility is to decide what is feasible from the source that actually exists.
 
+## Runtime Selection (MANDATORY — present the constraint, don't silently pick)
+
+Lock `render_runtime = "remotion"` (audiograms and composed outputs) or `"ffmpeg"` (pure-audio-led clip exports). **HyperFrames is NOT a valid runtime on this pipeline in Phase 1** — podcast outputs lean on Remotion's word-level caption stack, which has no HyperFrames parity yet.
+
+Per AGENT_GUIDE.md → "Present Both Composition Runtimes (HARD RULE)": surface the constraint to the user — "HyperFrames is available on your machine, but podcast-repurpose depends on Remotion caption burn, so remotion is the only viable choice here". Record a `render_runtime_selection` decision with hyperframes `rejected_because: "caption-burn parity deferred on podcast-repurpose"`.
+
 ## Reference Inputs
 
 - `docs/podcast-repurposing-best-practices.md`

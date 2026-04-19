@@ -423,13 +423,32 @@ Each profile specifies codec, audio codec, CRF, pixel format, max file size, max
 
 ---
 
-## Remotion Composer
+## Composition Runtimes
 
-A standalone Node.js/React subproject in `remotion-composer/` for programmatic video composition using [Remotion](https://www.remotion.dev/).
+OpenMontage has a multi-runtime composition layer. Three engines live behind `video_compose`, chosen at proposal and locked in `edit_decisions.render_runtime`:
+
+### Remotion (React-based)
+
+A standalone Node.js/React subproject in `remotion-composer/` using [Remotion](https://www.remotion.dev/).
 
 - **React 18** + **Remotion 4.0** + **TypeScript 5.3**
-- Used by `video_compose` tool for complex compositions
+- Handles the existing scene-component stack (`text_card`, `stat_card`, charts, captions, `TalkingHead`, `CinematicRenderer`)
 - Scripts: `start` (studio), `build` (render), `upgrade`
+
+### HyperFrames (HTML/CSS/GSAP)
+
+Consumed via `npx @hyperframes/cli` (no monorepo checkout needed). Runtime floor: Node.js ≥ 22, FFmpeg, `npx`.
+
+- Handles kinetic typography, product promos, launch reels, website-to-video, registry blocks
+- Driver: `tools/video/hyperframes_compose.py` materializes a workspace under `projects/<name>/hyperframes/`, then runs `lint → validate → render`
+- Layer 3 skills vendored at `.agents/skills/hyperframes*/`; Layer 2 guide at `skills/core/hyperframes.md`
+
+### FFmpeg (fallback / simple cuts)
+
+- Handles pure concat/trim when no composition is needed
+- Also handles subtitle burn-in as a post-hoc operation
+
+`video_compose` reads `edit_decisions.render_runtime` and dispatches via `_render_via_hyperframes`, `_remotion_render`, or `_render_via_ffmpeg`. Silent runtime swaps are forbidden — the tool returns a structured blocker when the chosen runtime is unavailable. See `AGENT_GUIDE.md` → "Composition Runtimes (Inside video_compose)" and `skills/core/hyperframes.md` for the full decision matrix.
 
 ---
 

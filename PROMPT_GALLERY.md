@@ -126,6 +126,38 @@ These use the **Animation pipeline** with `image_animation` approach — FLUX-ge
 
 ---
 
+## HyperFrames — HTML/GSAP Motion Graphics (zero-key, ~$0)
+
+These use the HyperFrames composition runtime — HTML + CSS + GSAP rendered deterministically to video via headless Chrome + FFmpeg. Perfect for kinetic typography, product promos, launch reels, and website-to-video treatments where the visual grammar is typographic and motion-first.
+
+**Requirements:** Node.js ≥ 22, FFmpeg, `npx` — no monorepo checkout, the CLI is fetched via `npx @hyperframes/cli` on first run.
+
+### Kinetic Product Launch
+
+> "Make a 20-second product launch video for a new AI coding assistant called 'Cortex'. Big kinetic typography, three feature callouts, a bold accent color, and a final CTA card. Use the HyperFrames runtime."
+
+**What you get:** HTML/GSAP composition with SplitText-style word reveals, staggered feature callouts, accent-driven color accents from a custom playbook, and `hyperframes lint`/`validate` gates passed before render.
+
+**Estimated time:** 3-5 minutes | **Cost:** $0
+
+### Website → Video Teaser
+
+> "Here's my landing page URL: https://example.com. Make me a 15-second social ad for Instagram. Use HyperFrames and pick up the site's real colors and typography."
+
+**What you get:** `website-to-hyperframes` workflow — capture the site, extract colors/typography into a `DESIGN.md`, storyboard 3-4 beats, generate narration, build compositions with GSAP timelines, lint + validate + render.
+
+**Estimated time:** 8-12 minutes | **Cost:** $0 (or ~$0.05 with premium TTS)
+
+### Launch Reel with Registry Blocks
+
+> "Create a 25-second launch reel for a developer tools startup. Include a data chart block (showing user growth from HyperFrames registry), kinetic title cards, and a shader transition between scenes."
+
+**What you get:** `hyperframes add data-chart` + `hyperframes add shader-transition` installed as sub-compositions, wired into index.html, animated with GSAP timelines. Registry blocks are HyperFrames-only; Remotion can't install them.
+
+**Estimated time:** 5-10 minutes | **Cost:** $0
+
+---
+
 ## Full Setup Prompts (~$1-$3)
 
 With video generation (Veo, Kling, Runway) + premium TTS (ElevenLabs) + music (Suno). These produce broadcast-quality content.

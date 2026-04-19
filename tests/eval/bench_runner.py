@@ -29,6 +29,7 @@ class BenchScenario:
     scenes: list[dict[str, Any]]
     edit_decisions: dict[str, Any] | None = None
     renderer_family: str | None = None
+    render_runtime: str | None = None  # remotion | hyperframes | ffmpeg (optional)
     delivery_promise: dict[str, Any] | None = None
     cuts: list[dict[str, Any]] = field(default_factory=list)
 
@@ -365,7 +366,9 @@ def run_bench(scenarios: list[BenchScenario], verbose: bool = False) -> list[Ben
         if sc.expected_slideshow_verdict is not None:
             try:
                 from lib.slideshow_risk import score_slideshow_risk
-                risk = score_slideshow_risk(sc.scenes, sc.edit_decisions, sc.renderer_family)
+                risk = score_slideshow_risk(
+                    sc.scenes, sc.edit_decisions, sc.renderer_family, sc.render_runtime
+                )
                 actual = risk["verdict"]
                 ok = _verdict_matches(sc.expected_slideshow_verdict, actual)
                 result.checks["slideshow_risk"] = {

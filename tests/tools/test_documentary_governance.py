@@ -108,6 +108,65 @@ def test_documentary_renderer_family_maps_to_remotion():
     assert VideoCompose._get_composition_id("documentary-montage") == "CinematicRenderer"
 
 
+def test_video_compose_surfaces_all_three_runtimes():
+    """Preflight must see remotion, hyperframes, and ffmpeg as separate engines."""
+    info = VideoCompose().get_info()
+    engines = info["render_engines"]
+    assert set(engines.keys()) == {"remotion", "hyperframes", "ffmpeg"}
+    assert engines["ffmpeg"] is True  # always true on this machine
+    assert "hyperframes_note" in info
+    assert "runtime_governance" in info
+
+
+def test_video_compose_blocks_silent_hyperframes_swap(tmp_path, monkeypatch):
+    """Governance: if render_runtime='hyperframes' is locked but runtime
+    is missing, the tool MUST return a structured blocker and NOT route to
+    Remotion or FFmpeg."""
+    monkeypatch.setattr(
+        VideoCompose, "_hyperframes_available", lambda self: False, raising=True
+    )
+    result = VideoCompose().execute(
+        {
+            "operation": "render",
+            "edit_decisions": {
+                "version": "1.0",
+                "renderer_family": "animation-first",
+                "render_runtime": "hyperframes",
+                "cuts": [
+                    {"id": "c1", "source": "x", "in_seconds": 0, "out_seconds": 2}
+                ],
+            },
+            "asset_manifest": {"assets": [{"id": "x", "path": "missing.png"}]},
+            "output_path": str(tmp_path / "out.mp4"),
+        }
+    )
+    assert not result.success
+    err = (result.error or "").lower()
+    assert "hyperframes" in err
+    # Error MUST mention it's a blocker, not silently pick a different engine.
+    assert ("blocker" in err) or ("not available" in err)
+
+
+def test_video_compose_rejects_unknown_render_runtime(tmp_path):
+    result = VideoCompose().execute(
+        {
+            "operation": "render",
+            "edit_decisions": {
+                "version": "1.0",
+                "renderer_family": "explainer-data",
+                "render_runtime": "bogus-runtime",
+                "cuts": [
+                    {"id": "c1", "source": "x", "in_seconds": 0, "out_seconds": 2}
+                ],
+            },
+            "asset_manifest": {"assets": []},
+            "output_path": str(tmp_path / "out.mp4"),
+        }
+    )
+    assert not result.success
+    assert "unknown render_runtime" in (result.error or "").lower()
+
+
 def test_provider_menu_preserves_tool_discovery_metadata(monkeypatch):
     import tools.video.stock_sources as stock_sources
 

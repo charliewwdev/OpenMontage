@@ -114,6 +114,22 @@ The agent must ask the user before changing any major production choice, includi
 
 Minor prompt refinements inside an already approved provider/model path do not require separate approval unless they materially change the creative direction.
 
+### Present Both Composition Runtimes (HARD RULE)
+
+When both Remotion and HyperFrames are available on the machine (check `video_compose.get_info()["render_engines"]`), the agent **MUST present both options to the user** before locking `render_runtime` at the proposal stage. The agent MAY recommend one with rationale — but silently picking a "default" is forbidden even when the pipeline manifest or a director skill suggests one.
+
+The presentation MUST include, for each runtime:
+
+1. A one-sentence plain-language description of what it is best at for **this specific brief**.
+2. A one-sentence honest tradeoff (why it might not be the right pick here).
+3. The agent's recommendation and the reason, tied to the brief's delivery_promise and visual approach.
+
+Then wait for explicit user approval before advancing. Record the full shortlist — BOTH runtimes plus any "ffmpeg" option that applies — as `options_considered` in the `render_runtime_selection` decision logged in `decision_log`. A decision log entry with only one runtime considered when both were available is a CRITICAL reviewer finding.
+
+Exception: if only one runtime is available on the machine, the agent proceeds with it but MUST say so explicitly ("HyperFrames isn't installed on this machine; I'm proceeding with Remotion. Install HyperFrames if you want the alternative."). The `render_runtime_selection` decision still records the unavailable option as `rejected_because: "runtime not available on this machine"`.
+
+This rule applies to every pipeline that invokes `video_compose` — not just Wave 1. A pipeline's director skill may recommend a runtime, but that recommendation is input to the conversation with the user, not a decision.
+
 ### Escalate Blockers Explicitly
 
 When a blocker occurs, the agent must surface it immediately using this structure:
@@ -223,9 +239,31 @@ If the folder has tracks, the proposal and asset stages should present them as o
 
 ## Mandatory Preflight
 
-Do this before any creative work:
+Do this before any creative work. **Use `provider_menu_summary()` first — it's the human-ready rollup.** The raw `support_envelope()` dump is a firehose (megabytes of JSON on a well-configured machine); pasting it into chat will bury the user.
 
 ```bash
+python -c "
+from tools.tool_registry import registry
+import json
+registry.discover()
+print(json.dumps(registry.provider_menu_summary(), indent=2))
+"
+```
+
+The summary returns four fields the agent should translate into plain language:
+
+- `composition_runtimes` — booleans for `ffmpeg`, `remotion`, `hyperframes`. This is the source of truth for the "Present Both Composition Runtimes (HARD RULE)" check.
+- `capabilities[]` — one entry per capability family with `configured / total` counts and provider lists. Ready-made for the "N of M configured" menu.
+- `setup_offers[]` — unavailable tools whose install is a 1-minute env-var fix. Lead with these when offering upgrades.
+- `runtime_warnings[]` — specific signals like "hyperframes: npm package not resolvable". Surface these to the user verbatim — they're the kind of silent-failure bugs that break the governance contract.
+
+Then, for deeper inspection (only when the summary isn't enough):
+
+```bash
+# Full menu — grouped available/unavailable per capability.
+python -c "from tools.tool_registry import registry; import json; registry.discover(); print(json.dumps(registry.provider_menu(), indent=2))"
+
+# Raw envelope — every tool's full contract. Slow/firehose; use for debugging only.
 python -c "from tools.tool_registry import registry; import json; registry.discover(); print(json.dumps(registry.support_envelope(), indent=2))"
 ```
 
@@ -239,18 +277,7 @@ Then:
 
 ### Provider Menu (Mandatory at Preflight)
 
-After running `support_envelope()`, run the **provider menu** to see the full picture:
-
-```bash
-python -c "
-from tools.tool_registry import registry
-import json
-registry.discover()
-print(json.dumps(registry.provider_menu(), indent=2))
-"
-```
-
-This returns every capability grouped by status — how many providers the user has configured vs. how many exist. **Present this to the user as a capability menu**, not as a flat tool list.
+Already fetched via `provider_menu_summary()` above. Read that output and **present it to the user as a capability menu**, not as a flat tool list. Use `provider_menu()` directly only when you need the per-tool detail the summary collapses.
 
 **How to present:**
 
@@ -315,9 +342,9 @@ When tools are `UNAVAILABLE` but can be fixed with simple configuration, **offer
 - If the user declines setup, proceed with the best available path — no nagging
 - Group related fixes (tools sharing the same env var dependency)
 
-### Remotion Rendering (Inside video_compose)
+### Composition Runtimes (Inside video_compose)
 
-`video_compose` has two render engines. Check which are available:
+`video_compose` has **three** render engines / runtimes. They are parallel, not ranked — the choice is made at proposal and locked in `edit_decisions.render_runtime`. Check which are available:
 
 ```bash
 python -c "
@@ -326,13 +353,17 @@ registry.discover()
 info = registry._tools['video_compose'].get_info()
 print('Render engines:', info.get('render_engines'))
 print('Remotion note:', info.get('remotion_note'))
+print('HyperFrames note:', info.get('hyperframes_note'))
 "
 ```
 
 | Engine | Used For | Requires |
 |--------|----------|----------|
 | **FFmpeg** | Video-only cuts, concat, trim, subtitle burn | `ffmpeg` binary (always available) |
-| **Remotion** | Still images -> animated video, text cards, stat cards, charts, callouts, comparisons, transitions with spring physics | Node.js (`npx`) + `remotion-composer/` project |
+| **Remotion** | React-based composition: still images → animated video, text cards, stat cards, charts, callouts, comparisons, transitions with spring physics, word-level caption burn, TalkingHead avatar | Node.js (`npx`) + `remotion-composer/` + `node_modules` |
+| **HyperFrames** | HTML/CSS/GSAP composition: kinetic typography, product promos, launch reels, website-to-video, registry-block-driven scenes | Node.js ≥ 22 + FFmpeg + `npx` (consumed via `npx @hyperframes/cli`) |
+
+`render_runtime` is **locked at proposal** (`proposal_packet.production_plan.render_runtime`) and **carried through edit_decisions unchanged**. `video_compose` routes based on this field; silent runtime swaps are forbidden. If the chosen runtime becomes unavailable at compose time, surface a structured blocker per "Escalate Blockers Explicitly" above. See `skills/core/hyperframes.md` for the Remotion-vs-HyperFrames decision matrix.
 
 ### Critical Rule: Motion-Required Requests
 
@@ -346,10 +377,11 @@ For any request where the deliverable inherently depends on motion rather than s
 
 For these requests:
 
-- `Remotion` availability must be confirmed up front if the planned visual treatment depends on Remotion rendering.
+- The `render_runtime` chosen at proposal (Remotion, HyperFrames, or FFmpeg) must be confirmed available up front if the planned visual treatment depends on it.
 - Still-image fallback is forbidden. Do not quietly convert the job into a Ken Burns teaser, animatic, or slide-based video.
 - FFmpeg-only fallback is forbidden when it changes the approved deliverable from motion-led video to still-led video.
-- Bubble critical issues immediately. If Remotion is unavailable, fails to render, or provider clip generation fails in a way that blocks the approved treatment, stop and tell the user before proceeding.
+- **Silent runtime swap is forbidden.** If `render_runtime="hyperframes"` was locked and HyperFrames is unavailable, do NOT route to Remotion instead. Surface the blocker, propose options, get user approval, log a `render_runtime_selection` decision — then proceed.
+- Bubble critical issues immediately. If the chosen runtime is unavailable, fails to render, or provider clip generation fails in a way that blocks the approved treatment, stop and tell the user before proceeding.
 - Do not spend more tokens or time on downgraded output unless the user explicitly approves the downgrade as an animatic or proof-of-concept.
 
 **When Remotion is available**, the agent should design production plans around it:
@@ -363,11 +395,11 @@ For these requests:
 See `remotion-composer/SCENE_TYPES.md` for the authoritative list and their cut schemas. Current scene types usable via `cut.type`:
 `text_card`, `stat_card`, `callout`, `comparison`, `hero_title`, `terminal_scene`, `anime_scene`, `bar_chart`, `line_chart`, `pie_chart`, `kpi_grid`, `progress_bar`. Overlay types include `section_title`, `stat_reveal`, `hero_title`, `provider_chip`.
 
-**When Remotion is NOT available**, `video_compose` falls back to FFmpeg Ken Burns motion on still images. This still works but produces less engaging visuals. Mention this tradeoff in the proposal.
+**When Remotion is NOT available** and `render_runtime="remotion"` was NOT locked, `video_compose` may use FFmpeg Ken Burns motion on still images. This still works but produces less engaging visuals. Mention this tradeoff in the proposal. When `render_runtime="remotion"` IS locked and Remotion is unavailable, that's a blocker — escalate, don't silently swap.
 
-That fallback is only acceptable when it does not violate the approved delivery shape. If the user asked for a motion-led trailer or comparable clip-driven piece, the project is blocked until Remotion is working or the user explicitly approves a lower-fidelity alternative.
+When `render_runtime="hyperframes"` is locked and HyperFrames is unavailable (Node < 22, missing `ffmpeg`/`npx`, or `hyperframes doctor` reports issues), that's also a blocker. Do not substitute Remotion or FFmpeg without user approval + a logged `render_runtime_selection` decision.
 
-The routing is automatic — the `render` operation in `video_compose` calls `_needs_remotion()` and routes accordingly. But the **agent must know Remotion exists at proposal time** so it can design the visual approach to take advantage of it (animated text cards, component scenes, spring transitions) rather than designing around static images.
+Routing is automatic — `video_compose` reads `edit_decisions.render_runtime` and dispatches to the matching engine (`_render_via_hyperframes`, `_remotion_render`, or `_render_via_ffmpeg`). But the **agent must know both Remotion and HyperFrames exist at proposal time** so it can design the visual approach intentionally. Don't default to Remotion for motion-graphics-heavy concepts that HTML/GSAP would express more naturally, and don't default to HyperFrames for briefs that reuse the existing React scene stack.
 
 ## Capability Discovery
 
@@ -589,7 +621,9 @@ Reading order:
 2. relevant pipeline or creative skill (Layer 2) — know HOW to use it in this context
 3. underlying vendor skill (Layer 3) — **mandatory before calling any generation tool**
 
-**NEVER read tool source code (`tools/*.py`) to understand how to use a tool.** Skills exist precisely so you don't need implementation details. Layer 2 tells you *what* and *when*. Layer 3 tells you *how*. If you're reading `.py` files to figure out input schemas or provider options, you're doing it wrong — that information belongs in the skill layer.
+**Prefer skills over source code for tool usage.** Skills exist precisely so you don't need implementation details in the common case. Layer 2 tells you *what* and *when*. Layer 3 tells you *how*. For authoring prompts, choosing parameters, or understanding usage patterns, you should be reading skills — not `.py` files.
+
+**Exception: debugging, audits, and verifying the governance contract.** When a skill and a tool disagree, or when something behaves differently than the skill claims, reading the tool source is fair game — that's often the only way to catch a silent-availability bug or a stale doc string. An audit that refuses to look at the implementation will miss exactly the bugs that matter most. If you do read source to debug, consider whether the finding belongs in a skill update afterward so the next agent doesn't need to repeat the dive.
 
 **Layer 3 is not optional.** Every generation tool (video, image, TTS, music) has an `agent_skills` field listing its Layer 3 skills. These skills contain provider-specific prompt engineering, parameter tuning, and quality techniques. Read them before writing prompts. The difference between a generic prompt and a skill-informed prompt is the difference between "usable" and "cinematic."
 

@@ -27,6 +27,7 @@ def score_slideshow_risk(
     scenes: list[dict[str, Any]],
     edit_decisions: dict[str, Any] | None = None,
     renderer_family: str | None = None,
+    render_runtime: str | None = None,
 ) -> dict[str, Any]:
     """Score slideshow risk across 6 dimensions.
 
@@ -34,12 +35,19 @@ def score_slideshow_risk(
         scenes: Scene list from scene_plan artifact.
         edit_decisions: Optional edit_decisions artifact for transition analysis.
         renderer_family: Optional renderer family for cinematic claim verification.
+        render_runtime: Optional render runtime (remotion/hyperframes/ffmpeg).
+            Passed through so dimension scoring can reason about runtime-specific
+            indicators when it's useful. Scoring logic is currently
+            runtime-neutral — a text-heavy HyperFrames composition is just as
+            slideshow-y as a text-heavy Remotion one — but the parameter is
+            part of the contract so callers record runtime alongside family.
 
     Returns:
         {
             "average": float,
             "verdict": str,
             "dimensions": {dimension_name: {"score": float, "reason": str}},
+            "render_runtime": str | None,
         }
     """
     if not scenes:
@@ -47,6 +55,7 @@ def score_slideshow_risk(
             "average": 5.0,
             "verdict": "fail",
             "dimensions": {},
+            "render_runtime": render_runtime,
         }
 
     dimensions = {
@@ -74,6 +83,7 @@ def score_slideshow_risk(
         "average": round(average, 2),
         "verdict": verdict,
         "dimensions": dimensions,
+        "render_runtime": render_runtime,
     }
 
 

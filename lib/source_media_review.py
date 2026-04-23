@@ -44,7 +44,7 @@ def _probe_video(path: Path, tool_registry: Any) -> dict[str, Any]:
 
     # Technical probe via audio_probe or ffprobe
     try:
-        audio_probe = tool_registry.get_tool("audio_probe")
+        audio_probe = tool_registry.get("audio_probe")
         if audio_probe:
             probe_result = audio_probe.execute({"input_path": str(path)})
             if probe_result.success:
@@ -84,7 +84,7 @@ def _probe_video(path: Path, tool_registry: Any) -> dict[str, Any]:
 
     # Sample frames
     try:
-        frame_sampler = tool_registry.get_tool("frame_sampler")
+        frame_sampler = tool_registry.get("frame_sampler")
         if frame_sampler:
             duration = result["technical_probe"].get("duration_seconds", 0)
             timestamps = _sample_timestamps(duration, count=4)
@@ -122,7 +122,7 @@ def _probe_audio(path: Path, tool_registry: Any) -> dict[str, Any]:
     result: dict[str, Any] = {"technical_probe": {}, "quality_risks": []}
 
     try:
-        audio_probe = tool_registry.get_tool("audio_probe")
+        audio_probe = tool_registry.get("audio_probe")
         if audio_probe:
             probe_result = audio_probe.execute({"input_path": str(path)})
             if probe_result.success:
@@ -195,7 +195,7 @@ def _transcribe_if_available(
         return None
 
     try:
-        transcriber = tool_registry.get_tool("transcriber")
+        transcriber = tool_registry.get("transcriber")
         if transcriber and transcriber.get_status().value == "available":
             result = transcriber.execute({"input_path": str(path)})
             if result.success:

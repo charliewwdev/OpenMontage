@@ -95,7 +95,72 @@ seedance.execute({
 })
 ```
 
-## Prompt structure
+## Prompt structure — The Higgsfield Methodology (canonical as of 2026)
+
+**CRITICAL: Open every prompt with a shot-structure declaration.** Seedance rewards prompts that declare format upfront before any creative description. This is the single biggest quality lever.
+
+### Opener templates (copy one verbatim, then extend)
+
+**For action/combat/multi-shot (highest-performing format):**
+```
+Montage, multi-shot Hollywood action, don't use one camera angle or single cut, cinematic lighting, photorealistic, 35mm film quality, ARRI ALEXA aesthetic, heavy film grain, sharp but imperfect focus, motion blur on fast actions, halation on highlights, soft highlight rolloff, wide-angle lens with strong distortion, subtle chromatic aberration near frame edges, no 3D, no cartoon, no VFX aesthetic.
+```
+
+**For single-POV continuous shots (orbs, walkthrough):**
+```
+Single continuous shot, first-person POV perspective, the camera IS [his/her] eyes, hyper-chaotic handheld motion, completely unstabilized, violent raw human movement, constant micro-jitters, aggressive head swings, abrupt jerks, frequent over-rotation, no smoothness at all, no cuts, no zoom, 35mm film, photorealistic.
+```
+
+**For locked-POV reaction scenes:**
+```
+One continuous shot, POV [setting] perspective, no cuts, no zoom, natural head movement, photorealistic, 35mm film grain.
+```
+
+### Body structure (after the opener)
+
+1. **Environment/location** — sensory detail (wet asphalt, sodium lamps, neon bleed, rain particulates, volumetric haze)
+2. **Character block** — with reference tags and identity-lock language (see Reference-to-video below)
+3. **Enemy/secondary character block** — same detail level
+4. **Beat-by-beat choreography** with TEMPORAL MARKERS: `0–3s: …  3–6s: …  6–10s: …`
+5. **VFX inline in brackets:** `[VFX: branching white-blue electric arcs pulsing along forearms, sparks jumping between fingers]`
+6. **Slow-motion markers:** write `RAMPS TO SLOW MOTION` before the impact beat, `SNAPS BACK TO REAL TIME` on resume
+7. **Sound design block:** either `no music, only raw SFX` or explicit SFX sequence. Music language stays textural.
+
+### Combat vocabulary (proven to hit)
+
+- `snaps forward`, `lunges`, `sprints`, `weaves`, `chambers`, `drives`, `pivots`, `redirects`, `ducks`, `slips`
+- `explodes outward`, `devastating`, `raw force`, `kinetic`, `overload`, `compresses`, `erupts`, `fractures`, `ripples`
+- Avoid soft verbs: `attacks`, `hits`, `fights` — these read generic and Seedance underdelivers on them
+
+### Camera behavior — state what it IS and ISN'T doing
+
+Seedance misfires when camera intent is ambiguous. Always explicitly negate what you don't want:
+- `no cuts` (for continuous POV)
+- `no zoom` (prevents unnatural perspective punch-ins)
+- `no stabilization` (when you want chaotic handheld)
+- `no smoothness at all`
+- `no 3D, no cartoon, no VFX aesthetic` — counter-intuitive but forces photoreal skin/texture/lighting even when the scene has heavy VFX elements
+
+### Realism enforcement phrase
+
+When the brief has VFX but you want photoreal skin/textures (not plastic Marvel-cartoon look), include:
+```
+no 3D, no cartoon, no VFX aesthetic — photorealistic textures, real skin pores, authentic fabric detail, grounded in reality
+```
+
+### Format priority (Higgsfield empirical ordering)
+
+| Format | Best for | Pattern |
+|---|---|---|
+| **Transformation** | calm → threat → transformation → aftermath | 6 numbered shots × 2.5s each @ 15s total |
+| **Orbs** | single continuous POV | 1 shot × 15s, hyper-chaotic handheld |
+| **Fights** | combat choreography | Beat-by-beat, clear power mismatch, RAMPS/SNAPS |
+| **POV** | locked reaction | Continuous, "no cuts no zoom" mantra |
+| **Animation** | stylized 3D | `@image` keyframe + timed segments |
+
+The **2.5-second-per-shot rhythm** appears optimal for multi-shot generations.
+
+## Legacy 8-part template (use only for single simple shots, not action)
 
 Seedance 2.0 is unusually literal about camera language, multi-shot cuts, and quoted dialogue. Use this 8-part template:
 
@@ -138,14 +203,32 @@ Do **not** request complex multi-instrument scores — keep music language textu
 
 ### Reference-to-video
 
-When you have character / product / wardrobe references, use the reference-to-video endpoint and name each asset in the prompt:
+When you have character / product / wardrobe references, use the reference-to-video endpoint. Seedance 2.0 honors an explicit bracket tagging syntax:
 
 ```
-Reference 1: hero character (Aang) — bald, blue arrow tattoo, orange robes.
-Reference 2: environment plate — snowy Air Temple courtyard at dawn.
-Shot 1: Aang (from reference 1) walks across the courtyard (reference 2),
-wind lifting his robes. Low-angle tracking shot, slow push-in.
+[reference_image: hero_portrait.png]
+[identity_lock]
+The same character — bald, blue arrow tattoo, orange robes — consistent across all shots, no drift or deformation. Do not alter clothing category or primary color.
+
+Shot 1 (wide, slow push-in): hero walks across the snowy Air Temple courtyard, wind lifting robes.
+Shot 2 (medium close-up): hero turns toward camera, staff in hand.
+Shot 3 (extreme close-up, rack focus): hero's eyes open, wind whipping.
 ```
+
+**Identity-anchor phrases that measurably reduce face drift** (stack them — redundancy helps):
+- `the same character`
+- `consistent across different scenes / all shots`
+- `maintain exact appearance from reference image`
+- `no deformation, no drift, no face morph`
+- `Do not alter clothing category or primary color`
+
+**Single-reference workflow (common in practice):** When you only have one photo:
+- Use a clear, front-facing portrait with neutral lighting and minimal motion blur; avoid occluded faces (e.g., phones, sunglasses, heavy shadow).
+- Reuse the SAME reference image across all shots — do not generate new refs per shot.
+- Put all shots in ONE prompt under a single `[identity_lock]` block so the model treats them as a coherent sequence.
+- If wardrobe is changing by design (e.g., civilian → costume), describe the costume verbatim on every shot it appears and add `Do not alter clothing category or primary color` to lock it once generated.
+
+**Anti-drift fallback:** If face morphs across frames on first render, drop to a shorter duration (5-6s instead of 10s), tighten the identity-lock language, and if you have multiple reference images, cull to the 3 most consistent ones rather than flooding with 9.
 
 ## Parameter guidance
 

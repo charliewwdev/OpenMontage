@@ -43,6 +43,8 @@ import { AnimeScene } from "./components/AnimeScene";
 import type { CameraMotion } from "./components/AnimeScene";
 import { TerminalScene } from "./components/TerminalScene";
 import type { TerminalStep } from "./components/TerminalScene";
+import { ScreenshotScene } from "./components/ScreenshotScene";
+import type { ScreenshotStep } from "./components/ScreenshotScene";
 import { ProviderChip } from "./components/ProviderChip";
 import type { ParticleType } from "./components/ParticleOverlay";
 import { resolveTheme, type ThemeConfig, DEFAULT_THEME } from "./Root";
@@ -262,6 +264,10 @@ interface Cut {
   steps?: TerminalStep[];
   terminalTitle?: string;
   prompt?: string;
+  // Screenshot scene props (type: "screenshot_scene")
+  screenshotSteps?: ScreenshotStep[];
+  screenshotSize?: { width: number; height: number };
+  cursorStartAt?: [number, number];
 }
 
 interface Overlay {
@@ -599,6 +605,17 @@ const SceneRenderer: React.FC<{ cut: Cut; theme: ThemeConfig }> = ({ cut, theme 
         prompt={cut.prompt}
         accentColor={accent}
         backgroundColor={bgColor || theme.backgroundColor}
+      />
+    );
+  }
+  if (cut.type === "screenshot_scene" && cut.backgroundImage && cut.screenshotSteps) {
+    return (
+      <ScreenshotScene
+        backgroundImage={cut.backgroundImage}
+        backgroundSize={cut.screenshotSize}
+        steps={cut.screenshotSteps as ScreenshotStep[]}
+        accentColor={accent}
+        cursorStartAt={cut.cursorStartAt}
       />
     );
   }

@@ -22,6 +22,10 @@ export interface CinematicTitleScene extends CinematicBaseScene {
   text: string;
   accent?: string;
   intensity?: number;
+  backgroundSrc?: string;
+  backgroundTrimBeforeSeconds?: number;
+  backgroundTrimAfterSeconds?: number;
+  variant?: "plate" | "overlay";
 }
 
 export type CinematicScene = CinematicVideoScene | CinematicTitleScene;

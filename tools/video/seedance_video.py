@@ -257,7 +257,7 @@ class SeedanceVideo(BaseTool):
 
         try:
             submit_resp = requests.post(
-                f"https://queue.fal.run/fal-ai/{model_path}",
+                f"https://queue.fal.run/{model_path}",
                 headers=headers,
                 json=payload,
                 timeout=30,
@@ -305,7 +305,7 @@ class SeedanceVideo(BaseTool):
             success=True,
             data={
                 "provider": "seedance",
-                "model": f"fal-ai/{model_path}",
+                "model": model_path,
                 "prompt": inputs["prompt"],
                 "operation": operation,
                 "variant": variant,
@@ -321,5 +321,5 @@ class SeedanceVideo(BaseTool):
             artifacts=[str(output_path)],
             cost_usd=self.estimate_cost(inputs),
             duration_seconds=round(time.time() - start, 2),
-            model=f"fal-ai/{model_path}",
+            model=model_path,
         )

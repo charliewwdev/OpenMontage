@@ -174,6 +174,10 @@ const TitleCard: React.FC<{
   titleFontSize: number;
   titleWidth: number;
   signalLineCount: number;
+  backgroundSrc?: string;
+  backgroundTrimBeforeSeconds?: number;
+  backgroundTrimAfterSeconds?: number;
+  variant?: "plate" | "overlay";
 }> = ({
   text,
   accent,
@@ -181,85 +185,210 @@ const TitleCard: React.FC<{
   titleFontSize,
   titleWidth,
   signalLineCount,
+  backgroundSrc,
+  backgroundTrimBeforeSeconds,
+  backgroundTrimAfterSeconds,
+  variant = "plate",
 }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
 
-  const reveal = spring({
+  const container = spring({
     fps,
     frame,
-    config: { damping: 18, stiffness: 90 },
+    config: { damping: 22, stiffness: 80 },
   });
 
   const exit = interpolate(
     frame,
-    [durationInFrames - 12, durationInFrames],
+    [durationInFrames - 14, durationInFrames],
     [1, 0],
-    {
-      extrapolateLeft: "clamp",
-      extrapolateRight: "clamp",
-    },
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
   );
 
-  const y = interpolate(reveal, [0, 1], [18, 0]);
-  const letterSpacing = interpolate(reveal, [0, 1], [0.3, 0.18]);
+  // Split by newlines first (each line rendered in its own block),
+  // then word-stagger inside each line. This preserves intentional
+  // \n separators (e.g. "TITLE 1\nTITLE 2") that the old whitespace
+  // regex was collapsing into a single space.
+  const lines = text.split(/\r?\n/);
+  const staggerFrames = 3;
+  const wordFadeFrames = 14;
+
+  const lineGrow = interpolate(frame, [0, 22], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+  const lineExit = exit;
   const flareOpacity =
-    0.18 + Math.max(0, Math.sin(frame * 0.08)) * 0.14 * intensity;
+    0.22 + Math.max(0, Math.sin(frame * 0.09)) * 0.18 * intensity;
+
+  const bgScale = interpolate(frame, [0, durationInFrames], [1.04, 1.1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+  });
+
+  const bgTrimBefore =
+    backgroundTrimBeforeSeconds !== undefined
+      ? Math.round(backgroundTrimBeforeSeconds * fps)
+      : undefined;
+  const bgTrimAfter =
+    backgroundTrimAfterSeconds !== undefined
+      ? Math.round(backgroundTrimAfterSeconds * fps)
+      : undefined;
+
+  const plateBg =
+    variant === "overlay"
+      ? "transparent"
+      : "radial-gradient(ellipse at 50% 50%, rgba(8,14,22,0.78) 0%, rgba(2,4,8,0.92) 58%, rgba(0,0,0,1) 100%)";
 
   return (
     <AbsoluteFill
       style={{
-        background:
-          "radial-gradient(circle at 50% 42%, rgba(16,28,40,0.9) 0%, rgba(3,5,8,1) 58%, rgba(0,0,0,1) 100%)",
+        background: "#000",
         justifyContent: "center",
         alignItems: "center",
       }}
     >
+      {backgroundSrc ? (
+        <>
+          <AbsoluteFill style={{ transform: `scale(${bgScale})`, opacity: 0.62 }}>
+            <OffthreadVideo
+              muted
+              src={resolveAsset(backgroundSrc)}
+              trimBefore={bgTrimBefore}
+              trimAfter={bgTrimAfter}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                filter: "contrast(1.08) saturate(0.55) brightness(0.55) blur(4px)",
+              }}
+            />
+          </AbsoluteFill>
+          <AbsoluteFill
+            style={{
+              background:
+                "linear-gradient(180deg, rgba(0,0,0,0.65) 0%, rgba(0,0,0,0.35) 40%, rgba(0,0,0,0.35) 60%, rgba(0,0,0,0.78) 100%)",
+            }}
+          />
+        </>
+      ) : null}
+
+      <AbsoluteFill
+        style={{
+          background: plateBg,
+        }}
+      />
+
       <SignalTexture
         accent={accent}
-        intensity={intensity}
+        intensity={intensity * 0.7}
         lineCount={signalLineCount}
       />
+
+      {/* Top accent line — grows from center outwards */}
       <div
         style={{
           position: "absolute",
-          width: 880,
-          height: 2,
+          width: 1100 * lineGrow,
+          height: 1,
           background: accent,
-          boxShadow: `0 0 28px ${accent}`,
-          opacity: flareOpacity,
-          transform: "translateY(-126px)",
+          boxShadow: `0 0 24px ${accent}`,
+          opacity: flareOpacity * lineExit,
+          transform: "translateY(-118px)",
         }}
       />
       <div
         style={{
           position: "absolute",
-          width: 880,
-          height: 2,
+          width: 1100 * lineGrow,
+          height: 1,
           background: accent,
-          boxShadow: `0 0 28px ${accent}`,
-          opacity: flareOpacity * 0.7,
-          transform: "translateY(126px)",
+          boxShadow: `0 0 24px ${accent}`,
+          opacity: flareOpacity * 0.75 * lineExit,
+          transform: "translateY(118px)",
         }}
       />
+
+      {/* Word-stagger text reveal */}
       <div
         style={{
-          opacity: reveal * exit,
-          transform: `translateY(${y}px)`,
-          fontFamily,
-          fontWeight: 700,
-          fontSize: titleFontSize,
-          lineHeight: 1.06,
-          letterSpacing: `${letterSpacing}em`,
-          textAlign: "center",
-          color: "#f3f6fa",
-          textTransform: "uppercase",
+          opacity: exit,
           width: titleWidth,
-          textShadow: "0 0 22px rgba(255,255,255,0.08)",
+          textAlign: "center",
+          fontFamily,
+          fontWeight: 500,
+          fontSize: titleFontSize,
+          lineHeight: 1.12,
+          letterSpacing: "0.16em",
+          color: "#f6f4ee",
+          textTransform: "uppercase",
+          textShadow: "0 0 34px rgba(255,255,255,0.10), 0 0 2px rgba(0,0,0,0.8)",
         }}
       >
-        {text}
+        {(() => {
+          let wordCounter = 0;
+          return lines.map((line, lineIdx) => {
+            const tokens = line.split(/(\s+)/).filter((w) => w.length > 0);
+            return (
+              <div key={lineIdx} style={{ display: "block" }}>
+                {tokens.map((w, ti) => {
+                  if (/^\s+$/.test(w)) {
+                    return <span key={ti}>&nbsp;</span>;
+                  }
+                  const startFrame = wordCounter * staggerFrames;
+                  wordCounter += 1;
+                  const wordOpacity = interpolate(
+                    frame,
+                    [startFrame, startFrame + wordFadeFrames],
+                    [0, 1],
+                    { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+                  );
+                  const blur = interpolate(
+                    frame,
+                    [startFrame, startFrame + wordFadeFrames],
+                    [6, 0],
+                    { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+                  );
+                  const ty = interpolate(
+                    frame,
+                    [startFrame, startFrame + wordFadeFrames],
+                    [14, 0],
+                    { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+                  );
+                  return (
+                    <span
+                      key={ti}
+                      style={{
+                        display: "inline-block",
+                        opacity: wordOpacity,
+                        filter: `blur(${blur}px)`,
+                        transform: `translateY(${ty}px)`,
+                      }}
+                    >
+                      {w}
+                    </span>
+                  );
+                })}
+              </div>
+            );
+          });
+        })()}
       </div>
+
+      {/* Subtle accent dot centered under text */}
+      <div
+        style={{
+          position: "absolute",
+          width: 6,
+          height: 6,
+          borderRadius: "50%",
+          background: accent,
+          boxShadow: `0 0 18px ${accent}`,
+          opacity: 0.55 * container * lineExit,
+          transform: "translateY(172px)",
+        }}
+      />
     </AbsoluteFill>
   );
 };
@@ -384,6 +513,10 @@ export const CinematicRenderer: React.FC<CinematicRendererProps> = ({
               titleFontSize={titleFontSize}
               titleWidth={titleWidth}
               signalLineCount={signalLineCount}
+              backgroundSrc={scene.backgroundSrc}
+              backgroundTrimBeforeSeconds={scene.backgroundTrimBeforeSeconds}
+              backgroundTrimAfterSeconds={scene.backgroundTrimAfterSeconds}
+              variant={scene.variant}
             />
           )}
         </Sequence>

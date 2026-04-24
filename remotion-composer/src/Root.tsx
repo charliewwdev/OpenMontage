@@ -14,6 +14,8 @@ import { EndTag, EndTagProps } from "./components/EndTag";
 import { HeroTitle } from "./components/HeroTitle";
 import { ProductReveal, ProductRevealProps } from "./components/ProductReveal";
 import { CaptionOverlay, WordCaption } from "./components/CaptionOverlay";
+import { CollageBurst, CollageBurstProps } from "./CollageBurst";
+import { LyricOverlay, LyricOverlayProps } from "./LyricOverlay";
 
 // ---------------------------------------------------------------------------
 // Theme System — prevents every video from looking like dark fintech
@@ -265,6 +267,34 @@ export const Root: React.FC = () => {
           highlightColor: "#FACC15",
           backgroundColor: "rgba(15, 23, 42, 0.75)",
         }}
+      />
+      <Composition
+        id="CollageBurst"
+        component={CollageBurst}
+        durationInFrames={30 * 30}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={{
+          backgroundSrc: "",
+          backgroundInSeconds: 0,
+          curtainStartSeconds: 1.5,
+          curtainEndSeconds: 3.0,
+          clips: [],
+        } as CollageBurstProps}
+      />
+      <Composition
+        id="LyricOverlay"
+        component={LyricOverlay}
+        durationInFrames={30 * 28}
+        fps={30}
+        width={1080}
+        height={1920}
+        defaultProps={{
+          videoSrc: "",
+          lyrics: [],
+          bottomY: 0.88,
+        } as LyricOverlayProps}
       />
       <Composition
         id="EndTag"

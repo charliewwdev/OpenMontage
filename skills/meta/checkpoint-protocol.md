@@ -56,15 +56,24 @@ The checkpoint utility will:
 
 Long-running stages (like `assets` or `compose` loops) can fail midway due to API errors, rate limits, or session interruptions. To allow resuming from the exact point of failure (e.g., Scene 4):
 
-1. **Write partial progress**: Every time you successfully generate a significant item (e.g., one scene's assets, one clip), write an `in_progress` checkpoint. Because `status` is `"in_progress"`, validation will not fail even if the canonical artifact is incomplete.
+1. **Write partial progress**: Every time you successfully generate a significant item (e.g., one scene's assets, one clip), write an `in_progress` checkpoint.
+
+   `in_progress` checkpoints may omit the stage's canonical artifact, but any artifact stored under a known artifact name is still schema-validated. If the partial data is not yet a valid canonical artifact, store it under `metadata.partial_progress` instead of `artifacts`.
    ```python
    write_checkpoint(
        pipeline_dir, project_name,
        stage="assets",
        status="in_progress",
-       artifacts={"asset_manifest": partial_manifest_dict}
+       artifacts={},  # no incomplete canonical artifact yet
+       metadata={
+           "partial_progress": {
+               "asset_manifest_draft": partial_manifest_dict,
+               "completed_scene_ids": completed_scene_ids,
+           }
+       },
    )
    ```
+   If the partial artifact already satisfies its schema (for example, an `asset_manifest` with `version: "1.0"` and valid `assets[]` entries), it may be stored in `artifacts` directly.
 2. **Resume from partial progress**: When starting a stage, ALWAYS check if an `in_progress` checkpoint exists for it. See Step 7 (Resume Protocol) for how to handle it.
 
 ### Step 5: Human Approval (If Required)
@@ -127,7 +136,7 @@ If `next_stage` is not the first stage:
    current_cp = read_checkpoint(pipeline_dir, project_name, next_stage)
    ```
    If `current_cp` exists and its status is `"in_progress"`, inform the human you are resuming from the middle of the stage.
-3. **Load artifacts**: Load prior artifacts from checkpoints for context. If resuming from `"in_progress"`, load the partial artifact (e.g. `asset_manifest`) from `current_cp` and skip the sub-tasks (like scenes) that are already completed.
+3. **Load artifacts**: Load prior artifacts from checkpoints for context. If resuming from `"in_progress"`, first load any schema-valid partial artifact from `current_cp["artifacts"]`. If the partial data is stored in `current_cp["metadata"]["partial_progress"]`, use that draft data and its completion markers (such as `completed_scene_ids`) to skip sub-tasks that are already done.
 4. **Continue**: Continue generation from the next successful step, appending to the partial artifact.
 
 If a checkpoint exists with status `"awaiting_human"`:

@@ -20,6 +20,11 @@ from tools.base_tool import (
     ToolStatus,
     ToolTier,
 )
+from tools.google_credentials import (
+    get_access_token,
+    resolve_project_id,
+    service_account_configured,
+)
 
 # Aspect ratio to approximate pixel dimensions (for cost/reporting only)
 ASPECT_RATIOS = {
@@ -57,8 +62,12 @@ class GoogleImagen(BaseTool):
 
     dependencies = []  # checked dynamically via env var
     install_instructions = (
-        "Set GOOGLE_API_KEY (or GEMINI_API_KEY) to your Google AI API key.\n"
-        "  Get one at https://aistudio.google.com/apikey"
+        "Auth option A — API key (AI Studio): set GOOGLE_API_KEY (or GEMINI_API_KEY).\n"
+        "  Get one at https://aistudio.google.com/apikey\n"
+        "Auth option B — service account (Vertex AI): set GOOGLE_APPLICATION_CREDENTIALS\n"
+        "  to a service-account JSON key (needs the 'google-auth' package), plus\n"
+        "  GOOGLE_CLOUD_PROJECT and optionally GOOGLE_CLOUD_LOCATION (default us-central1).\n"
+        "  Requires the Vertex AI API enabled and billing on the project."
     )
     agent_skills = []
 
@@ -131,7 +140,8 @@ class GoogleImagen(BaseTool):
         return os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
 
     def get_status(self) -> ToolStatus:
-        if self._get_api_key():
+        # API key -> AI Studio endpoint; service-account JSON -> Vertex AI.
+        if self._get_api_key() or service_account_configured():
             return ToolStatus.AVAILABLE
         return ToolStatus.UNAVAILABLE
 
@@ -145,12 +155,31 @@ class GoogleImagen(BaseTool):
         return 0.04 * n
 
     def execute(self, inputs: dict[str, Any]) -> ToolResult:
+        # Two auth paths: an AI Studio API key, or a service-account JSON that
+        # routes to Vertex AI (the AI Studio endpoint does not accept service
+        # accounts). API key wins when both are present.
         api_key = self._get_api_key()
+        bearer_token: str | None = None
+        project_id: str | None = None
         if not api_key:
-            return ToolResult(
-                success=False,
-                error="No Google API key found. " + self.install_instructions,
-            )
+            if not service_account_configured():
+                return ToolResult(
+                    success=False,
+                    error="No Google credentials found. " + self.install_instructions,
+                )
+            try:
+                bearer_token, creds_project = get_access_token()
+            except RuntimeError as exc:
+                return ToolResult(success=False, error=str(exc))
+            project_id = resolve_project_id(creds_project)
+            if not project_id:
+                return ToolResult(
+                    success=False,
+                    error=(
+                        "Vertex AI needs a project id. Set GOOGLE_CLOUD_PROJECT "
+                        "(or include project_id in the service-account key)."
+                    ),
+                )
 
         import requests
 
@@ -181,13 +210,31 @@ class GoogleImagen(BaseTool):
             "aspectRatio": aspect_ratio,
         }
 
+        if bearer_token:
+            location = os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1")
+            url = (
+                f"https://{location}-aiplatform.googleapis.com/v1/projects/"
+                f"{project_id}/locations/{location}/publishers/google/models/"
+                f"{model}:predict"
+            )
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {bearer_token}",
+            }
+        else:
+            url = (
+                f"https://generativelanguage.googleapis.com/v1beta/models/"
+                f"{model}:predict"
+            )
+            headers = {
+                "Content-Type": "application/json",
+                "x-goog-api-key": api_key,
+            }
+
         try:
             response = requests.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/{model}:predict",
-                headers={
-                    "Content-Type": "application/json",
-                    "x-goog-api-key": api_key,
-                },
+                url,
+                headers=headers,
                 json={
                     "instances": [{"prompt": prompt}],
                     "parameters": parameters,

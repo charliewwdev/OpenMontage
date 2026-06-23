@@ -24,6 +24,7 @@ from tools.base_tool import (
     ToolStatus,
     ToolTier,
 )
+from tools.google_credentials import get_access_token, service_account_configured
 
 
 class GoogleTTS(BaseTool):
@@ -39,9 +40,11 @@ class GoogleTTS(BaseTool):
 
     dependencies = []
     install_instructions = (
-        "Set GOOGLE_API_KEY to your Google Cloud API key with Text-to-Speech enabled.\n"
+        "Auth option A — API key: set GOOGLE_API_KEY (or GEMINI_API_KEY) to a\n"
+        "  Google Cloud API key with Text-to-Speech enabled.\n"
         "  Enable the API at https://console.cloud.google.com/apis/library/texttospeech.googleapis.com\n"
-        "  Or use GOOGLE_APPLICATION_CREDENTIALS for service account auth."
+        "Auth option B — service account: set GOOGLE_APPLICATION_CREDENTIALS to the\n"
+        "  path of a service-account JSON key (needs the 'google-auth' package)."
     )
     fallback = "openai_tts"
     fallback_tools = ["openai_tts", "elevenlabs_tts", "piper_tts"]
@@ -130,7 +133,9 @@ class GoogleTTS(BaseTool):
         return os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
 
     def get_status(self) -> ToolStatus:
-        if self._get_api_key() or os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
+        # Available via either an API key or a service-account JSON. Both paths
+        # are honoured by execute() — so this no longer over-reports.
+        if self._get_api_key() or service_account_configured():
             return ToolStatus.AVAILABLE
         return ToolStatus.UNAVAILABLE
 
@@ -159,16 +164,26 @@ class GoogleTTS(BaseTool):
         return round(char_count * rate_per_char, 4)
 
     def execute(self, inputs: dict[str, Any]) -> ToolResult:
+        # Prefer an API key (cheapest path); otherwise mint a Bearer token from
+        # the service-account JSON. This is what makes
+        # GOOGLE_APPLICATION_CREDENTIALS actually work for TTS.
         api_key = self._get_api_key()
+        bearer_token: str | None = None
         if not api_key:
-            return ToolResult(
-                success=False,
-                error="No Google API key found. " + self.install_instructions,
-            )
+            if service_account_configured():
+                try:
+                    bearer_token, _ = get_access_token()
+                except RuntimeError as exc:
+                    return ToolResult(success=False, error=str(exc))
+            else:
+                return ToolResult(
+                    success=False,
+                    error="No Google credentials found. " + self.install_instructions,
+                )
 
         start = time.time()
         try:
-            result = self._generate(inputs, api_key)
+            result = self._generate(inputs, api_key=api_key, bearer_token=bearer_token)
         except Exception as exc:
             return ToolResult(success=False, error=f"Google TTS failed: {exc}")
 
@@ -176,7 +191,12 @@ class GoogleTTS(BaseTool):
         result.cost_usd = self.estimate_cost(inputs)
         return result
 
-    def _generate(self, inputs: dict[str, Any], api_key: str) -> ToolResult:
+    def _generate(
+        self,
+        inputs: dict[str, Any],
+        api_key: str | None = None,
+        bearer_token: str | None = None,
+    ) -> ToolResult:
         import requests
 
         text = inputs["text"]
@@ -203,10 +223,17 @@ class GoogleTTS(BaseTool):
         api_version = "v1beta1" if self._needs_beta_api(voice_name) else "v1"
         url = f"https://texttospeech.googleapis.com/{api_version}/text:synthesize"
 
+        headers = {"Content-Type": "application/json"}
+        params: dict[str, str] = {}
+        if bearer_token:
+            headers["Authorization"] = f"Bearer {bearer_token}"
+        else:
+            params["key"] = api_key
+
         response = requests.post(
             url,
-            headers={"Content-Type": "application/json"},
-            params={"key": api_key},
+            headers=headers,
+            params=params,
             json=payload,
             timeout=120,
         )

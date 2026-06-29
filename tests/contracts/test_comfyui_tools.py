@@ -18,6 +18,7 @@ from tools.base_tool import (
     ToolTier,
 )
 from tools.graphics.comfyui_image import ComfyUIImage
+from tools.graphics.image_selector import ImageSelector
 from tools.tool_registry import ToolRegistry
 from tools.video.video_selector import VideoSelector
 from tools.video.comfyui_video import ComfyUIVideo
@@ -543,3 +544,109 @@ class TestVideoOperationReadiness:
         assert rank_inputs["operation"] == "image_to_video"
         assert selector._filter_candidates(rank_inputs, candidates) == []
 
+
+# ------------------------------------------------------------------
+# Custom-workflow selector eligibility
+# ------------------------------------------------------------------
+
+class _DegradedComfyVideo(BaseTool):
+    """Server reachable, but bundled WAN models missing -> DEGRADED, no
+    operation ready. Stands in for comfyui_video on a low-VRAM box."""
+
+    name = "comfyui_video"
+    capability = "video_generation"
+    provider = "comfyui"
+    supports = {"custom_workflow": True, "image_to_video": True}
+    input_schema = {"type": "object", "properties": {"workflow_json": {"type": "string"}}}
+
+    def get_status(self):
+        return ToolStatus.DEGRADED
+
+    def is_operation_available(self, operation):
+        return False
+
+    def execute(self, inputs):
+        raise AssertionError("not used")
+
+
+class _DegradedComfyImage(BaseTool):
+    name = "comfyui_image"
+    capability = "image_generation"
+    provider = "comfyui"
+    supports = {"custom_workflow": True}
+    input_schema = {"type": "object", "properties": {"workflow_json": {"type": "string"}}}
+
+    def get_status(self):
+        return ToolStatus.DEGRADED
+
+    def execute(self, inputs):
+        raise AssertionError("not used")
+
+
+class TestCustomWorkflowSelectorEligibility:
+
+    def test_video_selector_passes_degraded_tool_for_custom_workflow(self):
+        selector = VideoSelector()
+        candidates = [_DegradedComfyVideo()]
+        inputs = {
+            "prompt": "x",
+            "operation": "text_to_video",
+            "workflow_json": "{}",
+            "output_node": "14",
+        }
+        # Without the custom-workflow path this DEGRADED, operation-unready tool
+        # would be filtered out; with it, it is eligible and selectable.
+        filtered = selector._filter_candidates(inputs, candidates)
+        assert [t.name for t in filtered] == ["comfyui_video"]
+        assert selector._tool_selectable(candidates[0], inputs) is True
+
+    def test_video_selector_custom_workflow_requires_output_node(self):
+        selector = VideoSelector()
+        candidates = [_DegradedComfyVideo()]
+        inputs = {"prompt": "x", "operation": "text_to_video", "workflow_json": "{}"}
+        # output_node missing -> not eligible -> filtered out.
+        assert selector._filter_candidates(inputs, candidates) == []
+        assert selector._tool_selectable(candidates[0], inputs) is False
+
+    def test_video_selector_custom_workflow_needs_server(self):
+        class _OfflineComfyVideo(_DegradedComfyVideo):
+            def get_status(self):
+                return ToolStatus.UNAVAILABLE
+
+        selector = VideoSelector()
+        candidates = [_OfflineComfyVideo()]
+        inputs = {
+            "prompt": "x",
+            "operation": "text_to_video",
+            "workflow_json": "{}",
+            "output_node": "14",
+        }
+        assert selector._filter_candidates(inputs, candidates) == []
+
+    def test_image_selector_passes_degraded_tool_for_custom_workflow(self):
+        selector = ImageSelector()
+        candidates = [_DegradedComfyImage()]
+        inputs = {"prompt": "x", "workflow_json": "{}", "output_node": "13"}
+        filtered = selector._filter_candidates(inputs, candidates)
+        assert [t.name for t in filtered] == ["comfyui_image"]
+        assert selector._tool_selectable(candidates[0], inputs) is True
+
+    def test_image_selector_custom_workflow_requires_output_node(self):
+        selector = ImageSelector()
+        candidates = [_DegradedComfyImage()]
+        inputs = {"prompt": "x", "workflow_json": "{}"}
+        assert selector._filter_candidates(inputs, candidates) == []
+        assert selector._tool_selectable(candidates[0], inputs) is False
+
+    def test_selector_schemas_expose_custom_workflow_inputs(self):
+        for selector in (VideoSelector(), ImageSelector()):
+            props = selector.input_schema["properties"]
+            for field in (
+                "workflow_json",
+                "workflow_path",
+                "output_node",
+                "workflow_name",
+                "workflow_model",
+                "workflow_model_stack",
+            ):
+                assert field in props, f"{selector.name} missing {field}"

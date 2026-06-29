@@ -888,8 +888,12 @@ class CharacterAnimationReviewer(BaseTool):
             },
         }
         artifacts = _write_json(inputs.get("output_path"), report)
+        # success=False when QA finds issues so callers can gate on result.success
+        # without needing to inspect report["status"]. This mirrors the contract
+        # asserted in tests/contracts/test_character_animation_pipeline.py and
+        # is consistent with how visual_qa.py surfaces validation failures.
         return ToolResult(
-            success=True,
+            success=not issues,
             data={"character_qa_report": report},
             artifacts=artifacts,
             duration_seconds=round(time.time() - start, 2),

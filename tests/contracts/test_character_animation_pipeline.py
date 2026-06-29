@@ -186,6 +186,35 @@ def test_character_animation_smoke_flow(tmp_path):
     assert qa_report["checks"]["schema_valid"] is True
 
 
+def test_character_reviewer_success_false_when_qa_finds_issues():
+    """
+    CharacterAnimationReviewer.success must be False when QA finds issues.
+
+    Callers such as the compose-director gate on result.success to decide
+    whether to proceed. If success is always True, a broken rig silently
+    passes the gate. See PR #166 (closed) and the follow-up fix in #<this PR>.
+    """
+    result = CharacterAnimationReviewer().execute(
+        {
+            # Minimal rig_plan with missing joints — will trigger schema issues
+            "rig_plan": {"characters": [{"id": "char1", "role": "lead"}]},
+            "pose_library": {},
+            "action_timeline": {},
+            "review_level": "static",
+        }
+    )
+
+    qa_report = result.data["character_qa_report"]
+    assert qa_report["status"] == "revise", (
+        f"Expected status='revise' for a broken rig, got '{qa_report['status']}'"
+    )
+    assert len(qa_report["issues"]) > 0, "Expected at least one issue for a broken rig"
+    assert result.success is False, (
+        "success must be False when QA finds issues — "
+        "callers gate on result.success without inspecting report['status']"
+    )
+
+
 def test_character_style_is_normalized_for_schema(tmp_path):
     result = CharacterSpecGenerator().execute(
         {

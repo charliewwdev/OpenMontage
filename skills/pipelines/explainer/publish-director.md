@@ -115,23 +115,23 @@ provider.
 
 ### Step 6: Build Publish Log
 
+`export_bundle` already returns a schema-valid `publish_log` in `data["publish_log"]` — persist that directly rather than hand-building one. Do **not** add extra entry fields (the schema sets `additionalProperties: false`; only `platform`, `status`, `url`, `video_id`, `visibility`, `export_path`, `timestamp`, `metadata_used`, `error` are allowed). The shape it returns:
+
 ```json
 {
   "version": "1.0",
   "entries": [
     {
       "platform": "youtube",
-      "status": "draft",
-      "timestamp": "2024-01-15T10:30:00Z",
-      "metadata": {
+      "status": "exported",
+      "export_path": "projects/vector-db-explainer/exports",
+      "timestamp": "2026-01-15T10:30:00+00:00",
+      "metadata_used": {
         "title": "Vector Databases Explained in 60 Seconds",
-        "description_length": 450,
-        "tags_count": 8,
-        "chapters_count": 6,
-        "thumbnail_ready": false
-      },
-      "export_path": "exports/vector-db-explainer/",
-      "video_path": "renders/output.mp4"
+        "description": "What vector databases are and when to use them.",
+        "hashtags": ["#ai", "#vectordb"],
+        "chapters": [{ "start_seconds": 0, "title": "Introduction" }]
+      }
     }
   ]
 }

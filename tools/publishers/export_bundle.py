@@ -162,7 +162,19 @@ class ExportBundle(BaseTool):
 
         title = inputs["title"]
         project_name = inputs.get("project_name") or self._infer_project_name(video_path)
-        export_root = Path(inputs["export_dir"]).expanduser() if inputs.get("export_dir") else Path("exports") / project_name
+
+        # Explicitly-provided optional assets must exist — silently dropping them
+        # would ship a publish package missing part of an approved deliverable.
+        for key in ("subtitles_path", "thumbnail_path"):
+            val = inputs.get(key)
+            if val and not Path(val).expanduser().is_file():
+                return ToolResult(success=False, error=f"{key} provided but not found: {val}")
+
+        export_root = (
+            Path(inputs["export_dir"]).expanduser()
+            if inputs.get("export_dir")
+            else self._default_export_dir(video_path, project_name)
+        )
 
         video_dir = export_root / "video"
         meta_dir = export_root / "metadata"
@@ -271,6 +283,20 @@ class ExportBundle(BaseTool):
             },
             artifacts=[str(out_video)],
         )
+
+    @staticmethod
+    def _default_export_dir(video_path: Path, project_name: str) -> Path:
+        """Keep run output inside the project workspace.
+
+        When the render lives at ``projects/<name>/renders/...`` (the OpenMontage
+        convention), default the bundle to ``projects/<name>/exports/`` alongside
+        ``artifacts/``, ``assets/`` and ``renders/``. Otherwise fall back to a
+        top-level ``exports/<project_name>/``.
+        """
+        resolved = video_path.resolve()
+        if resolved.parent.name == "renders":
+            return resolved.parent.parent / "exports"
+        return Path("exports") / project_name
 
     @staticmethod
     def _infer_project_name(video_path: Path) -> str:

@@ -123,6 +123,31 @@ def test_infer_project_name(tmp_path):
     assert result.success is True
 
 
+def test_missing_optional_asset_errors(tmp_path):
+    video = tmp_path / "p" / "renders" / "final.mp4"
+    _make_video(video)
+    for key in ("subtitles_path", "thumbnail_path"):
+        result = ExportBundle().execute(
+            {
+                "video_path": str(video),
+                "title": "T",
+                "export_dir": str(tmp_path / "out"),
+                key: str(tmp_path / "does_not_exist.x"),
+            }
+        )
+        assert result.success is False, key
+        assert key in (result.error or "")
+
+
+def test_default_export_dir_inside_project_workspace(tmp_path):
+    # projects/<name>/renders/final.mp4 -> projects/<name>/exports (no export_dir given)
+    video = tmp_path / "projects" / "demo" / "renders" / "final.mp4"
+    _make_video(video)
+    result = ExportBundle().execute({"video_path": str(video), "title": "T"})
+    assert result.success is True
+    assert Path(result.data["export_path"]) == (tmp_path / "projects" / "demo" / "exports").resolve()
+
+
 def test_registry_discovers_export_bundle():
     reg = ToolRegistry()
     reg.discover()

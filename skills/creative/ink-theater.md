@@ -39,11 +39,21 @@ Then stage as beats on one continuous white page with a camera (pan / push).
 - Machines: `parts.{crank,gauge,hopper,slot,lever,box}` — compose them.
 - Full API + determinism rules: `ink-theater/README.md`.
 
+## Characters — Ink Puppet + real mocap (never hand-tune motion)
+
+For a character that walks / dances / etc., do NOT hand-author motion (sine curves, hand-posed frames). Use the puppet + the **mocap action library**:
+
+- `InkPuppet.create(mount,{cx,ground,boil})` → `p.drawIn(tl,{start})` (self-drawing reveal) → `InkPuppet.choreograph(tl, p, [{clip:'walk'},{clip:'dance_spin'},{clip:'wave'}], {start})`.
+- **Read `ink-theater/mocap/catalog.json` and pick moves that fit each beat — vary them, and NEVER loop one clip** (looping is what makes videos feel repetitive). ~12 today: walk, run, climb, march, shuffle, jump, kick, sit, wave, dab, dance_spin, dance_glide.
+- **Move not in the catalog?** `node ink-theater/mocap/add-motion.mjs <name> <cmu-id|url|path> <category> "<desc>"` — fetches, converts (auto-maps fair1 / CMU / Mixamo skeletons), rebundles + updates the catalog. Free CMU mocap (`una-dinosauria/cmu-mocap`) has thousands. Then copy `mocap/clips.js` into the project.
+- **Speech balloons** (characters "talking"): `InkTheater.balloon(tl, {into, overlay, at, dur, text, mouth:[x,y], center:[x,y], boil})` — HTML text so the webfont applies.
+
 ## ⚠ Non-negotiables
 
 - **Handwriting font: embed the FULL font, not a Google-Fonts subset woff2** (a `css2`-API subset is missing basic-latin → silent serif fallback everywhere). Use the bundled `ink-theater/assets/patrickhand.ttf` (`@font-face … format("truetype")`) on **HTML overlay `<div>`s** for captions/speech-balloons. No Google hot-link (breaks determinism). See `ink-theater/README.md` → "font gotcha".
 - Determinism: closed-form springs, seed-stepped boil off the timeline, no `repeat:-1`, seeded PRNG only.
 - One paused `gsap.timeline` on `window.__timelines`. Validate with `lint` + `snapshot` (read the contact-sheet) before render.
+- **Pipeline-exempt**: this is a style + engine on the `animation` / `character-animation` pipelines — NOT a Rule-Zero pipeline. Don't stall looking for an `.yaml` manifest.
 
 ## Reference builds
 

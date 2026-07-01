@@ -1,0 +1,86 @@
+[
+  {
+    "name": "climb",
+    "category": "locomotion",
+    "desc": "clambers up",
+    "frames": 180,
+    "source": "CMU 01_02"
+  },
+  {
+    "name": "dab",
+    "category": "dance",
+    "desc": "does a dab",
+    "frames": 180,
+    "source": "FAIR dab"
+  },
+  {
+    "name": "dance_glide",
+    "category": "dance",
+    "desc": "gliding ballet dance",
+    "frames": 180,
+    "source": "CMU 05_10"
+  },
+  {
+    "name": "dance_spin",
+    "category": "dance",
+    "desc": "expressive dance w/ a pirouette",
+    "frames": 180,
+    "source": "CMU 05_02"
+  },
+  {
+    "name": "jump",
+    "category": "action",
+    "desc": "a forward jump",
+    "frames": 104,
+    "source": "CMU 13_11"
+  },
+  {
+    "name": "kick",
+    "category": "action",
+    "desc": "kicks",
+    "frames": 180,
+    "source": "CMU 10_01"
+  },
+  {
+    "name": "march",
+    "category": "locomotion",
+    "desc": "marches on the spot",
+    "frames": 180,
+    "source": "15_01"
+  },
+  {
+    "name": "run",
+    "category": "locomotion",
+    "desc": "runs / jogs",
+    "frames": 38,
+    "source": "CMU 09_01"
+  },
+  {
+    "name": "shuffle",
+    "category": "locomotion",
+    "desc": "a slow zombie shuffle",
+    "frames": 180,
+    "source": "FAIR zombie"
+  },
+  {
+    "name": "sit",
+    "category": "posture",
+    "desc": "sits then stands",
+    "frames": 180,
+    "source": "CMU 13_01"
+  },
+  {
+    "name": "walk",
+    "category": "locomotion",
+    "desc": "walks",
+    "frames": 86,
+    "source": "CMU 02_01"
+  },
+  {
+    "name": "wave",
+    "category": "gesture",
+    "desc": "waves hello",
+    "frames": 180,
+    "source": "FAIR wave_hello"
+  }
+]

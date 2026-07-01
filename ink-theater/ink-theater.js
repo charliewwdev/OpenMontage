@@ -260,10 +260,39 @@
     };
   }
 
+  // ---- comic speech balloon (the "characters talking" primitive) ----
+  // Builds an ink bubble + tail (grows from the mouth) and an HTML overlay text,
+  // and animates it on the timeline. Text is HTML so the webfont applies.
+  //   balloon(tl, { into:<g>, overlay:<div>, at, dur, text, mouth:[x,y],
+  //                 center:[x,y], w, size, font, boil })
+  function balloon(tl, o) {
+    o = o || {};
+    var g = root.gsap;
+    var bx = (o.center && o.center[0]) || 1030, by = (o.center && o.center[1]) || 320;
+    var w = o.w || Math.max(200, String(o.text || "").length * 26), h = o.h || 116;
+    var mouth = o.mouth || [bx - 260, by + 130];
+    var grp = el("g", o.boil ? { filter: "url(#" + o.boil + ")" } : {});
+    grp.appendChild(el("rect", { x: bx - w / 2, y: by - h / 2, width: w, height: h, rx: h / 2, fill: "#fff", stroke: INK, "stroke-width": 3.4 }));
+    grp.appendChild(el("path", { d: "M " + (bx - 40) + " " + (by + h / 2 - 6) + " L " + mouth[0] + " " + mouth[1] + " L " + (bx - 4) + " " + (by + h / 2 - 2) + " Z", fill: "#fff", stroke: INK, "stroke-width": 3.4, "stroke-linejoin": "round" }));
+    (o.into || document.body).appendChild(grp);
+    var d = document.createElement("div");
+    d.textContent = o.text;
+    d.style.cssText = "position:absolute;display:flex;align-items:center;justify-content:center;text-align:center;opacity:0;color:" + INK +
+      ";font-family:'" + (o.font || "InkHand") + "',cursive;left:" + (bx - w / 2) + "px;top:" + (by - h / 2) + "px;width:" + w + "px;height:" + h + "px;font-size:" + (o.size || 50) + "px";
+    (o.overlay || document.body).appendChild(d);
+    if (tl && g) {
+      g.set(grp, { svgOrigin: mouth[0] + " " + mouth[1], scale: 0 });
+      tl.to(grp, { scale: 1, duration: 0.4, ease: ease.overshoot }, o.at || 0);
+      tl.to(d, { opacity: 1, duration: 0.25 }, (o.at || 0) + 0.18);
+      tl.to([grp, d], { opacity: 0, duration: 0.3 }, (o.at || 0) + (o.dur || 2) - 0.3);
+    }
+    return { group: grp, text: d };
+  }
+
   root.InkTheater = {
     el: el, rng: rng, resample: resample, smoothD: smoothD, wobblePts: wobblePts,
     inkPath: inkPath, inkRibbon: inkRibbon, boil: boil,
     springEase: springEase, ease: ease, fabrik: fabrik,
-    parts: parts, mascot: mascot, INK: INK
+    parts: parts, mascot: mascot, balloon: balloon, INK: INK
   };
 })(window);

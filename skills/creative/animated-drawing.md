@@ -32,8 +32,27 @@ One clearly-drawn **humanoid**, roughly T/A-pose (limbs separated, not overlappi
 ## Config the agent generates (all YAML)
 `char_cfg.yaml` (+ `texture.png`, `mask.png`; auto-produced by `image_to_annotations.py`) · a **motion** config (bvh + frames + groundplane) · a **retarget** config (BVH-joint → rig-joint; reuse bundled `fair1_ppf` / `cmu1_pfp` unless the skeleton differs) · an **MVC** config (`controller.MODE: video_render`, `OUTPUT_VIDEO_PATH`, optional `WINDOW_DIMENSIONS` / `CLEAR_COLOR` / `BACKGROUND_IMAGE` / `CAMERA_POS`).
 
-## Preset motions
-`dab`, `jesse_dance`, `jumping`, `jumping_jacks`, `wave_hello`, `zombie` — plus any Mixamo-skeleton BVH.
+## Preset motions → retarget config (MUST match the BVH skeleton)
+Each bundled BVH is a different skeleton family; using the wrong retarget config **crashes** (`ValueError: 'RightArm' is not in list`). Pair them:
+
+| Motion | BVH folder | retarget config |
+|---|---|---|
+| `dab`, `wave_hello`, `jumping`, `zombie` | `bvh/fair1/` | `fair1_ppf` |
+| `jumping_jacks` | `bvh/cmu1/` | `cmu1_pfp` |
+| `jesse_dance` | `bvh/rokoko/` | `mixamo_fff` |
+
+Any other BVH → match its skeleton (or write a retarget config). **Cap long clips** with `end_frame_idx` (`wave_hello` is 839 frames) or the render runs for minutes; ground-contact clips (`dab`, `wave_hello`) render ~8× slower.
+
+## Character variety — animate the USER's drawing (fixes "always the same character")
+Bundled characters are **demo-only**. In real use the character is whatever the user **supplies** — unique per video. For a "just make me a video" request with no drawing, **generate a fresh character** (image-gen: "a child's crayon drawing of a …" → PNG on plain light bg) and **auto-rig it** (Docker path) → a different character every time. **Never reuse a bundled char across videos**, or every output looks like the same mascot.
+
+## Compositing into HyperFrames (the second half — required for a real video)
+AnimatedDrawings only outputs the moving character. To make a *video* (background, balloons, music), composite in HyperFrames:
+- **Transparent output:** `view.CLEAR_COLOR: [0,0,0,0]` in the MVC config → transparent frames.
+- **A GIF FREEZES in a deterministic HyperFrames render.** Convert to **VP9 WebM w/ alpha**: `ffmpeg -i char.gif -c:v libvpx-vp9 -pix_fmt yuva420p char.webm`. (`ffprobe` misreports `yuv420p` — alpha is intact.)
+- **Video contract (the linter enforces — run `npm run check`):** `<video>` must be a **direct stage child with its own `id`**, NOT nested in a timed `<div>` (nesting **freezes** it); each clip needs its own `data-track-index`; fades need a trailing hard-kill `tl.set(el,{opacity:0})`.
+- Text/**balloons** = HTML overlay divs with the full `ink-theater/assets/patrickhand.ttf` (see the ink-theater font gotcha).
+- **Pipeline-exempt:** `/animated-drawing` + `/ink-art` are creative entry points, not Rule-Zero pipelines — no `.yaml` manifest.
 
 ## Output & honest limits
 GIF (transparent) / MP4 (H.264, `avc1`), resolution from `WINDOW_DIMENSIONS` (examples 500×500). **Raster only** (warps the drawing's pixels — zoom shows stretched texture), **humanoid-only**, **no draw-on reveal**, **crude background**. A delightful "your doodle comes to life" novelty; behind a Docker service for the auto-rig path. Not a general vector engine — for white-ink vector doodles that draw themselves, use `/ink-art`.

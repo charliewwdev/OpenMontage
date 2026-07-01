@@ -15,6 +15,8 @@ for (let i = 0; i < rest.length; i++) {
   if (rest[i] === "--axis") opt.axis = rest[++i];
   else if (rest[i] === "--fps") opt.fps = +rest[++i];
   else if (rest[i] === "--nolockx") opt.lockx = false;
+  else if (rest[i] === "--max") opt.max = +rest[++i];
+  else if (rest[i] === "--name") opt.name = rest[++i];
 }
 
 // ---- parse BVH ----
@@ -105,14 +107,29 @@ function fk(frame) {
   return pos;
 }
 
+// ---- joint-name resolver (skeleton-agnostic via aliases: fair1 / CMU / Mixamo) ----
+const present = new Set(joints.map((j) => j.name));
+const ALIAS = {
+  hips: ["Hips", "mixamorig:Hips", "Hip"],
+  chest: ["Spine3", "Spine2", "Spine1", "Chest", "Spine", "mixamorig:Spine2", "mixamorig:Spine1"],
+  neck: ["Neck", "Neck1", "mixamorig:Neck"], head: ["Head", "mixamorig:Head"],
+  shR: ["RightArm", "RightShoulder", "mixamorig:RightArm"], elR: ["RightForeArm", "mixamorig:RightForeArm"], haR: ["RightHand", "mixamorig:RightHand"],
+  shL: ["LeftArm", "LeftShoulder", "mixamorig:LeftArm"], elL: ["LeftForeArm", "mixamorig:LeftForeArm"], haL: ["LeftHand", "mixamorig:LeftHand"],
+  hipR: ["RightUpLeg", "RightHip", "mixamorig:RightUpLeg"], knR: ["RightLeg", "mixamorig:RightLeg"], ftR: ["RightFoot", "mixamorig:RightFoot"],
+  hipL: ["LeftUpLeg", "LeftHip", "mixamorig:LeftUpLeg"], knL: ["LeftLeg", "mixamorig:LeftLeg"], ftL: ["LeftFoot", "mixamorig:LeftFoot"]
+};
+const JN = {};
+for (const k in ALIAS) JN[k] = ALIAS[k].find((n) => present.has(n)) || ALIAS[k][0];
+const unmapped = Object.keys(ALIAS).filter((k) => !present.has(JN[k]));
+if (unmapped.length) console.error("WARN " + inPath + ": unmapped joints " + unmapped.join(",") + " (skeleton not recognized — extend ALIAS)");
+
 // ---- pick 2D axes ----
 const p0 = fk(motion[0]);
-const headN = "Head", footN = "RightFoot";
-const spread = [0, 1, 2].map((a) => Math.abs((p0[headN] ? p0[headN][a] : 0) - (p0[footN] ? p0[footN][a] : 0)));
+const spread = [0, 1, 2].map((a) => Math.abs(p0[JN.head][a] - p0[JN.ftR][a]));
 let upAxis = spread[1] >= spread[2] ? 1 : 2;      // Y or Z, whichever spans head→foot most
 if (opt.axis === "xy") upAxis = 1; if (opt.axis === "zy") upAxis = 2;
 const horizAxis = 0;                              // X = left/right (arms)
-const upSign = (p0[headN][upAxis] - p0[footN][upAxis]) > 0 ? 1 : -1;
+const upSign = (p0[JN.head][upAxis] - p0[JN.ftR][upAxis]) > 0 ? 1 : -1;
 function proj(P) { return [P[horizAxis], -upSign * P[upAxis]]; }
 
 // scale from the SKELETON rest height (rotation-free FK) so every clip of the
@@ -127,33 +144,27 @@ const restUp = Object.values(restPos).map((P) => -upSign * P[upAxis]);
 const heightUnits = Math.max(...restUp) - Math.min(...restUp);
 const scale = 520 / heightUnits;
 
-const MAP = {
-  hips: "Hips", chest: "Spine3", neck: "Neck", head: "Head",
-  shR: "RightArm", elR: "RightForeArm", haR: "RightHand",
-  shL: "LeftArm", elL: "LeftForeArm", haL: "LeftHand",
-  hipR: "RightUpLeg", knR: "RightLeg", ftR: "RightFoot",
-  hipL: "LeftUpLeg", knL: "LeftLeg", ftL: "LeftFoot"
-};
 const step = Math.max(1, Math.round((1 / frameTime) / opt.fps));
-const hips0 = proj(p0["Hips"]);
-const frames = [];
+const hips0 = proj(p0[JN.hips]);
+let frames = [];
 for (let f = 0; f < motion.length; f += step) {
   const P = fk(motion[f]);
-  const h = proj(P["Hips"]);
+  const h = proj(P[JN.hips]);
   const rootY = (h[1] - hips0[1]) * scale;         // vertical root motion (jumps)
   const rootX = opt.lockx ? h[0] : hips0[0];       // in-place unless drift wanted
   const out = { rootY: Math.round(rootY * 10) / 10 };
-  for (const key in MAP) {
-    const j = P[MAP[key]]; if (!j) continue;
+  for (const key in JN) {
+    const j = P[JN[key]]; if (!j) continue;
     const q = proj(j);
     out[key] = [Math.round((q[0] - rootX) * scale * 10) / 10, Math.round((q[1] - h[1]) * scale * 10) / 10];
   }
   frames.push(out);
 }
+if (opt.max && frames.length > opt.max) frames = frames.slice(0, opt.max);   // cap length (loops the take)
 // ground = lowest foot at rest (frame 0), figure height
 const f0 = frames[0];
 const groundY = Math.max(f0.ftR ? f0.ftR[1] : 0, f0.ftL ? f0.ftL[1] : 0);
-const name = inPath.split(/[\\/]/).pop().replace(/\.bvh$/i, "");
+const name = opt.name || inPath.split(/[\\/]/).pop().replace(/\.bvh$/i, "");
 const clip = { name, fps: opt.fps, height: Math.round(520), groundY: Math.round(groundY), frameCount: frames.length, frames };
 mkdirSync(dirname(outPath), { recursive: true });
 writeFileSync(outPath, JSON.stringify(clip));

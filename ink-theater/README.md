@@ -61,11 +61,25 @@ The right way to animate a doodle *character* (walk / dance / wave / jump) is **
 var p = InkPuppet.create(mount, { cx: 960, ground: 902, boil: "boil" });
 p.drawIn(tl, { start: 0.4 });                         // pencil sketches the figure limb-by-limb
 InkPuppet.choreograph(tl, p, [                          // then plays named mocap clips — zero hand-tuning
-  { clip: "wave_hello" }, { clip: "dab" }, { clip: "jumping" }, { clip: "zombie" }
+  { clip: "walk" }, { clip: "dance_spin" }, { clip: "kick" }, { clip: "wave" }
 ], { start: 3.7 });
+
+// speak — comic balloon tethered to the mouth (HTML text = webfont works)
+InkTheater.balloon(tl, { into: fxGroup, overlay: htmlOverlay, at: 5, dur: 2, text: "hello!", boil: "boil" });
 ```
 
-Deterministic + seek-safe (pose is a pure function of each segment's local time). **Add a motion** by dropping any BVH through the converter — free CMU mocap has thousands (walk/run/dance/…). This is what Meta's *Animated Drawings* does, but here it stays **vector, white-ink, with a draw-on reveal** (Animated Drawings is raster, humanoid-only, and has no reveal — see the eval notes). Provenance of the bundled example clips: `mocap/NOTE.md`.
+Deterministic + seek-safe (pose is a pure function of each segment's local time).
+
+**The action library (`mocap/catalog.json`)** ships ~12 varied moves the agent picks by name — locomotion (`walk`, `run`, `climb`, `march`, `shuffle`), action (`jump`, `kick`), posture (`sit`), gesture (`wave`), dance (`dance_spin`, `dance_glide`, `dab`). **Read the catalog and pick moves that fit the story — don't loop one clip.**
+
+**Extend it in one command** (self-extending, no code changes) — the converter auto-maps fair1 / CMU / Mixamo skeletons:
+```
+node mocap/add-motion.mjs backflip 05_20 dance "a backflip"   # CMU id, or a URL, or a local .bvh
+```
+Free **CMU mocap** (`una-dinosauria/cmu-mocap`) has thousands. This is what Meta's *Animated Drawings* does, but here it stays **vector, white-ink, with a draw-on reveal** (AD is raster, humanoid-only, no reveal). Provenance: `mocap/NOTE.md`.
+
+### Speech balloons — `InkTheater.balloon(tl, opts)`
+Comic balloon that grows from the mouth, with HTML overlay text (so the webfont applies). `opts`: `into` (an SVG `<g>`), `overlay` (an HTML div), `at`, `dur`, `text`, `mouth:[x,y]`, `center:[x,y]`, `w`, `size`, `boil`.
 
 ## Demos
 

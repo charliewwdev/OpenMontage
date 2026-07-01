@@ -9,7 +9,7 @@
     <script src="clips.js"></script>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
-      @font-face { font-family: "InkHand"; src: url("assets/inkhand.woff2") format("woff2"); font-display: block; }
+      @font-face { font-family: "InkHand"; src: url("assets/patrickhand.ttf") format("truetype"); font-display: block; }
       html, body { width: 1920px; height: 1080px; overflow: hidden; background: #fcfbf8; }
       #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
       .stage { position: absolute; inset: 0; background: #fcfbf8; }
@@ -22,8 +22,8 @@
     </style>
   </head>
   <body>
-    <div id="root" data-composition-id="main" data-start="0" data-duration="18" data-width="1920" data-height="1080">
-      <section id="scene" class="clip" data-start="0" data-duration="18" data-track-index="1">
+    <div id="root" data-composition-id="main" data-start="0" data-duration="21" data-width="1920" data-height="1080">
+      <section id="scene" class="clip" data-start="0" data-duration="21" data-track-index="1">
         <div class="stage">
           <svg viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
             <defs>
@@ -62,10 +62,12 @@
 
       // 2) it comes alive and performs — real mocap, chosen by name
       var segs = [
-        { clip: "wave_hello", dur: 3.0, label: "it waves" },
-        { clip: "dab", dur: 3.0, label: "it dabs" },
-        { clip: "jumping", dur: 3.4, label: "it jumps" },
-        { clip: "zombie", dur: 3.9, label: "it walks" }
+        { clip: "walk", dur: 2.6, label: "it walks" },
+        { clip: "run", dur: 2.6, label: "it runs" },
+        { clip: "dance_spin", dur: 3.4, label: "it dances" },
+        { clip: "kick", dur: 2.6, label: "it kicks" },
+        { clip: "sit", dur: 3.4, label: "it sits" },
+        { clip: "wave", dur: 2.6, label: "it waves" }
       ];
       window.InkPuppet.choreograph(tl, pup, segs, { start: 3.7 });
 

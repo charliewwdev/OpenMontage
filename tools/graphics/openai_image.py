@@ -1,4 +1,4 @@
-"""OpenAI GPT Image generation (gpt-image-1 / DALL-E 3)."""
+"""OpenAI GPT Image generation (gpt-image-2 / DALL-E 3)."""
 
 from __future__ import annotations
 
@@ -60,8 +60,8 @@ class OpenAIImage(BaseTool):
             "prompt": {"type": "string"},
             "model": {
                 "type": "string",
-                "enum": ["gpt-image-1", "dall-e-3"],
-                "default": "gpt-image-1",
+                "enum": ["gpt-image-2", "dall-e-3"],
+                "default": "gpt-image-2",
             },
             "size": {
                 "type": "string",
@@ -100,10 +100,10 @@ class OpenAIImage(BaseTool):
         return ToolStatus.UNAVAILABLE
 
     def estimate_cost(self, inputs: dict[str, Any]) -> float:
-        model = inputs.get("model", "gpt-image-1")
+        model = inputs.get("model", "gpt-image-2")
         quality = inputs.get("quality", "high")
         n = inputs.get("n", 1)
-        if model == "gpt-image-1":
+        if "gpt-image" in model:
             cost_map = {"low": 0.011, "medium": 0.042, "high": 0.167, "auto": 0.042}
             return cost_map.get(quality, 0.042) * n
         # dall-e-3 fallback pricing
@@ -121,13 +121,13 @@ class OpenAIImage(BaseTool):
 
         start = time.time()
         client = OpenAI()
-        model = inputs.get("model", "gpt-image-1")
+        model = inputs.get("model", "gpt-image-2")
         prompt = inputs["prompt"]
         size = inputs.get("size", "1024x1024")
         n = inputs.get("n", 1)
 
         try:
-            if model == "gpt-image-1":
+            if "gpt-image" in model:
                 quality = inputs.get("quality", "high")
                 output_format = inputs.get("output_format", "png")
                 response = client.images.generate(

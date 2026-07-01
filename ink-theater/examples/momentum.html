@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en" data-resolution="landscape">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1920, height=1080" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <script src="ink-theater.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      @font-face { font-family: "InkHand"; src: url("assets/inkhand.woff2") format("woff2"); font-display: block; }
+      html, body { width: 1920px; height: 1080px; overflow: hidden; background: #fff; }
+      #root { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
+      .stage { position: absolute; inset: 0; background: #fff; }
+      .stage svg.scene { position: absolute; inset: 0; display: block; width: 1920px; height: 1080px; }
+      .cap { position: absolute; left: 0; width: 1920px; text-align: center; font-family: "InkHand", cursive; color: #1a1a1a; opacity: 0; }
+      #cap1, #cap2 { top: 206px; font-size: 70px; }
+      #cap1b { top: 300px; font-size: 44px; color: #d8402e; }
+      #cap2b { top: 300px; font-size: 44px; color: #2f6fb0; }
+      .endtag { position: absolute; inset: 0; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; }
+      .ett { font-family: "InkHand", cursive; font-size: 180px; color: #1a1a1a; line-height: 1; }
+      .etu { width: 460px; height: 34px; margin: 4px 0 2px; }
+      .ets { font-family: "InkHand", cursive; font-size: 52px; color: #7a7a7a; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-duration="14" data-width="1920" data-height="1080">
+      <section id="scene" class="clip" data-start="0" data-duration="14" data-track-index="1">
+        <div class="stage">
+          <svg class="scene" viewBox="0 0 1920 1080" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <filter id="boil" x="-15%" y="-15%" width="130%" height="130%">
+                <feTurbulence id="boilTurb" type="fractalNoise" baseFrequency="0.011" numOctaves="1" seed="1" result="n"/>
+                <feDisplacementMap in="SourceGraphic" in2="n" scale="2.4"/>
+              </filter>
+            </defs>
+            <g id="ink"></g>
+          </svg>
+          <div id="cap1" class="cap">starting is the hard part</div>
+          <div id="cap1b" class="cap">all the effort is up front</div>
+          <div id="cap2" class="cap">then it carries itself</div>
+          <div id="cap2b" class="cap">momentum does the rest</div>
+          <div id="endtag" class="endtag">
+            <div class="ett">momentum</div>
+            <svg class="etu" viewBox="0 0 460 34"><path id="endund" d="" fill="none" stroke="#e07b1a" stroke-width="7" stroke-linecap="round"/></svg>
+            <div class="ets">get it moving — then keep it rolling.</div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      if (document.fonts && document.fonts.load) { document.fonts.load("180px InkHand"); }
+      var IT = window.InkTheater, INK = IT.INK;
+      var mount = document.getElementById("ink");
+      var tl = gsap.timeline({ paused: true });
+
+      function hillY(x) { return 820 - 320 * Math.exp(-Math.pow((x - 1050) / 300, 2)); }
+
+      var gpts = [], gx;
+      for (gx = 300; gx <= 1720; gx += 36) gpts.push([gx, hillY(gx)]);
+      var ground = IT.el("path", { d: IT.inkPath(gpts, { wobble: 1.2, step: 36 }), fill: "none", stroke: INK, "stroke-width": 5, "stroke-linecap": "round" });
+      ground.style.strokeDasharray = 1700; ground.style.strokeDashoffset = 1700;
+      mount.appendChild(IT.el("g", { filter: "url(#boil)" }, [ground]));
+
+      var R = 72;
+      var ballG = IT.el("g", null, [
+        IT.el("circle", { cx: 0, cy: 0, r: R, fill: "#fff", stroke: INK, "stroke-width": 5 }),
+        IT.el("circle", { cx: -34, cy: 0, r: 7, fill: INK }),
+        IT.el("circle", { cx: 30, cy: 14, r: 6, fill: INK }),
+        IT.el("path", { d: "M-20 -34 A 40 40 0 0 1 30 -22", fill: "none", stroke: INK, "stroke-width": 3 })
+      ]);
+      var ballWrap = IT.el("g", { filter: "url(#boil)" }, [ballG]);
+      mount.appendChild(ballWrap);
+
+      var SC = 1.3;
+      var m = IT.mascot({ x: 0, y: 0, scale: SC });
+      m.reachR([54, -8]); m.reachL([44, -20]);
+      var mWrap = IT.el("g", { filter: "url(#boil)" }, [m.g]);
+      mount.appendChild(mWrap);
+      var FOOT = 100 * SC;
+
+      var pos = { x: 560 };
+      function placeScene() {
+        var x = pos.x, cy = hillY(x) - R, rot = (x - 560) * 0.5;
+        ballG.setAttribute("transform", "rotate(" + rot + ")");
+        ballWrap.setAttribute("transform", "translate(" + x + "," + cy + ")");
+        var mx = Math.min(x - 100, 952);
+        mWrap.setAttribute("transform", "translate(" + mx + "," + (hillY(mx) - FOOT) + ")");
+      }
+      placeScene();
+
+      tl.to(ground, { strokeDashoffset: 0, duration: 1.6, ease: "power1.inOut" }, 0.3);
+
+      // BEAT 1 — the slow grind up
+      tl.fromTo("#cap1", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.6 }, 1.4);
+      tl.fromTo("#cap1b", { opacity: 0 }, { opacity: 1, duration: 0.6 }, 1.9);
+      tl.to(pos, { x: 1052, duration: 3.4, ease: "power1.inOut", onUpdate: placeScene }, 1.4);
+      tl.to(["#cap1", "#cap1b"], { opacity: 0, duration: 0.4 }, 4.9);
+
+      // BEAT 2 — the effortless roll down
+      tl.fromTo("#cap2", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.6 }, 5.7);
+      tl.fromTo("#cap2b", { opacity: 0 }, { opacity: 1, duration: 0.6 }, 6.2);
+      tl.to(pos, { x: 1820, duration: 2.0, ease: "power2.in", onUpdate: placeScene }, 5.5);
+      tl.to(mWrap, { y: "+=8", duration: 0.5, yoyo: true, repeat: 1, ease: "sine.inOut" }, 6.0);
+      tl.to(["#cap2", "#cap2b"], { opacity: 0, duration: 0.4 }, 7.8);
+
+      // END TAG
+      var und = document.getElementById("endund");
+      und.setAttribute("d", IT.inkPath([[20, 18], [230, 28], [440, 15]], { wobble: 1.6, step: 60 }));
+      und.style.strokeDasharray = 460; und.style.strokeDashoffset = 460;
+      tl.to("#endtag", { opacity: 1, duration: 0.7, ease: "power2.out" }, 8.4);
+      tl.fromTo(und, { strokeDashoffset: 460 }, { strokeDashoffset: 0, duration: 0.9, ease: "power2.out" }, 9.0);
+
+      IT.boil(document.getElementById("boilTurb"), tl, { duration: 14, fps: 9 });
+      window.__timelines["main"] = tl;
+    </script>
+  </body>
+</html>

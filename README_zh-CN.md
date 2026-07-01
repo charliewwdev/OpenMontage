@@ -136,7 +136,9 @@ make setup
 
 就是这么简单。智能体会通过实时网络搜索研究您的主题，生成 AI 图像，撰写并配音带有语音指导的脚本，自动寻找免版税的背景音乐，烧录词级字幕，并渲染最终视频。在您看到任何内容之前，系统会运行多点自我审查——ffprobe 验证、帧采样、音频电平分析、交付承诺验证以及字幕检查。每一个提供商的选择都会在 7 个维度上进行评分，并附有可审计的决策日志。每一个创意决定都需要您的批准。
 
-> **没有 `make`？** 可手动运行：`pip install -r requirements.txt && cd remotion-composer && npm install && cd .. && pip install piper-tts && cp .env.example .env`
+> **没有 `make`？** macOS/Linux：`python3 -m venv .venv && source .venv/bin/activate && python -m pip install -r requirements.txt && cd remotion-composer && npm install && cd .. && python -m pip install piper-tts && cp .env.example .env`
+>
+> Windows PowerShell：`py -3 -m venv .venv; .\.venv\Scripts\Activate.ps1; python -m pip install -r requirements.txt; cd remotion-composer; npm install; cd ..; python -m pip install piper-tts; Copy-Item .env.example .env`
 >
 > **Windows:** 如果 `npm install` 报错 `ERR_INVALID_ARG_TYPE`，请改用 `npx --yes npm install`。
 

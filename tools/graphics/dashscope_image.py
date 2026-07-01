@@ -106,7 +106,16 @@ class DashscopeImage(BaseTool):
     retry_policy = RetryPolicy(
         max_retries=2, retryable_errors=["rate_limit", "timeout"]
     )
-    idempotency_key_fields = ["prompt", "model", "size", "n"]
+    idempotency_key_fields = [
+        "prompt",
+        "model",
+        "size",
+        "n",
+        "negative_prompt",
+        "seed",
+        "prompt_extend",
+        "watermark",
+    ]
     side_effects = [
         "writes image file to output_path",
         "calls DashScope (Alibaba Cloud) image generation API",
@@ -156,39 +165,26 @@ class DashscopeImage(BaseTool):
             response.raise_for_status()
             data = response.json()
 
-            choices = data.get("output", {}).get("choices", [])
-            if not choices:
+            image_urls = self._extract_image_urls(data)
+            if not image_urls:
                 return ToolResult(
                     success=False,
-                    error="DashScope returned no image choices",
+                    error="DashScope returned no image URLs",
                 )
 
-            content = choices[0].get("message", {}).get("content", [])
-            if not content:
-                return ToolResult(
-                    success=False,
-                    error="DashScope returned no image content",
-                )
-
-            image_url = content[0].get("image")
-            if not image_url:
-                return ToolResult(
-                    success=False,
-                    error="DashScope image output missing URL",
-                )
-
-            # Download the image from the temporary URL (valid ~24h).
-            download = requests.get(image_url, timeout=120)
-            download.raise_for_status()
-
-            output_path = Path(
-                inputs.get("output_path", "dashscope_image.png")
+            # DashScope bills per image and URLs expire ~24h; save every one.
+            output_paths = self._resolve_output_paths(
+                inputs.get("output_path", "dashscope_image.png"),
+                count=len(image_urls),
             )
-            output_path.parent.mkdir(parents=True, exist_ok=True)
-            output_path.write_bytes(download.content)
+            for path, url in zip(output_paths, image_urls):
+                download = requests.get(url, timeout=120)
+                download.raise_for_status()
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(download.content)
 
             usage = data.get("usage", {})
-            n_generated = int(usage.get("image_count", 1))
+            n_generated = len(image_urls)
 
         except Exception as e:
             return ToolResult(
@@ -203,16 +199,47 @@ class DashscopeImage(BaseTool):
                 "model": payload["model"],
                 "prompt": inputs["prompt"],
                 "size": payload["parameters"]["size"],
-                "output": str(output_path),
-                "outputs": [str(output_path)],
+                "output": str(output_paths[0]),
+                "outputs": [str(p) for p in output_paths],
                 "images_generated": n_generated,
                 "usage": usage,
             },
-            artifacts=[str(output_path)],
+            artifacts=[str(p) for p in output_paths],
             cost_usd=self.estimate_cost(inputs),
             duration_seconds=round(time.time() - start, 2),
             model=payload["model"],
         )
+
+    @staticmethod
+    def _extract_image_urls(data: dict[str, Any]) -> list[str]:
+        """Collect image URLs from every choice whose finish_reason is "stop".
+
+        Per Qwen Cloud docs, a multi-output task is SUCCEEDED if at least one
+        image is generated; failed choices carry finish_reason != "stop" and
+        must be skipped to avoid downloading partial/empty results.
+        """
+        urls: list[str] = []
+        for choice in data.get("output", {}).get("choices", []):
+            if choice.get("finish_reason") != "stop":
+                continue
+            for item in choice.get("message", {}).get("content", []):
+                url = item.get("image")
+                if url:
+                    urls.append(url)
+        return urls
+
+    @staticmethod
+    def _resolve_output_paths(base: str, count: int) -> list[Path]:
+        """Derive distinct paths for `count` images. Single image keeps the
+        base path unchanged; multiple images insert an index before the
+        extension (foo.png -> foo_1.png, foo_2.png, ...)."""
+        base_path = Path(base)
+        if count <= 1:
+            return [base_path]
+        stem = base_path.stem
+        suffix = base_path.suffix
+        parent = base_path.parent
+        return [parent / f"{stem}_{i}{suffix}" for i in range(1, count + 1)]
 
     def _build_payload(self, inputs: dict[str, Any]) -> dict[str, Any]:
         parameters: dict[str, Any] = {

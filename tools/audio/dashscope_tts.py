@@ -123,7 +123,7 @@ class DashscopeTTS(BaseTool):
     retry_policy = RetryPolicy(
         max_retries=2, retryable_errors=["rate_limit", "timeout"]
     )
-    idempotency_key_fields = ["text", "voice", "model", "language_type"]
+    idempotency_key_fields = ["text", "voice", "model", "language_type", "instructions"]
     side_effects = [
         "writes audio file to output_path",
         "calls DashScope (Alibaba Cloud) TTS API",

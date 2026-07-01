@@ -129,7 +129,7 @@ class DashscopeAsr(BaseTool):
         backoff_seconds=2.0,
         retryable_errors=["timeout", "rate_limit"],
     )
-    idempotency_key_fields = ["audio_url", "model"]
+    idempotency_key_fields = ["audio_url", "model", "enable_words", "language_hints"]
     side_effects = [
         "writes transcription JSON to output_path",
         "calls DashScope (Alibaba Cloud) ASR API (async submit + poll)",

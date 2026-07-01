@@ -251,6 +251,266 @@ class TestDashscopeImageSpecific:
 
 
 # ------------------------------------------------------------------
+# PR review regressions: multi-image download + idempotency keys
+# ------------------------------------------------------------------
+
+class TestDashscopeImageMultiOutput:
+    """Regression tests for PR #240 review: the tool advertised
+    multiple_outputs and accepted n>1 but only downloaded the first image.
+    Verify every returned URL is saved and returned as an artifact."""
+
+    def test_extract_image_urls_across_choices(self):
+        data = {
+            "output": {
+                "choices": [
+                    {"finish_reason": "stop", "message": {"content": [{"image": "https://x/1.png"}]}},
+                    {"finish_reason": "stop", "message": {"content": [{"image": "https://x/2.png"}]}},
+                    {"finish_reason": "stop", "message": {"content": [{"image": "https://x/3.png"}]}},
+                ]
+            }
+        }
+        assert DashscopeImage._extract_image_urls(data) == [
+            "https://x/1.png",
+            "https://x/2.png",
+            "https://x/3.png",
+        ]
+
+    def test_extract_image_urls_within_single_choice(self):
+        data = {
+            "output": {
+                "choices": [
+                    {"finish_reason": "stop", "message": {"content": [
+                        {"image": "https://x/1.png"},
+                        {"image": "https://x/2.png"},
+                    ]}}
+                ]
+            }
+        }
+        assert DashscopeImage._extract_image_urls(data) == [
+            "https://x/1.png",
+            "https://x/2.png",
+        ]
+
+    def test_extract_image_urls_empty_when_no_images(self):
+        assert DashscopeImage._extract_image_urls({}) == []
+        assert DashscopeImage._extract_image_urls(
+            {"output": {"choices": []}}
+        ) == []
+        assert DashscopeImage._extract_image_urls(
+            {"output": {"choices": [{"message": {"content": [{"text": "x"}]}}]}}
+        ) == []
+
+    def test_extract_image_urls_skips_failed_choices(self):
+        """Per Qwen Cloud docs, a multi-output task can be SUCCEEDED with
+        partial failures. Choices with finish_reason != "stop" must be
+        skipped so we don't download partial/empty results. The failed
+        choice here carries a non-empty URL to prove it is the
+        finish_reason filter (not the truthy-url check) that skips it."""
+        data = {
+            "output": {
+                "choices": [
+                    {
+                        "finish_reason": "stop",
+                        "message": {"content": [{"image": "https://x/ok.png"}]},
+                    },
+                    {
+                        "finish_reason": "content_filter",
+                        "message": {"content": [{"image": "https://x/blocked.png"}]},
+                    },
+                ]
+            }
+        }
+        assert DashscopeImage._extract_image_urls(data) == ["https://x/ok.png"]
+
+    def test_resolve_output_paths_single_unchanged(self):
+        paths = DashscopeImage._resolve_output_paths("foo.png", 1)
+        assert paths == [Path("foo.png")]
+
+    def test_resolve_output_paths_multiple_inserts_index(self):
+        paths = DashscopeImage._resolve_output_paths("foo.png", 3)
+        assert paths == [
+            Path("foo_1.png"),
+            Path("foo_2.png"),
+            Path("foo_3.png"),
+        ]
+
+    def test_resolve_output_paths_multiple_without_extension(self):
+        paths = DashscopeImage._resolve_output_paths("foo", 2)
+        assert paths == [Path("foo_1"), Path("foo_2")]
+
+    def test_execute_downloads_all_images(self, monkeypatch, tmp_path):
+        """The bug: n=3 returned images_generated=3 but downloaded 1 file.
+        Mock the DashScope response with 3 URLs and verify all 3 are saved."""
+        monkeypatch.setenv("DASHSCOPE_API_KEY", "fake-key")
+
+        class FakeResp:
+            def __init__(self, payload, content=b""):
+                self._payload = payload
+                self.content = content
+
+            def raise_for_status(self):
+                pass
+
+            def json(self):
+                return self._payload
+
+        api_response = {
+            "output": {
+                "choices": [
+                    {"finish_reason": "stop", "message": {"content": [{"image": f"https://x/{i}.png"}]}}
+                    for i in range(1, 4)
+                ]
+            },
+            "usage": {"image_count": 3},
+        }
+
+        import requests
+
+        monkeypatch.setattr(
+            requests, "post", lambda *a, **kw: FakeResp(api_response)
+        )
+        monkeypatch.setattr(
+            requests,
+            "get",
+            lambda url, **kw: FakeResp({}, content=f"img-{url}".encode()),
+        )
+
+        out = tmp_path / "shot.png"
+        result = DashscopeImage().execute({
+            "prompt": "test", "n": 3, "output_path": str(out),
+        })
+
+        assert result.success is True
+        assert result.data["images_generated"] == 3
+        assert len(result.artifacts) == 3
+        assert (tmp_path / "shot_1.png").exists()
+        assert (tmp_path / "shot_2.png").exists()
+        assert (tmp_path / "shot_3.png").exists()
+
+    def test_execute_single_image_uses_base_path(self, monkeypatch, tmp_path):
+        """n=1 must keep the legacy single-path behavior (no _1 suffix)."""
+        monkeypatch.setenv("DASHSCOPE_API_KEY", "fake-key")
+
+        class FakeResp:
+            def __init__(self, payload, content=b""):
+                self._payload = payload
+                self.content = content
+
+            def raise_for_status(self):
+                pass
+
+            def json(self):
+                return self._payload
+
+        api_response = {
+            "output": {
+                "choices": [
+                    {"finish_reason": "stop", "message": {"content": [{"image": "https://x/1.png"}]}}
+                ]
+            },
+            "usage": {"image_count": 1},
+        }
+
+        import requests
+
+        monkeypatch.setattr(
+            requests, "post", lambda *a, **kw: FakeResp(api_response)
+        )
+        monkeypatch.setattr(
+            requests,
+            "get",
+            lambda url, **kw: FakeResp({}, content=b"img-bytes"),
+        )
+
+        out = tmp_path / "shot.png"
+        result = DashscopeImage().execute({
+            "prompt": "test", "n": 1, "output_path": str(out),
+        })
+
+        assert result.success is True
+        assert result.data["images_generated"] == 1
+        assert result.artifacts == [str(out)]
+        assert out.exists()
+        assert not (tmp_path / "shot_1.png").exists()
+
+
+class TestDashscopeIdempotencyKeys:
+    """Regression tests for PR #240 review: idempotency keys must include
+    all output-affecting fields so different requests don't collide and
+    reuse stale artifacts."""
+
+    def test_image_idempotency_includes_all_output_fields(self):
+        fields = DashscopeImage().idempotency_key_fields
+        for field in (
+            "prompt", "model", "size", "n",
+            "negative_prompt", "seed", "prompt_extend", "watermark",
+        ):
+            assert field in fields, f"image idempotency missing {field}"
+
+    def test_image_idempotency_differs_on_negative_prompt(self):
+        tool = DashscopeImage()
+        base = {"prompt": "x", "model": "m", "size": "1024*1024", "n": 1}
+        assert tool.idempotency_key(base) != tool.idempotency_key(
+            {**base, "negative_prompt": "blurry"}
+        )
+
+    def test_image_idempotency_differs_on_seed(self):
+        tool = DashscopeImage()
+        base = {"prompt": "x", "model": "m", "size": "1024*1024", "n": 1}
+        assert tool.idempotency_key(base) != tool.idempotency_key(
+            {**base, "seed": 42}
+        )
+
+    def test_image_idempotency_differs_on_prompt_extend(self):
+        tool = DashscopeImage()
+        base = {"prompt": "x", "model": "m", "size": "1024*1024", "n": 1}
+        assert tool.idempotency_key(
+            {**base, "prompt_extend": True}
+        ) != tool.idempotency_key({**base, "prompt_extend": False})
+
+    def test_image_idempotency_differs_on_watermark(self):
+        tool = DashscopeImage()
+        base = {"prompt": "x", "model": "m", "size": "1024*1024", "n": 1}
+        assert tool.idempotency_key(
+            {**base, "watermark": False}
+        ) != tool.idempotency_key({**base, "watermark": True})
+
+    def test_tts_idempotency_includes_instructions(self):
+        assert "instructions" in DashscopeTTS().idempotency_key_fields
+
+    def test_tts_idempotency_differs_on_instructions(self):
+        tool = DashscopeTTS()
+        base = {
+            "text": "hi", "voice": "Cherry",
+            "model": "qwen3-tts-flash", "language_type": "Auto",
+        }
+        assert tool.idempotency_key(base) != tool.idempotency_key(
+            {**base, "instructions": "speak softly"}
+        )
+
+    def test_asr_idempotency_includes_enable_words_and_language_hints(self):
+        fields = DashscopeAsr().idempotency_key_fields
+        assert "enable_words" in fields
+        assert "language_hints" in fields
+
+    def test_asr_idempotency_differs_on_enable_words(self):
+        tool = DashscopeAsr()
+        base = {"audio_url": "https://x/a.mp3", "model": "qwen3-asr-flash-filetrans"}
+        assert tool.idempotency_key(
+            {**base, "enable_words": True}
+        ) != tool.idempotency_key({**base, "enable_words": False})
+
+    def test_asr_idempotency_differs_on_language_hints(self):
+        tool = DashscopeAsr()
+        base = {"audio_url": "https://x/a.mp3", "model": "qwen3-asr-flash-filetrans"}
+        assert tool.idempotency_key(
+            {**base, "language_hints": ["zh"]}
+        ) != tool.idempotency_key(
+            {**base, "language_hints": ["zh", "en"]}
+        )
+
+
+# ------------------------------------------------------------------
 # TTS-specific tests
 # ------------------------------------------------------------------
 

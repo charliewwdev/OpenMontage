@@ -51,7 +51,25 @@ Bundle the font locally (`@font-face url("assets/x.woff2")`) — a Google Fonts 
 4. Captions = HTML overlay divs (see gotcha).
 5. Register one `gsap.timeline({paused:true})` on `window.__timelines["<id>"]`.
 
+## Ink Puppet — real mocap on a hand-drawn figure (recommended for characters)
+
+The right way to animate a doodle *character* (walk / dance / wave / jump) is **not** hand-tuned math — it is **real motion-capture retargeted onto a stick figure**. An agent should only choose the character and choreograph named moves; it must never hand-tune motion. Two pieces:
+
+- **`mocap/bvh2clip.mjs`** — offline converter: a 3D BVH mocap file → a compact 2D "clip" (per-frame joint tracks, hips-relative pose + root motion, scaled to a fixed figure height). Run once per motion; bundle clips with `clips.js`.
+- **`ink-puppet.js`** — runtime: builds the stick figure, plays clips, exposes a **declarative choreography API**:
+
+```js
+var p = InkPuppet.create(mount, { cx: 960, ground: 902, boil: "boil" });
+p.drawIn(tl, { start: 0.4 });                         // pencil sketches the figure limb-by-limb
+InkPuppet.choreograph(tl, p, [                          // then plays named mocap clips — zero hand-tuning
+  { clip: "wave_hello" }, { clip: "dab" }, { clip: "jumping" }, { clip: "zombie" }
+], { start: 3.7 });
+```
+
+Deterministic + seek-safe (pose is a pure function of each segment's local time). **Add a motion** by dropping any BVH through the converter — free CMU mocap has thousands (walk/run/dance/…). This is what Meta's *Animated Drawings* does, but here it stays **vector, white-ink, with a draw-on reveal** (Animated Drawings is raster, humanoid-only, and has no reveal — see the eval notes). Provenance of the bundled example clips: `mocap/NOTE.md`.
+
 ## Demos
 
-- `projects/ink-theater-reel/` — capabilities reel (each primitive, labeled).
-- `projects/ink-theater-momentum/` — "Momentum" story (springs + rig + ink + handwriting).
+- `examples/mocap-figure/` — the pencil figure draws itself, then waves / dabs / jumps / walks via **real mocap**.
+- `examples/reel.html` — capabilities reel (each primitive, labeled).
+- `examples/momentum.html` — "Momentum" story (springs + rig + ink + handwriting).

@@ -28,20 +28,19 @@ Every frame must be reproducible from time alone. This engine obeys that:
 - Seeded PRNG (`rng`) for all "random-looking" wobble — no runtime `Math.random`.
 - No `repeat:-1` (finite counts only), animate only transforms/opacity/attrs.
 
-## ⚠ The font gotcha (learned the hard way)
+## ⚠ The font gotcha (the REAL root cause)
 
-**HyperFrames' rasterizer applies `@font-face` webfonts to HTML elements but NOT to SVG `<text>`.** SVG text silently falls back to a system serif — even static, even with the font "loaded". 
+Custom handwriting rendered as **serif** in every render for a long time. The cause was **not** SVG-vs-HTML — it was a **font-subset trap**: grabbing one woff2 from the Google Fonts `css2` API (`grep … | head -1`) returns a single *unicode-range subset* (often cyrillic / vietnamese / latin-ext) that is **missing basic-latin (ASCII)**. So every English word silently falls back to serif — while the renderer still logs `Fonts: 1 loaded`. (This means earlier demos whose captions "looked handwritten" were actually serif.)
 
-**Always render custom-font captions as HTML overlay `<div>`s** positioned over the SVG scene, never as SVG `<text>`. See `projects/ink-theater-momentum/index.html` for the working pattern:
+**Fix (verified):** embed the **full font file** — the TrueType, or a woff2 that actually covers basic-latin:
 
 ```html
-<div class="stage">
-  <svg class="scene">…ink art…</svg>            <!-- shapes only -->
-  <div id="cap1" class="cap">handwritten line</div>  <!-- HTML text = webfont works -->
-</div>
+@font-face { font-family: "InkHand"; src: url("assets/patrickhand.ttf") format("truetype"); font-display: block; }
 ```
 
-Bundle the font locally (`@font-face url("assets/x.woff2")`) — a Google Fonts hot-link is a render-time network fetch and violates determinism. Prefer a **static** woff2 (e.g. Patrick Hand) — but note even static SVG `<text>` fails; it's the SVG-vs-HTML boundary that matters, not variable-vs-static.
+A working Patrick Hand TTF ships at **`ink-theater/assets/patrickhand.ttf`** — copy it into your project's `assets/` and use `font-family: "InkHand"`. It renders real handwriting on normal **HTML overlay `<div>`s** (verified — put caption divs over the SVG scene). Don't hot-link Google Fonts (a render-time network fetch breaks determinism); a local `@font-face` file is auto-inlined by the compiler at build time.
+
+> Note: HyperFrames also pre-bundles ~18 fonts (none are handwriting) — see `hyperframes-creative/references/typography.md`. For handwriting you must embed your own full font as above.
 
 ## Usage in a HyperFrames project
 

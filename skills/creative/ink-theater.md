@@ -41,7 +41,7 @@ Then stage as beats on one continuous white page with a camera (pan / push).
 
 ## ⚠ Non-negotiables
 
-- **Captions = HTML overlay `<div>`s, never SVG `<text>`** — HyperFrames doesn't apply webfonts to SVG text (silent serif fallback). Bundle a static handwriting woff2 locally (no hot-link). See `ink-theater/README.md` → "font gotcha".
+- **Handwriting font: embed the FULL font, not a Google-Fonts subset woff2** (a `css2`-API subset is missing basic-latin → silent serif fallback everywhere). Use the bundled `ink-theater/assets/patrickhand.ttf` (`@font-face … format("truetype")`) on **HTML overlay `<div>`s** for captions/speech-balloons. No Google hot-link (breaks determinism). See `ink-theater/README.md` → "font gotcha".
 - Determinism: closed-form springs, seed-stepped boil off the timeline, no `repeat:-1`, seeded PRNG only.
 - One paused `gsap.timeline` on `window.__timelines`. Validate with `lint` + `snapshot` (read the contact-sheet) before render.
 

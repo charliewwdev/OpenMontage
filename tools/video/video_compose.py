@@ -389,8 +389,22 @@ class VideoCompose(BaseTool):
         preset = inputs.get("preset", "medium")
         profile_name = inputs.get("profile")
 
-        # Resolve target resolution from profile or default
+        # Resolve target resolution + fit mode. Priority: explicit `profile`
+        # arg > edit_decisions.metadata.compose_target > default (landscape HD).
+        # compose_target = {"width": W, "height": H, "fit": "pad"|"cover"} lets a
+        # caller request vertical (9:16) or any aspect without a named profile.
+        # fit="pad" letterboxes (no content loss, the historical default);
+        # fit="cover" scales-to-fill and centre-crops (better for vertical social).
         resolution = "1920x1080"
+        fit_mode = "pad"
+        compose_target = (edit_decisions.get("metadata") or {}).get("compose_target")
+        if isinstance(compose_target, dict):
+            try:
+                resolution = f"{int(compose_target['width'])}x{int(compose_target['height'])}"
+            except (KeyError, ValueError, TypeError):
+                pass
+            if compose_target.get("fit") in ("pad", "cover"):
+                fit_mode = compose_target["fit"]
         if profile_name:
             try:
                 from lib.media_profiles import get_profile
@@ -398,6 +412,10 @@ class VideoCompose(BaseTool):
                 resolution = f"{p.width}x{p.height}"
             except (ImportError, ValueError):
                 pass
+        try:
+            target_w, target_h = (int(v) for v in resolution.split("x"))
+        except ValueError:
+            target_w, target_h = 1920, 1080
 
         cuts = edit_decisions.get("cuts", [])
         if not cuts:
@@ -474,17 +492,22 @@ class VideoCompose(BaseTool):
                     # pix_fmt / sar across ALL segments — otherwise it throws
                     # "Non-monotonous DTS" or silently produces corrupt output.
                     #
-                    # Default target is 1920x1080 @ 30fps, yuv420p, sar=1. If the
-                    # source is smaller it letterboxes; if larger it downscales.
-                    # Callers can override via edit_decisions.metadata.compose_target
-                    # (future extension) but the defaults match the most common
-                    # delivery profile (YouTube landscape).
-                    vf_parts: list[str] = [
-                        "scale=1920:1080:force_original_aspect_ratio=decrease",
-                        "pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black",
-                        "setsar=1",
-                        "fps=30",
-                    ]
+                    # Target is target_w x target_h @ 30fps, yuv420p, sar=1
+                    # (default 1920x1080; overridable via `profile` or
+                    # edit_decisions.metadata.compose_target — see above).
+                    # fit="pad" letterboxes to preserve all content; fit="cover"
+                    # scales-to-fill then centre-crops (no bars, for vertical social).
+                    if fit_mode == "cover":
+                        geom = [
+                            f"scale={target_w}:{target_h}:force_original_aspect_ratio=increase",
+                            f"crop={target_w}:{target_h}",
+                        ]
+                    else:
+                        geom = [
+                            f"scale={target_w}:{target_h}:force_original_aspect_ratio=decrease",
+                            f"pad={target_w}:{target_h}:(ow-iw)/2:(oh-ih)/2:color=black",
+                        ]
+                    vf_parts: list[str] = [*geom, "setsar=1", "fps=30"]
                     af_parts: list[str] = []
                     if speed != 1.0:
                         vf_parts.append(f"setpts={1.0/speed}*PTS")

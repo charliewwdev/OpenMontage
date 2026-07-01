@@ -183,7 +183,19 @@
             "provider": { "type": "string" },
             "voice_id": { "type": "string" },
             "rationale": { "type": "string" },
-            "estimated_cost_usd": { "type": "number", "minimum": 0 }
+            "estimated_cost_usd": { "type": "number", "minimum": 0 },
+            "delivery_style": {
+              "type": "string",
+              "description": "Plain-language voice direction, e.g. warm expert, expressive narrator, crisp tutorial."
+            },
+            "pacing_policy": {
+              "type": "string",
+              "description": "How the voice should use pauses, speed, and emphasis across the piece."
+            },
+            "sample_approval_required": {
+              "type": "boolean",
+              "description": "True when a TTS sample must be approved before batch narration generation."
+            }
           },
           "additionalProperties": false
         },

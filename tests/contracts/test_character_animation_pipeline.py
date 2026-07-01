@@ -186,6 +186,33 @@ def test_character_animation_smoke_flow(tmp_path):
     assert qa_report["checks"]["schema_valid"] is True
 
 
+def test_character_reviewer_success_false_when_qa_finds_issues():
+    """
+    CharacterAnimationReviewer surfaces QA failures via status/issues, not success.
+
+    success=True means the tool executed successfully; the QA verdict lives in
+    character_qa_report.status and character_qa_report.issues — matching the
+    pattern used by visual_qa.py (success=True, verdict in validation_passed).
+    compose-director gates on report.status, not result.success.
+    """
+    result = CharacterAnimationReviewer().execute(
+        {
+            # Minimal rig_plan with missing joints — will trigger schema issues
+            "rig_plan": {"characters": [{"id": "char1", "role": "lead"}]},
+            "pose_library": {},
+            "action_timeline": {},
+            "review_level": "static",
+        }
+    )
+
+    qa_report = result.data["character_qa_report"]
+    assert result.success is True, "tool execution must succeed even when QA finds issues"
+    assert qa_report["status"] == "revise", (
+        f"Expected status='revise' for a broken rig, got '{qa_report['status']}'"
+    )
+    assert len(qa_report["issues"]) > 0, "Expected at least one issue for a broken rig"
+
+
 def test_character_style_is_normalized_for_schema(tmp_path):
     result = CharacterSpecGenerator().execute(
         {

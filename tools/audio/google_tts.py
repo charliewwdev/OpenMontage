@@ -78,6 +78,12 @@ class GoogleTTS(BaseTool):
         "required": ["text"],
         "properties": {
             "text": {"type": "string", "description": "Text to convert to speech"},
+            "input_type": {
+                "type": "string",
+                "default": "text",
+                "enum": ["text", "ssml"],
+                "description": "Set to 'ssml' when text contains SSML tags such as <speak> or <break>.",
+            },
             "voice": {
                 "type": "string",
                 "default": "en-US-Chirp3-HD-Orus",
@@ -92,7 +98,7 @@ class GoogleTTS(BaseTool):
                 "type": "number",
                 "default": 1.0,
                 "minimum": 0.25,
-                "maximum": 4.0,
+                "maximum": 2.0,
                 "description": "Speaking speed. 1.0 = normal, 0.5 = half speed, 2.0 = double speed",
             },
             "pitch": {
@@ -116,7 +122,7 @@ class GoogleTTS(BaseTool):
         cpu_cores=1, ram_mb=256, vram_mb=0, disk_mb=50, network_required=True
     )
     retry_policy = RetryPolicy(max_retries=2, retryable_errors=["rate_limit", "timeout"])
-    idempotency_key_fields = ["text", "voice", "language_code", "speaking_rate", "pitch"]
+    idempotency_key_fields = ["text", "input_type", "voice", "language_code", "speaking_rate", "pitch"]
     side_effects = ["writes audio file to output_path", "calls Google Cloud TTS API"]
     user_visible_verification = ["Listen to generated audio for natural speech quality"]
 
@@ -200,14 +206,33 @@ class GoogleTTS(BaseTool):
         import requests
 
         text = inputs["text"]
+        input_type = inputs.get("input_type", "text")
         voice_name = inputs.get("voice", "en-US-Chirp3-HD-Orus")
         language_code = inputs.get("language_code", "en-US")
         speaking_rate = inputs.get("speaking_rate", 1.0)
         pitch = inputs.get("pitch", 0.0)
         audio_encoding = inputs.get("audio_encoding", "MP3")
 
+        if not 0.25 <= speaking_rate <= 2.0:
+            return ToolResult(
+                success=False,
+                error="Google TTS speaking_rate must be between 0.25 and 2.0.",
+            )
+        if not -20.0 <= pitch <= 20.0:
+            return ToolResult(
+                success=False,
+                error="Google TTS pitch must be between -20.0 and 20.0 semitones.",
+            )
+
+        if input_type == "ssml":
+            stripped = text.strip()
+            ssml = stripped if stripped.startswith("<speak") else f"<speak>{stripped}</speak>"
+            synthesis_input = {"ssml": ssml}
+        else:
+            synthesis_input = {"text": text}
+
         payload = {
-            "input": {"text": text},
+            "input": synthesis_input,
             "voice": {
                 "languageCode": language_code,
                 "name": voice_name,
@@ -253,6 +278,7 @@ class GoogleTTS(BaseTool):
                 "voice": voice_name,
                 "language_code": language_code,
                 "text_length": len(text),
+                "input_type": input_type,
                 "output": str(output_path),
                 "format": audio_encoding,
                 "speaking_rate": speaking_rate,

@@ -94,6 +94,38 @@ class ImageSelector(BaseTool):
                 "default": "generate",
                 "description": "Operation mode. 'rank' returns scored provider rankings without generating.",
             },
+            "workflow_json": {
+                "type": "string",
+                "description": (
+                    "Optional full ComfyUI workflow JSON. Routes to a custom-workflow-capable "
+                    "provider (e.g. comfyui_image) based on server availability, not bundled "
+                    "model readiness. Requires output_node."
+                ),
+            },
+            "workflow_path": {
+                "type": "string",
+                "description": (
+                    "Optional path to a ComfyUI workflow JSON file. Routes to a custom-workflow-"
+                    "capable provider based on server availability. Requires output_node."
+                ),
+            },
+            "output_node": {
+                "type": "string",
+                "description": "ComfyUI output node ID for a custom workflow_json/workflow_path.",
+            },
+            "workflow_name": {
+                "type": "string",
+                "description": "Optional human-readable provenance label for a custom workflow.",
+            },
+            "workflow_model": {
+                "type": "string",
+                "description": "Optional model/provenance label for a custom workflow.",
+            },
+            "workflow_model_stack": {
+                "type": "array",
+                "items": {"type": "object"},
+                "description": "Optional provenance metadata for custom workflow dependencies.",
+            },
             "output_path": {"type": "string"},
         },
     }
@@ -184,6 +216,12 @@ class ImageSelector(BaseTool):
                 "image_path",
                 "image_urls",
                 "image_paths",
+                "workflow_json",
+                "workflow_path",
+                "output_node",
+                "workflow_name",
+                "workflow_model",
+                "workflow_model_stack",
             ):
                 if passthrough_key in adapted and passthrough_key not in props:
                     stripped.append(f"{passthrough_key}={adapted.pop(passthrough_key)}")
@@ -226,7 +264,7 @@ class ImageSelector(BaseTool):
 
         tool_by_provider: dict[str, BaseTool] = {}
         for tool in candidates:
-            if tool.provider not in tool_by_provider and tool.get_status() == ToolStatus.AVAILABLE:
+            if tool.provider not in tool_by_provider and self._tool_selectable(tool, inputs):
                 tool_by_provider[tool.provider] = tool
 
         if preferred != "auto":
@@ -277,6 +315,12 @@ class ImageSelector(BaseTool):
         return serialized
 
     def _filter_candidates(self, inputs: dict[str, Any], candidates: list[BaseTool]) -> list[BaseTool]:
+        # A caller-supplied custom workflow is provider-specific (ComfyUI graph
+        # JSON). Route it only to custom-workflow-capable providers whose server
+        # is reachable — bundled-model readiness is irrelevant in that case.
+        if self._has_custom_workflow(inputs):
+            return [t for t in candidates if self._custom_workflow_eligible(t, inputs)]
+
         wants_edit = (
             inputs.get("generation_mode") == "edit"
             or inputs.get("image_url")
@@ -296,3 +340,31 @@ class ImageSelector(BaseTool):
             ):
                 filtered.append(tool)
         return filtered or candidates
+
+    @staticmethod
+    def _has_custom_workflow(inputs: dict[str, Any]) -> bool:
+        return bool(inputs.get("workflow_json") or inputs.get("workflow_path"))
+
+    def _custom_workflow_eligible(self, tool: BaseTool, inputs: dict[str, Any]) -> bool:
+        """Whether a tool can run the caller-supplied custom workflow.
+
+        Eligibility is based on server availability, not bundled-model readiness:
+        a provider qualifies when it advertises ``custom_workflow`` support, an
+        ``output_node`` is supplied, and its backend is reachable (status is not
+        UNAVAILABLE).
+        """
+        if not self._has_custom_workflow(inputs):
+            return False
+        if not inputs.get("output_node"):
+            return False
+        supports = getattr(tool, "supports", {})
+        if not supports.get("custom_workflow"):
+            return False
+        return tool.get_status() != ToolStatus.UNAVAILABLE
+
+    def _tool_selectable(self, tool: BaseTool, inputs: dict[str, Any]) -> bool:
+        """A provider is selectable if it is AVAILABLE, or if it can serve a
+        caller-supplied custom workflow even while bundled models report DEGRADED."""
+        if tool.get_status() == ToolStatus.AVAILABLE:
+            return True
+        return self._custom_workflow_eligible(tool, inputs)

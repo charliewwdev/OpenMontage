@@ -54,6 +54,12 @@ class VideoSelector(BaseTool):
                 "enum": ["text_to_video", "image_to_video", "reference_to_video", "rank"],
                 "default": "text_to_video",
             },
+            "target_operation": {
+                "type": "string",
+                "enum": ["text_to_video", "image_to_video", "reference_to_video"],
+                "description": "Operation to score when operation='rank'.",
+                "default": "text_to_video",
+            },
             "aspect_ratio": {
                 "type": "string",
                 "enum": ["16:9", "9:16", "1:1"],
@@ -89,6 +95,38 @@ class VideoSelector(BaseTool):
             "resolution": {
                 "type": "string",
                 "description": "Resolution hint for providers that support named output resolutions.",
+            },
+            "workflow_json": {
+                "type": "string",
+                "description": (
+                    "Optional full ComfyUI workflow JSON. Routes to a custom-workflow-capable "
+                    "provider (e.g. comfyui_video) based on server availability, not bundled "
+                    "model readiness. Requires output_node."
+                ),
+            },
+            "workflow_path": {
+                "type": "string",
+                "description": (
+                    "Optional path to a ComfyUI workflow JSON file. Routes to a custom-workflow-"
+                    "capable provider based on server availability. Requires output_node."
+                ),
+            },
+            "output_node": {
+                "type": "string",
+                "description": "ComfyUI output node ID for a custom workflow_json/workflow_path.",
+            },
+            "workflow_name": {
+                "type": "string",
+                "description": "Optional human-readable provenance label for a custom workflow.",
+            },
+            "workflow_model": {
+                "type": "string",
+                "description": "Optional model/provenance label for a custom workflow.",
+            },
+            "workflow_model_stack": {
+                "type": "array",
+                "items": {"type": "object"},
+                "description": "Optional provenance metadata for custom workflow dependencies.",
             },
             "output_path": {"type": "string"},
         },
@@ -137,11 +175,13 @@ class VideoSelector(BaseTool):
     def execute(self, inputs: dict[str, object]) -> ToolResult:
         from lib.scoring import rank_providers
 
-        task_context = self._prepare_task_context(inputs)
         candidates = self._providers()
 
         # Rank mode — return scored provider rankings without generating
         if inputs.get("operation") == "rank":
+            rank_inputs = self._rank_inputs(inputs)
+            task_context = self._prepare_task_context(rank_inputs)
+            candidates = self._filter_candidates(rank_inputs, candidates)
             rankings = rank_providers(candidates, task_context)
             return ToolResult(
                 success=True,
@@ -153,6 +193,7 @@ class VideoSelector(BaseTool):
             )
 
         # Normal generation — use scored selection
+        task_context = self._prepare_task_context(inputs)
         tool, score = self._select_best_tool(inputs, candidates, task_context)
         if tool is None:
             return ToolResult(success=False, error="No video generation provider available.")
@@ -222,10 +263,10 @@ class VideoSelector(BaseTool):
 
         rankings = rank_providers(candidates, task_context)
 
-        # Build tool lookup: provider → tool (first available per provider)
+        # Build tool lookup: provider → tool (first selectable per provider)
         tool_by_provider: dict[str, BaseTool] = {}
         for tool in candidates:
-            if tool.provider not in tool_by_provider and tool.get_status() == ToolStatus.AVAILABLE:
+            if tool.provider not in tool_by_provider and self._tool_selectable(tool, inputs):
                 tool_by_provider[tool.provider] = tool
 
         # If a preferred provider is explicitly requested and available,
@@ -251,6 +292,12 @@ class VideoSelector(BaseTool):
             capability=self.capability,
             operation=str(inputs.get("operation", "text_to_video")),
         )
+
+    @staticmethod
+    def _rank_inputs(inputs: dict[str, object]) -> dict[str, object]:
+        rank_inputs = dict(inputs)
+        rank_inputs["operation"] = inputs.get("target_operation", "text_to_video")
+        return rank_inputs
 
     @staticmethod
     def _tool_context_payload(tool: BaseTool) -> dict[str, object]:
@@ -283,25 +330,72 @@ class VideoSelector(BaseTool):
         inputs: dict[str, object],
         candidates: list[BaseTool],
     ) -> list[BaseTool]:
+        # A caller-supplied custom workflow is provider-specific (ComfyUI graph
+        # JSON). Route it only to custom-workflow-capable providers whose server
+        # is reachable — bundled-model readiness is irrelevant in that case.
+        if self._has_custom_workflow(inputs):
+            return [t for t in candidates if self._custom_workflow_eligible(t, inputs)]
+
         operation = inputs.get("operation", "text_to_video")
         if operation == "rank":
-            return candidates
+            operation = inputs.get("target_operation", "text_to_video")
 
         filtered: list[BaseTool] = []
+        matched_operation = False
         for tool in candidates:
             supports = getattr(tool, "supports", {})
             props = getattr(tool, "input_schema", {}).get("properties", {})
 
             if operation == "image_to_video":
                 if supports.get("image_to_video") or "image_url" in props or "reference_image_url" in props:
-                    filtered.append(tool)
+                    matched_operation = True
+                    if self._operation_ready(tool, "image_to_video"):
+                        filtered.append(tool)
                 continue
 
             if operation == "reference_to_video":
                 if supports.get("reference_to_video") or "reference_image_urls" in props:
+                    matched_operation = True
                     filtered.append(tool)
                 continue
 
-            filtered.append(tool)
+            matched_operation = True
+            if self._operation_ready(tool, str(operation)):
+                filtered.append(tool)
 
-        return filtered or candidates
+        return filtered if matched_operation else candidates
+
+    @staticmethod
+    def _operation_ready(tool: BaseTool, operation: str) -> bool:
+        checker = getattr(tool, "is_operation_available", None)
+        if not callable(checker):
+            return True
+        return bool(checker(operation))
+
+    @staticmethod
+    def _has_custom_workflow(inputs: dict[str, object]) -> bool:
+        return bool(inputs.get("workflow_json") or inputs.get("workflow_path"))
+
+    def _custom_workflow_eligible(self, tool: BaseTool, inputs: dict[str, object]) -> bool:
+        """Whether a tool can run the caller-supplied custom workflow.
+
+        Eligibility is based on server availability, not bundled-model readiness:
+        a provider qualifies when it advertises ``custom_workflow`` support, an
+        ``output_node`` is supplied, and its backend is reachable (status is not
+        UNAVAILABLE).
+        """
+        if not self._has_custom_workflow(inputs):
+            return False
+        if not inputs.get("output_node"):
+            return False
+        supports = getattr(tool, "supports", {})
+        if not supports.get("custom_workflow"):
+            return False
+        return tool.get_status() != ToolStatus.UNAVAILABLE
+
+    def _tool_selectable(self, tool: BaseTool, inputs: dict[str, object]) -> bool:
+        """A provider is selectable if it is AVAILABLE, or if it can serve a
+        caller-supplied custom workflow even while bundled models report DEGRADED."""
+        if tool.get_status() == ToolStatus.AVAILABLE:
+            return True
+        return self._custom_workflow_eligible(tool, inputs)

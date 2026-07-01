@@ -187,6 +187,15 @@ class VideoCompose(BaseTool):
             "codec": {"type": "string", "default": "libx264"},
             "crf": {"type": "integer", "default": 23},
             "preset": {"type": "string", "default": "medium"},
+            "remotion_timeout_ms": {
+                "type": "integer",
+                "description": (
+                    "Remotion render timeout in milliseconds, passed through as "
+                    "`--timeout` (governs headless-browser setup and delayRender). "
+                    "Raise this when the browser is slow to start (e.g. restricted "
+                    "networks). The subprocess timeout is widened to match."
+                ),
+            },
         },
     }
 
@@ -1738,12 +1747,45 @@ class VideoCompose(BaseTool):
             except (ImportError, ValueError):
                 pass
 
+        # Optional creator-facing render timeout. Remotion's `--timeout` (ms)
+        # governs headless-browser setup and delayRender(); on slow machines or
+        # restricted networks the default 30s browser setup times out with an
+        # opaque failure. Pass it through and give the subprocess enough headroom
+        # so run_command() does not kill Remotion before its own timeout fires.
+        remotion_timeout_ms = inputs.get("remotion_timeout_ms")
+        subprocess_timeout = 600
+        if remotion_timeout_ms:
+            try:
+                ms = int(remotion_timeout_ms)
+                cmd.append(f"--timeout={ms}")
+                subprocess_timeout = max(subprocess_timeout, ms // 1000 + 60)
+            except (TypeError, ValueError):
+                pass
+
         try:
             # Invoke from inside the composer dir so npx can resolve the
             # local remotion binary via node_modules/.bin. Without this,
             # Windows npx cannot locate the CLI and returns "could not
             # determine executable to run".
-            self.run_command(cmd, timeout=600, cwd=composer_dir)
+            self.run_command(cmd, timeout=subprocess_timeout, cwd=composer_dir)
+        except subprocess.CalledProcessError as e:
+            # run_command uses check=True + capture_output, so the useful
+            # Remotion diagnostics live in stderr/stdout — surface the tail
+            # instead of the bare "returned non-zero exit status 1".
+            detail = (e.stderr or e.stdout or "").strip()
+            tail = "\n".join(detail.splitlines()[-25:]) if detail else "(no output captured)"
+            return ToolResult(
+                success=False,
+                error=f"Remotion render failed (exit {e.returncode}):\n{tail}",
+            )
+        except subprocess.TimeoutExpired as e:
+            return ToolResult(
+                success=False,
+                error=(
+                    f"Remotion render timed out after {e.timeout}s. If the headless "
+                    "browser is slow to start, raise remotion_timeout_ms (ms)."
+                ),
+            )
         except Exception as e:
             return ToolResult(success=False, error=f"Remotion render failed: {e}")
         finally:

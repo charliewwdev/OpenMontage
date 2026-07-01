@@ -38,7 +38,7 @@ Custom handwriting rendered as **serif** in every render for a long time. The ca
 @font-face { font-family: "InkHand"; src: url("assets/patrickhand.ttf") format("truetype"); font-display: block; }
 ```
 
-A working Patrick Hand TTF ships at **`ink-theater/assets/patrickhand.ttf`** — copy it into your project's `assets/` and use `font-family: "InkHand"`. It renders real handwriting on normal **HTML overlay `<div>`s** (verified — put caption divs over the SVG scene). Don't hot-link Google Fonts (a render-time network fetch breaks determinism); a local `@font-face` file is auto-inlined by the compiler at build time.
+A working Patrick Hand TTF ships at **`ink-theater/assets/patrickhand.ttf`** (SIL Open Font License — the license ships beside it as `assets/OFL.txt`; see `THIRD_PARTY_NOTICES.md`) — copy it into your project's `assets/` and use `font-family: "InkHand"`. It renders real handwriting on normal **HTML overlay `<div>`s** (verified — put caption divs over the SVG scene). Don't hot-link Google Fonts (a render-time network fetch breaks determinism); a local `@font-face` file is auto-inlined by the compiler at build time.
 
 > Note: HyperFrames also pre-bundles ~18 fonts (none are handwriting) — see `hyperframes-creative/references/typography.md`. For handwriting you must embed your own full font as above.
 
@@ -70,19 +70,17 @@ InkTheater.balloon(tl, { into: fxGroup, overlay: htmlOverlay, at: 5, dur: 2, tex
 
 Deterministic + seek-safe (pose is a pure function of each segment's local time).
 
-**The action library (`mocap/catalog.json`)** ships ~12 varied moves the agent picks by name — locomotion (`walk`, `run`, `climb`, `march`, `shuffle`), action (`jump`, `kick`), posture (`sit`), gesture (`wave`), dance (`dance_spin`, `dance_glide`, `dab`). **Read the catalog and pick moves that fit the story — don't loop one clip.**
+**The action library (`mocap/catalog.json`)** ships 12 varied moves the agent picks by name — locomotion (`walk`, `run`, `climb`, `march`, `shuffle`), action (`jump`, `kick`), posture (`sit`), gesture (`wave`), dance (`dance_spin`, `dance_glide`, `twist`). Every clip is CMU-sourced (free for any use). **Read the catalog and pick moves that fit the story — don't loop one clip.**
 
 **Extend it in one command** (self-extending, no code changes) — the converter auto-maps fair1 / CMU / Mixamo skeletons:
 ```
 node mocap/add-motion.mjs backflip 05_20 dance "a backflip"   # CMU id, or a URL, or a local .bvh
 ```
-Free **CMU mocap** (`una-dinosauria/cmu-mocap`) has thousands. This is what Meta's *Animated Drawings* does, but here it stays **vector, white-ink, with a draw-on reveal** (AD is raster, humanoid-only, no reveal). Provenance: `mocap/NOTE.md`.
+Free **CMU mocap** (`una-dinosauria/cmu-mocap`) has thousands. This is what Meta's *Animated Drawings* does, but here it stays **vector, white-ink, with a draw-on reveal** (AD is raster, humanoid-only, no reveal). Provenance (all clips CMU, free for any use): `mocap/NOTE.md` · `THIRD_PARTY_NOTICES.md`.
 
 ### Speech balloons — `InkTheater.balloon(tl, opts)`
 Comic balloon that grows from the mouth, with HTML overlay text (so the webfont applies). `opts`: `into` (an SVG `<g>`), `overlay` (an HTML div), `at`, `dur`, `text`, `mouth:[x,y]`, `center:[x,y]`, `w`, `size`, `boil`.
 
 ## Demos
 
-- `examples/mocap-figure/` — the pencil figure draws itself, then waves / dabs / jumps / walks via **real mocap**.
-- `examples/reel.html` — capabilities reel (each primitive, labeled).
-- `examples/momentum.html` — "Momentum" story (springs + rig + ink + handwriting).
+- `examples/mocap-figure/` — the pencil figure draws itself, then walks / runs / dances / kicks / sits / waves via **real CMU mocap**. Self-contained and lintable (`npx hyperframes lint ink-theater/examples/mocap-figure`); see `examples/README.md`.

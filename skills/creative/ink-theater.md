@@ -44,7 +44,7 @@ Then stage as beats on one continuous white page with a camera (pan / push).
 For a character that walks / dances / etc., do NOT hand-author motion (sine curves, hand-posed frames). Use the puppet + the **mocap action library**:
 
 - `InkPuppet.create(mount,{cx,ground,boil})` → `p.drawIn(tl,{start})` (self-drawing reveal) → `InkPuppet.choreograph(tl, p, [{clip:'walk'},{clip:'dance_spin'},{clip:'wave'}], {start})`.
-- **Read `ink-theater/mocap/catalog.json` and pick moves that fit each beat — vary them, and NEVER loop one clip** (looping is what makes videos feel repetitive). ~12 today: walk, run, climb, march, shuffle, jump, kick, sit, wave, dab, dance_spin, dance_glide.
+- **Read `ink-theater/mocap/catalog.json` and pick moves that fit each beat — vary them, and NEVER loop one clip** (looping is what makes videos feel repetitive). 12 today (all CMU-sourced): walk, run, climb, march, shuffle, jump, kick, sit, wave, twist, dance_spin, dance_glide.
 - **Move not in the catalog?** `node ink-theater/mocap/add-motion.mjs <name> <cmu-id|url|path> <category> "<desc>"` — fetches, converts (auto-maps fair1 / CMU / Mixamo skeletons), rebundles + updates the catalog. Free CMU mocap (`una-dinosauria/cmu-mocap`) has thousands. Then copy `mocap/clips.js` into the project.
 - **Speech balloons** (characters "talking"): `InkTheater.balloon(tl, {into, overlay, at, dur, text, mouth:[x,y], center:[x,y], boil})` — HTML text so the webfont applies.
 

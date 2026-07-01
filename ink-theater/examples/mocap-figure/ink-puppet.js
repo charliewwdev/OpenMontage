@@ -6,11 +6,13 @@
  *   var p = InkPuppet.create(mount, {cx, ground});
  *   p.drawIn(tl, {start:0.3});                    // pencil sketches the figure
  *   InkPuppet.choreograph(tl, p, [                // then plays named mocap clips
- *     {clip:'wave_hello', dur:3},
- *     {clip:'dab', dur:3},
- *     {clip:'jumping', dur:3.5},
- *     {clip:'zombie', dur:4}
+ *     {clip:'wave', dur:3},
+ *     {clip:'twist', dur:3},
+ *     {clip:'jump', dur:3.5},
+ *     {clip:'walk', dur:4}
  *   ], {start:2.6});
+ *
+ * Clip names must exist in mocap/catalog.json (unknown names warn + hold).
  *
  * Clips come from window.INK_CLIPS (load clips.js). Motion = professional mocap.
  */
@@ -77,7 +79,10 @@
     var CLIPS = root.INK_CLIPS || {};
     segments.forEach(function (seg) {
       var clip = CLIPS[seg.clip];
-      if (!clip) { t += seg.dur; return; }
+      if (!clip) {
+        console.warn('[InkPuppet] unknown clip "' + seg.clip + '" — skipping ' + seg.dur + 's (holds pose). Known clips: ' + Object.keys(CLIPS).join(", "));
+        t += seg.dur; return;
+      }
       var proxy = { u: 0 };
       tl.to(proxy, {
         u: 1, duration: seg.dur, ease: "none",

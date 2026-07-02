@@ -252,8 +252,7 @@ function renderDecisions(s) {
   const body = el("div", { class: "panel-body" });
   for (const d of decisions.slice(-8).reverse()) {
     const alts = (d.options_considered || [])
-      .filter((o) => (o.option_id || o.label) !== d.selected && o.rejected_because !== undefined || (o.option_id !== d.selected && (o.option_id || o.label)))
-      .filter((o) => o.option_id !== d.selected);
+      .filter((o) => (o.option_id ?? o.label) !== d.selected && (o.option_id || o.label));
     body.append(el("div", { class: "decision" },
       el("div", { class: "d-cat" }, `${d.category || "decision"}${d.confidence ? ` · ${d.confidence}` : ""}`),
       el("div", { class: "d-pick" }, `${d.subject || ""} `, el("span", { class: "arrow" }, "→"), ` ${d.selected || ""}`),
@@ -273,19 +272,27 @@ function renderActivity(s) {
   const body = el("div", { class: "panel-body" });
   // A start is "running" only until a later finish/error for the same
   // tool+scene closes it — closed starts are dropped (the finish row tells
-  // the story), unmatched starts render as live.
-  const open = new Map();
+  // the story), unmatched starts render as live. Counted (not keyed-single)
+  // so parallel runs of the same tool on the same scene stay visible.
+  const open = new Map(); // key -> {count, ev}
   const rows = [];
   for (const ev of events) {
     const key = `${ev.tool}:${ev.scene_id || ""}`;
     if (ev.event === "start") {
-      open.set(key, ev);
+      const slot = open.get(key) || { count: 0, ev };
+      slot.count += 1;
+      slot.ev = ev;
+      open.set(key, slot);
     } else {
-      open.delete(key);
+      const slot = open.get(key);
+      if (slot) {
+        slot.count -= 1;
+        if (slot.count <= 0) open.delete(key);
+      }
       rows.push(ev);
     }
   }
-  rows.push(...open.values());
+  for (const slot of open.values()) rows.push(slot.ev);
   rows.sort((a, b) => String(a.ts).localeCompare(String(b.ts)));
   for (const ev of rows.slice(-10).reverse()) {
     let statusEl;
@@ -445,7 +452,18 @@ function renderRenders(s) {
   if (!renders.length) return null;
   if (activeRender >= renders.length) activeRender = 0;
   const current = renders[activeRender];
-  const video = el("video", { src: mediaURL(s.project_id, current.path), controls: "", preload: "none" });
+  // Full re-renders (every SSE refresh) must not reset an in-progress
+  // watch: carry playback position/state over to the recreated element.
+  const prev = document.querySelector(".render-hero video");
+  const src = mediaURL(s.project_id, current.path);
+  const video = el("video", { src, controls: "", preload: "none" });
+  if (prev && prev.getAttribute("src") === src && (prev.currentTime > 0 || !prev.paused)) {
+    const t = prev.currentTime;
+    const wasPlaying = !prev.paused && !prev.ended;
+    video.addEventListener("loadedmetadata", () => { video.currentTime = t; }, { once: true });
+    video.setAttribute("preload", "metadata");
+    if (wasPlaying) video.autoplay = true;
+  }
   const versions = el("div", { class: "render-meta" },
     renders.map((r, i) => el("span", {
       class: `v${i === activeRender ? " active" : ""}`,
@@ -498,7 +516,16 @@ function renderAwaitingNotice(s) {
 // replay — scrub a completed run from its timestamps
 // ---------------------------------------------------------------------------
 
-const ts = (iso) => { const t = Date.parse(iso); return Number.isFinite(t) ? t : null; };
+// Python writers emit tz-aware UTC isoformat, but treat tz-naive strings as
+// UTC too — mixing local-parsed and UTC-parsed timestamps would skew replay
+// ordering by the user's UTC offset.
+const ts = (iso) => {
+  if (!iso) return null;
+  let s = String(iso);
+  if (!/(Z|[+-]\d{2}:?\d{2})$/.test(s)) s += "Z";
+  const t = Date.parse(s);
+  return Number.isFinite(t) ? t : null;
+};
 
 function replayBounds(s) {
   const moments = [];
@@ -556,14 +583,17 @@ function stateAt(s, T) {
         card.generating_tool = (startedNow.get(card.id) || {}).tool;
       }
     }
-    const scriptStage = view.stages.find((x) => x.name === "script");
-    if (!(scriptStage && ["completed", "awaiting_human"].includes(scriptStage.status))) {
-      delete view.artifacts.script;
-    }
-    const composeStage = view.stages.find((x) => x.name === "compose");
-    if (!(composeStage && composeStage.status === "completed")) {
-      view.media.renders = [];
-    }
+  }
+  // Final artifacts hide until their stage happened — for every project
+  // shape, storyboard or not (a degraded run must not show the finished
+  // movie before its stages ran).
+  const scriptStage = view.stages.find((x) => x.name === "script");
+  if (!(scriptStage && ["completed", "awaiting_human"].includes(scriptStage.status))) {
+    delete view.artifacts.script;
+  }
+  const composeStage = view.stages.find((x) => x.name === "compose");
+  if (!(composeStage && composeStage.status === "completed")) {
+    view.media.renders = [];
   }
   return view;
 }
@@ -578,33 +608,42 @@ function renderReplayBar(s) {
       el("span", { class: "rp-btn", onclick: startReplay }, "▶ REPLAY RUN"));
   }
   const pos = (replay.t - replay.t0) / Math.max(1, replay.t1 - replay.t0);
+  const timeLabel = el("span", { class: "rp-time" },
+    new Date(replay.t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }));
+  const setT = (value) => {
+    replay.t = replay.t0 + (Number(value) / 1000) * (replay.t1 - replay.t0);
+    timeLabel.textContent = new Date(replay.t)
+      .toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  };
   return el("div", { class: "replay-bar" },
     el("span", { class: "rp-btn", onclick: toggleReplayPlay }, replay.playing ? "❚❚" : "▶"),
     el("input", {
       type: "range", min: "0", max: "1000", value: String(Math.round(pos * 1000)),
-      oninput: (e) => {
-        replay.t = replay.t0 + (Number(e.target.value) / 1000) * (replay.t1 - replay.t0);
-        replay.playing = false;
-        render();
-      },
+      // A full render() would destroy this slider mid-drag: while dragging,
+      // only pause + track the time label; re-render the board on release.
+      onpointerdown: () => { replay.playing = false; },
+      oninput: (e) => setT(e.target.value),
+      onchange: (e) => { setT(e.target.value); render(); },
     }),
-    el("span", { class: "rp-time" },
-      new Date(replay.t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })),
+    timeLabel,
     el("span", { class: "rp-btn", onclick: stopReplay }, "✕ LIVE"),
   );
 }
+
+let replayTimer = null;
 
 function startReplay() {
   const bounds = replayBounds(state);
   if (!bounds) return;
   replay = { ...bounds, t: bounds.t0, playing: true };
   document.body.classList.add("replaying");
-  tickReplay();
+  scheduleTick();
   render();
 }
 
 function stopReplay() {
   replay = null;
+  clearTimeout(replayTimer);
   document.body.classList.remove("replaying");
   render();
 }
@@ -612,8 +651,14 @@ function stopReplay() {
 function toggleReplayPlay() {
   if (!replay) return;
   replay.playing = !replay.playing;
-  if (replay.playing) tickReplay();
+  if (replay.playing) scheduleTick();
   render();
+}
+
+function scheduleTick() {
+  // Single pending tick, ever — rapid pause/play must not stack chains.
+  clearTimeout(replayTimer);
+  replayTimer = setTimeout(tickReplay, 100);
 }
 
 function tickReplay() {
@@ -624,7 +669,7 @@ function tickReplay() {
   replay.t = Math.min(replay.t1, replay.t + step);
   if (replay.t >= replay.t1) replay.playing = false;
   render();
-  if (replay.playing) setTimeout(tickReplay, 100);
+  if (replay.playing) scheduleTick();
 }
 
 // ---------------------------------------------------------------------------

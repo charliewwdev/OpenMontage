@@ -11,7 +11,6 @@ export function el(tag, attrs = {}, ...children) {
   for (const [k, v] of Object.entries(attrs)) {
     if (v == null) continue;
     if (k === "class") node.className = v;
-    else if (k === "html") node.innerHTML = v;
     else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
     else node.setAttribute(k, v);
   }
@@ -23,15 +22,17 @@ export function el(tag, attrs = {}, ...children) {
 }
 
 export function fmtDuration(seconds) {
-  if (seconds == null) return "";
-  const s = Math.round(seconds);
+  const n = Number(seconds);
+  if (seconds == null || !Number.isFinite(n)) return "";
+  const s = Math.max(0, Math.round(n));
   const m = Math.floor(s / 60);
   return `${m}:${String(s % 60).padStart(2, "0")}`;
 }
 
 export function fmtMoney(v) {
-  if (v == null) return "—";
-  return `$${Number(v).toFixed(2)}`;
+  const n = Number(v);
+  if (v == null || !Number.isFinite(n)) return "—";
+  return `$${n.toFixed(2)}`;
 }
 
 export function fmtAgo(epochSeconds) {

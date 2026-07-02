@@ -68,6 +68,7 @@ def _load_pipeline_meta(pipeline_type: Optional[str]) -> dict[str, Any]:
                     "gated": bool(s.get("human_approval_default", False)),
                 }
                 for s in manifest.get("stages", [])
+                if isinstance(s, dict) and s.get("name")
             ]
             if stages:
                 return {
@@ -260,9 +261,19 @@ def _resolve_asset_path(project_dir: Path, raw_path: str) -> Optional[Path]:
 
 
 def _asset_entry(project_dir: Path, asset: dict) -> dict:
-    """Normalize a manifest asset entry + resolve file existence."""
+    """Normalize a manifest asset entry + resolve file existence.
+
+    A file that resolves OUTSIDE the project directory is treated as
+    not-servable (exists=False): /media only serves within the project, and
+    a bare-filename fallback path would 404 or hit the wrong file.
+    """
     raw_path = asset.get("path") or ""
     resolved = _resolve_asset_path(project_dir, raw_path)
+    if resolved is not None:
+        try:
+            resolved.resolve().relative_to(Path(project_dir).resolve())
+        except (ValueError, OSError):
+            resolved = None
     file_path = resolved if resolved is not None else (project_dir / raw_path)
     exists = resolved is not None
     kind = asset.get("type") or ""
@@ -325,20 +336,26 @@ def _build_storyboard(
     sections = (artifacts.get("script") or {}).get("sections") or []
     manifest_assets = (artifacts.get("asset_manifest") or {}).get("assets") or []
 
+    def scene_key(value: Any) -> str:
+        # 0 is a legitimate scene id — only None/absent collapses to "".
+        return str(value) if value is not None else ""
+
     assets_by_scene: dict[str, list[dict]] = {}
     for asset in manifest_assets:
         if not isinstance(asset, dict):
             continue
         entry = _asset_entry(project_dir, asset)
-        key = str(entry.get("scene_id") or "")
-        assets_by_scene.setdefault(key, []).append(entry)
+        assets_by_scene.setdefault(scene_key(entry.get("scene_id")), []).append(entry)
 
-    # A scene is "generating" if its most recent event is an unfinished start.
+    # A scene is "generating" if its most recent top-level event is an
+    # unfinished start. Nested (depth>0) provider events inside a selector
+    # call are skipped — the outer call's finish is the real completion.
     generating: dict[str, dict] = {}
     for ev in events:
         sid = ev.get("scene_id")
-        if not sid:
+        if sid is None or ev.get("depth"):
             continue
+        sid = scene_key(sid)
         if ev.get("event") == "start":
             generating[sid] = ev
         elif ev.get("event") in ("finish", "error"):
@@ -348,7 +365,7 @@ def _build_storyboard(
     for scene in scene_plan["scenes"]:
         if not isinstance(scene, dict):
             continue
-        sid = str(scene.get("id") or "")
+        sid = scene_key(scene.get("id"))
         section = _find_script_section(scene, sections)
         scene_assets = assets_by_scene.get(sid, [])
         visuals = [a for a in scene_assets if a["type"] in ("image", "video", "diagram", "animation")]
@@ -362,7 +379,7 @@ def _build_storyboard(
             "start_seconds": scene.get("start_seconds"),
             "end_seconds": scene.get("end_seconds"),
             "duration_seconds": (
-                (scene.get("end_seconds") or 0) - (scene.get("start_seconds") or 0)
+                max(0, (scene.get("end_seconds") or 0) - (scene.get("start_seconds") or 0))
                 if scene.get("end_seconds") is not None and scene.get("start_seconds") is not None
                 else None
             ),

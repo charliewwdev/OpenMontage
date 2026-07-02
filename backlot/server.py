@@ -30,25 +30,34 @@ SSE_HEARTBEAT_SECONDS = 15
 
 
 class ChangeHub:
-    """Fan-out of project-change notifications to SSE subscribers."""
+    """Fan-out of project-change notifications to SSE subscribers.
+
+    Subscriptions are filtered: a board subscribed to one project only ever
+    receives that project's ids, so unrelated-project bursts can't flood its
+    queue and starve out the one notification it actually needs.
+    """
 
     def __init__(self) -> None:
-        self._subscribers: set[asyncio.Queue] = set()
+        self._subscribers: dict[asyncio.Queue, Optional[str]] = {}
 
-    def subscribe(self) -> asyncio.Queue:
+    def subscribe(self, project_id: Optional[str] = None) -> asyncio.Queue:
         q: asyncio.Queue = asyncio.Queue(maxsize=64)
-        self._subscribers.add(q)
+        self._subscribers[q] = project_id
         return q
 
     def unsubscribe(self, q: asyncio.Queue) -> None:
-        self._subscribers.discard(q)
+        self._subscribers.pop(q, None)
 
     def publish(self, project_id: str) -> None:
-        for q in list(self._subscribers):
+        for q, only in list(self._subscribers.items()):
+            if only is not None and only != project_id:
+                continue
             try:
                 q.put_nowait(project_id)
             except asyncio.QueueFull:
-                pass  # subscriber is behind; it will refetch on next event
+                # Queue holds only THIS subscriber's relevant ids, so a full
+                # queue already guarantees a pending wake-up → safe to drop.
+                pass
 
 
 hub = ChangeHub()
@@ -88,17 +97,25 @@ def _cached_summaries() -> list[dict]:
     return summaries
 
 
+# Watch-loop hot path: pure string comparison, no per-path filesystem calls
+# (change batches can be thousands of paths during a render).
+import os as _os
+
+_PROJECTS_ROOT_STR = _os.path.normcase(str(PROJECTS_DIR.resolve()))
+
+
 def _project_of_change(path_str: str) -> Optional[str]:
     """Map a changed filesystem path to a project id (None = irrelevant)."""
-    try:
-        rel = Path(path_str).resolve().relative_to(PROJECTS_DIR.resolve())
-    except (ValueError, OSError):
+    norm = _os.path.normcase(_os.path.normpath(path_str))
+    if not norm.startswith(_PROJECTS_ROOT_STR):
         return None
-    if not rel.parts:
+    rel = norm[len(_PROJECTS_ROOT_STR):].lstrip("\\/")
+    if not rel:
         return None
-    if _IGNORE_PARTS.intersection(rel.parts):
+    parts = rel.replace("\\", "/").split("/")
+    if _IGNORE_PARTS.intersection(parts):
         return None
-    return rel.parts[0]
+    return parts[0]
 
 
 async def _watch_projects() -> None:
@@ -153,25 +170,24 @@ def create_app() -> FastAPI:
         _safe_project_dir(project_id)  # 404 early for unknown projects
 
         async def stream():
-            q = hub.subscribe()
+            q = hub.subscribe(project_id)
             try:
                 yield _sse({"type": "hello", "project_id": project_id})
                 while True:
                     if await request.is_disconnected():
                         return
                     try:
-                        changed = await asyncio.wait_for(q.get(), timeout=SSE_HEARTBEAT_SECONDS)
+                        await asyncio.wait_for(q.get(), timeout=SSE_HEARTBEAT_SECONDS)
                     except asyncio.TimeoutError:
                         yield _sse({"type": "heartbeat", "ts": time.time()})
                         continue
-                    if changed == project_id:
-                        # Coalesce bursts: drain anything queued for this project.
-                        while not q.empty():
-                            try:
-                                q.get_nowait()
-                            except asyncio.QueueEmpty:
-                                break
-                        yield _sse({"type": "change", "project_id": project_id})
+                    # Coalesce bursts: drain anything else queued.
+                    while not q.empty():
+                        try:
+                            q.get_nowait()
+                        except asyncio.QueueEmpty:
+                            break
+                    yield _sse({"type": "change", "project_id": project_id})
             finally:
                 hub.unsubscribe(q)
 
@@ -257,7 +273,9 @@ def create_app() -> FastAPI:
 
 
 def _safe_project_dir(project_id: str) -> Path:
-    if "/" in project_id or "\\" in project_id or project_id in (".", ".."):
+    # ':' rejects Windows drive-relative ids like "C:" (PROJECTS_DIR / "C:"
+    # collapses back to PROJECTS_DIR itself).
+    if any(c in project_id for c in "/\\:") or project_id in (".", ".."):
         raise HTTPException(status_code=400, detail="invalid project id")
     project_dir = PROJECTS_DIR / project_id
     if not project_dir.is_dir():
@@ -286,7 +304,10 @@ def _thumbnail_for(source: Path, width: int) -> Optional[Path]:
         if cached.is_file():
             return cached
         THUMB_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        tmp = cached.with_suffix(".tmp.jpg")
+        # Unique temp per request — concurrent misses for the same source
+        # must not write (and replace from) the same temp file.
+        import uuid
+        tmp = THUMB_CACHE_DIR / f"{key}.{uuid.uuid4().hex[:8]}.tmp.jpg"
         if is_video:
             import subprocess
             result = subprocess.run(

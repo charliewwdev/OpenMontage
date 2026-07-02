@@ -13,6 +13,8 @@ const player = document.getElementById("player");
 let state = null;
 let selectedStage = null;   // stage drawer open for this stage name
 let activeRender = 0;
+let replay = null;          // {t0, t1, t, playing} — replay mode when non-null
+let firstPaint = true;
 
 // ---------------------------------------------------------------------------
 // header slate
@@ -46,16 +48,14 @@ function renderSlate(s) {
     const budget = spent + (s.cost.budget_remaining_usd ?? 0);
     const hasBudget = s.cost.budget_remaining_usd != null;
     const pct = hasBudget && budget > 0 ? Math.min(100, (spent / budget) * 100) : 0;
-    cost.append(
-      el("div", { class: "nums" }, el("b", {}, fmtMoney(spent)),
-        hasBudget ? el("span", {}, ` / ${fmtMoney(budget)}`) : null),
-      hasBudget
-        ? el("div", { class: "bar" }, el("i", {
-            class: pct > 75 ? "warn" : "", style: `width:${pct}%`,
-          }))
-        : null,
-      el("div", { class: "label" }, "generation spend"),
-    );
+    cost.append(el("div", { class: "nums" }, el("b", {}, fmtMoney(spent)),
+      hasBudget ? el("span", {}, ` / ${fmtMoney(budget)}`) : ""));
+    if (hasBudget) {
+      cost.append(el("div", { class: "bar" }, el("i", {
+        class: pct > 75 ? "warn" : "", style: `width:${pct}%`,
+      })));
+    }
+    cost.append(el("div", { class: "label" }, "generation spend"));
   }
 
   return el("header", { class: "slate" },
@@ -271,15 +271,27 @@ function renderActivity(s) {
   const events = s.events || [];
   if (!events.length) return null;
   const body = el("div", { class: "panel-body" });
-  const started = new Map();
+  // A start is "running" only until a later finish/error for the same
+  // tool+scene closes it — closed starts are dropped (the finish row tells
+  // the story), unmatched starts render as live.
+  const open = new Map();
+  const rows = [];
   for (const ev of events) {
-    if (ev.event === "start") started.set(`${ev.tool}:${ev.scene_id || ""}`, ev);
+    const key = `${ev.tool}:${ev.scene_id || ""}`;
+    if (ev.event === "start") {
+      open.set(key, ev);
+    } else {
+      open.delete(key);
+      rows.push(ev);
+    }
   }
-  for (const ev of events.slice(-10).reverse()) {
+  rows.push(...open.values());
+  rows.sort((a, b) => String(a.ts).localeCompare(String(b.ts)));
+  for (const ev of rows.slice(-10).reverse()) {
     let statusEl;
     if (ev.event === "finish") {
-      statusEl = el("span", { class: "status ok" },
-        `✓${ev.duration_s != null ? ` ${ev.duration_s}s` : ""}`);
+      statusEl = el("span", { class: `status ${ev.success === false ? "err" : "ok"}` },
+        `${ev.success === false ? "✕" : "✓"}${ev.duration_s != null ? ` ${ev.duration_s.toFixed ? ev.duration_s.toFixed(1) : ev.duration_s}s` : ""}${ev.cost_usd ? ` ${fmtMoney(ev.cost_usd)}` : ""}`);
     } else if (ev.event === "error") {
       statusEl = el("span", { class: "status err" }, "✕");
     } else {
@@ -301,13 +313,20 @@ function renderActivity(s) {
 // storyboard filmstrip
 // ---------------------------------------------------------------------------
 
+function sceneLabel(id) {
+  // "sc4" → "SC 04", "scene-11" → "SC 11", anything else → uppercased id
+  const m = String(id).match(/(\d+)\s*$/);
+  if (m) return `SC ${m[1].padStart(2, "0")}`;
+  return String(id).toUpperCase().slice(0, 10);
+}
+
 function sceneCard(s, card) {
   const dur = card.duration_seconds;
   const width = Math.max(132, Math.min(300, 70 + (dur || 3) * 26));
   const wrap = el("div", { class: "scene-card", style: `width:${width}px` });
 
   const slate = el("div", { class: "sc-slate" },
-    el("span", { class: "num" }, `SC ${String(card.id).replace(/^sc/i, "").padStart(2, "0")}`),
+    el("span", { class: "num" }, sceneLabel(card.id)),
     card.takes.length > 1 ? el("span", { class: "take" }, `T${card.takes.length}`) : null,
     card.hero_moment ? el("span", { class: "hero" }, "★ HERO") : null,
     el("span", { class: "dur" }, fmtDuration(dur)),
@@ -476,16 +495,153 @@ function renderAwaitingNotice(s) {
 }
 
 // ---------------------------------------------------------------------------
+// replay — scrub a completed run from its timestamps
+// ---------------------------------------------------------------------------
+
+const ts = (iso) => { const t = Date.parse(iso); return Number.isFinite(t) ? t : null; };
+
+function replayBounds(s) {
+  const moments = [];
+  for (const st of s.stages) {
+    for (const h of st.history_entries || []) {
+      const t = ts(h.timestamp);
+      if (t) moments.push(t);
+    }
+  }
+  for (const ev of s.events || []) {
+    const t = ts(ev.ts);
+    if (t) moments.push(t);
+  }
+  if (moments.length < 2) return null;
+  return { t0: Math.min(...moments), t1: Math.max(...moments) };
+}
+
+function stateAt(s, T) {
+  const view = structuredClone(s);
+  for (const st of view.stages) {
+    const past = (st.history_entries || []).filter((h) => ts(h.timestamp) != null && ts(h.timestamp) <= T);
+    if (!past.length) {
+      st.status = "pending"; st.review = null; st.timestamp = null;
+      st.gate_skipped = false; st.partial_progress = null;
+    } else {
+      const cur = past[past.length - 1];
+      st.status = cur.status || "pending";
+      st.timestamp = cur.timestamp;
+    }
+  }
+  view.events = (view.events || []).filter((ev) => ts(ev.ts) != null && ts(ev.ts) <= T);
+
+  // Storyboard: visuals appear as their scene finishes (events) or when the
+  // assets stage has completed as of T (legacy runs without events).
+  if (view.storyboard) {
+    const assetsStage = view.stages.find((x) => x.name === "assets");
+    const assetsDone = assetsStage && assetsStage.status === "completed";
+    const finished = new Set();
+    const startedNow = new Map();
+    for (const ev of view.events) {
+      if (!ev.scene_id) continue;
+      if (ev.event === "finish") { finished.add(ev.scene_id); startedNow.delete(ev.scene_id); }
+      else if (ev.event === "start") startedNow.set(ev.scene_id, ev);
+      else if (ev.event === "error") startedNow.delete(ev.scene_id);
+    }
+    const scenePlanStage = view.stages.find((x) => x.name === "scene_plan");
+    const scenePlanDone = scenePlanStage && ["completed", "awaiting_human"].includes(scenePlanStage.status);
+    if (!scenePlanDone) {
+      view.storyboard = null;
+    } else {
+      for (const card of view.storyboard.scenes) {
+        const visible = assetsDone || finished.has(card.id);
+        if (!visible) { card.visual = null; card.takes = []; card.audio = []; }
+        card.generating = startedNow.has(card.id);
+        card.generating_tool = (startedNow.get(card.id) || {}).tool;
+      }
+    }
+    const scriptStage = view.stages.find((x) => x.name === "script");
+    if (!(scriptStage && ["completed", "awaiting_human"].includes(scriptStage.status))) {
+      delete view.artifacts.script;
+    }
+    const composeStage = view.stages.find((x) => x.name === "compose");
+    if (!(composeStage && composeStage.status === "completed")) {
+      view.media.renders = [];
+    }
+  }
+  return view;
+}
+
+function renderReplayBar(s) {
+  const bounds = replayBounds(s);
+  if (!bounds) return null;
+  if (!replay) {
+    // collapsed: just the entry button
+    return el("div", { class: "replay-bar", style: "justify-content:flex-end" },
+      el("span", { class: "rp-time" }, "scrub the whole run"),
+      el("span", { class: "rp-btn", onclick: startReplay }, "▶ REPLAY RUN"));
+  }
+  const pos = (replay.t - replay.t0) / Math.max(1, replay.t1 - replay.t0);
+  return el("div", { class: "replay-bar" },
+    el("span", { class: "rp-btn", onclick: toggleReplayPlay }, replay.playing ? "❚❚" : "▶"),
+    el("input", {
+      type: "range", min: "0", max: "1000", value: String(Math.round(pos * 1000)),
+      oninput: (e) => {
+        replay.t = replay.t0 + (Number(e.target.value) / 1000) * (replay.t1 - replay.t0);
+        replay.playing = false;
+        render();
+      },
+    }),
+    el("span", { class: "rp-time" },
+      new Date(replay.t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })),
+    el("span", { class: "rp-btn", onclick: stopReplay }, "✕ LIVE"),
+  );
+}
+
+function startReplay() {
+  const bounds = replayBounds(state);
+  if (!bounds) return;
+  replay = { ...bounds, t: bounds.t0, playing: true };
+  document.body.classList.add("replaying");
+  tickReplay();
+  render();
+}
+
+function stopReplay() {
+  replay = null;
+  document.body.classList.remove("replaying");
+  render();
+}
+
+function toggleReplayPlay() {
+  if (!replay) return;
+  replay.playing = !replay.playing;
+  if (replay.playing) tickReplay();
+  render();
+}
+
+function tickReplay() {
+  if (!replay || !replay.playing) return;
+  // A full run replays in ~20 seconds regardless of real duration
+  // (10 renders/second — full re-render per tick, keep it modest).
+  const step = (replay.t1 - replay.t0) / 200;
+  replay.t = Math.min(replay.t1, replay.t + step);
+  if (replay.t >= replay.t1) replay.playing = false;
+  render();
+  if (replay.playing) setTimeout(tickReplay, 100);
+}
+
+// ---------------------------------------------------------------------------
 // page assembly
 // ---------------------------------------------------------------------------
 
 function render() {
   if (!state) return;
-  const s = state;
+  const s = replay ? stateAt(state, replay.t) : state;
   document.title = `Backlot — ${s.title}`;
+  document.body.classList.toggle("first", firstPaint);
+  firstPaint = false;
   app.innerHTML = "";
   app.append(renderSlate(s));
   app.append(renderRail(s));
+  const replayBar = renderReplayBar(state);
+  if (replayBar) app.append(replayBar);
   const drawer = renderDrawer(s);
   if (drawer) app.append(drawer);
   const awaitingNotice = renderAwaitingNotice(s);

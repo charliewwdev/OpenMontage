@@ -514,3 +514,9 @@ body.replaying .live .dot { background: var(--blue); animation: none; }
 .hint { font-size: 12px; color: var(--text-3); padding: 10px 2px; }
 
 a { color: inherit; }
+
+/* entrance choreography plays only on first paint, not on every SSE refresh */
+body:not(.first) .slate, body:not(.first) .rail .stage,
+body:not(.first) .script-card, body:not(.first) .notice,
+body:not(.first) aside .panel, body:not(.first) .scene-card,
+body:not(.first) .lib-card, body:not(.first) .drawer { animation: none; }

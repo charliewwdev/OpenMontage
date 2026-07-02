@@ -147,6 +147,11 @@ def _build_stage_rail(
             "human_approved": cp.get("human_approved") if cp else None,
             "partial_progress": (cp.get("metadata") or {}).get("partial_progress") if cp else None,
             "versions": len(versions) + (1 if cp else 0),
+            # Chronological status trail (history + current) — powers replay.
+            "history_entries": (
+                [{"status": v.get("status"), "timestamp": v.get("timestamp")} for v in versions]
+                + ([{"status": cp.get("status"), "timestamp": cp.get("timestamp")}] if cp else [])
+            ),
         }
         # Gate audit: a gated stage that completed without ever passing
         # through awaiting_human (current or archived) was gate-skipped.

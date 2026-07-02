@@ -35,7 +35,8 @@ function card(p) {
     el("span", { class: "when" }, fmtAgo(p.last_activity)),
   );
 
-  return el("a", { class: `lib-card${p.live ? " live-card" : ""}`, href: `/p/${p.project_id}`, style: "text-decoration:none;color:inherit" },
+  const staticSuffix = new URLSearchParams(location.search).has("static") ? "?static=1" : "";
+  return el("a", { class: `lib-card${p.live ? " live-card" : ""}`, href: `/p/${p.project_id}${staticSuffix}`, style: "text-decoration:none;color:inherit" },
     poster,
     el("div", { class: "lib-body" },
       el("h3", {}, (p.title || p.project_id).toUpperCase()),

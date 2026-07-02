@@ -5,7 +5,9 @@ import {
   getJSON, mediaURL, subscribe, thumbURL, waveBars,
 } from "/ui/lib.js";
 
-const projectId = decodeURIComponent(location.pathname.split("/p/")[1] || "");
+const rawProjectPath = location.pathname.split("/p/")[1] || "";
+const projectId = decodeURIComponent(rawProjectPath);
+const encodedProjectId = encodeURIComponent(projectId);
 const app = document.getElementById("app");
 const modal = document.getElementById("modal");
 const player = document.getElementById("player");
@@ -411,7 +413,11 @@ function sceneCard(s, card) {
   if (card.takes.length > 1) {
     const takes = el("div", { class: "takes" });
     card.takes.forEach((t, i) => {
-      const isActive = t === card.visual;
+      const isActive = card.visual && (
+        t === card.visual
+        || (t.path && t.path === card.visual.path)
+        || (t.id && t.id === card.visual.id)
+      );
       const tk = el("span", { class: `tk${isActive ? " active" : ""}`, title: `take ${i + 1}` });
       if (t.exists && t.type === "image") tk.append(el("img", { src: thumbURL(s.project_id, t.path, 320), loading: "lazy", alt: "" }));
       takes.append(tk);

@@ -266,6 +266,10 @@ def create_app() -> FastAPI:
     async def board_page(project_id: str) -> FileResponse:
         return FileResponse(UI_DIR / "board.html")
 
+    @app.get("/p/{project_path:path}")
+    async def board_page_path(project_path: str) -> FileResponse:
+        return FileResponse(UI_DIR / "board.html")
+
     @app.get("/")
     async def library_page() -> FileResponse:
         return FileResponse(UI_DIR / "index.html")

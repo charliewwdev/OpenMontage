@@ -532,3 +532,76 @@ body:not(.first) .lib-card, body:not(.first) .drawer { animation: none; }
 .stage.stalled .node { border-color: var(--red); color: var(--red); background: var(--red-dim); animation: none; }
 .stage.stalled .name { color: var(--red); }
 .stage.stalled .sub { color: var(--red); }
+
+/* responsive project board */
+@media (max-width: 900px) {
+  .wrap { max-width: none; width: 100%; padding: 0 18px 64px; overflow-x: clip; }
+  .slate { flex-wrap: wrap; align-items: flex-start; gap: 10px 12px; }
+  .slate > div:nth-child(2) { min-width: 0; flex: 1 1 240px; }
+  .slate h1 { overflow-wrap: anywhere; }
+  .slate .spacer { display: none; }
+  .cost { text-align: left; }
+  .cost .bar { width: min(150px, 38vw); }
+
+  .rail {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding: 18px 0 16px;
+    scrollbar-width: thin;
+  }
+  .stage { flex: 0 0 82px; }
+  .stage .name { font-size: 10px; max-width: 76px; overflow-wrap: anywhere; text-align: center; }
+  .stage .sub { max-width: 76px; font-size: 9.5px; }
+
+  .board { display: block; }
+  .main-col, aside { width: 100%; min-width: 0; }
+  aside { margin-top: 20px; }
+  aside .panel + .panel { margin-top: 14px; }
+
+  .script-card {
+    width: 100%;
+    max-width: 700px;
+    padding: 28px 32px 26px;
+  }
+  .filmstrip {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding-left: 4px;
+    padding-right: 4px;
+  }
+  .section-title { flex-wrap: wrap; }
+  .section-title .meta { margin-left: 0; }
+}
+
+@media (max-width: 520px) {
+  .wrap { padding: 0 12px 52px; }
+  .slate { padding-top: 14px; }
+  .clapper { width: 30px; height: 23px; }
+  .slate .wordmark { font-size: 10px; }
+  .slate h1 { font-size: 15px; letter-spacing: .06em; }
+  .chip { font-size: 9.5px; padding: 3px 7px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .live { font-size: 10px; letter-spacing: .1em; }
+  .cost { width: 100%; }
+  .cost .bar { width: 100%; }
+
+  .rail { margin: 0 -12px; padding-left: 12px; padding-right: 12px; }
+  .stage { flex-basis: 74px; }
+  .stage .name, .stage .sub { max-width: 68px; }
+
+  .script-card {
+    padding: 24px 20px 28px;
+    border-radius: 5px;
+  }
+  .script-approved { top: 14px; right: 16px; font-size: 9px; padding: 2px 6px; }
+  .script-card .sp-title { font-size: 14px; padding-right: 58px; }
+  .script-card .sp-meta { margin-bottom: 18px; }
+  .script-card .sp-slug .tc { float: none; display: block; margin-top: 2px; }
+  .script-card .sp-expand { right: 12px; bottom: 10px; }
+
+  .panel-head { flex-wrap: wrap; }
+  .panel-head .meta { margin-left: 0; }
+  .drawer .drawer-head { flex-wrap: wrap; }
+  .drawer pre { font-size: 10.5px; }
+  .scene-card { max-width: calc(100vw - 42px); }
+}

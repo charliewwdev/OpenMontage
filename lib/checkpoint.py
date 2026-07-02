@@ -67,8 +67,8 @@ def get_pipeline_stages(pipeline_type: str | None) -> list[str]:
         return list(STAGES)
 
     try:
-        from lib.pipeline_loader import load_pipeline, get_stage_order
-        manifest = load_pipeline(pipeline_type)
+        from lib.pipeline_loader import load_pipeline_readonly, get_stage_order
+        manifest = load_pipeline_readonly(pipeline_type)
         return get_stage_order(manifest)
     except (FileNotFoundError, Exception):
         # Graceful fallback: return all known stages in canonical order
@@ -85,7 +85,7 @@ CHECKPOINT_SCHEMA_PATH = (
 # live under PROJECTS_DIR/<project_id>/ — this is the location the Backlot
 # board watches. Callers may still pass a different pipeline_dir (tests do),
 # but production runs should use the default.
-PROJECTS_DIR = Path(__file__).resolve().parent.parent / "projects"
+from lib.paths import PROJECTS_DIR  # noqa: E402  (single source of truth)
 
 PROJECT_MARKER_FILENAME = "project.json"
 HISTORY_DIRNAME = "history"
@@ -221,30 +221,47 @@ def init_project(
 def _stage_requires_approval(pipeline_type: Optional[str], stage: str) -> Optional[bool]:
     """Read human_approval_default for a stage from its pipeline manifest.
 
-    Returns None when the manifest can't answer (unknown pipeline_type,
-    stage not declared) — the caller then falls back to the value the
+    Returns None when the stage isn't declared in the manifest or no
+    pipeline_type was given — the caller then falls back to the value the
     agent passed in.
+
+    A *provided but unknown* pipeline_type raises: a typo must not silently
+    disable gate enforcement (fail-closed, not fail-open). Other manifest
+    load failures are logged and fall back — a corrupt manifest shouldn't
+    strand an otherwise-valid run, but the degradation must be visible.
     """
     if not pipeline_type or pipeline_type == "unknown":
         return None
+    from lib.pipeline_loader import get_stage_human_approval_default, load_pipeline_readonly
     try:
-        from lib.pipeline_loader import load_pipeline
-        manifest = load_pipeline(pipeline_type)
-        for stage_def in manifest.get("stages", []):
-            if stage_def.get("name") == stage:
-                return bool(stage_def.get("human_approval_default", False))
-    except Exception:
+        manifest = load_pipeline_readonly(pipeline_type)
+    except FileNotFoundError:
+        raise CheckpointValidationError(
+            f"Unknown pipeline_type {pipeline_type!r} — cannot resolve gate "
+            f"policy for stage {stage!r}. Check the spelling against "
+            f"pipeline_defs/*.yaml."
+        )
+    except Exception as exc:
+        import logging
+        logging.getLogger(__name__).warning(
+            "Gate policy unavailable for pipeline %r (%s) — falling back to "
+            "the caller's human_approval_required flag.", pipeline_type, exc,
+        )
         return None
-    return None
+    return get_stage_human_approval_default(manifest, stage)
 
 
 def _archive_superseded_checkpoint(path: Path, stage: str) -> None:
-    """Move an existing checkpoint into history/ before it is overwritten.
+    """Copy an existing checkpoint into history/ before it is overwritten.
 
     Preserves the full run record: stage re-runs (script v1 → v2) and gate
     transitions (awaiting_human → completed) remain reconstructable. Repeated
     in_progress refreshes are NOT archived — they are partial-progress
     heartbeats, not versions.
+
+    Archiving is best-effort and must never crash a checkpoint write: the
+    Backlot watcher may hold the file open (Windows denies renames of open
+    files), so we copy rather than move, and swallow archival I/O failures.
     """
     if not path.exists():
         return
@@ -256,16 +273,21 @@ def _archive_superseded_checkpoint(path: Path, stage: str) -> None:
     if existing.get("status") == "in_progress":
         return
 
-    stamp = str(existing.get("timestamp", ""))
-    safe_stamp = "".join(c for c in stamp if c.isalnum()) or f"{path.stat().st_mtime_ns}"
-    history_dir = path.parent / HISTORY_DIRNAME
-    history_dir.mkdir(parents=True, exist_ok=True)
-    target = history_dir / f"checkpoint_{stage}_{safe_stamp}.json"
-    counter = 1
-    while target.exists():
-        target = history_dir / f"checkpoint_{stage}_{safe_stamp}_{counter}.json"
-        counter += 1
-    path.replace(target)
+    try:
+        import shutil
+        stamp = str(existing.get("timestamp", ""))
+        safe_stamp = "".join(c for c in stamp if c.isalnum()) or f"{path.stat().st_mtime_ns}"
+        history_dir = path.parent / HISTORY_DIRNAME
+        history_dir.mkdir(parents=True, exist_ok=True)
+        target = history_dir / f"checkpoint_{stage}_{safe_stamp}.json"
+        if target.exists():
+            target = history_dir / f"checkpoint_{stage}_{safe_stamp}_{path.stat().st_mtime_ns}.json"
+        shutil.copyfile(path, target)
+    except OSError:
+        import logging
+        logging.getLogger(__name__).warning(
+            "Could not archive superseded checkpoint %s to history/", path
+        )
 
 
 def _decision_log_path(pipeline_dir: Path, project_id: str) -> Path:
@@ -320,6 +342,20 @@ def write_checkpoint(
     metadata: Optional[dict] = None,
 ) -> Path:
     """Write a checkpoint file for a pipeline stage."""
+    # Backfill a missing pipeline_type from the project marker so that
+    # omitting the kwarg doesn't quietly bypass gate enforcement.
+    if not pipeline_type:
+        marker = None
+        marker_path = pipeline_dir / project_id / PROJECT_MARKER_FILENAME
+        if marker_path.exists():
+            try:
+                with open(marker_path) as f:
+                    marker = json.load(f)
+            except (json.JSONDecodeError, OSError):
+                marker = None
+        if isinstance(marker, dict) and marker.get("pipeline_type"):
+            pipeline_type = marker["pipeline_type"]
+
     valid_stages = (
         set(get_pipeline_stages(pipeline_type)) if pipeline_type
         else ALL_KNOWN_STAGES
@@ -332,22 +368,31 @@ def write_checkpoint(
 
     # --- Gate enforcement (GI-4) ---
     # The pipeline manifest is the binding source of truth for whether a stage
-    # gates on human approval. A gated stage can only be written as
-    # "completed" with explicit evidence of approval (human_approved=True).
-    # Skipping a gate is a hard error, not a soft violation.
+    # gates on human approval; a caller may gate MORE strictly (e.g. a
+    # manual_all checkpoint policy) but never less. A gated stage can only be
+    # written "completed" with explicit evidence of approval
+    # (human_approved=True). Skipping a gate is a hard error.
+    #
+    # Enforcement happens at write time only: pre-existing checkpoints written
+    # before gating (or by hand) still read as completed — deliberate
+    # back-compat so in-flight and legacy projects keep resuming.
     manifest_gate = _stage_requires_approval(pipeline_type, stage)
-    gated = manifest_gate if manifest_gate is not None else human_approval_required
+    gated = bool(manifest_gate) or human_approval_required
     if gated:
         human_approval_required = True
         if status == "completed" and not human_approved:
+            gate_source = (
+                f"human_approval_default: true in the {pipeline_type!r} manifest"
+                if manifest_gate
+                else "human_approval_required=True was passed by the caller"
+            )
             raise CheckpointValidationError(
                 f"GATE VIOLATION: stage {stage!r} requires human approval "
-                f"(human_approval_default: true in the {pipeline_type!r} manifest) "
-                f"but status='completed' was written without human_approved=True. "
-                f"Correct protocol: write status='awaiting_human', present the "
-                f"artifact summary to the user, END YOUR TURN, and only after "
-                f"the user approves re-write with status='completed', "
-                f"human_approved=True."
+                f"({gate_source}) but status='completed' was written without "
+                f"human_approved=True. Correct protocol: write "
+                f"status='awaiting_human', present the artifact summary to the "
+                f"user, END YOUR TURN, and only after the user approves "
+                f"re-write with status='completed', human_approved=True."
             )
 
     checkpoint = {
@@ -397,12 +442,18 @@ def write_checkpoint(
 
     path = _checkpoint_path(pipeline_dir, project_id, stage)
     path.parent.mkdir(parents=True, exist_ok=True)
-    # Preserve run history: a superseded completed/awaiting_human checkpoint
-    # moves to history/ instead of being destroyed (stage versioning, gate
-    # audit trail, replay).
-    _archive_superseded_checkpoint(path, stage)
-    with open(path, "w") as f:
+    # Serialize to a temp file first so a mid-write failure (disk full,
+    # unserializable metadata) can never leave the stage with a truncated
+    # current checkpoint; then archive the superseded file and swap in the
+    # new one atomically.
+    tmp_path = path.with_suffix(".json.tmp")
+    with open(tmp_path, "w") as f:
         json.dump(checkpoint, f, indent=2)
+    # Preserve run history: a superseded completed/awaiting_human checkpoint
+    # is copied to history/ (stage versioning, gate audit trail, replay).
+    _archive_superseded_checkpoint(path, stage)
+    import os
+    os.replace(tmp_path, path)
 
     return path
 

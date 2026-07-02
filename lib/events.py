@@ -19,11 +19,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-PROJECTS_DIR = REPO_ROOT / "projects"
+from lib.paths import PROJECTS_DIR, REPO_ROOT  # single source of truth
 
 EVENTS_FILENAME = "events.jsonl"
 
+# Thread-level serialization only. Cross-PROCESS appends are unsynchronized
+# by design: single-line O_APPEND writes rarely tear, and read_events skips
+# malformed lines, so a torn line degrades to one missing activity entry.
 _write_lock = threading.Lock()
 
 # Input keys checked (in order) when inferring the project a tool call
@@ -50,14 +52,13 @@ def infer_project_dir(inputs: Any) -> Optional[Path]:
     if not isinstance(inputs, dict):
         return None
     try:
-        for key in _EXPLICIT_PROJECT_KEYS:
-            value = inputs.get(key)
-            if isinstance(value, (str, Path)) and str(value):
-                p = Path(value)
-                if p.is_dir():
-                    return p
+        # Only paths under the canonical projects root are attributable —
+        # an explicit project_dir pointing elsewhere (HyperFrames workspace,
+        # arbitrary user dir) must not receive an events.jsonl. Explicit
+        # values are normalized to the project ROOT the same way hints are,
+        # so project_dir="projects/x/renders/build" attributes to projects/x.
         projects_root = PROJECTS_DIR.resolve()
-        for key in _PATH_HINT_KEYS:
+        for key in _EXPLICIT_PROJECT_KEYS + _PATH_HINT_KEYS:
             value = inputs.get(key)
             if not isinstance(value, (str, Path)) or not str(value):
                 continue
@@ -74,12 +75,18 @@ def infer_project_dir(inputs: Any) -> Optional[Path]:
 
 
 def emit_event(project_dir: Path | str, payload: dict[str, Any]) -> None:
-    """Append one event to the project's events.jsonl. Never raises."""
+    """Append one event to the project's events.jsonl. Never raises.
+
+    Writes only into an EXISTING project directory — a typo'd path must not
+    spawn a ghost project on the board.
+    """
     try:
+        project_dir = Path(project_dir)
+        if not project_dir.is_dir():
+            return
         entry = {"ts": datetime.now(timezone.utc).isoformat()}
         entry.update({k: v for k, v in payload.items() if v is not None})
-        path = Path(project_dir) / EVENTS_FILENAME
-        path.parent.mkdir(parents=True, exist_ok=True)
+        path = project_dir / EVENTS_FILENAME
         line = json.dumps(entry, default=str)
         with _write_lock:
             with open(path, "a", encoding="utf-8") as f:

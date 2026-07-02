@@ -138,6 +138,13 @@ class ToolResult:
     model: Optional[str] = None
 
 
+import threading as _threading
+
+# Shared nesting counter for instrumented execute() calls (thread-local so
+# parallel tool threads don't see each other's depth).
+_EXECUTE_DEPTH = _threading.local()
+
+
 def _instrument_execute(fn: Callable) -> Callable:
     """Wrap a tool's execute() with Backlot event emission.
 
@@ -152,57 +159,65 @@ def _instrument_execute(fn: Callable) -> Callable:
     if getattr(fn, "_backlot_instrumented", False):
         return fn
 
+    depth_state = _EXECUTE_DEPTH  # shared across all tools (selector → provider)
+
     @functools.wraps(fn)
     def wrapper(self, inputs: Any, *args: Any, **kwargs: Any):
-        project_dir = None
+        # Event layer is fully optional: if it can't import, run untouched.
+        try:
+            from lib.events import emit_event, infer_project_dir
+        except Exception:
+            return fn(self, inputs, *args, **kwargs)
+
         tool_name = getattr(self, "name", "") or self.__class__.__name__
         scene_id = inputs.get("scene_id") if isinstance(inputs, dict) else None
         output_path = inputs.get("output_path") if isinstance(inputs, dict) else None
-        try:
-            from lib.events import emit_event, infer_project_dir
-            project_dir = infer_project_dir(inputs)
-            if project_dir is not None:
-                emit_event(project_dir, {
-                    "tool": tool_name,
-                    "event": "start",
-                    "scene_id": scene_id,
-                    "output_path": str(output_path) if output_path else None,
-                })
-        except Exception:
-            project_dir = None
+        # Nesting depth: selector tools delegate to provider tools' execute().
+        # Both emit (the ticker wants the provider name too), but depth lets
+        # consumers dedupe — e.g. sum cost_usd only at depth 0.
+        depth = getattr(depth_state, "value", 0)
+        depth_state.value = depth + 1
+        project_dir = infer_project_dir(inputs)
+
+        base = {
+            "tool": tool_name,
+            "scene_id": scene_id,
+            "depth": depth if depth else None,
+        }
+        if project_dir is not None:
+            emit_event(project_dir, {
+                **base, "event": "start",
+                "output_path": str(output_path) if output_path else None,
+            })
 
         started = time.monotonic()
         try:
             result = fn(self, inputs, *args, **kwargs)
         except Exception as exc:
             if project_dir is not None:
-                try:
-                    from lib.events import emit_event
-                    emit_event(project_dir, {
-                        "tool": tool_name,
-                        "event": "error",
-                        "scene_id": scene_id,
-                        "error": str(exc)[:300],
-                        "duration_s": round(time.monotonic() - started, 2),
-                    })
-                except Exception:
-                    pass
-            raise
-
-        if project_dir is not None:
-            try:
-                from lib.events import emit_event
                 emit_event(project_dir, {
-                    "tool": tool_name,
-                    "event": "finish",
-                    "scene_id": scene_id,
-                    "output_path": str(output_path) if output_path else None,
-                    "success": getattr(result, "success", None),
-                    "cost_usd": getattr(result, "cost_usd", None) or None,
+                    **base, "event": "error",
+                    "error": str(exc)[:300],
                     "duration_s": round(time.monotonic() - started, 2),
                 })
-            except Exception:
-                pass
+            raise
+        finally:
+            depth_state.value = depth
+
+        if project_dir is None:
+            # The tool may have created its own project dir during execute
+            # (first call of a run) — attribute the finish if possible.
+            project_dir = infer_project_dir(inputs)
+        if project_dir is not None:
+            cost = getattr(result, "cost_usd", None)
+            emit_event(project_dir, {
+                **base, "event": "finish",
+                "output_path": str(output_path) if output_path else None,
+                "success": getattr(result, "success", None),
+                # NOTE: 0.0 is meaningful (ran for free) — only None is dropped.
+                "cost_usd": cost if isinstance(cost, (int, float)) else None,
+                "duration_s": round(time.monotonic() - started, 2),
+            })
         return result
 
     wrapper._backlot_instrumented = True  # type: ignore[attr-defined]

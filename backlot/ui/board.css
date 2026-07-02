@@ -520,3 +520,7 @@ body:not(.first) .slate, body:not(.first) .rail .stage,
 body:not(.first) .script-card, body:not(.first) .notice,
 body:not(.first) aside .panel, body:not(.first) .scene-card,
 body:not(.first) .lib-card, body:not(.first) .drawer { animation: none; }
+
+/* stages that ran but aren't declared by the pipeline manifest */
+.stage.undeclared .node { border-style: dashed; opacity: .85; }
+.stage.undeclared .name { font-style: italic; }

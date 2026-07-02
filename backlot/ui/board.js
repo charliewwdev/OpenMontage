@@ -102,13 +102,15 @@ function renderRail(s) {
     const icon = STAGE_ICONS[st.status] || String(pendingIndex);
     if (!STAGE_ICONS[st.status]) pendingIndex += 1;
     const node = el("div", {
-      class: `stage ${cls}${selectedStage === st.name ? " selected" : ""}`,
+      class: `stage ${cls}${selectedStage === st.name ? " selected" : ""}${st.undeclared ? " undeclared" : ""}`,
+      title: st.undeclared ? `"${st.name}" ran but isn't declared by this pipeline's manifest` : null,
       onclick: () => toggleDrawer(st.name),
     },
       el("span", { class: "line" }),
       el("span", { class: "node" }, icon),
       el("span", { class: "name" }, st.name),
-      el("span", { class: "sub", style: "white-space:pre-line" }, stageSub(st)),
+      el("span", { class: "sub", style: "white-space:pre-line" },
+        st.undeclared ? `${stageSub(st)}\nunlisted`.trim() : stageSub(st)),
     );
     rail.append(node);
   }

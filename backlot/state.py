@@ -13,9 +13,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 from lib.events import read_events
-
-REPO_ROOT = Path(__file__).resolve().parent.parent
-PROJECTS_DIR = REPO_ROOT / "projects"
+from lib.paths import PROJECTS_DIR, REPO_ROOT  # single source of truth (env-overridable)
 
 MEDIA_IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
 MEDIA_VIDEO_EXT = {".mp4", ".webm", ".mov"}
@@ -167,22 +165,36 @@ def _build_stage_rail(
         rail.append(entry)
 
     # Checkpoints for stages the manifest doesn't declare (legacy runs,
-    # pipeline mismatch) still deserve a slot at the end.
+    # pipeline mismatch) still deserve a slot — at their canonical position
+    # in the pipeline, not dangling after publish ("idea" belongs up front).
+    canon = {name: i for i, name in enumerate(FALLBACK_STAGES)}
     for name, cp in checkpoints.items():
-        if name not in manifest_stage_names:
-            rail.append({
-                "name": name,
-                "gated": False,
-                "status": cp.get("status") or "unknown",
-                "timestamp": cp.get("timestamp"),
-                "review": cp.get("review"),
-                "cost_snapshot": cp.get("cost_snapshot"),
-                "error": cp.get("error"),
-                "human_approved": cp.get("human_approved"),
-                "partial_progress": None,
-                "versions": 1 + len(history.get(name, [])),
-                "undeclared": True,
-            })
+        if name in manifest_stage_names:
+            continue
+        entry = {
+            "name": name,
+            "gated": False,
+            "status": cp.get("status") or "unknown",
+            "timestamp": cp.get("timestamp"),
+            "review": cp.get("review"),
+            "cost_snapshot": cp.get("cost_snapshot"),
+            "error": cp.get("error"),
+            "human_approved": cp.get("human_approved"),
+            "partial_progress": None,
+            "versions": 1 + len(history.get(name, [])),
+            "undeclared": True,
+        }
+        pos = canon.get(name)
+        if pos is None:
+            rail.append(entry)  # truly unknown name — end of rail
+            continue
+        insert_at = len(rail)
+        for i, existing in enumerate(rail):
+            existing_pos = canon.get(existing["name"])
+            if existing_pos is not None and existing_pos > pos:
+                insert_at = i
+                break
+        rail.insert(insert_at, entry)
     return rail
 
 

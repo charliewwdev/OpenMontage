@@ -6,6 +6,7 @@ interface for discovery, execution, cost estimation, and health reporting.
 
 from __future__ import annotations
 
+import functools
 import hashlib
 import inspect
 import json
@@ -13,6 +14,7 @@ import os
 import platform
 import subprocess
 import shutil
+import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
@@ -136,8 +138,86 @@ class ToolResult:
     model: Optional[str] = None
 
 
+def _instrument_execute(fn: Callable) -> Callable:
+    """Wrap a tool's execute() with Backlot event emission.
+
+    Appends start/finish/error entries to the owning project's events.jsonl
+    when the call can be attributed to a project (explicit project_dir input
+    or any path input under projects/). Powers the board's live activity
+    ticker and per-scene generating states with zero agent involvement.
+
+    Instrumentation is strictly non-fatal: any failure inside the event layer
+    is swallowed and the tool call proceeds untouched.
+    """
+    if getattr(fn, "_backlot_instrumented", False):
+        return fn
+
+    @functools.wraps(fn)
+    def wrapper(self, inputs: Any, *args: Any, **kwargs: Any):
+        project_dir = None
+        tool_name = getattr(self, "name", "") or self.__class__.__name__
+        scene_id = inputs.get("scene_id") if isinstance(inputs, dict) else None
+        output_path = inputs.get("output_path") if isinstance(inputs, dict) else None
+        try:
+            from lib.events import emit_event, infer_project_dir
+            project_dir = infer_project_dir(inputs)
+            if project_dir is not None:
+                emit_event(project_dir, {
+                    "tool": tool_name,
+                    "event": "start",
+                    "scene_id": scene_id,
+                    "output_path": str(output_path) if output_path else None,
+                })
+        except Exception:
+            project_dir = None
+
+        started = time.monotonic()
+        try:
+            result = fn(self, inputs, *args, **kwargs)
+        except Exception as exc:
+            if project_dir is not None:
+                try:
+                    from lib.events import emit_event
+                    emit_event(project_dir, {
+                        "tool": tool_name,
+                        "event": "error",
+                        "scene_id": scene_id,
+                        "error": str(exc)[:300],
+                        "duration_s": round(time.monotonic() - started, 2),
+                    })
+                except Exception:
+                    pass
+            raise
+
+        if project_dir is not None:
+            try:
+                from lib.events import emit_event
+                emit_event(project_dir, {
+                    "tool": tool_name,
+                    "event": "finish",
+                    "scene_id": scene_id,
+                    "output_path": str(output_path) if output_path else None,
+                    "success": getattr(result, "success", None),
+                    "cost_usd": getattr(result, "cost_usd", None) or None,
+                    "duration_s": round(time.monotonic() - started, 2),
+                })
+            except Exception:
+                pass
+        return result
+
+    wrapper._backlot_instrumented = True  # type: ignore[attr-defined]
+    return wrapper
+
+
 class BaseTool(ABC):
     """Abstract base class for all OpenMontage tools."""
+
+    def __init_subclass__(cls, **kwargs: Any) -> None:
+        """Auto-instrument every concrete execute() with Backlot events."""
+        super().__init_subclass__(**kwargs)
+        impl = cls.__dict__.get("execute")
+        if impl is not None and not getattr(impl, "__isabstractmethod__", False):
+            cls.execute = _instrument_execute(impl)
 
     # --- Identity (override in subclasses) ---
     name: str = ""

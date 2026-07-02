@@ -213,7 +213,14 @@ projects/<project-name>/
 
 **Naming convention**: Use kebab-case derived from the video title (e.g., `hidden-math-of-nature`, `how-music-rewires-brain`).
 
-Create the project directory at pipeline initialization, before any stage runs. All tools and agents should write outputs to these paths — never to the repo root or ad-hoc locations.
+At pipeline initialization, before any stage runs:
+
+1. **Initialize the workspace**: `python -c "from lib.checkpoint import init_project; init_project('<project-id>', title='<Title>', pipeline_type='<pipeline>')"` — creates the layout above and writes `project.json` (the marker the Backlot board reads).
+2. **Open the board**: run `python -m backlot open <project-id>`. This starts the Backlot server if needed and opens the user's browser at the project's live board. If the command fails, continue the production — the board is an observer, never a blocker. This is the agent's ONLY board duty; the board derives everything else from disk.
+
+All tools and agents must write outputs to these paths — **always pass an explicit `output_path` under `projects/<project-id>/`**. Assets written to the repo root, cwd, or temp dirs are invisible to the user's board and violate the workspace contract.
+
+**This applies to atelier and HyperFrames-skill runs too**: hand-authored compositions still write the canonical artifacts they have (script or beats-plan, scene_plan-equivalent, asset manifest) plus checkpoints into `projects/<project-id>/`. The board is runtime-agnostic; only runs that skip the artifacts get a degraded board.
 
 ## Music Library
 
@@ -568,11 +575,11 @@ The reviewer is a meta skill (`skills/meta/reviewer.md`) — advisory, never dir
 
 The checkpoint protocol meta skill (`skills/meta/checkpoint-protocol.md`) teaches the agent when to pause:
 
-- Read `human_approval_default` from the pipeline manifest per stage
-- Creative stages (`idea`, `script`, `scene_plan`) typically require approval
-- Technical stages (`assets`, `edit`, `compose`) typically auto-proceed
-- When approval is required: present artifact summary, review findings, and cost snapshot
-- Wait for human to approve, request revision, or abort
+- Read `human_approval_default` from the pipeline manifest per stage. **The manifest value is binding** — never re-judge it. `lib/checkpoint.py` enforces this: a gated stage cannot be written `completed` without `human_approved=True`.
+- Gated stages across all pipelines: `idea`/`proposal`, `script`, `scene_plan`, **`assets`** (review the generated assets scene-by-scene — the Backlot board's filmstrip — before compose locks them in), and `publish`. `edit` and `compose` auto-proceed.
+- When approval is required: write the checkpoint as `awaiting_human`, present artifact summary, review findings, and cost snapshot — then **END YOUR TURN**. Doing further pipeline work in the same response is a gate violation.
+- **Approval is per-gate.** An early "go ahead" never covers later gates; explicit full-run pre-authorization must be recorded as a `decision_log` entry (`category: "approval_policy"`) to count.
+- Wait for human to approve, request revision, or abort.
 
 ## Communication Protocol
 
@@ -592,9 +599,12 @@ Primary files:
 
 Checkpoint rules:
 
-- Checkpoints live at `pipelines/<project_id>/checkpoint_<stage>.json`.
+- Checkpoints live at `projects/<project_id>/checkpoint_<stage>.json` (the project workspace — this is what the Backlot board watches).
 - `status` may be `completed`, `failed`, `awaiting_human`, or `in_progress`.
+- Write an `in_progress` checkpoint on entering each stage; during `assets`/`compose`, refresh `metadata.partial_progress` after each completed scene/asset unit — this powers live progress on the board.
 - `completed` and `awaiting_human` checkpoints must include the canonical artifact.
+- A gated stage (`human_approval_default: true`) can only be written `completed` with `human_approved=True` — the writer raises a GATE VIOLATION otherwise.
+- Superseded checkpoints are archived automatically to `projects/<project_id>/history/` — stage re-runs never destroy run history.
 - Invalid checkpoints or invalid canonical artifacts are contract violations and should fail fast.
 
 Pipeline manifest rules:

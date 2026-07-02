@@ -81,6 +81,15 @@ CHECKPOINT_SCHEMA_PATH = (
     / "checkpoint.schema.json"
 )
 
+# Canonical project root. Checkpoints, artifacts, and the project marker all
+# live under PROJECTS_DIR/<project_id>/ — this is the location the Backlot
+# board watches. Callers may still pass a different pipeline_dir (tests do),
+# but production runs should use the default.
+PROJECTS_DIR = Path(__file__).resolve().parent.parent / "projects"
+
+PROJECT_MARKER_FILENAME = "project.json"
+HISTORY_DIRNAME = "history"
+
 
 class CheckpointValidationError(ValueError):
     """Raised when a checkpoint or its canonical artifacts are invalid."""
@@ -157,6 +166,108 @@ def _checkpoint_path(pipeline_dir: Path, project_id: str, stage: str) -> Path:
     return pipeline_dir / project_id / f"checkpoint_{stage}.json"
 
 
+def init_project(
+    project_id: str,
+    *,
+    title: str,
+    pipeline_type: str,
+    pipeline_dir: Optional[Path] = None,
+    style_playbook: Optional[str] = None,
+) -> Path:
+    """Initialize a project workspace with the canonical layout + marker file.
+
+    Creates projects/<project_id>/ with the standard subdirectories and writes
+    project.json — the marker the Backlot board uses to render a project's
+    identity and stage rail before the first checkpoint exists.
+
+    Idempotent: re-running preserves the original created_at and merges fields.
+    Returns the project directory.
+    """
+    base = pipeline_dir or PROJECTS_DIR
+    project_dir = base / project_id
+    for sub in (
+        "artifacts",
+        "assets/images",
+        "assets/video",
+        "assets/audio",
+        "assets/music",
+        "renders",
+    ):
+        (project_dir / sub).mkdir(parents=True, exist_ok=True)
+
+    marker_path = project_dir / PROJECT_MARKER_FILENAME
+    marker: dict[str, Any] = {}
+    if marker_path.exists():
+        try:
+            with open(marker_path) as f:
+                marker = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            marker = {}
+
+    marker.setdefault("version", "1.0")
+    marker.setdefault("created_at", datetime.now(timezone.utc).isoformat())
+    marker["project_id"] = project_id
+    marker["title"] = title
+    marker["pipeline_type"] = pipeline_type
+    if style_playbook is not None:
+        marker["style_playbook"] = style_playbook
+
+    with open(marker_path, "w") as f:
+        json.dump(marker, f, indent=2)
+
+    return project_dir
+
+
+def _stage_requires_approval(pipeline_type: Optional[str], stage: str) -> Optional[bool]:
+    """Read human_approval_default for a stage from its pipeline manifest.
+
+    Returns None when the manifest can't answer (unknown pipeline_type,
+    stage not declared) — the caller then falls back to the value the
+    agent passed in.
+    """
+    if not pipeline_type or pipeline_type == "unknown":
+        return None
+    try:
+        from lib.pipeline_loader import load_pipeline
+        manifest = load_pipeline(pipeline_type)
+        for stage_def in manifest.get("stages", []):
+            if stage_def.get("name") == stage:
+                return bool(stage_def.get("human_approval_default", False))
+    except Exception:
+        return None
+    return None
+
+
+def _archive_superseded_checkpoint(path: Path, stage: str) -> None:
+    """Move an existing checkpoint into history/ before it is overwritten.
+
+    Preserves the full run record: stage re-runs (script v1 → v2) and gate
+    transitions (awaiting_human → completed) remain reconstructable. Repeated
+    in_progress refreshes are NOT archived — they are partial-progress
+    heartbeats, not versions.
+    """
+    if not path.exists():
+        return
+    try:
+        with open(path) as f:
+            existing = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        existing = {}
+    if existing.get("status") == "in_progress":
+        return
+
+    stamp = str(existing.get("timestamp", ""))
+    safe_stamp = "".join(c for c in stamp if c.isalnum()) or f"{path.stat().st_mtime_ns}"
+    history_dir = path.parent / HISTORY_DIRNAME
+    history_dir.mkdir(parents=True, exist_ok=True)
+    target = history_dir / f"checkpoint_{stage}_{safe_stamp}.json"
+    counter = 1
+    while target.exists():
+        target = history_dir / f"checkpoint_{stage}_{safe_stamp}_{counter}.json"
+        counter += 1
+    path.replace(target)
+
+
 def _decision_log_path(pipeline_dir: Path, project_id: str) -> Path:
     return pipeline_dir / project_id / "decision_log.json"
 
@@ -219,6 +330,26 @@ def write_checkpoint(
             f"Valid stages: {sorted(valid_stages)}"
         )
 
+    # --- Gate enforcement (GI-4) ---
+    # The pipeline manifest is the binding source of truth for whether a stage
+    # gates on human approval. A gated stage can only be written as
+    # "completed" with explicit evidence of approval (human_approved=True).
+    # Skipping a gate is a hard error, not a soft violation.
+    manifest_gate = _stage_requires_approval(pipeline_type, stage)
+    gated = manifest_gate if manifest_gate is not None else human_approval_required
+    if gated:
+        human_approval_required = True
+        if status == "completed" and not human_approved:
+            raise CheckpointValidationError(
+                f"GATE VIOLATION: stage {stage!r} requires human approval "
+                f"(human_approval_default: true in the {pipeline_type!r} manifest) "
+                f"but status='completed' was written without human_approved=True. "
+                f"Correct protocol: write status='awaiting_human', present the "
+                f"artifact summary to the user, END YOUR TURN, and only after "
+                f"the user approves re-write with status='completed', "
+                f"human_approved=True."
+            )
+
     checkpoint = {
         "version": "1.0",
         "project_id": project_id,
@@ -266,6 +397,10 @@ def write_checkpoint(
 
     path = _checkpoint_path(pipeline_dir, project_id, stage)
     path.parent.mkdir(parents=True, exist_ok=True)
+    # Preserve run history: a superseded completed/awaiting_human checkpoint
+    # moves to history/ instead of being destroyed (stage versioning, gate
+    # audit trail, replay).
+    _archive_superseded_checkpoint(path, stage)
     with open(path, "w") as f:
         json.dump(checkpoint, f, indent=2)
 

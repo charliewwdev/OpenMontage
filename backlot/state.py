@@ -47,8 +47,8 @@ def _read_json(path: Path) -> Optional[dict]:
 def _rel(project_dir: Path, path: Path) -> str:
     """Project-relative POSIX path for media URLs."""
     try:
-        return path.relative_to(project_dir).as_posix()
-    except ValueError:
+        return path.resolve().relative_to(Path(project_dir).resolve()).as_posix()
+    except (ValueError, OSError):
         return path.name
 
 
@@ -226,13 +226,40 @@ def _collect_artifacts(project_dir: Path, checkpoints: dict[str, dict]) -> dict[
 # Storyboard join
 # ---------------------------------------------------------------------------
 
+def _resolve_asset_path(project_dir: Path, raw_path: str) -> Optional[Path]:
+    """Manifest paths appear in several real-world flavors — try them all.
+
+    Observed on disk: project-relative ("assets/images/x.png"),
+    repo-relative ("projects/<id>/assets/images/x.png"), and absolute.
+    """
+    if not raw_path:
+        return None
+    p = Path(raw_path)
+    candidates = []
+    if p.is_absolute():
+        candidates.append(p)
+    else:
+        candidates.append(project_dir / raw_path)
+        candidates.append(REPO_ROOT / raw_path)
+        # repo-relative with the project prefix repeated
+        parts = p.parts
+        if len(parts) > 2 and parts[0] == "projects":
+            candidates.append(project_dir.parent / Path(*parts[1:]))
+    for c in candidates:
+        try:
+            if c.is_file():
+                return c
+        except OSError:
+            continue
+    return None
+
+
 def _asset_entry(project_dir: Path, asset: dict) -> dict:
     """Normalize a manifest asset entry + resolve file existence."""
     raw_path = asset.get("path") or ""
-    file_path = Path(raw_path)
-    if not file_path.is_absolute():
-        file_path = project_dir / raw_path
-    exists = file_path.is_file()
+    resolved = _resolve_asset_path(project_dir, raw_path)
+    file_path = resolved if resolved is not None else (project_dir / raw_path)
+    exists = resolved is not None
     kind = asset.get("type") or ""
     if not kind and file_path.suffix:
         ext = file_path.suffix.lower()
@@ -400,7 +427,8 @@ def _scan_media(project_dir: Path) -> dict[str, list[dict]]:
 
 
 def _find_poster(project_dir: Path, state: dict) -> Optional[str]:
-    """Best poster image for the library card."""
+    """Best poster for the library card (image path, or a video path —
+    the /thumb endpoint extracts a frame from videos)."""
     board = state.get("storyboard") or {}
     for card in board.get("scenes", []):
         visual = card.get("visual")
@@ -408,11 +436,21 @@ def _find_poster(project_dir: Path, state: dict) -> Optional[str]:
             return visual["path"]
     for snap in (state.get("media") or {}).get("snapshots", []):
         return snap["path"]
-    images_dir = project_dir / "assets" / "images"
-    if images_dir.is_dir():
-        for f in sorted(images_dir.iterdir()):
-            if f.suffix.lower() in MEDIA_IMAGE_EXT:
-                return _rel(project_dir, f)
+    # Common image homes, in order of how representative they usually are.
+    for rel_dir in ("assets/images", "assets/frames", "exports", "assets", "."):
+        d = (project_dir / rel_dir) if rel_dir != "." else project_dir
+        if not d.is_dir():
+            continue
+        try:
+            for f in sorted(d.iterdir()):
+                if f.is_file() and f.suffix.lower() in MEDIA_IMAGE_EXT:
+                    return _rel(project_dir, f)
+        except OSError:
+            continue
+    # Last resort: the newest render — /thumb extracts a poster frame.
+    renders = (state.get("media") or {}).get("renders", [])
+    if renders:
+        return renders[0]["path"]
     return None
 
 

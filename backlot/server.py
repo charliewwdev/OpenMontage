@@ -17,9 +17,11 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from backlot.state import PROJECTS_DIR, REPO_ROOT, list_projects, load_board_state
+from backlot.state import PROJECTS_DIR, REPO_ROOT, list_projects, load_board_state, summarize_project
 
 UI_DIR = Path(__file__).resolve().parent / "ui"
+THUMB_CACHE_DIR = REPO_ROOT / ".backlot" / "thumbs"
+THUMB_WIDTHS = (320, 640, 960)
 
 # Paths inside a project whose changes are pure noise for the board.
 _IGNORE_PARTS = {"node_modules", ".git", "__pycache__", ".cache"}
@@ -51,6 +53,40 @@ class ChangeHub:
 
 hub = ChangeHub()
 
+# Library summaries are expensive to derive (full state parse per project);
+# cache per project and invalidate from the watcher.
+_summary_cache: dict[str, dict] = {}
+
+
+def _invalidate_summary(project_id: str) -> None:
+    _summary_cache.pop(project_id, None)
+
+
+def _cached_summaries() -> list[dict]:
+    if not PROJECTS_DIR.is_dir():
+        return []
+    summaries = []
+    for entry in sorted(PROJECTS_DIR.iterdir()):
+        if not entry.is_dir() or entry.name.startswith(("_", ".")):
+            continue
+        cached = _summary_cache.get(entry.name)
+        if cached is None:
+            try:
+                cached = summarize_project(entry)
+            except Exception:
+                cached = {
+                    "project_id": entry.name, "title": entry.name,
+                    "pipeline_type": "unknown", "has_pipeline_state": False,
+                    "poster": None, "live": False, "last_activity": 0,
+                    "active_stage": None, "awaiting_human": False,
+                    "stage_states": [], "completed_count": 0,
+                    "render_count": 0, "scene_count": 0, "error": "unreadable",
+                }
+            _summary_cache[entry.name] = cached
+        summaries.append(cached)
+    summaries.sort(key=lambda s: (not s["live"], -(s["last_activity"] or 0)))
+    return summaries
+
 
 def _project_of_change(path_str: str) -> Optional[str]:
     """Map a changed filesystem path to a project id (None = irrelevant)."""
@@ -80,6 +116,7 @@ async def _watch_projects() -> None:
             if pid:
                 touched.add(pid)
         for pid in touched:
+            _invalidate_summary(pid)
             hub.publish(pid)
 
 
@@ -104,7 +141,7 @@ def create_app() -> FastAPI:
 
     @app.get("/api/projects")
     async def projects() -> list:
-        return await asyncio.to_thread(list_projects)
+        return await asyncio.to_thread(_cached_summaries)
 
     @app.get("/api/project/{project_id}/state")
     async def project_state(project_id: str) -> dict:
@@ -171,6 +208,24 @@ def create_app() -> FastAPI:
             "X-Accel-Buffering": "no",
         })
 
+    # ---- Thumbnails (downscaled, cached on disk) ------------------------
+
+    @app.get("/thumb/{project_id}/{file_path:path}")
+    async def thumb(project_id: str, file_path: str, w: int = 640) -> FileResponse:
+        project_dir = _safe_project_dir(project_id)
+        target = (project_dir / file_path).resolve()
+        try:
+            target.relative_to(project_dir.resolve())
+        except ValueError:
+            raise HTTPException(status_code=403, detail="path escapes project")
+        if not target.is_file():
+            raise HTTPException(status_code=404, detail="media not found")
+        width = min(THUMB_WIDTHS, key=lambda x: abs(x - w))
+        cached = await asyncio.to_thread(_thumbnail_for, target, width)
+        if cached is None:
+            return FileResponse(target)  # not an image we can thumb — serve as-is
+        return FileResponse(cached, media_type="image/jpeg")
+
     # ---- Media (range requests handled by FileResponse) ---------------
 
     @app.get("/media/{project_id}/{file_path:path}")
@@ -212,6 +267,46 @@ def _safe_project_dir(project_id: str) -> Path:
 
 def _sse(payload: dict) -> str:
     return f"data: {json.dumps(payload)}\n\n"
+
+
+def _thumbnail_for(source: Path, width: int) -> Optional[Path]:
+    """Downscale an image (or extract a video poster frame) to a cached JPEG."""
+    suffix = source.suffix.lower()
+    is_image = suffix in {".png", ".jpg", ".jpeg", ".webp", ".gif"}
+    is_video = suffix in {".mp4", ".webm", ".mov"}
+    if not (is_image or is_video):
+        return None
+    try:
+        import hashlib
+        stat = source.stat()
+        key = hashlib.sha1(
+            f"{source}|{stat.st_mtime_ns}|{stat.st_size}|{width}".encode()
+        ).hexdigest()[:20]
+        cached = THUMB_CACHE_DIR / f"{key}.jpg"
+        if cached.is_file():
+            return cached
+        THUMB_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        tmp = cached.with_suffix(".tmp.jpg")
+        if is_video:
+            import subprocess
+            result = subprocess.run(
+                ["ffmpeg", "-y", "-loglevel", "error", "-ss", "1.5",
+                 "-i", str(source), "-frames:v", "1",
+                 "-vf", f"scale={width}:-2", str(tmp)],
+                capture_output=True, timeout=30,
+            )
+            if result.returncode != 0 or not tmp.is_file():
+                return None
+        else:
+            from PIL import Image
+            with Image.open(source) as img:
+                img = img.convert("RGB")
+                img.thumbnail((width, width * 3))
+                img.save(tmp, "JPEG", quality=82)
+        tmp.replace(cached)
+        return cached
+    except Exception:
+        return None
 
 
 app = create_app()

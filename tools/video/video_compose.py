@@ -1401,6 +1401,11 @@ class VideoCompose(BaseTool):
             }
             if profile:
                 remotion_inputs["profile"] = profile
+            # Forward the creator-facing render timeout through the high-level
+            # render path (execute(operation="render") -> _render), otherwise it
+            # would only take effect on a direct _remotion_render() call.
+            if inputs.get("remotion_timeout_ms") is not None:
+                remotion_inputs["remotion_timeout_ms"] = inputs["remotion_timeout_ms"]
             render_result = self._remotion_render(remotion_inputs)
 
             # Governance: NEVER silently fall back to FFmpeg when Remotion fails.

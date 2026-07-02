@@ -78,6 +78,39 @@ def test_remotion_timeout_ms_is_passed_through(tool, tmp_path, monkeypatch):
     assert seen["timeout"] >= 180
 
 
+def test_high_level_render_forwards_timeout_to_remotion(tool, tmp_path, monkeypatch):
+    # The gap in the first cut: execute(operation="render") -> _render() builds a
+    # fresh remotion_inputs dict, so the option must be forwarded there, not only
+    # on a direct _remotion_render() call.
+    captured = {}
+    monkeypatch.setattr(tool, "_pre_compose_validation", lambda *a, **k: None)
+    monkeypatch.setattr(tool, "_needs_remotion", lambda *a, **k: True)
+
+    def fake_remotion_render(inputs):
+        captured.update(inputs)
+        from tools.base_tool import ToolResult
+
+        return ToolResult(success=True, data={}, artifacts=[])
+
+    monkeypatch.setattr(tool, "_remotion_render", fake_remotion_render)
+    monkeypatch.setattr(tool, "_run_final_review", lambda *a, **k: {})
+
+    tool._render(
+        {
+            "edit_decisions": {
+                "render_runtime": "remotion",
+                "renderer_family": "explainer-data",
+                "cuts": [{"id": "c1", "source": "a1", "in_seconds": 0, "out_seconds": 2}],
+            },
+            "asset_manifest": {"assets": [{"id": "a1", "path": "/tmp/a1.mp4"}]},
+            "output_path": str(tmp_path / "out.mp4"),
+            "remotion_timeout_ms": 120000,
+        }
+    )
+
+    assert captured.get("remotion_timeout_ms") == 120000
+
+
 def test_no_timeout_flag_when_not_requested(tool, tmp_path, monkeypatch):
     seen = {}
 

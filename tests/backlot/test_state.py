@@ -188,3 +188,59 @@ class TestLibrary:
         summary = summarize_project(p)
         assert summary["awaiting_human"] is True
         assert summary["active_stage"] == "script"
+
+
+class TestFindingsFixes:
+    """Regression tests for dogfood findings F-04/F-05."""
+
+    def test_artifact_refs_outside_project_are_not_followed(self, projects_root, tmp_path):
+        # F-04: a checkpoint pointing at JSON outside the project tree
+        # must not surface that file on the board.
+        secret = tmp_path / "secret.json"
+        secret.write_text(json.dumps({"version": "1.0", "leaked": True}), encoding="utf-8")
+        p = _make_project(projects_root, "sneaky-ref")
+        _write(p / "checkpoint_script.json", {
+            "stage": "script", "status": "completed",
+            "timestamp": "2026-01-01T01:00:00Z",
+            "artifacts": {"script": str(secret)},
+        })
+        s = load_board_state(p)
+        assert "script" not in s["artifacts"]
+
+    def test_inside_project_absolute_refs_still_resolve(self, projects_root):
+        p = _make_project(projects_root, "abs-ref")
+        _write(p / "artifacts" / "inline_script.json", SCRIPT)
+        _write(p / "checkpoint_script.json", {
+            "stage": "script", "status": "completed",
+            "timestamp": "2026-01-01T01:00:00Z",
+            "artifacts": {"script": str((p / "artifacts" / "inline_script.json").resolve())},
+        })
+        s = load_board_state(p)
+        assert s["artifacts"]["script"]["title"] == "Test Film"
+
+    def test_stalled_in_progress_stage_flagged(self, projects_root):
+        # F-05: an in_progress stage with no recent activity reads stalled.
+        import os
+        p = _make_project(projects_root, "wedged")
+        _write(p / "checkpoint_research.json", {
+            "stage": "research", "status": "in_progress",
+            "timestamp": "2026-01-01T01:00:00Z", "artifacts": {},
+        })
+        past = time.time() - 30 * 60
+        for f in p.rglob("*"):
+            if f.is_file():
+                os.utime(f, (past, past))
+        s = load_board_state(p)
+        research = next(x for x in s["stages"] if x["name"] == "research")
+        assert research["stalled"] is True
+        assert research["stalled_minutes"] >= 29
+
+    def test_fresh_in_progress_not_stalled(self, projects_root):
+        p = _make_project(projects_root, "busy")
+        _write(p / "checkpoint_research.json", {
+            "stage": "research", "status": "in_progress",
+            "timestamp": "2026-01-01T01:00:00Z", "artifacts": {},
+        })
+        s = load_board_state(p)
+        research = next(x for x in s["stages"] if x["name"] == "research")
+        assert "stalled" not in research

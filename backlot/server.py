@@ -239,7 +239,11 @@ def create_app() -> FastAPI:
         width = min(THUMB_WIDTHS, key=lambda x: abs(x - w))
         cached = await asyncio.to_thread(_thumbnail_for, target, width)
         if cached is None:
-            return FileResponse(target)  # not an image we can thumb — serve as-is
+            # Never fall back to raw video bytes for an <img> consumer (F-03);
+            # non-thumbable images are safe to serve as-is.
+            if target.suffix.lower() in {".mp4", ".webm", ".mov"}:
+                raise HTTPException(status_code=404, detail="no poster frame available")
+            return FileResponse(target)
         return FileResponse(cached, media_type="image/jpeg")
 
     # ---- Media (range requests handled by FileResponse) ---------------

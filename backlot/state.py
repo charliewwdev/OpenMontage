@@ -31,6 +31,11 @@ FALLBACK_STAGES = [
 # How long (seconds) without filesystem activity before a board reads "idle".
 LIVE_WINDOW_SECONDS = 5 * 60
 
+# An in_progress stage with no filesystem activity for this long is flagged
+# as possibly stalled (F-05: a wedged agent must be visible, not silent —
+# heartbeat checkpoints and tool events both reset the clock).
+STALL_WINDOW_SECONDS = 10 * 60
+
 
 def _read_json(path: Path) -> Optional[dict]:
     """Read a JSON file, returning None on any failure."""
@@ -84,13 +89,22 @@ def _load_pipeline_meta(pipeline_type: Optional[str]) -> dict[str, Any]:
 
 
 def _resolve_artifact(project_dir: Path, value: Any) -> Optional[dict]:
-    """Checkpoint artifacts may be inline dicts or path strings — resolve both."""
+    """Checkpoint artifacts may be inline dicts or path strings — resolve both.
+
+    Path references are only followed INSIDE the project directory: a
+    checkpoint must not be able to pull arbitrary JSON from elsewhere on
+    disk onto the board (F-04).
+    """
     if isinstance(value, dict):
         return value
     if isinstance(value, str) and value:
         p = Path(value)
         if not p.is_absolute():
             p = project_dir / value
+        try:
+            p.resolve().relative_to(Path(project_dir).resolve())
+        except (ValueError, OSError):
+            return None
         return _read_json(p)
     return None
 
@@ -552,6 +566,16 @@ def load_board_state(project_dir: Path) -> dict[str, Any]:
     import time
     last_activity = _last_activity(project_dir)
     now = time.time()
+
+    # Stall detection: an in_progress stage that stopped writing anything.
+    for stage_entry in stages:
+        if (
+            stage_entry["status"] == "in_progress"
+            and last_activity
+            and (now - last_activity) > STALL_WINDOW_SECONDS
+        ):
+            stage_entry["stalled"] = True
+            stage_entry["stalled_minutes"] = int((now - last_activity) / 60)
 
     state: dict[str, Any] = {
         "project_id": project_id,

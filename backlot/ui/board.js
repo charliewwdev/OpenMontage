@@ -32,9 +32,13 @@ function renderSlate(s) {
 
   const awaiting = s.stages.find((x) => x.status === "awaiting_human");
   const inProgress = s.stages.find((x) => x.status === "in_progress");
+  const stalled = s.stages.find((x) => x.stalled);
   let liveEl;
   if (awaiting) {
     liveEl = el("span", { class: "live" }, el("span", { class: "dot" }), "◈ AWAITING YOU");
+  } else if (stalled) {
+    liveEl = el("span", { class: "live", style: "color:var(--red)" },
+      el("span", { class: "dot", style: "background:var(--red);animation:none" }), "⚠ STALLED?");
   } else if (s.live || inProgress) {
     liveEl = el("span", { class: "live" }, el("span", { class: "dot" }), "LIVE");
   } else {
@@ -52,7 +56,7 @@ function renderSlate(s) {
       hasBudget ? el("span", {}, ` / ${fmtMoney(budget)}`) : ""));
     if (hasBudget) {
       cost.append(el("div", { class: "bar" }, el("i", {
-        class: pct > 75 ? "warn" : "", style: `width:${pct}%`,
+        class: pct > 90 ? "crit" : pct > 75 ? "warn" : "", style: `width:${pct}%`,
       })));
     }
     cost.append(el("div", { class: "label" }, "generation spend"));
@@ -77,6 +81,9 @@ function renderSlate(s) {
 
 function stageSub(st) {
   if (st.status === "awaiting_human") return "awaiting your approval\nreply in chat to continue";
+  if (st.status === "in_progress" && st.stalled) {
+    return `stalled? no activity for ${st.stalled_minutes}m\nask the agent for status`;
+  }
   if (st.status === "in_progress" && st.partial_progress) {
     const done = st.partial_progress.completed_scene_ids;
     if (Array.isArray(done)) return `${done.length} scene${done.length === 1 ? "" : "s"} done`;
@@ -96,7 +103,7 @@ function renderRail(s) {
   let pendingIndex = 1;
   for (const st of s.stages) {
     const cls = st.status === "completed" ? "done"
-      : st.status === "in_progress" ? "active"
+      : st.status === "in_progress" ? (st.stalled ? "active stalled" : "active")
       : st.status === "awaiting_human" ? "await"
       : st.status === "failed" ? "failed" : "";
     const icon = STAGE_ICONS[st.status] || String(pendingIndex);
@@ -717,8 +724,31 @@ function render() {
   if (renders) app.append(renders);
 }
 
+// Defensive normalization (F-02): the server contract guarantees these
+// fields, but a sparse/legacy payload must degrade, never crash the board.
+function normalize(s) {
+  s.pipeline = s.pipeline || { pipeline_type: "unknown", stages: [], known: false };
+  s.stages = Array.isArray(s.stages) ? s.stages : [];
+  s.artifacts = s.artifacts || {};
+  s.media = s.media || {};
+  s.media.renders = Array.isArray(s.media.renders) ? s.media.renders : [];
+  s.media.snapshots = Array.isArray(s.media.snapshots) ? s.media.snapshots : [];
+  s.media.music = Array.isArray(s.media.music) ? s.media.music : [];
+  s.events = Array.isArray(s.events) ? s.events : [];
+  if (s.storyboard && Array.isArray(s.storyboard.scenes)) {
+    for (const c of s.storyboard.scenes) {
+      c.takes = Array.isArray(c.takes) ? c.takes : [];
+      c.audio = Array.isArray(c.audio) ? c.audio : [];
+      c.required_assets = Array.isArray(c.required_assets) ? c.required_assets : [];
+    }
+  } else {
+    s.storyboard = null;
+  }
+  return s;
+}
+
 async function refresh() {
-  state = await getJSON(`/api/project/${encodeURIComponent(projectId)}/state`);
+  state = normalize(await getJSON(`/api/project/${encodeURIComponent(projectId)}/state`));
   render();
 }
 

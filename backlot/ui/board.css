@@ -524,3 +524,11 @@ body:not(.first) .lib-card, body:not(.first) .drawer { animation: none; }
 /* stages that ran but aren't declared by the pipeline manifest */
 .stage.undeclared .node { border-style: dashed; opacity: .85; }
 .stage.undeclared .name { font-style: italic; }
+
+/* spend past 90% of budget */
+.cost .bar i.crit { background: var(--red); }
+
+/* in_progress stage with no filesystem activity for a while (F-05) */
+.stage.stalled .node { border-color: var(--red); color: var(--red); background: var(--red-dim); animation: none; }
+.stage.stalled .name { color: var(--red); }
+.stage.stalled .sub { color: var(--red); }

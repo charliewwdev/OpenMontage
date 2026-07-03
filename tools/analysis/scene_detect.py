@@ -168,9 +168,11 @@ class SceneDetect(BaseTool):
     def _escape_lavfi_movie_path(path: str) -> str:
         """Escape a path for FFmpeg lavfi movie=... without allowing filter injection."""
         normalized = path.replace("\\", "/")
+        if "'" in normalized:
+            raise ValueError("FFmpeg lavfi movie paths containing single quotes are unsupported")
         escaped = []
         for char in normalized:
-            if char in "\\':,[];":
+            if char in "\\:,[];":
                 escaped.append("\\" + char)
             else:
                 escaped.append(char)

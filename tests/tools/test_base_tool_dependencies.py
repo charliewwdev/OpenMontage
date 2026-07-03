@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import subprocess
 import sys
 import unittest
 from pathlib import Path
@@ -33,15 +34,18 @@ class BinaryDependencyTests(unittest.TestCase):
 
         with patch("tools.base_tool.shutil.which", return_value="/usr/bin/ffmpeg"):
             tool.check_dependencies()
-    def test_run_command_error_includes_stderr(self) -> None:
+    def test_run_command_error_preserves_called_process_error_type(self) -> None:
         tool = DummyTool()
 
-        with self.assertRaisesRegex(RuntimeError, "specific stderr"):
+        with self.assertRaises(subprocess.CalledProcessError) as ctx:
             tool.run_command([
                 sys.executable,
                 "-c",
                 "import sys; print('specific stderr', file=sys.stderr); sys.exit(7)",
             ])
+
+        self.assertEqual(ctx.exception.returncode, 7)
+        self.assertIn("specific stderr", str(ctx.exception))
 
 
 if __name__ == "__main__":

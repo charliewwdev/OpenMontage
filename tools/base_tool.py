@@ -349,9 +349,35 @@ class BaseTool(ABC):
             stderr = (exc.stderr or "").strip()
             stdout = (exc.stdout or "").strip()
             detail = stderr or stdout or str(exc)
-            raise RuntimeError(
-                f"Command failed with exit code {exc.returncode}: {' '.join(resolved_cmd)}\n{detail}"
+            raise ToolCommandError(
+                exc.returncode,
+                exc.cmd,
+                output=exc.output,
+                stderr=exc.stderr,
+                detail=detail,
             ) from exc
+
+
+class ToolCommandError(subprocess.CalledProcessError):
+    """CalledProcessError with stderr/stdout surfaced in str(error)."""
+
+    def __init__(
+        self,
+        returncode: int,
+        cmd: list[str],
+        *,
+        output: Optional[str] = None,
+        stderr: Optional[str] = None,
+        detail: str = "",
+    ) -> None:
+        super().__init__(returncode, cmd, output=output, stderr=stderr)
+        self.detail = detail
+
+    def __str__(self) -> str:
+        base = super().__str__()
+        if self.detail:
+            return f"{base}\n{self.detail}"
+        return base
 
 
 class DependencyError(Exception):

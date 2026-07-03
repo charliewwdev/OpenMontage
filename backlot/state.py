@@ -437,9 +437,15 @@ def _build_storyboard(
         # Only files that can actually be shown (raster/video) are takes; a
         # bespoke composition asset (.tsx animation) is real but not showable.
         renderable = [a for a in visuals if a.get("renderable")]
-        # Active visual: newest renderable take, else a per-scene review
-        # snapshot, else nothing (card falls to the shot-spec placeholder).
-        active_visual = renderable[-1] if renderable else _find_scene_snapshot(project_dir, sid)
+        # A raster/video asset whose FILE is missing stays as a "file missing"
+        # indicator. But an asset that EXISTS yet can't be shown (a .tsx atelier
+        # composition) is dropped — it falls back to a per-scene snapshot.
+        missing = [a for a in visuals if not a.get("exists") and a["type"] in ("image", "video", "diagram")]
+        active_visual = (
+            renderable[-1] if renderable
+            else missing[-1] if missing
+            else _find_scene_snapshot(project_dir, sid)
+        )
         cards.append({
             "id": sid,
             "type": scene.get("type"),

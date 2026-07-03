@@ -54,12 +54,21 @@ _BLOCKED_NAMES = frozenset({
     "__builtins__", "__loader__", "globals", "locals", "vars",
     "getattr", "setattr", "delattr",
 })
-# Sandbox-escape / reflection dunders blocked as attribute access.
-_BLOCKED_ATTRS = frozenset({
-    "__globals__", "__builtins__", "__subclasses__", "__bases__", "__base__",
-    "__mro__", "__code__", "__class__", "__dict__", "__getattribute__",
-    "__closure__", "__reduce__", "__reduce_ex__", "__subclasshook__",
-})
+# Reflection via dunder attributes is the general escape hatch: `().__class__`,
+# `print.__self__` (the builtins module), `x.__globals__`, `f.__reduce__`, etc.
+# Enumerating dangerous dunders one by one is whack-a-mole, so block ALL dunder
+# *attribute access* and allow only a tiny set that legitimate scenes use
+# (`super().__init__(...)`, occasional `Type.__name__`). A dunder is any name
+# that starts and ends with double underscores.
+_ALLOWED_DUNDER_ATTRS = frozenset({"__init__", "__name__"})
+
+
+def _is_blocked_dunder(attr: str) -> bool:
+    return (
+        attr.startswith("__")
+        and attr.endswith("__")
+        and attr not in _ALLOWED_DUNDER_ATTRS
+    )
 
 
 # Quality presets mapping to Manim CLI flags
@@ -244,8 +253,8 @@ class MathAnimate(BaseTool):
                 if node.id in _BLOCKED_NAMES:
                     violations.append(f"use of '{node.id}'")
             elif isinstance(node, ast.Attribute):
-                if node.attr in _BLOCKED_ATTRS:
-                    violations.append(f"attribute access '.{node.attr}'")
+                if _is_blocked_dunder(node.attr):
+                    violations.append(f"dunder attribute access '.{node.attr}'")
 
         seen: set[str] = set()
         deduped: list[str] = []

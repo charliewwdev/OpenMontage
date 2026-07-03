@@ -103,8 +103,38 @@ def test_blocks_sandbox_escape_dunders():
         "        ().__class__.__bases__[0].__subclasses__()\n"
     )
     violations = MathAnimate._scan_scene_code(code)
-    assert "attribute access '.__bases__'" in violations
-    assert "attribute access '.__subclasses__'" in violations
+    assert "dunder attribute access '.__class__'" in violations
+    assert "dunder attribute access '.__bases__'" in violations
+    assert "dunder attribute access '.__subclasses__'" in violations
+
+
+def test_blocks_builtins_module_via_print_self():
+    # Regression for the reported no-import bypass: print.__self__ is the
+    # builtins module, reachable without an import, a bare open/__builtins__/
+    # getattr, or a blocked name. Blocking all reflection dunders closes it.
+    code = (
+        "from manim import *\n"
+        "class S(Scene):\n"
+        "    def construct(self):\n"
+        "        print.__self__.open('.env').read()\n"
+    )
+    assert "dunder attribute access '.__self__'" in MathAnimate._scan_scene_code(code)
+
+
+def test_super_init_is_allowed():
+    # A legitimate custom Mobject with super().__init__() must not be blocked —
+    # __init__ (and __name__) are the only permitted dunders.
+    code = (
+        "from manim import *\n"
+        "class Widget(VGroup):\n"
+        "    def __init__(self, **kwargs):\n"
+        "        super().__init__(**kwargs)\n"
+        "        self.add(Circle())\n"
+        "class S(Scene):\n"
+        "    def construct(self):\n"
+        "        self.add(Widget())\n"
+    )
+    assert MathAnimate._scan_scene_code(code) == []
 
 
 def test_syntax_error_defers_to_manim():

@@ -17,9 +17,11 @@ Routing is driven by `edit_decisions.render_runtime` (locked at proposal):
 
 Authoring mode is orthogonal to runtime. Setting
 `edit_decisions.composition_mode = "atelier"` (or `renderer_family="bespoke"`)
-routes to a hand-authored, project-local Remotion composition that BYPASSES the
-cut-schema and the stock scene-type registry entirely — the "hand-stitched
-every time" path for hero/bespoke pieces. See `_render_via_atelier`.
+means the composition is hand-authored rather than assembled from stock scene
+components. Runtime still wins first: HyperFrames atelier routes through
+`hyperframes_compose`, FFmpeg stays FFmpeg-only, and only Remotion atelier uses
+`_render_via_atelier` for a project-local Remotion entry that bypasses the
+cut-schema and stock scene-type registry.
 
 Silent runtime swaps are forbidden by governance. If the chosen runtime is
 unavailable or fails, this tool surfaces a structured blocker and waits for
@@ -1302,6 +1304,36 @@ class VideoCompose(BaseTool):
         if not edit_decisions:
             return ToolResult(success=False, error="edit_decisions required for render")
 
+        # --- Runtime routing: honor render_runtime locked at proposal ---
+        # Silent swaps are forbidden by governance. Resolve this before any
+        # composition-mode branching so `composition_mode="atelier"` cannot
+        # accidentally force the Remotion atelier path when HyperFrames or
+        # FFmpeg was approved.
+        render_runtime = (edit_decisions.get("render_runtime") or "").strip().lower()
+
+        if not render_runtime:
+            return ToolResult(
+                success=False,
+                error=(
+                    "render_runtime is not set in edit_decisions. Per governance, "
+                    "it MUST be locked at proposal stage (proposal_packet."
+                    "production_plan.render_runtime) and carried forward through "
+                    "edit_decisions.render_runtime. Valid values: 'remotion', "
+                    "'hyperframes', 'ffmpeg'. Re-run the proposal stage with an "
+                    "explicit runtime choice — do NOT default this field."
+                ),
+            )
+
+        if render_runtime not in {"remotion", "hyperframes", "ffmpeg"}:
+            return ToolResult(
+                success=False,
+                error=(
+                    f"Unknown render_runtime {render_runtime!r}. "
+                    f"Valid values: remotion, hyperframes, ffmpeg. "
+                    f"render_runtime must be set at proposal stage."
+                ),
+            )
+
         # --- Atelier (bespoke) mode -------------------------------------
         # Hand-authored, project-local Remotion composition. Deliberately
         # bypasses the cut-schema, the stock scene-type registry, and the
@@ -1310,8 +1342,11 @@ class VideoCompose(BaseTool):
         # under remotion-composer/projects/<slug>/ and points this renderer at
         # it. No reusable creative components; a new visual language per video.
         # Triggered by composition_mode="atelier" (or renderer_family="bespoke").
-        if (edit_decisions.get("composition_mode") == "atelier"
-                or edit_decisions.get("renderer_family") == "bespoke"):
+        remotion_atelier_requested = (
+            edit_decisions.get("composition_mode") == "atelier"
+            or edit_decisions.get("renderer_family") == "bespoke"
+        )
+        if render_runtime == "remotion" and remotion_atelier_requested:
             return self._render_via_atelier(inputs, edit_decisions)
 
         if not asset_manifest:
@@ -1345,26 +1380,6 @@ class VideoCompose(BaseTool):
         # Also accept profile as "output_profile" (skill convention) or "profile"
         profile = inputs.get("profile") or inputs.get("output_profile")
 
-        # --- Runtime routing: honor render_runtime locked at proposal ---
-        # Silent swaps are forbidden by governance. If the chosen runtime
-        # is unavailable, surface a structured blocker rather than quietly
-        # picking a different engine. Missing render_runtime is itself a
-        # governance violation — edit_decisions.schema.json requires it.
-        render_runtime = (edit_decisions.get("render_runtime") or "").strip().lower()
-
-        if not render_runtime:
-            return ToolResult(
-                success=False,
-                error=(
-                    "render_runtime is not set in edit_decisions. Per governance, "
-                    "it MUST be locked at proposal stage (proposal_packet."
-                    "production_plan.render_runtime) and carried forward through "
-                    "edit_decisions.render_runtime. Valid values: 'remotion', "
-                    "'hyperframes', 'ffmpeg'. Re-run the proposal stage with an "
-                    "explicit runtime choice — do NOT default this field."
-                ),
-            )
-
         if render_runtime == "hyperframes":
             return self._render_via_hyperframes(
                 inputs=inputs,
@@ -1383,16 +1398,6 @@ class VideoCompose(BaseTool):
                 output_path=output_path,
                 profile=profile,
             )
-        if render_runtime != "remotion":
-            return ToolResult(
-                success=False,
-                error=(
-                    f"Unknown render_runtime {render_runtime!r}. "
-                    f"Valid values: remotion, hyperframes, ffmpeg. "
-                    f"render_runtime must be set at proposal stage."
-                ),
-            )
-
         # --- Explicit Remotion path (render_runtime == 'remotion') ---
         if self._needs_remotion(resolved_cuts):
             remotion_inputs: dict[str, Any] = {

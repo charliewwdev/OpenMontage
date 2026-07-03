@@ -15,7 +15,7 @@ from typing import Any, Optional
 from lib.events import read_events
 from lib.paths import PROJECTS_DIR, REPO_ROOT  # single source of truth (env-overridable)
 
-MEDIA_IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
+MEDIA_IMAGE_EXT = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".svg"}
 MEDIA_VIDEO_EXT = {".mp4", ".webm", ".mov"}
 MEDIA_AUDIO_EXT = {".mp3", ".wav", ".m4a", ".ogg"}
 

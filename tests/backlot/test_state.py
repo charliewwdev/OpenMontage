@@ -244,3 +244,110 @@ class TestFindingsFixes:
         s = load_board_state(p)
         research = next(x for x in s["stages"] if x["name"] == "research")
         assert "stalled" not in research
+
+
+class TestStoryboardVisualSelection:
+    """The renderable / snapshot / takes logic in _build_storyboard.
+
+    Covers the atelier-thumbnail work: a .tsx composition asset is not a
+    showable visual; a missing raster file still surfaces as an indicator;
+    an existing SVG diagram IS showable; snapshots/<id>.png is the fallback.
+    """
+
+    def _project_with_scenes(self, root, scenes, assets):
+        p = _make_project(root, "vis")
+        _write(p / "project.json", {"pipeline_type": "cinematic"})
+        _write(p / "artifacts" / "scene_plan.json", {"version": "1.0", "scenes": scenes})
+        _write(p / "artifacts" / "asset_manifest.json", {"version": "1.0", "assets": assets})
+        return p
+
+    def _card(self, p, scene_id):
+        s = load_board_state(p)
+        return next(c for c in s["storyboard"]["scenes"] if c["id"] == scene_id)
+
+    def test_existing_tsx_animation_is_not_a_visual(self, projects_root):
+        # A bespoke composition asset exists on disk but can't be shown.
+        p = self._project_with_scenes(
+            projects_root,
+            [{"id": "sc1", "type": "animation", "description": "morph",
+              "start_seconds": 0, "end_seconds": 5}],
+            [{"id": "a1", "type": "animation", "path": "Composition.tsx", "scene_id": "sc1",
+              "source_tool": "atelier_remotion"}],
+        )
+        (p / "Composition.tsx").write_text("export const X = 1;", encoding="utf-8")
+        card = self._card(p, "sc1")
+        # No snapshot yet -> no renderable visual, falls to placeholder (None).
+        assert card["visual"] is None
+        assert card["takes"] == []
+
+    def test_snapshot_is_the_fallback_for_animation_scene(self, projects_root):
+        p = self._project_with_scenes(
+            projects_root,
+            [{"id": "sc1", "type": "animation", "description": "morph",
+              "start_seconds": 0, "end_seconds": 5}],
+            [{"id": "a1", "type": "animation", "path": "Composition.tsx", "scene_id": "sc1",
+              "source_tool": "atelier_remotion"}],
+        )
+        (p / "Composition.tsx").write_text("x", encoding="utf-8")
+        (p / "snapshots").mkdir()
+        (p / "snapshots" / "sc1.png").write_bytes(b"\x89PNG")
+        card = self._card(p, "sc1")
+        assert card["visual"] is not None
+        assert card["visual"]["snapshot"] is True
+        assert card["visual"]["renderable"] is True
+        assert card["visual"]["path"].endswith("sc1.png")
+
+    def test_snapshot_matches_id_underscore_suffix(self, projects_root):
+        p = self._project_with_scenes(
+            projects_root,
+            [{"id": "sc1", "type": "animation", "start_seconds": 0, "end_seconds": 5}],
+            [],
+        )
+        (p / "snapshots").mkdir()
+        (p / "snapshots" / "sc1_hero.png").write_bytes(b"\x89PNG")
+        card = self._card(p, "sc1")
+        assert card["visual"] is not None and card["visual"]["snapshot"] is True
+
+    def test_existing_svg_diagram_is_renderable(self, projects_root):
+        # Regression guard: an existing non-raster-but-showable image (.svg)
+        # must remain a visual, not be dropped to a placeholder.
+        p = self._project_with_scenes(
+            projects_root,
+            [{"id": "sc1", "type": "diagram", "start_seconds": 0, "end_seconds": 5}],
+            [{"id": "a1", "type": "diagram", "path": "assets/images/d.svg", "scene_id": "sc1",
+              "source_tool": "diagram_gen"}],
+        )
+        (p / "assets" / "images" / "d.svg").write_text("<svg/>", encoding="utf-8")
+        card = self._card(p, "sc1")
+        assert card["visual"] is not None
+        assert card["visual"]["exists"] is True
+        assert card["visual"]["renderable"] is True
+
+    def test_missing_raster_file_still_flagged(self, projects_root):
+        # The "asset in manifest, file missing" indicator must survive.
+        p = self._project_with_scenes(
+            projects_root,
+            [{"id": "sc1", "type": "generated", "start_seconds": 0, "end_seconds": 5}],
+            [{"id": "a1", "type": "image", "path": "assets/images/gone.png", "scene_id": "sc1",
+              "source_tool": "t"}],
+        )
+        card = self._card(p, "sc1")
+        assert card["visual"] is not None
+        assert card["visual"]["exists"] is False
+
+    def test_renderable_prefers_existing_and_takes_exclude_missing(self, projects_root):
+        # Two takes: one real png, one missing. Active = the real one;
+        # takes carries only renderable (showable) entries.
+        p = self._project_with_scenes(
+            projects_root,
+            [{"id": "sc1", "type": "generated", "start_seconds": 0, "end_seconds": 5}],
+            [
+                {"id": "a1", "type": "image", "path": "assets/images/real.png", "scene_id": "sc1", "source_tool": "t"},
+                {"id": "a2", "type": "image", "path": "assets/images/missing.png", "scene_id": "sc1", "source_tool": "t"},
+            ],
+        )
+        (p / "assets" / "images" / "real.png").write_bytes(b"\x89PNG")
+        card = self._card(p, "sc1")
+        assert card["visual"]["exists"] is True
+        assert card["visual"]["path"].endswith("real.png")
+        assert [t["path"].split("/")[-1] for t in card["takes"]] == ["real.png"]

@@ -48,7 +48,7 @@ OpenMontage/
 │   ├── audio/              # TTS (ElevenLabs, OpenAI, Piper), music gen, mixing, enhancement
 │   ├── avatar/             # Talking head animation, lip sync
 │   ├── enhancement/        # Upscale, bg removal, face enhance/restore, color grading
-│   ├── graphics/           # Image gen (FLUX, DALL-E, Recraft, local diffusion), stock, diagrams, code snippets, math animation
+│   ├── graphics/           # Image gen (FLUX, GPT Image, Recraft, local diffusion), stock, diagrams, code snippets, math animation
 │   ├── publishers/         # (Reserved)
 │   ├── subtitle/           # SRT/VTT generation from timestamps
 │   └── video/              # 13 video gen providers, composition, stitching, trimming
@@ -383,7 +383,7 @@ All config is validated via Pydantic models in `lib/config_model.py`.
 | Variable | Used By | Purpose |
 |----------|---------|---------|
 | `ELEVENLABS_API_KEY` | elevenlabs_tts, music_gen | TTS, music, sound effects |
-| `OPENAI_API_KEY` | openai_tts, openai_image | TTS fallback, DALL-E 3 |
+| `OPENAI_API_KEY` | openai_tts, openai_image | TTS fallback, GPT Image 2 |
 | `XAI_API_KEY` | grok_image, grok_video | Grok image editing/generation, Grok video generation |
 | `FAL_KEY` | flux_image, kling_video, veo_video, minimax_video, recraft_image | fal.ai hosted models (FLUX, Veo, Kling, MiniMax, Recraft) |
 | `HEYGEN_API_KEY` | heygen_video | Multi-provider video generation |

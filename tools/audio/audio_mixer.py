@@ -131,6 +131,20 @@ class AudioMixer(BaseTool):
                 },
             },
             "normalize": {"type": "boolean", "default": True},
+            "loudnorm_target": {
+                "type": "number",
+                "default": -16,
+                "minimum": -40,
+                "maximum": 0,
+                "description": (
+                    "Integrated loudness target (LUFS) for the loudnorm filter when "
+                    "normalize=true. Default -16 (Apple Podcasts). Pass -14 for "
+                    "YouTube/TikTok/IG per sound-design.md. Matches the "
+                    "edit_decisions.metadata.loudnorm_target convention — directors "
+                    "should forward that field here so the executed loudness matches "
+                    "the platform the asset targets."
+                ),
+            },
             "video_path": {
                 "type": "string",
                 "description": (
@@ -179,6 +193,25 @@ class AudioMixer(BaseTool):
     user_visible_verification = [
         "Listen to mixed output and verify speech clarity and music ducking",
     ]
+
+    @staticmethod
+    def _loudnorm_filter(inputs: dict[str, Any], in_label: str, out_label: str) -> str:
+        """Build a loudnorm filter graph edge honoring the per-call LUFS target.
+
+        The integrated loudness target (``I=``) was historically hard-coded to
+        -16 (podcast/Apple). sound-design.md targets -14 for YouTube/TikTok/IG,
+        and edit_decisions.metadata.loudnorm_target is the declarative form.
+        Forward that value (or pass loudnorm_target directly) so the executed
+        loudness matches the target platform instead of silently defaulting.
+        """
+        target = inputs.get("loudnorm_target", -16)
+        try:
+            target = float(target)
+        except (TypeError, ValueError):
+            target = -16.0
+        # Clamp to a sane loudness range to avoid malformed ffmpeg args.
+        target = max(-40.0, min(0.0, target))
+        return f"[{in_label}]loudnorm=I={target}:LRA=11:TP=-1.5[{out_label}]"
 
     def execute(self, inputs: dict[str, Any]) -> ToolResult:
         operation = inputs["operation"]
@@ -251,7 +284,7 @@ class AudioMixer(BaseTool):
         )
 
         if normalize:
-            filter_parts.append("[mixed]loudnorm=I=-16:LRA=11:TP=-1.5[out]")
+            filter_parts.append(self._loudnorm_filter(inputs, "mixed", "out"))
             out_label = "[out]"
         else:
             out_label = "[mixed]"
@@ -558,7 +591,7 @@ class AudioMixer(BaseTool):
 
         # Normalize
         if normalize:
-            filter_parts.append("[premix]loudnorm=I=-16:LRA=11:TP=-1.5[out]")
+            filter_parts.append(self._loudnorm_filter(inputs, "premix", "out"))
             out_label = "[out]"
         else:
             out_label = "[premix]"

@@ -371,7 +371,7 @@ def test_architecture_env_mapping_includes_kling_official():
     assert "`KLING_API_BASE_URL` | kling_official_video, kling_official_image, kling_tts, kling_avatar, kling_lip_sync" in architecture
     assert "Elements and Account" in architecture
     assert "not separate pipeline stages" in architecture
-    assert "Kling Official Phase 3 adds provider tools only where OpenMontage already has a" in architecture
+    assert "Kling Official also adds provider tools only where OpenMontage already has a" in architecture
 
 
 def test_ai_video_skill_metadata_and_new_skill_link():

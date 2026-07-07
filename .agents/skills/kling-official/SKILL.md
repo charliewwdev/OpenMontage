@@ -69,7 +69,7 @@ Local image references may be normalized through `tools/_kling/media.py`. Local 
 
 Image Omni accepts `image_list[]` with official `image` values. Prompt placeholders such as `<<<image_1>>>` must map stably to the provided image order. If the prompt already contains placeholders, validate that the referenced images exist and do not insert duplicates.
 
-## Phase 3 Capability Boundaries
+## Capability Boundaries
 
 TTS, avatar, and lip sync are provider additions to existing OpenMontage capabilities. Audio effects and video effects are official Kling endpoints, but they are not registered as default OpenMontage tools until a pipeline has a stable capability slot for them.
 
@@ -148,7 +148,7 @@ Local video paths must not be silently uploaded through fal.ai or any other prov
 
 ## Audio Effects And Video Effects
 
-Official Kling audio effects (`/v1/audio/text-to-audio`, `/v1/audio/video-to-audio`) and video effects (`/v1/videos/effects`) are intentionally not default OpenMontage selector tools in Phase 3. Record the non-mapping reason in docs/tests instead of registering tools that current pipelines might misuse.
+Official Kling audio effects (`/v1/audio/text-to-audio`, `/v1/audio/video-to-audio`) and video effects (`/v1/videos/effects`) are intentionally not default OpenMontage selector tools. Record the non-mapping reason in docs/tests instead of registering tools that current pipelines might misuse.
 
 ## Elements Helper
 

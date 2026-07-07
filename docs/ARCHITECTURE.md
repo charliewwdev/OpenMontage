@@ -398,16 +398,16 @@ All config is validated via Pydantic models in `lib/config_model.py`.
 | `VIDEO_GEN_LOCAL_ENABLED` | local video tools | Enable local GPU generation |
 | `VIDEO_GEN_LOCAL_MODEL` | wan, hunyuan, ltx, cogvideo | Select local model |
 
-Kling Official Phase 2 adds deeper Omni reference support inside the existing
-`kling_official_video` and `kling_official_image` providers. Elements and Account
-Usage live under `tools/_kling/` as internal helpers for element ID references and
-low-frequency account diagnostics; they are not separate pipeline stages,
-selectors, or generated-asset capabilities.
+Kling Official support stays inside the existing provider and capability model.
+`kling_official_video` and `kling_official_image` handle Classic, Turbo, and Omni
+request shapes, while Elements and Account Usage live under `tools/_kling/` as
+internal helpers for element ID references and low-frequency account diagnostics;
+they are not separate pipeline stages, selectors, or generated-asset capabilities.
 
-Kling Official Phase 3 adds provider tools only where OpenMontage already has a
+Kling Official also adds provider tools only where OpenMontage already has a
 matching capability slot: `kling_tts` for `tts`, plus `kling_avatar` and
 `kling_lip_sync` for `avatar`. Official Kling audio effects and video effects are
-not registered as tools yet because current pipelines do not define stable
+not registered as tools because current pipelines do not define stable
 `sound_effects` or `video_effects` capability routing.
 
 ---

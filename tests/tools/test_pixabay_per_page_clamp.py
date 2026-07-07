@@ -1,8 +1,6 @@
 """Pixabay rejects per_page outside 3-200 with HTTP 400, so every
 Pixabay caller must clamp before building the request."""
 
-import requests
-
 from tools.graphics.pixabay_image import PixabayImage
 from tools.video.pixabay_video import PixabayVideo
 from tools.video.stock_sources.base import SearchFilters
@@ -25,10 +23,16 @@ def _capture_get(captured):
     return fake_get
 
 
+def _patch_requests_get(monkeypatch, captured):
+    import requests
+
+    monkeypatch.setattr(requests, "get", _capture_get(captured))
+
+
 def test_pixabay_video_tool_clamps_per_page(monkeypatch):
     monkeypatch.setenv("PIXABAY_API_KEY", "test-key")
     captured = {}
-    monkeypatch.setattr(requests, "get", _capture_get(captured))
+    _patch_requests_get(monkeypatch, captured)
 
     PixabayVideo().execute({"query": "sky", "per_page": 1})
     assert captured["params"]["per_page"] == 3
@@ -40,7 +44,7 @@ def test_pixabay_video_tool_clamps_per_page(monkeypatch):
 def test_pixabay_image_tool_clamps_per_page(monkeypatch):
     monkeypatch.setenv("PIXABAY_API_KEY", "test-key")
     captured = {}
-    monkeypatch.setattr(requests, "get", _capture_get(captured))
+    _patch_requests_get(monkeypatch, captured)
 
     PixabayImage().execute({"query": "sky", "per_page": 1})
     assert captured["params"]["per_page"] == 3
@@ -52,7 +56,7 @@ def test_pixabay_image_tool_clamps_per_page(monkeypatch):
 def test_pixabay_stock_source_clamps_per_page(monkeypatch):
     monkeypatch.setenv("PIXABAY_API_KEY", "test-key")
     captured = {}
-    monkeypatch.setattr(requests, "get", _capture_get(captured))
+    _patch_requests_get(monkeypatch, captured)
 
     source = PixabayVideoSource()
     source.search("sky", SearchFilters(per_page=1))

@@ -25,7 +25,10 @@ class _FakeResponse:
         return None
 
 
-def _install_fake_requests(captured: dict) -> types.ModuleType:
+def _install_fake_requests(
+    monkeypatch: pytest.MonkeyPatch,
+    captured: dict,
+) -> types.ModuleType:
     """Install a stub ``requests`` module that records the JSON payload."""
     fake = types.ModuleType("requests")
 
@@ -36,24 +39,25 @@ def _install_fake_requests(captured: dict) -> types.ModuleType:
         return _FakeResponse()
 
     fake.post = fake_post
-    sys.modules["requests"] = fake
+    monkeypatch.setitem(sys.modules, "requests", fake)
     return fake
 
 
 def test_force_instrumental_is_sent_true_by_default(monkeypatch, tmp_path):
     monkeypatch.setenv("ELEVENLABS_API_KEY", "test-key")
     captured: dict = {}
-    _install_fake_requests(captured)
+    _install_fake_requests(monkeypatch, captured)
     # Route the output to tmp_path so the test never writes music_output.mp3
     # into the repo root (the default output_path).
     out = tmp_path / "bg.mp3"
-    try:
-        MusicGen()._generate(
-            {"prompt": "gentle ambient", "duration_seconds": 10, "output_path": str(out)},
-            "test-key",
-        )
-    finally:
-        sys.modules.pop("requests", None)
+    MusicGen()._generate(
+        {
+            "prompt": "gentle ambient",
+            "duration_seconds": 10,
+            "output_path": str(out),
+        },
+        "test-key",
+    )
 
     assert "force_instrumental" in captured["payload"], "force_instrumental kwarg was never sent"
     assert captured["payload"]["force_instrumental"] is True
@@ -63,20 +67,17 @@ def test_force_instrumental_is_sent_true_by_default(monkeypatch, tmp_path):
 def test_explicit_vocal_opt_out_is_respected(monkeypatch, tmp_path):
     monkeypatch.setenv("ELEVENLABS_API_KEY", "test-key")
     captured: dict = {}
-    _install_fake_requests(captured)
+    _install_fake_requests(monkeypatch, captured)
     out = tmp_path / "vocals.mp3"
-    try:
-        MusicGen()._generate(
-            {
-                "prompt": "lead vocal pop",
-                "duration_seconds": 10,
-                "force_instrumental": False,
-                "output_path": str(out),
-            },
-            "test-key",
-        )
-    finally:
-        sys.modules.pop("requests", None)
+    MusicGen()._generate(
+        {
+            "prompt": "lead vocal pop",
+            "duration_seconds": 10,
+            "force_instrumental": False,
+            "output_path": str(out),
+        },
+        "test-key",
+    )
 
     assert captured["payload"]["force_instrumental"] is False
 

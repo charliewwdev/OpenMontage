@@ -296,9 +296,24 @@ class GeminiOmniVideo(BaseTool):
                         return item
         return None
 
+    @staticmethod
+    def _file_id_from_uri(uri: str) -> str:
+        """Extract the bare file id from any documented URI shape.
+
+        The API may return ``files/<id>``, a full
+        ``https://.../v1beta/files/<id>`` resource URI, or a ready-made
+        download URL ``.../files/<id>:download?alt=media``. Polling and
+        download both need just ``<id>``.
+        """
+        path = uri.split("?", 1)[0].rstrip("/")
+        marker = "files/"
+        idx = path.rfind(marker)
+        tail = path[idx + len(marker):] if idx != -1 else path.split("/")[-1]
+        return tail.split(":", 1)[0]
+
     def _download_via_uri(self, requests_mod: Any, api_key: str, uri: str) -> bytes:
         """Poll a Files API entry until ACTIVE, then download its bytes."""
-        file_id = uri.rstrip("/").split("/")[-1]
+        file_id = self._file_id_from_uri(uri)
         headers = {"x-goog-api-key": api_key}
         deadline = time.time() + _MAX_POLL_SECONDS
         while True:

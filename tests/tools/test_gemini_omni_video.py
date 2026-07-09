@@ -139,6 +139,47 @@ def test_gemini_omni_text_to_video_via_uri_delivery(monkeypatch, tmp_path, gemin
     assert calls["get"][1]["params"] == {"alt": "media"}
 
 
+def test_gemini_omni_uri_delivery_handles_full_download_url(monkeypatch, tmp_path, gemini_env):
+    """The API may return a full .../files/<id>:download?alt=media URL, not just files/<id>."""
+    from tools.video.gemini_omni_video import GeminiOmniVideo
+
+    full_url = (
+        "https://generativelanguage.googleapis.com/v1beta/files/vid-456:download?alt=media"
+    )
+    calls = _install_fake_requests(
+        monkeypatch,
+        post_responses=[FakeResponse({"id": "int_5", "output_video": {"uri": full_url}})],
+        get_responses=[
+            FakeResponse({"state": "ACTIVE"}),
+            FakeResponse(content=b"full url mp4"),
+        ],
+    )
+
+    output_path = tmp_path / "full.mp4"
+    result = GeminiOmniVideo().execute({"prompt": "A sunset.", "output_path": str(output_path)})
+
+    assert result.success, result.error
+    assert output_path.read_bytes() == b"full url mp4"
+    assert calls["get"][0]["url"].endswith("/files/vid-456")
+    assert calls["get"][1]["url"].endswith("/files/vid-456:download")
+
+
+@pytest.mark.parametrize(
+    "uri",
+    [
+        "files/vid-456",
+        "files/vid-456/",
+        "v1beta/files/vid-456",
+        "https://generativelanguage.googleapis.com/v1beta/files/vid-456",
+        "https://generativelanguage.googleapis.com/v1beta/files/vid-456:download?alt=media",
+    ],
+)
+def test_gemini_omni_file_id_extraction_covers_documented_uri_shapes(uri):
+    from tools.video.gemini_omni_video import GeminiOmniVideo
+
+    assert GeminiOmniVideo._file_id_from_uri(uri) == "vid-456"
+
+
 def test_gemini_omni_inline_data_response_is_handled(monkeypatch, tmp_path, gemini_env):
     from tools.video.gemini_omni_video import GeminiOmniVideo
 

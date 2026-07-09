@@ -465,9 +465,16 @@ class GreenScreenProcessor(BaseTool):
                 "-i", str(frame),
                 "-filter_complex",
                 (
-                    f"[0:v]scale=iw:ih[bg];"
+                    # The background is a 1x1 color source; it MUST be scaled up
+                    # to the frame's dimensions. `scale=iw:ih` on [0:v] alone is a
+                    # no-op (iw/ih are the 1x1 source's own size), and overlay
+                    # takes the size of its FIRST input — so that leaves a 1x1
+                    # canvas and the keyed frame gets clipped to a single pixel,
+                    # producing a solid-color video with the subject gone.
+                    # scale2ref resizes [0:v] to match the frame [1:v] first.
                     f"[1:v]chromakey=color=0x00FF00:similarity=0.3:blend=0.08[fg];"
-                    f"[bg][fg]overlay=0:0"
+                    f"[0:v][fg]scale2ref[bg][fg2];"
+                    f"[bg][fg2]overlay=0:0"
                 ),
                 "-frames:v", "1",
                 str(out_path),

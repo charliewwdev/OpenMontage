@@ -62,7 +62,7 @@ class VeoVideo(BaseTool):
         "ambient sound and music generation built in",
     ]
     not_good_for = ["budget projects", "offline generation", "quick iteration"]
-    fallback_tools = ["kling_video", "minimax_video", "wan_video"]
+    fallback_tools = ["gemini_omni_video", "kling_video", "minimax_video", "wan_video"]
 
     input_schema = {
         "type": "object",

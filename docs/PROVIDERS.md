@@ -43,6 +43,10 @@ DOUBAO_SPEECH_API_KEY=       # Volcengine Doubao Speech TTS (strong Mandarin nar
 DOUBAO_SPEECH_VOICE_TYPE=    # Default Doubao speaker/voice type
 DASHSCOPE_API_KEY=           # Alibaba DashScope (Qwen image gen, TTS, ASR with word timestamps)
 
+# SPEECH-TO-TEXT (optional cloud transcription; local whisper is the default)
+AZURE_SPEECH_KEY=            # Azure AI Speech — Fast Transcription (word-level timestamps)
+AZURE_SPEECH_REGION=         # Speech resource region, e.g. eastus
+
 # MULTI-MODEL GATEWAY (one key, 6+ tools)
 FAL_KEY=                     # FLUX, Recraft, Kling, Veo, MiniMax video
 
@@ -242,6 +246,54 @@ Start with `speech_rate: 0` for natural Mandarin delivery. If the approved forma
 #### Pricing
 
 Doubao Speech 2.0 is billed by character package or usage in Volcengine. OpenMontage estimates cost from text length and prefers provider-returned usage metadata when available.
+
+---
+
+### Azure AI Speech — Speech-to-Text
+
+> **Cloud transcription.** Azure AI Speech Fast Transcription turns local audio into text with word-level timestamps, speaker diarization, and multi-language identification — no GPU required. Optional: the local faster-whisper `transcriber` remains the default offline STT path. When `AZURE_SPEECH_KEY` is set, the agent prefers `azure_stt` for cloud transcription.
+
+**Tools unlocked:** `azure_stt`
+**Env vars:** `AZURE_SPEECH_KEY`, `AZURE_SPEECH_REGION` (or `AZURE_SPEECH_ENDPOINT`)
+
+#### Setup
+
+1. In the [Azure portal](https://portal.azure.com), create a **Speech** resource (Azure AI services → Speech service).
+2. Open the resource's **Keys and Endpoint** page.
+3. Copy **KEY 1** and the **Location/Region** (e.g. `eastus`).
+4. Add to `.env`:
+   ```bash
+   AZURE_SPEECH_KEY=your-speech-resource-key
+   AZURE_SPEECH_REGION=eastus
+   # AZURE_SPEECH_ENDPOINT=https://<custom>...  # optional, overrides region
+   ```
+
+#### API Notes
+
+OpenMontage uses the **Fast Transcription** REST endpoint, which accepts a local
+audio file directly (multipart upload) and returns a synchronous result — no
+Azure Blob storage, SAS URLs, or async job polling:
+
+```text
+POST https://{region}.api.cognitive.microsoft.com/speechtotext/transcriptions:transcribe?api-version=2024-11-15
+Ocp-Apim-Subscription-Key: ${AZURE_SPEECH_KEY}
+```
+
+For files longer than ~2 hours or bulk jobs, use Azure Batch Transcription instead (not wired into OpenMontage).
+
+#### What It Is Best For
+
+- Cloud transcription with word-level timestamps and no local GPU
+- Multi-language auto-detection across a candidate locale set
+- Speaker diarization without a HuggingFace token
+- Subtitle timing metadata that flows straight into `subtitle_gen`
+
+#### Pricing
+
+Azure AI Speech Standard (S0) bills speech-to-text by audio-hour (roughly
+$1.00/audio-hour at time of writing; a free F0 tier includes a limited monthly
+allowance). OpenMontage estimates cost from the transcribed audio duration. See
+[Azure AI Speech pricing](https://azure.microsoft.com/pricing/details/cognitive-services/speech-services/) for current rates.
 
 ---
 

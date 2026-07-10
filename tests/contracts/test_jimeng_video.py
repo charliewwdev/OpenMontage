@@ -61,7 +61,7 @@ class TestContract:
 
     def test_has_fallbacks(self):
         tool = JimengVideo()
-        assert "minimax_tokenplan_video" in tool.fallback_tools
+        assert "minimax_video" in tool.fallback_tools
         assert "kling_video" in tool.fallback_tools
 
     def test_has_install_instructions(self):

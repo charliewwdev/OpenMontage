@@ -78,7 +78,7 @@ class JimengVideo(BaseTool):
         "Chinese-language prompt understanding",
     ]
     not_good_for = ["offline generation", "users without Volcengine AK/SK"]
-    fallback_tools = ["minimax_tokenplan_video", "kling_video", "veo_video"]
+    fallback_tools = ["minimax_video", "kling_video", "veo_video"]
 
     input_schema = {
         "type": "object",

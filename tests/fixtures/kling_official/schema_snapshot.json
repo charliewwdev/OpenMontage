@@ -1,5 +1,5 @@
 {
-  "build_id": "97344324",
+  "build_id": "97939672",
   "source_urls": [
     "https://kling.ai/document-api/api/get-started/authentication",
     "https://kling.ai/document-api/api/get-started/error-codes",
@@ -18,10 +18,10 @@
     "https://kling.ai/document-api/api/video/effects"
   ],
   "chunk_names": [
-    "index-B9E4in0e.js",
-    "document-navigation-nxVgwiS5.js"
+    "index-0m3slU3p.js",
+    "document-navigation-Dk7H_V3n.js"
   ],
-  "extracted_at": "2026-07-03T08:12:55Z",
+  "extracted_at": "2026-07-10T08:34:20Z",
   "api_base": {
     "default": "https://api-singapore.klingai.com",
     "env_override": "KLING_API_BASE_URL",
@@ -145,6 +145,7 @@
     "classic_image_results": "data.task_result.images[]",
     "classic_audio_results": "data.task_result.audios[]",
     "identify_face_session": "data.session_id",
+    "identify_face_results": "data.face_data[]",
     "turbo_results": "data[0].outputs[]"
   },
   "core_field_enums": {
@@ -220,7 +221,8 @@
     ]
   },
   "notes": [
-    "Official docs were fetched as a SPA on 2026-07-03. Current HTML exposes buildId 97344324.",
+    "Official docs were fetched as a SPA on 2026-07-10. Current HTML exposes buildId 97939672.",
+    "Advanced lip sync currently accepts one face_choose item. The item contains face_id, audio_id or sound_file, and sound_start_time, sound_end_time, and sound_insert_time.",
     "The current entry/navigation bundles no longer expose the older api-*.js chunk names as literal references, so this fixture records the current entry assets and the Phase 1 core schema facts used by implementation and tests."
   ]
 }

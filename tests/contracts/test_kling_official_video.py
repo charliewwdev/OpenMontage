@@ -10,17 +10,14 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from tools._kling.account import reset_account_usage_cache
-from tools.tool_registry import registry
 from tools._kling.errors import KlingAPIError
 from tools.video.kling_official_video import KlingOfficialVideo
-from tools.video.video_selector import VideoSelector
 
 
-def test_registry_discovers_kling_official_video(monkeypatch):
+def test_registry_discovers_kling_official_video(monkeypatch, isolated_tool_registry):
     monkeypatch.delenv("KLING_API_KEY", raising=False)
-    registry.clear()
-    registry.discover("tools")
-    tool = registry.get("kling_official_video")
+    isolated_tool_registry.discover("tools")
+    tool = isolated_tool_registry.get("kling_official_video")
     assert tool is not None
     assert tool.capability == "video_generation"
     assert tool.provider == "kling_official"
@@ -355,14 +352,13 @@ def test_execute_downloads_all_omni_video_outputs_and_records_metadata(monkeypat
     assert Path(result.artifacts[1]).name == "out_2.mp4"
 
 
-def test_video_selector_prefers_official_provider_without_fal_upload(monkeypatch, tmp_path):
+def test_video_selector_prefers_official_provider_without_fal_upload(
+    monkeypatch, tmp_path, isolated_tool_registry
+):
     monkeypatch.setenv("KLING_API_KEY", "test-key")
     image_path = tmp_path / "ref.png"
     image_path.write_bytes(b"fake")
-    registry.clear()
-    registry.register(KlingOfficialVideo())
-    registry.register(VideoSelector())
-    registry._discovered_packages.add("tools")
+    isolated_tool_registry.discover("tools")
 
     seen = {}
 
@@ -377,11 +373,12 @@ def test_video_selector_prefers_official_provider_without_fal_upload(monkeypatch
 
     monkeypatch.setattr(KlingOfficialVideo, "execute", fake_execute)
     monkeypatch.setattr("tools.video._shared.upload_image_fal", fail_upload)
-    result = registry.get("video_selector").execute(
+    result = isolated_tool_registry.get("video_selector").execute(
         {
             "prompt": "animate",
             "operation": "image_to_video",
             "preferred_provider": "kling_official",
+            "allowed_providers": ["kling_official"],
             "reference_image_path": str(image_path),
         }
     )

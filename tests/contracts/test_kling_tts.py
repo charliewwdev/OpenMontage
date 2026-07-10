@@ -9,15 +9,12 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from tools.audio.kling_tts import KlingTTS
-from tools.audio.tts_selector import TTSSelector
-from tools.tool_registry import registry
 
 
-def test_registry_discovers_kling_tts(monkeypatch):
+def test_registry_discovers_kling_tts(monkeypatch, isolated_tool_registry):
     monkeypatch.delenv("KLING_API_KEY", raising=False)
-    registry.clear()
-    registry.discover("tools")
-    tool = registry.get("kling_tts")
+    isolated_tool_registry.discover("tools")
+    tool = isolated_tool_registry.get("kling_tts")
     assert tool is not None
     assert tool.capability == "tts"
     assert tool.provider == "kling_official"
@@ -153,12 +150,9 @@ def test_execute_accepts_synchronous_create_response(monkeypatch, tmp_path):
     assert result.data["audio_duration_seconds"] == 2.5
 
 
-def test_tts_selector_prefers_kling_official(monkeypatch):
+def test_tts_selector_prefers_kling_official(monkeypatch, isolated_tool_registry):
     monkeypatch.setenv("KLING_API_KEY", "test-key")
-    registry.clear()
-    registry.register(KlingTTS())
-    registry.register(TTSSelector())
-    registry._discovered_packages.add("tools")
+    isolated_tool_registry.discover("tools")
 
     def fake_execute(self, inputs):
         from tools.base_tool import ToolResult
@@ -166,11 +160,12 @@ def test_tts_selector_prefers_kling_official(monkeypatch):
         return ToolResult(success=True, data={"output_path": "out.mp3"}, artifacts=["out.mp3"])
 
     monkeypatch.setattr(KlingTTS, "execute", fake_execute)
-    result = registry.get("tts_selector").execute(
+    result = isolated_tool_registry.get("tts_selector").execute(
         {
             "text": "official speech",
             "voice_id": "voice-a",
             "preferred_provider": "kling_official",
+            "allowed_providers": ["kling_official"],
         }
     )
     assert result.success

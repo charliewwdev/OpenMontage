@@ -43,6 +43,8 @@ def test_cli_modes_are_explicit_and_non_paid_by_default():
     assert script._execution_mode(script._parse_args(["--live-tts"])) == "live_tts"
     assert script._execution_mode(script._parse_args(["--live-full"])) == "live_full"
     assert script._execution_mode(script._parse_args(["--live"])) == "live_full"
+    assert script._execution_mode(script._parse_args(["--live-avatar"])) == "live_avatar"
+    assert script._execution_mode(script._parse_args(["--live-all"])) == "live_all"
 
 
 def test_video_duration_aligns_to_narration_within_kling_limits():
@@ -52,3 +54,39 @@ def test_video_duration_aligns_to_narration_within_kling_limits():
     assert script._aligned_video_duration("10", 6.05) == "10"
     assert script._aligned_video_duration("3", None) == "3"
     assert script._aligned_video_duration("3", 30.0) == "15"
+
+
+def test_live_all_combines_core_and_avatar_results(monkeypatch, tmp_path):
+    script = _load_script()
+    core = {
+        "artifacts": {"narration": "narration.mp3", "final": "final.mp4"},
+        "ffprobe": {"final": {"duration": 6.0}},
+        "estimated_cost_usd": 0.25,
+    }
+    avatar_suite = {
+        "artifacts": {"avatar": "avatar.mp4", "lip_sync": "lip.mp4"},
+        "ffprobe": {"avatar": {"duration": 7.0}, "lip_sync": {"duration": 7.0}},
+        "estimated_cost_usd": 0.75,
+    }
+    monkeypatch.setattr(script, "_run_live_full", lambda *args, **kwargs: core)
+    monkeypatch.setattr(
+        script, "_run_live_avatar_suite", lambda *args, **kwargs: avatar_suite
+    )
+
+    result = script._run_live_all(
+        tmp_path,
+        voice_id="voice-a",
+        voice_language="en",
+        voice_speed=1.0,
+        text="hello",
+        timeout_seconds=30,
+        poll_interval=1.0,
+        include_account_usage=False,
+        video_duration="3",
+    )
+
+    assert result["core"] is core
+    assert result["avatar_suite"] is avatar_suite
+    assert result["artifacts"]["final"] == "final.mp4"
+    assert result["artifacts"]["lip_sync"] == "lip.mp4"
+    assert result["estimated_cost_usd"] == 1.0

@@ -27,7 +27,6 @@ from tools.audio.kling_tts import KlingTTS
 from tools.avatar.kling_avatar import KlingAvatar
 from tools.avatar.kling_lip_sync import KlingLipSync
 from tools.graphics.kling_official_image import KlingOfficialImage
-from tools.tool_registry import registry
 from tools.video.kling_official_video import KlingOfficialVideo
 
 
@@ -194,9 +193,9 @@ def test_turbo_create_and_poll_parse_result_paths(monkeypatch):
 def test_schema_snapshot_contains_phase1_contract_fields():
     fixture = PROJECT_ROOT / "tests/fixtures/kling_official/schema_snapshot.json"
     data = json.loads(fixture.read_text())
-    assert data["build_id"] == "97344324"
-    assert "index-B9E4in0e.js" in data["chunk_names"]
-    assert "document-navigation-nxVgwiS5.js" in data["chunk_names"]
+    assert data["build_id"] == "97939672"
+    assert "index-0m3slU3p.js" in data["chunk_names"]
+    assert "document-navigation-Dk7H_V3n.js" in data["chunk_names"]
     assert data["api_base"]["auth_env"] == "KLING_API_KEY"
     assert data["task_statuses"]["classic"] == ["submitted", "processing", "succeed", "failed"]
     assert data["task_statuses"]["turbo"] == ["submitted", "processing", "succeeded", "failed"]
@@ -211,6 +210,7 @@ def test_schema_snapshot_contains_phase1_contract_fields():
     assert data["endpoints"]["video_effects"]["path"] == "/v1/videos/effects"
     assert data["result_paths"]["classic_audio_results"] == "data.task_result.audios[]"
     assert data["result_paths"]["identify_face_session"] == "data.session_id"
+    assert data["result_paths"]["identify_face_results"] == "data.face_data[]"
     assert data["core_field_enums"]["tts_voice_language"] == ["zh", "en"]
     assert data["core_field_enums"]["avatar_mode"] == ["std", "pro"]
 
@@ -251,7 +251,7 @@ def test_elements_helper_normalizes_and_records_metadata(tmp_path):
         raise AssertionError("element_list items without element_id must be rejected")
 
 
-def test_elements_helper_read_only_endpoints_do_not_enter_registry():
+def test_elements_helper_read_only_endpoints_do_not_enter_registry(isolated_tool_registry):
     fake = HelperFakeClient()
     assert get_custom_element(123, client=fake)["data"]["element_id"] == 123
     assert list_custom_elements(client=fake)["data"][0]["element_id"] == 456
@@ -266,10 +266,9 @@ def test_elements_helper_read_only_endpoints_do_not_enter_registry():
     assert not hasattr(elements_module, "create_element")
     assert not hasattr(elements_module, "delete_element")
 
-    registry.clear()
-    registry.discover("tools")
-    assert registry.get("kling_elements") is None
-    assert registry.get("kling_account_usage") is None
+    isolated_tool_registry.discover("tools")
+    assert isolated_tool_registry.get("kling_elements") is None
+    assert isolated_tool_registry.get("kling_account_usage") is None
 
 
 def test_account_usage_helper_uses_endpoint_cache_and_throttle():
@@ -402,8 +401,7 @@ def test_provider_agent_skills_reference_kling_official():
     assert "kling-official" in KlingLipSync().agent_skills
 
 
-def test_phase3_does_not_register_audio_or_video_effect_tools():
-    registry.clear()
-    registry.discover("tools")
-    assert registry.get("kling_audio") is None
-    assert registry.get("kling_effects") is None
+def test_phase3_does_not_register_audio_or_video_effect_tools(isolated_tool_registry):
+    isolated_tool_registry.discover("tools")
+    assert isolated_tool_registry.get("kling_audio") is None
+    assert isolated_tool_registry.get("kling_effects") is None

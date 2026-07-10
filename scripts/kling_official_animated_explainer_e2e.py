@@ -4,8 +4,9 @@
 This script validates the official Kling provider path through OpenMontage
 selectors and the animated-explainer asset/compose surface.
 
-Default mode is a no-cost dry run. Use --live-tts for one paid TTS sample, or
---live-full for TTS + image + image-to-video + local FFmpeg compose.
+Default mode is a no-cost dry run. Use --live-tts for one paid TTS sample,
+--live-full for TTS + image + image-to-video + local FFmpeg compose, or
+--live-all to add avatar and lip-sync provider smokes.
 """
 
 from __future__ import annotations
@@ -113,6 +114,8 @@ def _tool_statuses() -> dict[str, str]:
         "kling_tts",
         "kling_official_image",
         "kling_official_video",
+        "kling_avatar",
+        "kling_lip_sync",
     ]
     statuses: dict[str, str] = {}
     for name in names:
@@ -123,7 +126,7 @@ def _tool_statuses() -> dict[str, str]:
 
 def _capability_summary() -> dict[str, Any]:
     summary = registry.provider_menu_summary()
-    wanted = {"tts", "image_generation", "video_generation", "video_post"}
+    wanted = {"tts", "image_generation", "video_generation", "avatar", "video_post"}
     return {
         "composition_runtimes": summary.get("composition_runtimes", {}),
         "capabilities": [
@@ -454,6 +457,198 @@ def _run_live_full(
     }
 
 
+def _first_remote_url(result_data: dict[str, Any]) -> str:
+    direct = result_data.get("remote_url")
+    if direct:
+        return str(direct)
+    for item in result_data.get("remote_outputs") or []:
+        if not isinstance(item, dict):
+            continue
+        url = item.get("url") or item.get("video_url") or item.get("resource_url")
+        if url:
+            return str(url)
+    raise RuntimeError("Kling result did not include a remote video URL for lip-sync input.")
+
+
+def _run_live_avatar_suite(
+    project_dir: Path,
+    *,
+    timeout_seconds: int,
+    poll_interval: float,
+) -> dict[str, Any]:
+    image = registry.get("image_selector")
+    avatar = registry.get("kling_avatar")
+    lip_sync = registry.get("kling_lip_sync")
+    assert image and avatar and lip_sync
+
+    assets_dir = project_dir / "assets"
+    image_dir = assets_dir / "images"
+    video_dir = assets_dir / "video"
+    artifacts_dir = project_dir / "artifacts"
+    narration_path = assets_dir / "audio" / "narration.mp3"
+    if not narration_path.is_file():
+        raise RuntimeError(
+            f"Avatar smoke requires an existing narration file: {narration_path}. "
+            "Run --live-full or --live-all first."
+        )
+
+    _announce_paid_call(
+        "image_selector -> kling_official_image",
+        "kling_official",
+        "kling-v3 generation",
+        "Create one synthetic single-face portrait for the avatar provider smoke.",
+        "sample",
+    )
+    portrait_result = image.execute(
+        {
+            "preferred_provider": "kling_official",
+            "allowed_providers": ["kling_official"],
+            "prompt": (
+                "Photorealistic studio portrait of one fictional adult presenter, front-facing, "
+                "head and shoulders centered, neutral expression, mouth closed, even soft lighting, "
+                "plain background, no text, no watermark."
+            ),
+            "negative_prompt": "multiple people, profile view, open mouth, obscured face, text, watermark",
+            "api_family": "generation",
+            "model_name": "kling-v3",
+            "resolution": "1k",
+            "aspect_ratio": "1:1",
+            "n": 1,
+            "output_path": str(image_dir / "avatar_portrait.png"),
+        }
+    )
+    _require_success("avatar portrait", portrait_result)
+    portrait_path = Path(portrait_result.data["output_path"])
+
+    _announce_paid_call(
+        "kling_avatar",
+        "kling_official",
+        "kling-official-avatar std",
+        "Validate photo-and-audio to avatar video through the official provider.",
+        "sample",
+    )
+    avatar_result = avatar.execute(
+        {
+            "image_path": str(portrait_path),
+            "audio_path": str(narration_path),
+            "prompt": "Natural presenter delivery with subtle head movement and stable identity.",
+            "mode": "std",
+            "timeout_seconds": max(timeout_seconds, 900),
+            "poll_interval": poll_interval,
+            "output_path": str(video_dir / "kling_avatar_smoke.mp4"),
+        }
+    )
+    _require_success("kling_avatar", avatar_result)
+    avatar_path = Path(avatar_result.data["output_path"])
+    partial_report_path = artifacts_dir / "kling_avatar_live_partial.json"
+    _write_json(
+        partial_report_path,
+        {
+            "portrait": portrait_result.data,
+            "avatar": avatar_result.data,
+            "artifacts": {
+                "narration": str(narration_path),
+                "portrait": str(portrait_path),
+                "avatar": str(avatar_path),
+            },
+            "ffprobe": {
+                "portrait": _probe_media(portrait_path),
+                "avatar": _probe_media(avatar_path),
+            },
+        },
+    )
+
+    _announce_paid_call(
+        "kling_lip_sync",
+        "kling_official",
+        "kling-official-lip-sync full_lip_sync",
+        "Validate identify-face, explicit auto-selection, and advanced lip-sync as one smoke.",
+        "sample",
+    )
+    lip_sync_result = lip_sync.execute(
+        {
+            "operation": "full_lip_sync",
+            "video_url": _first_remote_url(avatar_result.data),
+            "audio_path": str(narration_path),
+            "auto_select_face": True,
+            "faces_artifact_path": str(artifacts_dir / "kling_lip_sync_faces.json"),
+            "timeout_seconds": max(timeout_seconds, 900),
+            "poll_interval": poll_interval,
+            "output_path": str(video_dir / "kling_lip_sync_smoke.mp4"),
+        }
+    )
+    _require_success("kling_lip_sync", lip_sync_result)
+    lip_sync_path = Path(lip_sync_result.data["output_path"])
+
+    estimated_cost = sum(
+        float(getattr(result, "cost_usd", 0) or 0)
+        for result in (portrait_result, avatar_result, lip_sync_result)
+    )
+    return {
+        "portrait": portrait_result.data,
+        "avatar": avatar_result.data,
+        "lip_sync": lip_sync_result.data,
+        "artifacts": {
+            "narration": str(narration_path),
+            "portrait": str(portrait_path),
+            "avatar": str(avatar_path),
+            "lip_sync": str(lip_sync_path),
+            "faces": str(artifacts_dir / "kling_lip_sync_faces.json"),
+            "avatar_partial_report": str(partial_report_path),
+        },
+        "ffprobe": {
+            "portrait": _probe_media(portrait_path),
+            "avatar": _probe_media(avatar_path),
+            "lip_sync": _probe_media(lip_sync_path),
+        },
+        "estimated_cost_usd": estimated_cost,
+    }
+
+
+def _run_live_all(
+    project_dir: Path,
+    *,
+    voice_id: str,
+    voice_language: str,
+    voice_speed: float,
+    text: str,
+    timeout_seconds: int,
+    poll_interval: float,
+    include_account_usage: bool,
+    video_duration: str,
+) -> dict[str, Any]:
+    core = _run_live_full(
+        project_dir,
+        voice_id=voice_id,
+        voice_language=voice_language,
+        voice_speed=voice_speed,
+        text=text,
+        timeout_seconds=timeout_seconds,
+        poll_interval=poll_interval,
+        include_account_usage=include_account_usage,
+        video_duration=video_duration,
+    )
+    avatar_suite = _run_live_avatar_suite(
+        project_dir,
+        timeout_seconds=timeout_seconds,
+        poll_interval=poll_interval,
+    )
+    return {
+        "core": core,
+        "avatar_suite": avatar_suite,
+        "artifacts": {
+            **core["artifacts"],
+            **avatar_suite["artifacts"],
+        },
+        "ffprobe": {
+            "core": core["ffprobe"],
+            "avatar_suite": avatar_suite["ffprobe"],
+        },
+        "estimated_cost_usd": float(core.get("estimated_cost_usd") or 0)
+        + float(avatar_suite.get("estimated_cost_usd") or 0),
+    }
+
+
 def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     live = parser.add_mutually_exclusive_group()
@@ -464,6 +659,16 @@ def _parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         dest="live_full",
         action="store_true",
         help="Run paid Kling TTS, image, video, and local compose.",
+    )
+    live.add_argument(
+        "--live-avatar",
+        action="store_true",
+        help="Use existing narration to run paid Kling portrait, avatar, and lip-sync samples.",
+    )
+    live.add_argument(
+        "--live-all",
+        action="store_true",
+        help="Run the full smoke plus paid Kling avatar and lip-sync samples.",
     )
     parser.add_argument("--voice-id", default=DEFAULT_VOICE_ID)
     parser.add_argument("--voice-language", choices=["en", "zh"], default="en")
@@ -482,6 +687,10 @@ def _execution_mode(args: argparse.Namespace) -> str:
         return "live_tts"
     if getattr(args, "live_full", False):
         return "live_full"
+    if getattr(args, "live_avatar", False):
+        return "live_avatar"
+    if getattr(args, "live_all", False):
+        return "live_all"
     return "dry_run"
 
 
@@ -545,10 +754,30 @@ def main(argv: Sequence[str] | None = None) -> int:
                 include_account_usage=args.include_account_usage,
                 video_duration=args.video_duration,
             )
+        elif mode == "live_avatar":
+            report["live_avatar_result"] = _run_live_avatar_suite(
+                project_dir,
+                timeout_seconds=args.timeout_seconds,
+                poll_interval=args.poll_interval,
+            )
+        elif mode == "live_all":
+            report["live_all_result"] = _run_live_all(
+                project_dir,
+                voice_id=args.voice_id,
+                voice_language=args.voice_language,
+                voice_speed=args.voice_speed,
+                text=args.text,
+                timeout_seconds=args.timeout_seconds,
+                poll_interval=args.poll_interval,
+                include_account_usage=args.include_account_usage,
+                video_duration=args.video_duration,
+            )
         else:
             report["next_steps"] = [
                 "Run with --live-tts to make one paid Kling TTS sample call.",
                 "Run with --live-full to make paid Kling TTS/image/video calls and compose final_kling_e2e_smoke.mp4.",
+                "Run with --live-avatar to reuse narration for paid Kling avatar and lip-sync provider smokes.",
+                "Run with --live-all to add paid Kling avatar and lip-sync provider smokes.",
             ]
     except Exception as exc:
         report["failed"] = {"error": str(exc)}
@@ -563,6 +792,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"narration: {report['live_tts_result']['artifacts']['narration']}")
     elif mode == "live_full":
         print(f"final: {report['live_full_result']['artifacts']['final']}")
+    elif mode == "live_avatar":
+        print(f"avatar: {report['live_avatar_result']['artifacts']['avatar']}")
+        print(f"lip_sync: {report['live_avatar_result']['artifacts']['lip_sync']}")
+    elif mode == "live_all":
+        print(f"avatar: {report['live_all_result']['artifacts']['avatar']}")
+        print(f"lip_sync: {report['live_all_result']['artifacts']['lip_sync']}")
     return 0
 
 

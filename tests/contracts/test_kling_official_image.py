@@ -9,16 +9,13 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from tools.graphics.image_selector import ImageSelector
 from tools.graphics.kling_official_image import KlingOfficialImage
-from tools.tool_registry import registry
 
 
-def test_registry_discovers_kling_official_image(monkeypatch):
+def test_registry_discovers_kling_official_image(monkeypatch, isolated_tool_registry):
     monkeypatch.delenv("KLING_API_KEY", raising=False)
-    registry.clear()
-    registry.discover("tools")
-    tool = registry.get("kling_official_image")
+    isolated_tool_registry.discover("tools")
+    tool = isolated_tool_registry.get("kling_official_image")
     assert tool is not None
     assert tool.capability == "image_generation"
     assert tool.provider == "kling_official"
@@ -255,12 +252,9 @@ def test_execute_image_omni_series_records_references_callback_and_artifacts(mon
     assert Path(result.artifacts[1]).name == "series_2.png"
 
 
-def test_image_selector_prefers_official_provider(monkeypatch):
+def test_image_selector_prefers_official_provider(monkeypatch, isolated_tool_registry):
     monkeypatch.setenv("KLING_API_KEY", "test-key")
-    registry.clear()
-    registry.register(KlingOfficialImage())
-    registry.register(ImageSelector())
-    registry._discovered_packages.add("tools")
+    isolated_tool_registry.discover("tools")
 
     def fake_execute(self, inputs):
         from tools.base_tool import ToolResult
@@ -268,10 +262,11 @@ def test_image_selector_prefers_official_provider(monkeypatch):
         return ToolResult(success=True, data={"output_path": "out.png"}, artifacts=["out.png"])
 
     monkeypatch.setattr(KlingOfficialImage, "execute", fake_execute)
-    result = registry.get("image_selector").execute(
+    result = isolated_tool_registry.get("image_selector").execute(
         {
             "prompt": "official image",
             "preferred_provider": "kling_official",
+            "allowed_providers": ["kling_official"],
             "api_family": "omni",
             "image_reference": "subject",
         }

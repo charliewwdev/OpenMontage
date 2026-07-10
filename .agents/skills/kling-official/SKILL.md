@@ -141,8 +141,8 @@ Keep it separate from local `talking_head`. Pipelines that want Kling avatar out
 
 `kling_lip_sync` has two steps:
 
-1. `POST /v1/videos/identify-face` with `video_id` or `video_url`
-2. `POST /v1/videos/advanced-lip-sync` with `session_id`, `face_choose[]`, and `audio_id` or `sound_file`
+1. `POST /v1/videos/identify-face` with `video_id` or `video_url`; read faces from `data.face_data[]`
+2. `POST /v1/videos/advanced-lip-sync` with `session_id` and one `face_choose[]` item containing `face_id`, `audio_id` or `sound_file`, and the sound start/end/insert times
 
 Local video paths must not be silently uploaded through fal.ai or any other provider. If multiple faces are returned and the user did not pass `face_id` or `face_choose`, stop and return the face list for confirmation unless `auto_select_face=True` was explicitly set. If auto-selecting, record the selection reason and selected face in the result/artifact.
 

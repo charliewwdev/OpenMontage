@@ -99,6 +99,23 @@ class KlingLipSync(BaseTool):
                 "type": "string",
                 "description": "Alias for sound_file_path for compatibility with local lip_sync.",
             },
+            "sound_start_time": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Audio crop start in milliseconds.",
+            },
+            "sound_end_time": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Audio crop end in milliseconds; inferred for full_lip_sync when possible.",
+            },
+            "sound_insert_time": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Video timeline insertion point in milliseconds.",
+            },
+            "sound_volume": {"type": "number", "minimum": 0, "maximum": 2},
+            "original_audio_volume": {"type": "number", "minimum": 0, "maximum": 2},
             "faces_artifact_path": {"type": "string"},
             "callback_url": {"type": "string"},
             "external_task_id": {"type": "string"},
@@ -121,7 +138,17 @@ class KlingLipSync(BaseTool):
         backoff_seconds=2.0,
         retryable_errors=["1302", "1303", "5000", "5001", "5002"],
     )
-    idempotency_key_fields = ["video_id", "video_url", "session_id", "face_id", "audio_id", "sound_file_path"]
+    idempotency_key_fields = [
+        "video_id",
+        "video_url",
+        "session_id",
+        "face_id",
+        "audio_id",
+        "sound_file_path",
+        "sound_start_time",
+        "sound_end_time",
+        "sound_insert_time",
+    ]
     side_effects = [
         "paid remote generation via official Kling API",
         "writes face selection artifact",
@@ -192,6 +219,8 @@ class KlingLipSync(BaseTool):
                         model="kling-official-lip-sync",
                     )
                 merged = {**inputs, "session_id": identify["session_id"], "face_choose": face_choose}
+                selected_face = self._selected_face_record(identify["faces"], face_choose)
+                self._apply_face_timing_defaults(merged, selected_face)
                 request = self._build_advanced_request(merged)
                 result = self._run_advanced_lip_sync(client, merged, request, start)
                 result.data["faces_artifact_path"] = str(artifact_path)
@@ -225,7 +254,8 @@ class KlingLipSync(BaseTool):
         if not session_id:
             raise ValueError(f"Kling identify-face response missing data.session_id: {data}")
         faces = (
-            payload.get("faces")
+            payload.get("face_data")
+            or payload.get("faces")
             or payload.get("face_list")
             or payload.get("face_infos")
             or payload.get("faces_info")
@@ -286,7 +316,9 @@ class KlingLipSync(BaseTool):
                 "task_id": task_id,
                 "operation": request["operation"],
                 "session_id": request["payload"]["session_id"],
-                "face_choose": request["payload"]["face_choose"],
+                "face_choose": self._face_choose_result_metadata(
+                    request["payload"]["face_choose"]
+                ),
                 "audio_source": request["audio_source"],
                 "remote_outputs": outputs,
                 "output": str(paths[0]),
@@ -328,11 +360,15 @@ class KlingLipSync(BaseTool):
         face_choose = self._normalize_face_choose(inputs)
         if not face_choose:
             raise ValueError("advanced_lip_sync requires face_choose or face_id")
+        if len(face_choose) != 1:
+            raise ValueError("advanced_lip_sync currently supports exactly one face_choose item")
+        face_item = face_choose[0]
+        audio_source = self._copy_audio_input(inputs, face_item)
+        self._copy_timing_fields(inputs, face_item)
         payload: dict[str, Any] = {
             "session_id": session_id,
             "face_choose": face_choose,
         }
-        audio_source = self._copy_audio_input(inputs, payload)
         self._copy_common_task_fields(inputs, payload)
         return {
             "protocol": "classic",
@@ -439,11 +475,155 @@ class KlingLipSync(BaseTool):
         return 0.0
 
     @staticmethod
+    def _selected_face_record(
+        faces: list[dict[str, Any]], face_choose: list[dict[str, Any]]
+    ) -> dict[str, Any]:
+        selected_id = str(face_choose[0].get("face_id") or "")
+        for face in faces:
+            if str(face.get("face_id") or face.get("id") or "") == selected_id:
+                return face
+        raise ValueError(f"Selected face_id {selected_id!r} was not returned by identify_face")
+
+    def _apply_face_timing_defaults(
+        self, inputs: dict[str, Any], face: dict[str, Any]
+    ) -> None:
+        face_start = int(face.get("start_time") or 0)
+        face_end = int(face.get("end_time") or 0)
+        face_choose = self._normalize_face_choose(inputs)
+        face_item = face_choose[0] if face_choose else {}
+        if inputs.get("sound_start_time") is None and face_item.get("sound_start_time") is None:
+            inputs["sound_start_time"] = 0
+        if inputs.get("sound_insert_time") is None and face_item.get("sound_insert_time") is None:
+            inputs["sound_insert_time"] = face_start
+        if inputs.get("sound_end_time") is not None or face_item.get("sound_end_time") is not None:
+            return
+
+        candidates: list[int] = []
+        audio_duration = self._local_audio_duration_ms(inputs)
+        if audio_duration:
+            candidates.append(audio_duration)
+        if face_end > face_start:
+            candidates.append(face_end - face_start)
+        if not candidates:
+            raise ValueError(
+                "full_lip_sync could not infer sound_end_time; provide it explicitly"
+            )
+        inputs["sound_end_time"] = min(candidates)
+
+    @staticmethod
+    def _local_audio_duration_ms(inputs: dict[str, Any]) -> int | None:
+        sound_path = inputs.get("sound_file_path") or inputs.get("audio_path")
+        if not sound_path:
+            return None
+        path = Path(sound_path)
+        if not path.is_file():
+            return None
+        seconds = probe_output(path).get("duration_seconds")
+        if not seconds:
+            return None
+        return int(round(float(seconds) * 1000))
+
+    @staticmethod
+    def _copy_timing_fields(inputs: dict[str, Any], face_item: dict[str, Any]) -> None:
+        for key, default in (("sound_start_time", 0), ("sound_insert_time", 0)):
+            nested = face_item.get(key)
+            top_level = inputs.get(key)
+            if nested is not None and top_level is not None and int(nested) != int(top_level):
+                raise ValueError(
+                    f"Conflicting {key} values between top-level input and face_choose[0]"
+                )
+            value = nested if nested is not None else top_level
+            if value is None:
+                value = default
+            face_item[key] = int(value)
+
+        nested_end = face_item.get("sound_end_time")
+        top_level_end = inputs.get("sound_end_time")
+        if (
+            nested_end is not None
+            and top_level_end is not None
+            and int(nested_end) != int(top_level_end)
+        ):
+            raise ValueError(
+                "Conflicting sound_end_time values between top-level input and face_choose[0]"
+            )
+        sound_end = nested_end if nested_end is not None else top_level_end
+        if sound_end is None:
+            raise ValueError("advanced_lip_sync requires sound_end_time")
+        face_item["sound_end_time"] = int(sound_end)
+        if face_item["sound_end_time"] - face_item["sound_start_time"] < 2000:
+            raise ValueError("advanced_lip_sync requires at least 2000ms of cropped audio")
+
+        for key in ("sound_volume", "original_audio_volume"):
+            nested = face_item.get(key)
+            top_level = inputs.get(key)
+            if nested is not None and top_level is not None and float(nested) != float(top_level):
+                raise ValueError(
+                    f"Conflicting {key} values between top-level input and face_choose[0]"
+                )
+            value = nested if nested is not None else top_level
+            if value is not None:
+                face_item[key] = float(value)
+
+    @staticmethod
+    def _face_choose_result_metadata(
+        face_choose: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        metadata: list[dict[str, Any]] = []
+        for item in face_choose:
+            record = {key: value for key, value in item.items() if key != "sound_file"}
+            if item.get("sound_file"):
+                record["sound_file_provided"] = True
+            metadata.append(record)
+        return metadata
+
+    @staticmethod
     def _copy_audio_input(inputs: dict[str, Any], payload: dict[str, Any]) -> dict[str, Any]:
-        audio_id = str(inputs.get("audio_id") or "").strip()
-        if audio_id:
-            payload["audio_id"] = audio_id
-            return {"type": "audio_id", "value": audio_id}
+        nested_audio_id = str(payload.get("audio_id") or "").strip()
+        nested_sound_file = payload.get("sound_file")
+        if nested_audio_id and nested_sound_file:
+            raise ValueError(
+                "Conflicting audio input in face_choose[0]; provide audio_id or sound_file, not both"
+            )
+
+        top_level_audio_id = str(inputs.get("audio_id") or "").strip()
+        top_level_sound_requested = any(
+            inputs.get(key)
+            for key in ("sound_file", "sound_file_url", "sound_file_path", "audio_path")
+        )
+
+        if nested_audio_id:
+            if (
+                (top_level_audio_id and top_level_audio_id != nested_audio_id)
+                or top_level_sound_requested
+            ):
+                raise ValueError(
+                    "Conflicting audio input between top-level fields and face_choose[0]"
+                )
+            payload["audio_id"] = nested_audio_id
+            return {"type": "audio_id", "value": nested_audio_id}
+
+        if nested_sound_file:
+            if top_level_audio_id:
+                raise ValueError(
+                    "Conflicting audio input between top-level fields and face_choose[0]"
+                )
+            if top_level_sound_requested:
+                top_level_sound_file = normalize_media_input(
+                    url=inputs.get("sound_file_url"),
+                    path=inputs.get("sound_file_path") or inputs.get("audio_path"),
+                    value=inputs.get("sound_file"),
+                    label="Lip-sync audio file",
+                )
+                if top_level_sound_file != nested_sound_file:
+                    raise ValueError(
+                        "Conflicting audio input between top-level fields and face_choose[0]"
+                    )
+            return {"type": "sound_file", "source": "face_choose[0]"}
+
+        if top_level_audio_id:
+            payload["audio_id"] = top_level_audio_id
+            return {"type": "audio_id", "value": top_level_audio_id}
 
         sound_path = inputs.get("sound_file_path") or inputs.get("audio_path")
         sound_file = normalize_media_input(

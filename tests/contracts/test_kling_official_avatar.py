@@ -7,6 +7,8 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -14,14 +16,12 @@ from tools.avatar.kling_avatar import KlingAvatar
 from tools.avatar.kling_lip_sync import KlingLipSync
 from tools.avatar.lip_sync import LipSync
 from tools.avatar.talking_head import TalkingHead
-from tools.tool_registry import registry
 
 
-def test_registry_discovers_kling_avatar(monkeypatch):
+def test_registry_discovers_kling_avatar(monkeypatch, isolated_tool_registry):
     monkeypatch.delenv("KLING_API_KEY", raising=False)
-    registry.clear()
-    registry.discover("tools")
-    tool = registry.get("kling_avatar")
+    isolated_tool_registry.discover("tools")
+    tool = isolated_tool_registry.get("kling_avatar")
     assert tool is not None
     assert tool.capability == "avatar"
     assert tool.provider == "kling_official"
@@ -123,11 +123,10 @@ def test_avatar_cost_estimate_is_not_zero():
     assert tool.dry_run({"image_url": "x", "audio_id": "a"})["cost_estimate_confidence"] == "low"
 
 
-def test_registry_discovers_kling_lip_sync(monkeypatch):
+def test_registry_discovers_kling_lip_sync(monkeypatch, isolated_tool_registry):
     monkeypatch.delenv("KLING_API_KEY", raising=False)
-    registry.clear()
-    registry.discover("tools")
-    tool = registry.get("kling_lip_sync")
+    isolated_tool_registry.discover("tools")
+    tool = isolated_tool_registry.get("kling_lip_sync")
     assert tool is not None
     assert tool.capability == "avatar"
     assert tool.provider == "kling_official"
@@ -135,8 +134,12 @@ def test_registry_discovers_kling_lip_sync(monkeypatch):
 
 def test_lip_sync_schema_and_local_tool_are_distinct():
     tool = KlingLipSync()
+    props = tool.input_schema["properties"]
     assert "kling-official" in tool.agent_skills
     assert "avatar-video" in tool.agent_skills
+    assert "sound_start_time" in props
+    assert "sound_end_time" in props
+    assert "sound_insert_time" in props
     assert tool.runtime.value == "api"
     assert LipSync().provider == "wav2lip"
     assert LipSync().runtime.value == "local_gpu"
@@ -165,15 +168,97 @@ def test_advanced_lip_sync_payload_uses_face_and_audio_path(tmp_path):
             "session_id": "session-a",
             "face_id": "face-a",
             "audio_path": str(audio_path),
+            "sound_start_time": 0,
+            "sound_end_time": 2500,
+            "sound_insert_time": 500,
             "callback_url": "https://example.com/kling/callback",
         }
     )
 
     assert request["path"] == "/v1/videos/advanced-lip-sync"
     assert request["payload"]["session_id"] == "session-a"
-    assert request["payload"]["face_choose"] == [{"face_id": "face-a"}]
-    assert request["payload"]["sound_file"] == base64.b64encode(b"audio").decode("ascii")
+    assert request["payload"]["face_choose"] == [
+        {
+            "face_id": "face-a",
+            "sound_file": base64.b64encode(b"audio").decode("ascii"),
+            "sound_start_time": 0,
+            "sound_end_time": 2500,
+            "sound_insert_time": 500,
+        }
+    ]
+    assert "sound_file" not in request["payload"]
     assert request["payload"]["callback_url"] == "https://example.com/kling/callback"
+
+
+def test_advanced_lip_sync_accepts_official_nested_face_choose():
+    face_choose = {
+        "face_id": "face-a",
+        "audio_id": "audio-a",
+        "sound_start_time": 0,
+        "sound_end_time": 4000,
+        "sound_insert_time": 500,
+    }
+
+    request = KlingLipSync()._build_advanced_request(
+        {"session_id": "session-a", "face_choose": [face_choose]}
+    )
+
+    assert request["payload"]["face_choose"] == [face_choose]
+    assert request["audio_source"] == {"type": "audio_id", "value": "audio-a"}
+
+
+def test_full_lip_sync_preserves_nested_face_timing_defaults():
+    inputs = {
+        "session_id": "session-a",
+        "face_choose": [
+            {
+                "face_id": "face-a",
+                "audio_id": "audio-a",
+                "sound_start_time": 250,
+                "sound_end_time": 4250,
+                "sound_insert_time": 750,
+            }
+        ],
+    }
+    tool = KlingLipSync()
+
+    tool._apply_face_timing_defaults(
+        inputs, {"face_id": "face-a", "start_time": 0, "end_time": 0}
+    )
+    request = tool._build_advanced_request(inputs)
+
+    assert request["payload"]["face_choose"][0]["sound_start_time"] == 250
+    assert request["payload"]["face_choose"][0]["sound_end_time"] == 4250
+    assert request["payload"]["face_choose"][0]["sound_insert_time"] == 750
+
+
+@pytest.mark.parametrize(
+    ("top_level", "nested", "message"),
+    [
+        ({"audio_id": "audio-top"}, {"audio_id": "audio-nested"}, "audio input"),
+        ({"sound_end_time": 5000}, {"sound_end_time": 4000}, "sound_end_time"),
+    ],
+)
+def test_advanced_lip_sync_rejects_conflicting_top_level_and_nested_values(
+    top_level, nested, message
+):
+    inputs = {
+        "session_id": "session-a",
+        "face_choose": [
+            {
+                "face_id": "face-a",
+                "audio_id": "audio-a",
+                "sound_start_time": 0,
+                "sound_end_time": 4000,
+                "sound_insert_time": 0,
+                **nested,
+            }
+        ],
+        **top_level,
+    }
+
+    with pytest.raises(ValueError, match=message):
+        KlingLipSync()._build_advanced_request(inputs)
 
 
 def test_identify_face_execute_writes_faces_artifact(monkeypatch, tmp_path):
@@ -184,7 +269,14 @@ def test_identify_face_execute_writes_faces_artifact(monkeypatch, tmp_path):
                 "code": 0,
                 "data": {
                     "session_id": "session-a",
-                    "faces": [{"face_id": "face-a", "bbox": [0, 0, 100, 100]}],
+                    "face_data": [
+                        {
+                            "face_id": "face-a",
+                            "face_image": "https://example.com/face.png",
+                            "start_time": 0,
+                            "end_time": 5200,
+                        }
+                    ],
                 },
             }
 
@@ -214,9 +306,9 @@ def test_full_lip_sync_requires_confirmation_for_multiple_faces(monkeypatch, tmp
                 "code": 0,
                 "data": {
                     "session_id": "session-a",
-                    "faces": [
-                        {"face_id": "face-small", "bbox": [0, 0, 50, 50]},
-                        {"face_id": "face-large", "bbox": [0, 0, 200, 200]},
+                    "face_data": [
+                        {"face_id": "face-small", "bbox": [0, 0, 50, 50], "start_time": 0, "end_time": 4000},
+                        {"face_id": "face-large", "bbox": [0, 0, 200, 200], "start_time": 500, "end_time": 5500},
                     ],
                 },
             }
@@ -247,9 +339,9 @@ def test_full_lip_sync_auto_selects_largest_face_and_downloads(monkeypatch, tmp_
                 "code": 0,
                 "data": {
                     "session_id": "session-a",
-                    "faces": [
-                        {"face_id": "face-small", "bbox": [0, 0, 50, 50]},
-                        {"face_id": "face-large", "bbox": [0, 0, 200, 200]},
+                    "face_data": [
+                        {"face_id": "face-small", "bbox": [0, 0, 50, 50], "start_time": 0, "end_time": 4000},
+                        {"face_id": "face-large", "bbox": [0, 0, 200, 200], "start_time": 500, "end_time": 5500},
                     ],
                 },
             }
@@ -257,7 +349,15 @@ def test_full_lip_sync_auto_selects_largest_face_and_downloads(monkeypatch, tmp_
         def create_classic_task(self, path, payload):
             self.path = path
             self.payload = payload
-            assert payload["face_choose"] == [{"face_id": "face-large"}]
+            assert payload["face_choose"] == [
+                {
+                    "face_id": "face-large",
+                    "audio_id": "audio-a",
+                    "sound_start_time": 0,
+                    "sound_end_time": 5000,
+                    "sound_insert_time": 500,
+                }
+            ]
             return "lip-task-1"
 
         def poll_classic(self, path, task_id, result_key, timeout_seconds, poll_interval):
@@ -285,7 +385,15 @@ def test_full_lip_sync_auto_selects_largest_face_and_downloads(monkeypatch, tmp_
     assert result.success
     assert result.data["task_id"] == "lip-task-1"
     assert result.data["face_selection"]["selection_method"] == "auto_selected"
-    assert result.data["face_choose"] == [{"face_id": "face-large"}]
+    assert result.data["face_choose"] == [
+        {
+            "face_id": "face-large",
+            "audio_id": "audio-a",
+            "sound_start_time": 0,
+            "sound_end_time": 5000,
+            "sound_insert_time": 500,
+        }
+    ]
     assert Path(result.artifacts[0]).read_bytes() == b"video"
     faces_artifact = next(Path(path) for path in result.artifacts if Path(path).name == "kling_lip_sync_faces.json")
     assert json.loads(faces_artifact.read_text())["selection"]["selection_method"] == "auto_selected"
@@ -300,10 +408,21 @@ def test_auto_select_face_area_avoids_position_inflation():
 
 
 def test_advanced_lip_sync_execute_downloads_video(monkeypatch, tmp_path):
+    audio_path = tmp_path / "voice.mp3"
+    audio_path.write_bytes(b"audio")
+
     class FakeClient:
         def create_classic_task(self, path, payload):
             assert path == "/v1/videos/advanced-lip-sync"
-            assert payload["face_choose"] == [{"face_id": "face-a"}]
+            assert payload["face_choose"] == [
+                {
+                    "face_id": "face-a",
+                    "sound_file": base64.b64encode(b"audio").decode("ascii"),
+                    "sound_start_time": 0,
+                    "sound_end_time": 4000,
+                    "sound_insert_time": 0,
+                }
+            ]
             return "lip-task-1"
 
         def poll_classic(self, path, task_id, result_key, timeout_seconds, poll_interval):
@@ -322,7 +441,10 @@ def test_advanced_lip_sync_execute_downloads_video(monkeypatch, tmp_path):
             "operation": "advanced_lip_sync",
             "session_id": "session-a",
             "face_id": "face-a",
-            "audio_id": "audio-a",
+            "audio_path": str(audio_path),
+            "sound_start_time": 0,
+            "sound_end_time": 4000,
+            "sound_insert_time": 0,
             "output_path": str(tmp_path / "lip.mp4"),
         }
     )
@@ -331,6 +453,15 @@ def test_advanced_lip_sync_execute_downloads_video(monkeypatch, tmp_path):
     assert result.data["provider"] == "kling_official"
     assert result.data["task_id"] == "lip-task-1"
     assert result.data["duration_seconds"] == 4.0
+    assert result.data["face_choose"] == [
+        {
+            "face_id": "face-a",
+            "sound_start_time": 0,
+            "sound_end_time": 4000,
+            "sound_insert_time": 0,
+            "sound_file_provided": True,
+        }
+    ]
     assert result.cost_usd > 0
 
 

@@ -124,7 +124,17 @@ class KlingAvatar(BaseTool):
         backoff_seconds=2.0,
         retryable_errors=["1302", "1303", "5000", "5001", "5002"],
     )
-    idempotency_key_fields = ["image_url", "image_path", "audio_id", "sound_file", "sound_file_path", "mode"]
+    idempotency_key_fields = [
+        "image_url",
+        "image_path",
+        "audio_id",
+        "sound_file",
+        "sound_file_url",
+        "sound_file_path",
+        "audio_path",
+        "prompt",
+        "mode",
+    ]
     side_effects = ["paid remote generation via official Kling API", "writes avatar video to output_path"]
     user_visible_verification = ["Watch generated avatar video for identity preservation and mouth motion"]
     quality_score = 0.82

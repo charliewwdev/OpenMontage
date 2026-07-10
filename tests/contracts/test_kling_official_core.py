@@ -401,6 +401,116 @@ def test_provider_agent_skills_reference_kling_official():
     assert "kling-official" in KlingLipSync().agent_skills
 
 
+@pytest.mark.parametrize(
+    ("tool", "output_variants"),
+    [
+        (
+            KlingOfficialVideo(),
+            {
+                "prompt": "changed prompt",
+                "operation": "image_to_video",
+                "api_family": "omni",
+                "model_name": "kling-v2-6",
+                "model_variant": "kling-v2-5-turbo",
+                "duration": "10",
+                "aspect_ratio": "9:16",
+                "resolution": "1080p",
+                "mode": "pro",
+                "sound": "on",
+                "negative_prompt": "blur",
+                "cfg_scale": 0.7,
+                "reference_image_url": "https://example.com/first.png",
+                "reference_image_path": "/tmp/first.png",
+                "reference_tail_image_url": "https://example.com/tail.png",
+                "reference_tail_image_path": "/tmp/tail.png",
+                "reference_image_urls": ["https://example.com/ref.png"],
+                "reference_image_paths": ["/tmp/ref.png"],
+                "reference_video_url": "https://example.com/ref.mp4",
+                "video_urls": ["https://example.com/ref-2.mp4"],
+                "image_list": [{"image_url": "https://example.com/list.png"}],
+                "video_list": [{"video_url": "https://example.com/list.mp4"}],
+                "element_list": [{"element_id": 123}],
+                "multi_shot": True,
+                "shot_type": "intelligence",
+                "multi_prompt": [{"prompt": "second shot", "duration": "3"}],
+                "camera_control": {"type": "simple", "config": {"horizontal": 1}},
+                "watermark": True,
+            },
+        ),
+        (
+            KlingOfficialImage(),
+            {
+                "prompt": "changed prompt",
+                "negative_prompt": "blur",
+                "operation": "omni",
+                "api_family": "omni",
+                "model_name": "kling-image-o1",
+                "image_url": "https://example.com/source.png",
+                "image_path": "/tmp/source.png",
+                "image_urls": ["https://example.com/ref.png"],
+                "image_paths": ["/tmp/ref.png"],
+                "image_list": [{"image_url": "https://example.com/list.png"}],
+                "image_reference": "subject",
+                "image_fidelity": 0.7,
+                "human_fidelity": 0.8,
+                "resolution": "2k",
+                "aspect_ratio": "1:1",
+                "n": 2,
+                "result_type": "series",
+                "series_amount": "3",
+                "element_list": [{"element_id": 123}],
+                "watermark": True,
+            },
+        ),
+        (
+            KlingAvatar(),
+            {
+                "image_url": "https://example.com/avatar.png",
+                "image_path": "/tmp/avatar.png",
+                "audio_id": "audio-a",
+                "sound_file": "inline-audio",
+                "sound_file_url": "https://example.com/audio.mp3",
+                "sound_file_path": "/tmp/audio.mp3",
+                "audio_path": "/tmp/audio-alias.mp3",
+                "prompt": "natural presenter motion",
+                "mode": "pro",
+            },
+        ),
+        (
+            KlingLipSync(),
+            {
+                "operation": "full_lip_sync",
+                "video_id": "video-a",
+                "video_url": "https://example.com/video.mp4",
+                "session_id": "session-a",
+                "face_id": "face-a",
+                "face_choose": [{"face_id": "face-a", "audio_id": "audio-a"}],
+                "auto_select_face": True,
+                "audio_id": "audio-a",
+                "sound_file": "inline-audio",
+                "sound_file_url": "https://example.com/audio.mp3",
+                "sound_file_path": "/tmp/audio.mp3",
+                "audio_path": "/tmp/audio-alias.mp3",
+                "sound_start_time": 100,
+                "sound_end_time": 4100,
+                "sound_insert_time": 500,
+                "sound_volume": 1.2,
+                "original_audio_volume": 0.4,
+            },
+        ),
+    ],
+)
+def test_kling_output_inputs_change_idempotency_keys(tool, output_variants):
+    baseline = tool.idempotency_key({})
+    collisions = [
+        field
+        for field, value in output_variants.items()
+        if tool.idempotency_key({field: value}) == baseline
+    ]
+
+    assert collisions == [], f"{tool.name} idempotency key ignores: {collisions}"
+
+
 def test_phase3_does_not_register_audio_or_video_effect_tools(isolated_tool_registry):
     isolated_tool_registry.discover("tools")
     assert isolated_tool_registry.get("kling_audio") is None

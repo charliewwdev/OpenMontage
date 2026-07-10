@@ -139,15 +139,23 @@ class KlingLipSync(BaseTool):
         retryable_errors=["1302", "1303", "5000", "5001", "5002"],
     )
     idempotency_key_fields = [
+        "operation",
         "video_id",
         "video_url",
         "session_id",
         "face_id",
+        "face_choose",
+        "auto_select_face",
         "audio_id",
+        "sound_file",
+        "sound_file_url",
         "sound_file_path",
+        "audio_path",
         "sound_start_time",
         "sound_end_time",
         "sound_insert_time",
+        "sound_volume",
+        "original_audio_volume",
     ]
     side_effects = [
         "paid remote generation via official Kling API",

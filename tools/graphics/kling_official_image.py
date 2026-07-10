@@ -122,13 +122,25 @@ class KlingOfficialImage(BaseTool):
     )
     idempotency_key_fields = [
         "prompt",
+        "negative_prompt",
+        "operation",
         "api_family",
         "model_name",
         "image_url",
         "image_path",
+        "image_urls",
+        "image_paths",
+        "image_list",
+        "image_reference",
+        "image_fidelity",
+        "human_fidelity",
         "aspect_ratio",
         "resolution",
         "n",
+        "result_type",
+        "series_amount",
+        "element_list",
+        "watermark",
     ]
     side_effects = [
         "paid remote generation via official Kling API",

@@ -107,12 +107,12 @@ class TestContract:
     def test_has_user_visible_verification(self):
         assert len(JimengVideo().user_visible_verification) > 0
 
-    def test_lazy_imports_requests(self):
+    def test_lazy_imports_requests(self, monkeypatch):
         import importlib
         import sys
         mod_name = "tools.video.jimeng_video"
         if "requests" in sys.modules:
-            del sys.modules["requests"]
+            monkeypatch.delitem(sys.modules, "requests")
         importlib.reload(sys.modules[mod_name])
 
     def test_estimate_cost_returns_float(self):

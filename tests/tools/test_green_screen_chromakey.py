@@ -50,16 +50,20 @@ def test_chromakey_filter_scales_background_to_frame():
             fd.mkdir()
             pd.mkdir()
             (fd / "frame_0000.png").write_bytes(b"stub")
-            tool._process_chromakey(fd, pd, "#0E172A", 1)
+            tool._process_chromakey(fd, pd, "#0E172A", 1, 320, 240)
     finally:
         GreenScreenProcessor.run_command = orig
 
     ffmpeg_cmds = [c for c in captured if c and c[0] == "ffmpeg"]
     assert ffmpeg_cmds, "no ffmpeg command built"
-    fc_idx = ffmpeg_cmds[0].index("-filter_complex")
-    fc = ffmpeg_cmds[0][fc_idx + 1]
-    assert "scale2ref" in fc, f"background not scaled to frame: {fc}"
+    cmd = ffmpeg_cmds[0]
+    fc = cmd[cmd.index("-filter_complex") + 1]
+    # Background must be sized to the frame, not the old 1x1 no-op.
+    assert "size=320x240" in " ".join(cmd), "background not sized to frame"
+    assert "size=1x1" not in " ".join(cmd), "still using the 1x1 background"
     assert "[0:v]scale=iw:ih[bg]" not in fc, "still using the 1x1 no-op scale"
+    # Alpha must be forced so keyed transparency survives on every FFmpeg build.
+    assert "format=yuva420p" in fc, f"keyed alpha not forced: {fc}"
 
 
 @pytest.mark.skipif(shutil.which("ffmpeg") is None or shutil.which("ffprobe") is None,
@@ -79,7 +83,9 @@ def test_chromakey_preserves_frame_size_and_keys(tmp_path):
         capture_output=True, check=True, timeout=60,
     )
 
-    ok = GreenScreenProcessor()._process_chromakey(frames_dir, processed_dir, "#0E172A", 1)
+    ok = GreenScreenProcessor()._process_chromakey(
+        frames_dir, processed_dir, "#0E172A", 1, 320, 240
+    )
     assert ok
 
     out = processed_dir / "frame_0000.png"

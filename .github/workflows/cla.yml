@@ -1,0 +1,36 @@
+# CLA Assistant Lite — gates every PR on a CLA signature.
+# Install at: .github/workflows/cla.yml in the OpenMontage repo.
+# Signatures are stored in the repo on the 'cla-signatures' branch (no external service).
+name: "CLA Assistant"
+on:
+  issue_comment:
+    types: [created]
+  pull_request_target:
+    types: [opened, closed, synchronize]
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+  statuses: write
+
+jobs:
+  CLAAssistant:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "CLA Assistant"
+        if: (github.event.comment.body == 'recheck' || github.event.comment.body == 'I have read the CLA Document and I hereby sign the CLA') || github.event_name == 'pull_request_target'
+        uses: contributor-assistant/github-action@v2.6.1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          path-to-signatures: ".github/cla-signatures/signatures.json"
+          path-to-document: "https://github.com/charliewwdev/OpenMontage/blob/main/CLA.md"
+          branch: "cla-signatures"
+          allowlist: "charliewwdev,dependabot[bot],*[bot]"
+          custom-notsigned-prcomment: >
+            Thanks for the contribution! Before we can merge, please read our
+            [Contributor License Agreement](https://github.com/charliewwdev/OpenMontage/blob/main/CLA.md)
+            and sign by commenting the sentence below. The engine stays open source forever —
+            the CLA simply lets the project also offer commercial licensing as it grows.
+          custom-pr-sign-comment: "I have read the CLA Document and I hereby sign the CLA"

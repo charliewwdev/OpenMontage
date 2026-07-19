@@ -123,7 +123,16 @@ Authentication uses Volcengine IAM V4 signing (HMAC-SHA256), not a Bearer token.
 
 API flow: `POST ?Action=CVSync2AsyncSubmitTask` → poll `POST ?Action=CVSync2AsyncGetResult` → download `video_url`.
 
+The implementation uses the compatible generic `CVSync2Async*` route (API version `2022-08-31`) rather than the model-specific `2024-06-06` actions presented in the public API explorer. This is intentional — the generic route supports the same Jimeng 3.0 Pro model via `req_key` while remaining stable across model updates.
+
 The `req_key` for video is `jimeng_ti2v_v30_pro`. Success code is `10000`. Task statuses: `in_queue`, `generating`, `done`, `not_found`, `expired`.
+
+**Authoritative API reference:** [Jimeng TI2V V30 Pro SubmitTask](https://api.volcengine.com/api-docs/view?action=JimengTI2VV30PROSubmitTask&serviceCode=cv&version=2024-06-06)
+
+**Schema constraints** (enforced by `input_schema` to prevent paid-call failures):
+- `prompt`: max 800 characters
+- `frames`: must be exactly `121` (5s) or `241` (10s) at 24fps
+- `seed`: `-1` for random, or any non-negative integer
 
 #### Pricing
 

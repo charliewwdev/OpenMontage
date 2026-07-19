@@ -318,3 +318,63 @@ class TestRegistryDiscovery:
         jimeng = [t for t in registry._tools.values() if t.name == "jimeng_video"]
         assert len(jimeng) == 1
         assert jimeng[0].provider == "volcengine"
+
+
+# ------------------------------------------------------------------
+# Schema validation — reject invalid inputs before paid API call
+# ------------------------------------------------------------------
+
+class TestSchemaValidation:
+
+    def test_frames_accepts_121(self):
+        schema = JimengVideo().input_schema
+        valid = schema["properties"]["frames"]
+        assert valid["enum"] == [121, 241]
+
+    def test_frames_rejects_non_enum(self):
+        import jsonschema
+        schema = JimengVideo().input_schema
+        for invalid in [1, 100, 200, 500, 0, -1]:
+            instance = {"prompt": "test", "frames": invalid}
+            with pytest.raises(jsonschema.ValidationError):
+                jsonschema.validate(instance, schema)
+
+    def test_prompt_max_length_800(self):
+        schema = JimengVideo().input_schema
+        assert schema["properties"]["prompt"]["maxLength"] == 800
+
+    def test_prompt_rejects_over_800_chars(self):
+        import jsonschema
+        schema = JimengVideo().input_schema
+        instance = {"prompt": "x" * 801}
+        with pytest.raises(jsonschema.ValidationError):
+            jsonschema.validate(instance, schema)
+
+    def test_prompt_accepts_800_chars(self):
+        import jsonschema
+        schema = JimengVideo().input_schema
+        instance = {"prompt": "x" * 800}
+        jsonschema.validate(instance, schema)
+
+    def test_seed_minimum_is_negative_one(self):
+        schema = JimengVideo().input_schema
+        assert schema["properties"]["seed"]["minimum"] == -1
+
+    def test_seed_rejects_below_negative_one(self):
+        import jsonschema
+        schema = JimengVideo().input_schema
+        for invalid in [-2, -10, -100]:
+            instance = {"prompt": "test", "seed": invalid}
+            with pytest.raises(jsonschema.ValidationError):
+                jsonschema.validate(instance, schema)
+
+    def test_seed_accepts_negative_one(self):
+        import jsonschema
+        schema = JimengVideo().input_schema
+        jsonschema.validate({"prompt": "test", "seed": -1}, schema)
+
+    def test_seed_accepts_zero_and_positive(self):
+        import jsonschema
+        schema = JimengVideo().input_schema
+        for valid in [0, 1, 42, 999999]:
+            jsonschema.validate({"prompt": "test", "seed": valid}, schema)

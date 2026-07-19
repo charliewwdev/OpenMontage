@@ -86,7 +86,8 @@ class JimengVideo(BaseTool):
         "properties": {
             "prompt": {
                 "type": "string",
-                "description": "Video description. Max 2000 chars. Supports Chinese.",
+                "maxLength": 800,
+                "description": "Video description. Max 800 chars. Supports Chinese.",
             },
             "operation": {
                 "type": "string",
@@ -102,7 +103,7 @@ class JimengVideo(BaseTool):
             },
             "frames": {
                 "type": "integer",
-                "minimum": 1,
+                "enum": [121, 241],
                 "default": 121,
                 "description": "Total frames. 121=5s, 241=10s at 24fps.",
             },
@@ -113,6 +114,7 @@ class JimengVideo(BaseTool):
             },
             "seed": {
                 "type": "integer",
+                "minimum": -1,
                 "default": -1,
                 "description": "Random seed. -1 for random.",
             },

@@ -57,7 +57,7 @@ class JimengVideo(BaseTool):
     determinism = Determinism.STOCHASTIC
     runtime = ToolRuntime.API
 
-    dependencies = []
+    dependencies = ["env:VOLC_ACCESSKEY", "env:VOLC_SECRETKEY"]
     install_instructions = (
         "Set VOLC_ACCESSKEY and VOLC_SECRETKEY to your Volcengine IAM credentials.\n"
         "  Get them at https://console.volcengine.com/iam/keymanage\n"
@@ -253,12 +253,21 @@ class JimengVideo(BaseTool):
         )
 
     @staticmethod
+    def _duration_to_frames(duration: int) -> int:
+        if duration >= 10:
+            return 241
+        return 121
+
+    @staticmethod
     def _build_payload(inputs: dict[str, Any]) -> dict[str, Any]:
         operation = inputs.get("operation", "text_to_video")
+        frames = inputs.get("frames")
+        if frames is None:
+            frames = JimengVideo._duration_to_frames(int(inputs.get("duration", 5)))
         payload: dict[str, Any] = {
             "req_key": _REQ_KEY_VIDEO,
             "prompt": inputs["prompt"],
-            "frames": int(inputs.get("frames", 121)),
+            "frames": int(frames),
             "aspect_ratio": inputs.get("aspect_ratio", "16:9"),
             "seed": int(inputs.get("seed", -1)),
         }

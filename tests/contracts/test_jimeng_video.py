@@ -378,3 +378,26 @@ class TestSchemaValidation:
         schema = JimengVideo().input_schema
         for valid in [0, 1, 42, 999999]:
             jsonschema.validate({"prompt": "test", "seed": valid}, schema)
+
+
+# ------------------------------------------------------------------
+# Selector duration → frames mapping
+# ------------------------------------------------------------------
+
+class TestSelectorDurationMapping:
+
+    def test_duration_5_maps_to_121_frames(self):
+        payload = JimengVideo._build_payload({"prompt": "x", "duration": 5})
+        assert payload["frames"] == 121
+
+    def test_duration_10_maps_to_241_frames(self):
+        payload = JimengVideo._build_payload({"prompt": "x", "duration": 10})
+        assert payload["frames"] == 241
+
+    def test_duration_defaults_to_5_when_absent(self):
+        payload = JimengVideo._build_payload({"prompt": "x"})
+        assert payload["frames"] == 121
+
+    def test_frames_takes_priority_over_duration(self):
+        payload = JimengVideo._build_payload({"prompt": "x", "frames": 241, "duration": 5})
+        assert payload["frames"] == 241

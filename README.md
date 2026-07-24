@@ -1,6 +1,11 @@
 <p align="center">
-  <img src="assets/logo.png" alt="OpenMontage" width="200">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/monty-dark.svg">
+    <img src="assets/monty-light.svg" alt="Monty the Clapper — the official mascot of OpenMontage" width="200">
+  </picture>
 </p>
+
+<p align="center"><sub><em>Monty the Clapper — the official mascot of OpenMontage</em></sub></p>
 
 <h1 align="center">OpenMontage</h1>
 

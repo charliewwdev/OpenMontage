@@ -280,20 +280,6 @@ class TestToolSpecific:
         })
         assert model == "yt-video-2.0"
 
-    def test_resolve_model_from_env(self, monkeypatch):
-        monkeypatch.setenv("TENCENT_TOKENHUB_MODEL", "hy-video-1.5")
-        model = HunyuanCloudVideo._resolve_model({
-            "prompt": "test", "operation": "image_to_video",
-        })
-        assert model == "hy-video-1.5"
-
-    def test_resolve_model_input_overrides_env(self, monkeypatch):
-        monkeypatch.setenv("TENCENT_TOKENHUB_MODEL", "hy-video-1.5")
-        model = HunyuanCloudVideo._resolve_model({
-            "prompt": "test", "model": "yt-video-2.0",
-        })
-        assert model == "yt-video-2.0"
-
     # -- _build_payload --
 
     def test_build_payload_t2v_minimal(self):

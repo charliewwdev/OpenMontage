@@ -56,8 +56,7 @@ class HunyuanCloudVideo(BaseTool):
     dependencies = []
     install_instructions = (
         "Set TENCENT_TOKENHUB_API_KEY to your Tencent Cloud TokenHub API key.\n"
-        "  Get it at https://console.cloud.tencent.com/tokenhub\n"
-        "  Optionally set TENCENT_TOKENHUB_MODEL to override the default model."
+        "  Get it at https://console.cloud.tencent.com/tokenhub"
     )
     agent_skills = ["ai-video-gen"]
 
@@ -361,14 +360,10 @@ class HunyuanCloudVideo(BaseTool):
 
         Order of precedence:
         1. Explicit ``model`` input
-        2. TENCENT_TOKENHUB_MODEL env var
-        3. Default based on operation (hy-video-1.5 for T2V, yt-video-2.0 for I2V)
+        2. Default based on operation (hy-video-1.5 for T2V, yt-video-2.0 for I2V)
         """
         if inputs.get("model"):
             return inputs["model"]
-        env_model = os.environ.get("TENCENT_TOKENHUB_MODEL", "").strip()
-        if env_model:
-            return env_model
         operation = inputs.get("operation", "text_to_video")
         return _MODEL_I2V if operation == "image_to_video" else _MODEL_T2V
 

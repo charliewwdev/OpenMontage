@@ -118,9 +118,12 @@ class GoogleImagen(BaseTool):
                     "imagen-4.0-generate-001",
                     "imagen-4.0-fast-generate-001",
                     "imagen-4.0-ultra-generate-001",
+                    "gemini-2.5-flash-image",
                 ],
                 "default": "imagen-4.0-generate-001",
-                "description": "Imagen model variant",
+                "description": "Imagen model variant, or a Gemini image model "
+                "(gemini-*) routed through generate_content. Use "
+                "gemini-2.5-flash-image when the project has no Imagen access.",
             },
             "number_of_images": {
                 "type": "integer",
@@ -176,13 +179,111 @@ class GoogleImagen(BaseTool):
     def estimate_cost(self, inputs: dict[str, Any]) -> float:
         model = inputs.get("model", "imagen-4.0-generate-001")
         n = inputs.get("number_of_images", 1)
+        if model.startswith("gemini-"):
+            # ~1290 output tokens per image at $30/1M tokens
+            return 0.039 * n
         if "ultra" in model:
             return 0.06 * n
         if "fast" in model:
             return 0.02 * n
         return 0.04 * n
 
+    def _resolve_aspect_ratio(self, inputs: dict[str, Any]) -> str:
+        """Explicit aspect_ratio > derived from width/height > default 1:1."""
+        if "aspect_ratio" in inputs:
+            return inputs["aspect_ratio"]
+        if "width" in inputs and "height" in inputs:
+            import logging
+
+            aspect_ratio = _dims_to_aspect_ratio(inputs["width"], inputs["height"])
+            logging.getLogger(__name__).info(
+                "google_imagen: remapped %sx%s to nearest supported aspect ratio %s",
+                inputs["width"],
+                inputs["height"],
+                aspect_ratio,
+            )
+            return aspect_ratio
+        return "1:1"
+
+    def _execute_gemini(self, inputs: dict[str, Any], model: str) -> ToolResult:
+        """Generate via a Gemini image model (e.g. gemini-2.5-flash-image).
+
+        These models use generate_content with an image_config instead of the
+        Imagen :predict endpoint, and work on both auth paths (API key and
+        Vertex service account) through the shared genai client.
+        """
+        start = time.time()
+        try:
+            from google.genai import types
+            from tools.google_credentials import get_genai_client
+
+            client = get_genai_client()
+        except Exception as e:
+            return ToolResult(
+                success=False,
+                error=f"Failed to initialize Google GenAI client: {e}",
+            )
+
+        prompt = inputs["prompt"]
+        aspect_ratio = self._resolve_aspect_ratio(inputs)
+        number_of_images = inputs.get("number_of_images", 1)
+        config = types.GenerateContentConfig(
+            image_config=types.ImageConfig(aspect_ratio=aspect_ratio),
+        )
+
+        image_bytes: list[bytes] = []
+        try:
+            for _ in range(number_of_images):
+                response = client.models.generate_content(
+                    model=model, contents=prompt, config=config
+                )
+                for part in response.candidates[0].content.parts or []:
+                    inline = getattr(part, "inline_data", None)
+                    if inline and inline.data:
+                        image_bytes.append(inline.data)
+                        break
+        except Exception as e:
+            return ToolResult(
+                success=False, error=f"Gemini image generation failed: {e}"
+            )
+
+        if not image_bytes:
+            return ToolResult(
+                success=False,
+                error=f"No image data returned by {model} (text-only response).",
+            )
+
+        output_paths = self._output_paths(inputs.get("output_path"), len(image_bytes))
+        outputs: list[str] = []
+        for data, out_path in zip(image_bytes, output_paths):
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            out_path.write_bytes(data)
+            outputs.append(str(out_path))
+
+        return ToolResult(
+            success=True,
+            data={
+                "provider": "google_imagen",
+                "model": model,
+                "prompt": prompt,
+                "aspect_ratio": aspect_ratio,
+                "output": outputs[0],
+                "outputs": outputs,
+                "images_generated": len(outputs),
+            },
+            artifacts=outputs,
+            cost_usd=self.estimate_cost(inputs),
+            duration_seconds=round(time.time() - start, 2),
+            model=model,
+        )
+
     def execute(self, inputs: dict[str, Any]) -> ToolResult:
+        # Gemini image models go through generate_content via the shared genai
+        # client, which resolves auth (API key or Vertex service account) itself.
+        model = inputs.get("model", "imagen-4.0-generate-001")
+        if model.startswith("gemini-"):
+            return self._execute_gemini(inputs, model)
+
         # Two auth paths: an AI Studio API key, or a service-account JSON that
         # routes to Vertex AI (the AI Studio endpoint does not accept service
         # accounts). API key wins when both are present.
@@ -212,27 +313,9 @@ class GoogleImagen(BaseTool):
         import requests
 
         start = time.time()
-        model = inputs.get("model", "imagen-4.0-generate-001")
         prompt = inputs["prompt"]
 
-        import logging
-
-        logger = logging.getLogger(__name__)
-
-        # Resolve aspect ratio: explicit > derived from width/height > default
-        if "aspect_ratio" in inputs:
-            aspect_ratio = inputs["aspect_ratio"]
-        elif "width" in inputs and "height" in inputs:
-            requested_ratio = f"{inputs['width']}x{inputs['height']}"
-            aspect_ratio = _dims_to_aspect_ratio(inputs["width"], inputs["height"])
-            logger.info(
-                "google_imagen: remapped %s to nearest supported aspect ratio %s",
-                requested_ratio,
-                aspect_ratio,
-            )
-        else:
-            aspect_ratio = "1:1"
-
+        aspect_ratio = self._resolve_aspect_ratio(inputs)
         number_of_images = inputs.get("number_of_images", 1)
 
         parameters: dict[str, Any] = {

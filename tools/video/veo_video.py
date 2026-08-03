@@ -308,13 +308,6 @@ class VeoVideo(BaseTool):
                 client._api_client, "vertexai", False
             )
 
-        if is_vertex:
-            return ToolResult(
-                success=False,
-                error="Google Veo video generation via google-genai is only supported using the Gemini Developer API (API key) backend. "
-                "Please configure GEMINI_API_KEY/GOOGLE_API_KEY or use the FAL.ai backend.",
-            )
-
         prompt = inputs["prompt"]
         operation = inputs.get("operation", "text_to_video")
         model_variant = inputs.get("model_variant", "veo3.1")
@@ -501,7 +494,19 @@ class VeoVideo(BaseTool):
                     success=False,
                     error="No video asset returned in the response.",
                 )
-            client.files.download(file=video_asset)
+            if not is_vertex:
+                # The Files service is a Gemini Developer API feature. Vertex
+                # returns bytes inline when no GCS output URI is requested.
+                client.files.download(file=video_asset)
+            elif not getattr(video_asset, "video_bytes", None):
+                return ToolResult(
+                    success=False,
+                    error=(
+                        "Vertex AI returned a video without inline bytes "
+                        f"(uri={getattr(video_asset, 'uri', None)!r}). Configure "
+                        "the request without an output GCS URI so bytes are returned inline."
+                    ),
+                )
 
             output_path = Path(inputs.get("output_path", "veo_output.mp4"))
             output_path.parent.mkdir(parents=True, exist_ok=True)

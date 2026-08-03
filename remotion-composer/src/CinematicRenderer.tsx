@@ -8,31 +8,13 @@ import {
   Sequence,
   interpolate,
   spring,
-  staticFile,
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
 
-function resolveAsset(src: string): string {
-  if (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("data:")) {
-    return src;
-  }
-  const clean = src.replace(/^file:\/\/\/?/, "");
-  if (clean.startsWith("/") || /^[A-Za-z]:[/\\]/.test(clean)) {
-    const posix = clean.replace(/\\/g, "/");
-    // POSIX absolute paths already have a leading "/" — file:// + posix
-    // gives exactly three slashes. Windows drive paths (C:/...) need the
-    // extra slash added explicitly. Do not merge these branches — adding
-    // "file:///" unconditionally double-slashes POSIX paths (file:////...).
-    if (posix.startsWith("/")) {
-      return `file://${posix}`;
-    }
-    return `file:///${posix}`;
-  }
-  return staticFile(clean);
-}
 import { CinematicRendererProps, CinematicTone, CinematicVideoScene } from "./cinematic/types";
 import { CaptionOverlay } from "./components/CaptionOverlay";
+import { resolveAsset } from "./lib/resolveAsset";
 
 const FPS = 30;
 
@@ -57,10 +39,11 @@ const toneGradient = (tone: CinematicTone) => {
 
 const SceneVideo: React.FC<{ scene: CinematicVideoScene }> = ({ scene }) => {
   const frame = useCurrentFrame();
-  const { durationInFrames, fps } = useVideoConfig();
+  const { fps } = useVideoConfig();
+  const durationInFrames = Math.max(1, Math.round(scene.durationSeconds * fps));
   const fadeInFrames = scene.fadeInFrames ?? 10;
   const fadeOutFrames = scene.fadeOutFrames ?? 10;
-  const fadeOutStart = Math.max(fadeInFrames, durationInFrames - fadeOutFrames);
+  const fadeOutStart = Math.max(0, durationInFrames - fadeOutFrames);
   const fadeInOpacity =
     fadeInFrames === 0
       ? 1
@@ -98,6 +81,7 @@ const SceneVideo: React.FC<{ scene: CinematicVideoScene }> = ({ scene }) => {
         src={resolveAsset(scene.src)}
         trimBefore={trimBefore}
         trimAfter={trimAfter}
+        playbackRate={scene.playbackRate}
         style={{
           width: "100%",
           height: "100%",

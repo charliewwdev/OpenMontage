@@ -226,6 +226,7 @@ class HyperFramesCompose(BaseTool):
     # We cache per-process so the first call pays ~2-5s and subsequent calls
     # (get_info spam from the registry) are free.
     _npm_resolve_cache: Optional[dict[str, str]] = None
+    _cli_probe_cache: Optional[dict[str, str]] = None
 
     @classmethod
     def _node_major_version(cls) -> Optional[int]:
@@ -301,6 +302,45 @@ class HyperFramesCompose(BaseTool):
             cls._npm_resolve_cache = {"version": version}
         return cls._npm_resolve_cache
 
+    @classmethod
+    def _probe_cli(cls) -> dict[str, str]:
+        """Run the published CLI's doctor command once per process.
+
+        Package resolution alone does not prove that the executable can start:
+        an upstream packaging regression can publish successfully while every
+        CLI command crashes during bootstrap. Provider preflight must not call
+        that state available.
+        """
+        if cls._cli_probe_cache is not None:
+            return cls._cli_probe_cache
+
+        npx = shutil.which("npx")
+        if not npx:
+            cls._cli_probe_cache = {"error": "npx not on PATH"}
+            return cls._cli_probe_cache
+
+        try:
+            proc = subprocess.run(
+                [npx, "--yes", cls._NPM_PACKAGE, "doctor", "--json"],
+                capture_output=True,
+                text=True,
+                timeout=20,
+            )
+        except subprocess.TimeoutExpired:
+            cls._cli_probe_cache = {"error": "doctor timed out after 20s"}
+            return cls._cli_probe_cache
+        except (OSError, subprocess.SubprocessError) as exc:
+            cls._cli_probe_cache = {"error": f"doctor failed: {type(exc).__name__}"}
+            return cls._cli_probe_cache
+
+        if proc.returncode != 0:
+            output = "\n".join(filter(None, [proc.stderr, proc.stdout])).strip()
+            tail = output.splitlines()[-1][:200] if output else f"exit {proc.returncode}"
+            cls._cli_probe_cache = {"error": f"doctor failed: {tail}"}
+        else:
+            cls._cli_probe_cache = {"status": "ok"}
+        return cls._cli_probe_cache
+
     def _runtime_check(self) -> dict[str, Any]:
         """Return availability state for the HyperFrames runtime.
 
@@ -336,6 +376,12 @@ class HyperFramesCompose(BaseTool):
                     f"{npm_resolve['error']}"
                 )
 
+        cli_probe: dict[str, str] = {}
+        if not reasons:
+            cli_probe = self._probe_cli()
+            if "error" in cli_probe:
+                reasons.append(f"published CLI is not executable: {cli_probe['error']}")
+
         return {
             "runtime_available": not reasons,
             "node_major": node_major,
@@ -344,6 +390,8 @@ class HyperFramesCompose(BaseTool):
             "npm_package": self._NPM_PACKAGE,
             "npm_package_version": npm_resolve.get("version"),
             "npm_resolve_error": npm_resolve.get("error"),
+            "cli_probe_status": cli_probe.get("status"),
+            "cli_probe_error": cli_probe.get("error"),
             "reasons": reasons,
         }
 

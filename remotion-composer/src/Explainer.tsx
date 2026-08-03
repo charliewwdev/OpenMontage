@@ -59,6 +59,19 @@ function isLightColor(hex: string): boolean {
   return (r * 299 + g * 587 + b * 114) / 1000 > 128;
 }
 
+// Scrim painted behind a hero title. It has to wash *away* from the theme's
+// text color: a dark scrim under a light theme's dark text drops the pair to
+// ~3.4:1, which is the same legibility bug in reverse.
+function heroScrim(theme: ThemeConfig): string {
+  const { r, g, b } = hexToRgb(
+    isLightColor(theme.backgroundColor) ? "#FFFFFF" : "#0F172A"
+  );
+  return (
+    `radial-gradient(ellipse at center, rgba(${r},${g},${b},0.35) 0%, ` +
+    `rgba(${r},${g},${b},0.55) 100%)`
+  );
+}
+
 // Darken/lighten a color by mixing toward black or white
 function shiftColor(hex: string, amount: number): string {
   const { r, g, b } = hexToRgb(hex);
@@ -607,7 +620,14 @@ const SceneRenderer: React.FC<{ cut: Cut; theme: ThemeConfig }> = ({ cut, theme 
   }
   if (cut.type === "hero_title" && cut.text) {
     return maybeWrapWithBg(
-      <HeroTitle title={cut.text} subtitle={cut.heroSubtitle || cut.subtitle} />
+      <HeroTitle
+        title={cut.text}
+        subtitle={cut.heroSubtitle || cut.subtitle}
+        accentColor={accent}
+        textColor={textColor}
+        subtitleColor={theme.mutedTextColor}
+        scrimBackground={heroScrim(theme)}
+      />
     );
   }
   if (cut.type === "terminal_scene" && cut.steps) {
@@ -752,13 +772,17 @@ const SceneRenderer: React.FC<{ cut: Cut; theme: ThemeConfig }> = ({ cut, theme 
 // Overlay renderer
 // ---------------------------------------------------------------------------
 
-const OverlayRenderer: React.FC<{ overlay: Overlay }> = ({ overlay }) => {
+const OverlayRenderer: React.FC<{ overlay: Overlay; theme: ThemeConfig }> = ({
+  overlay,
+  theme,
+}) => {
   if (overlay.type === "section_title") {
     return (
       <SectionTitle
         title={overlay.text ?? ""}
         subtitle={overlay.subtitle}
-        accentColor={overlay.accentColor}
+        accentColor={overlay.accentColor || theme.accentColor}
+        textColor={theme.textColor}
         position={(overlay.position as any) || "top-left"}
       />
     );
@@ -768,13 +792,23 @@ const OverlayRenderer: React.FC<{ overlay: Overlay }> = ({ overlay }) => {
       <StatReveal
         stat={overlay.text ?? ""}
         label={overlay.subtitle}
-        accentColor={overlay.accentColor}
+        accentColor={overlay.accentColor || theme.accentColor}
+        textColor={theme.textColor}
         position={(overlay.position as any) || "bottom-right"}
       />
     );
   }
   if (overlay.type === "hero_title") {
-    return <HeroTitle title={overlay.text ?? ""} subtitle={overlay.subtitle} />;
+    return (
+      <HeroTitle
+        title={overlay.text ?? ""}
+        subtitle={overlay.subtitle}
+        accentColor={overlay.accentColor || theme.accentColor}
+        textColor={theme.textColor}
+        subtitleColor={theme.mutedTextColor}
+        scrimBackground={heroScrim(theme)}
+      />
+    );
   }
   if (overlay.type === "provider_chip" && overlay.providers) {
     return (
@@ -827,7 +861,7 @@ export const Explainer: React.FC<ExplainerProps> = (props) => {
 
         return (
           <Sequence key={`overlay-${i}`} from={from} durationInFrames={duration}>
-            <OverlayRenderer overlay={overlay} />
+            <OverlayRenderer overlay={overlay} theme={theme} />
           </Sequence>
         );
       })}
@@ -838,6 +872,7 @@ export const Explainer: React.FC<ExplainerProps> = (props) => {
           words={captions}
           wordsPerPage={6}
           fontSize={42}
+          color={theme.textColor}
           highlightColor={theme.captionHighlightColor}
           backgroundColor={theme.captionBackgroundColor}
         />

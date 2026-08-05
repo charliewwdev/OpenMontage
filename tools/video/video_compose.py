@@ -1253,7 +1253,7 @@ class VideoCompose(BaseTool):
             bg = palette.get("background", "#FFFFFF")
             text = palette.get("text", "#1F2937")
             surface = palette.get("surface", bg)
-            muted = palette.get("muted_text", "#6B7280")
+            muted = palette.get("muted", "#6B7280")
 
             # Build chart colors from all palette entries
             chart_colors = []
@@ -1271,7 +1271,7 @@ class VideoCompose(BaseTool):
                 "surfaceColor": surface,
                 "textColor": text,
                 "mutedTextColor": muted,
-                "headingFont": typo.get("heading", {}).get("font", "Inter"),
+                "headingFont": typo.get("headings", {}).get("font", "Inter"),
                 "bodyFont": typo.get("body", {}).get("font", "Inter"),
                 "monoFont": typo.get("code", {}).get("font", "JetBrains Mono"),
                 "chartColors": chart_colors[:6],
@@ -1287,9 +1287,9 @@ class VideoCompose(BaseTool):
                 else f"rgba(15, 23, 42, 0.75)"
             )
 
-            # Motion style from playbook
-            motion = playbook.get("motion", {})
-            pace = motion.get("pace", "moderate")
+            # Motion style from playbook. `pace` is an identity field in the
+            # playbook schema; motion carries pacing_rules, not a pace enum.
+            pace = playbook.get("identity", {}).get("pace", "moderate")
             if pace == "fast":
                 theme["springConfig"] = {"damping": 12, "stiffness": 80, "mass": 1}
                 theme["transitionDuration"] = 0.3

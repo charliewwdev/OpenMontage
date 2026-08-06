@@ -282,6 +282,47 @@ class TestClientHelpers:
             "folder_type": "temp",
         }
 
+    def test_poll_timeout_carries_prompt_id_for_recovery(self, monkeypatch):
+        from tools._comfyui.client import ComfyUIClient, ComfyUIError
+
+        client = ComfyUIClient("http://comfy.test")
+        monkeypatch.setattr(
+            "tools._comfyui.client.requests.get",
+            lambda *a, **k: type("R", (), {
+                "raise_for_status": lambda self: None,
+                "json": lambda self: {},
+            })(),
+        )
+        monkeypatch.setattr("tools._comfyui.client.time.sleep", lambda s: None)
+
+        with pytest.raises(ComfyUIError) as excinfo:
+            client.poll("prompt-timeout-1", timeout=0, interval=0)
+
+        assert excinfo.value.prompt_id == "prompt-timeout-1"
+        assert "prompt-timeout-1" in str(excinfo.value)
+
+    def test_generate_resume_prompt_id_skips_resubmit(self, monkeypatch, tmp_path):
+        from tools._comfyui.client import ComfyUIClient
+
+        client = ComfyUIClient("http://comfy.test")
+
+        def fail_submit(workflow):
+            raise AssertionError("submit() should not be called when resuming")
+
+        monkeypatch.setattr(client, "submit", fail_submit)
+        monkeypatch.setattr(client, "poll", lambda prompt_id, **kwargs: {
+            "outputs": {"9": {"images": [{
+                "filename": "resumed.png", "subfolder": "", "type": "output",
+            }]}}
+        })
+        monkeypatch.setattr(client, "download", lambda filename, subfolder, dest, folder_type="output": Path(dest))
+
+        paths = client.generate(
+            {"9": {"inputs": {}}}, "9", tmp_path / "out.png",
+            resume_prompt_id="already-running-id",
+        )
+        assert paths == [tmp_path / "out.png"]
+
     def test_is_default_url_when_env_not_set(self, monkeypatch):
         from tools._comfyui.client import ComfyUIClient
         monkeypatch.delenv("COMFYUI_SERVER_URL", raising=False)
@@ -417,6 +458,77 @@ class TestCustomWorkflowContract:
         provenance = result.data["workflow_provenance"]
         assert provenance["model_stack"] == [{"role": "lora", "name": "style.safetensors"}]
         assert provenance["model_stack_source"] == "caller_supplied"
+
+    def test_video_timeout_surfaces_resumable_prompt_id(self, tmp_path):
+        from tools._comfyui.client import ComfyUIError
+
+        tool = ComfyUIVideo()
+        tool._client.is_available = lambda: True
+
+        def fake_generate(workflow, output_node, dest, **kwargs):
+            raise ComfyUIError("Prompt timed-out-id did not complete within 5s", prompt_id="timed-out-id")
+
+        tool._client.generate = fake_generate
+
+        result = tool.execute({
+            "prompt": "test",
+            "workflow_json": json.dumps({"42": {"inputs": {}}}),
+            "output_node": "42",
+            "output_path": str(tmp_path / "video.mp4"),
+            "timeout_seconds": 5,
+        })
+
+        assert result.success is False
+        assert result.data["prompt_id"] == "timed-out-id"
+        assert "resume_prompt_id" in result.error
+        assert "timed-out-id" in result.error
+
+    def test_video_passes_timeout_and_resume_prompt_id_through(self, tmp_path):
+        tool = ComfyUIVideo()
+        tool._client.is_available = lambda: True
+        seen = {}
+
+        def fake_generate(workflow, output_node, dest, **kwargs):
+            seen.update(kwargs)
+            return [Path(dest)]
+
+        tool._client.generate = fake_generate
+
+        result = tool.execute({
+            "prompt": "test",
+            "workflow_json": json.dumps({"42": {"inputs": {}}}),
+            "output_node": "42",
+            "output_path": str(tmp_path / "video.mp4"),
+            "timeout_seconds": 7200,
+            "resume_prompt_id": "already-running-id",
+        })
+
+        assert result.success is True
+        assert seen["timeout"] == 7200
+        assert seen["resume_prompt_id"] == "already-running-id"
+
+    def test_video_default_timeout_is_generous_not_900s(self, tmp_path):
+        tool = ComfyUIVideo()
+        tool._client.is_available = lambda: True
+        seen = {}
+
+        def fake_generate(workflow, output_node, dest, **kwargs):
+            seen.update(kwargs)
+            return [Path(dest)]
+
+        tool._client.generate = fake_generate
+
+        tool.execute({
+            "prompt": "test",
+            "workflow_json": json.dumps({"42": {"inputs": {}}}),
+            "output_node": "42",
+            "output_path": str(tmp_path / "video.mp4"),
+        })
+
+        # Regression guard: the old hardcoded 900s timeout false-failed real
+        # renders on modest local GPUs (observed ~1360-1630s for non-accelerated
+        # custom Wan 1.3B workflows at 832x480/81-97 frames).
+        assert seen["timeout"] > 900
 
     def test_image_missing_models_are_structured(self):
         tool = ComfyUIImage()

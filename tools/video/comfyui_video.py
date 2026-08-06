@@ -186,6 +186,24 @@ class ComfyUIVideo(BaseTool):
                 ),
                 "items": {"type": "object"},
             },
+            "timeout_seconds": {
+                "type": "integer",
+                "description": (
+                    "How long to wait for the ComfyUI job to finish before giving up. "
+                    "Default 3600s (1hr) covers slow/local GPUs and non-accelerated "
+                    "custom workflows; raise it further for large frame counts or "
+                    "high resolutions. On timeout the job is NOT cancelled server-side "
+                    "and the error's data.prompt_id can be passed back via "
+                    "resume_prompt_id to keep waiting without resubmitting."
+                ),
+            },
+            "resume_prompt_id": {
+                "type": "string",
+                "description": (
+                    "A prompt_id from a previous timed-out call (see error data on "
+                    "timeout). Skips resubmission and just resumes waiting/downloading."
+                ),
+            },
         },
     }
 
@@ -320,12 +338,24 @@ class ComfyUIVideo(BaseTool):
                 workflow,
                 output_node=output_node,
                 dest=output_path,
-                timeout=900,
+                timeout=inputs.get("timeout_seconds", 3600),
                 interval=10,
+                resume_prompt_id=inputs.get("resume_prompt_id"),
             )
 
         except ComfyUIError as exc:
-            return ToolResult(success=False, error=str(exc))
+            data = {"prompt_id": exc.prompt_id} if exc.prompt_id else {}
+            if exc.prompt_id:
+                error_msg = (
+                    f"{exc}\n\nThis job was NOT cancelled and is very likely still "
+                    f"running server-side. To recover it without resubmitting, call "
+                    f"execute() again with resume_prompt_id={exc.prompt_id!r} "
+                    f"(and a longer timeout_seconds if it needs more time), or poll "
+                    f"GET {{COMFYUI_SERVER_URL}}/history/{exc.prompt_id} directly."
+                )
+            else:
+                error_msg = str(exc)
+            return ToolResult(success=False, error=error_msg, data=data)
         except Exception as exc:
             return ToolResult(success=False, error=f"ComfyUI video generation failed: {exc}")
 

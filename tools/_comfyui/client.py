@@ -18,7 +18,17 @@ import requests
 
 
 class ComfyUIError(Exception):
-    """Raised when ComfyUI returns an error or times out."""
+    """Raised when ComfyUI returns an error or times out.
+
+    ``prompt_id`` is set when the error follows a successful ``submit()``,
+    so callers can recover a timed-out-but-still-running job instead of
+    losing track of it: poll ``GET /history/{prompt_id}`` directly, or
+    pass ``resume_prompt_id`` back into ``ComfyUIVideo.execute()``.
+    """
+
+    def __init__(self, message: str, prompt_id: str | None = None) -> None:
+        super().__init__(message)
+        self.prompt_id = prompt_id
 
 
 class ComfyUIClient:
@@ -174,11 +184,18 @@ class ComfyUIClient:
                 status = entry.get("status", {})
                 if status.get("status_str") == "error":
                     msgs = status.get("messages", [])
-                    raise ComfyUIError(f"Execution error: {msgs}")
+                    raise ComfyUIError(f"Execution error: {msgs}", prompt_id=prompt_id)
                 return entry
             time.sleep(interval)
         raise ComfyUIError(
-            f"Prompt {prompt_id} did not complete within {timeout}s"
+            f"Prompt {prompt_id} did not complete within {timeout}s. "
+            f"The job is very likely still running on the ComfyUI server "
+            f"(local/custom workflows on modest GPUs routinely exceed the "
+            f"client wait) — it was not cancelled. Poll "
+            f"GET {{server_url}}/history/{prompt_id} directly, or call "
+            f"generate()/execute() again with a longer timeout and this "
+            f"prompt_id to resume waiting without resubmitting.",
+            prompt_id=prompt_id,
         )
 
     def download(
@@ -229,9 +246,15 @@ class ComfyUIClient:
         *,
         timeout: int = 600,
         interval: int = 5,
+        resume_prompt_id: str | None = None,
     ) -> list[Path]:
-        """Submit → poll → download.  Returns list of artifact paths."""
-        prompt_id = self.submit(workflow)
+        """Submit → poll → download.  Returns list of artifact paths.
+
+        Pass ``resume_prompt_id`` (from a previous ``ComfyUIError.prompt_id``)
+        to skip re-submitting an already-queued/running job and just resume
+        waiting on it — the common recovery path after a timeout.
+        """
+        prompt_id = resume_prompt_id or self.submit(workflow)
         entry = self.poll(prompt_id, timeout=timeout, interval=interval)
 
         outputs = entry.get("outputs", {})

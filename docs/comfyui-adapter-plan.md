@@ -257,20 +257,35 @@ output_node:          string    # required for custom workflows
 workflow_name:        string    # optional custom workflow provenance label
 workflow_model:       string    # optional custom model/provenance label
 workflow_model_stack: []        # optional custom dependency provenance
+timeout_seconds:      integer   # optional, default 3600 (see below)
+resume_prompt_id:     string    # optional, resume a timed-out job without resubmitting
 ```
 
 **execute() flow (i2v):**
 1. Upload reference image via `client.upload_image()`
 2. Deep-copy i2v workflow template
 3. Inject prompt, uploaded image name, seed, dimensions
-4. `client.generate(workflow, output_node="108", dest=output_path, timeout=900)`
+4. `client.generate(workflow, output_node="108", dest=output_path, timeout=inputs.get("timeout_seconds", 3600), resume_prompt_id=inputs.get("resume_prompt_id"))`
 5. Return `ToolResult`
 
 **execute() flow (t2v):**
 1. Deep-copy t2v workflow template
 2. Inject prompt, seed, dimensions
-3. `client.generate(workflow, output_node="16", dest=output_path, timeout=900)`
+3. `client.generate(workflow, output_node="16", dest=output_path, timeout=inputs.get("timeout_seconds", 3600), resume_prompt_id=inputs.get("resume_prompt_id"))`
 4. Return `ToolResult`
+
+**Timeout and resume (added after real-world local-GPU testing):** the
+default client wait was raised from 900s to 3600s — non-accelerated custom
+Wan 1.3B workflows on modest local GPUs were observed taking ~1360-1630s at
+832x480/81-97 frames, and the old 900s default false-failed those jobs even
+though ComfyUI kept rendering server-side. `ComfyUIError` now carries a
+`prompt_id` on both execution errors and timeouts (`ComfyUIError.prompt_id`),
+and `ComfyUIVideo`'s `ToolResult.error`/`.data` surface it on timeout so the
+caller isn't left guessing whether the job is dead. Callers recover a
+timed-out-but-still-running job by calling `execute()` again with
+`resume_prompt_id` set to that `prompt_id` (and a longer `timeout_seconds` if
+needed) — `client.generate()` then skips `submit()` entirely and just resumes
+polling/downloading the existing job instead of queuing a duplicate.
 
 `comfyui_video` publishes `operation_statuses` in `get_info()` and implements
 `is_operation_available(operation)` for selector routing. This keeps partial

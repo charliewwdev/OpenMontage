@@ -18,6 +18,13 @@ COMFYUI_SETUP_OFFER: dict[str, Any] = {
         "free local video generation through ComfyUI workflows",
         "community workflow_json/workflow_path execution",
     ],
+    # Optional: point image/video generation at separate ComfyUI instances
+    # (e.g. different GPUs). Each overrides COMFYUI_SERVER_URL for its own
+    # tool only; single-server setups can ignore this entirely.
+    "per_capability_env_var_overrides": {
+        "comfyui_image": "COMFYUI_IMAGE_SERVER_URL",
+        "comfyui_video": "COMFYUI_VIDEO_SERVER_URL",
+    },
 }
 
 

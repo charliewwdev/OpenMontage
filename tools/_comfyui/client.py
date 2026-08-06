@@ -42,14 +42,32 @@ class ComfyUIClient:
       4. POST /upload/image     → stage a local image for I2V workflows
     """
 
-    def __init__(self, server_url: str | None = None) -> None:
-        self.server_url = (
-            server_url
-            or os.environ.get("COMFYUI_SERVER_URL", "http://localhost:8188")
-        ).rstrip("/")
+    def __init__(
+        self, server_url: str | None = None, capability: str | None = None
+    ) -> None:
+        """*capability*, if given (e.g. ``"image"``, ``"video"``), lets a
+        per-capability env var (``COMFYUI_{CAPABILITY}_SERVER_URL``) point
+        this client at its own ComfyUI instance -- useful when image and
+        video generation are split across separate servers/GPUs. Falls back
+        to the shared ``COMFYUI_SERVER_URL`` when the capability-specific
+        var isn't set, so single-server setups need no extra configuration.
+        """
+        self.capability = capability
+        self._capability_env_var = (
+            f"COMFYUI_{capability.upper()}_SERVER_URL" if capability else None
+        )
+        resolved = server_url or self._capability_url() or os.environ.get(
+            "COMFYUI_SERVER_URL"
+        )
+        self.server_url = (resolved or "http://localhost:8188").rstrip("/")
         # Scopes websocket execution events to this client (see wait_ws) and
         # is echoed back on /prompt so the server targets messages to us.
         self.client_id = str(uuid.uuid4())
+
+    def _capability_url(self) -> str | None:
+        if self._capability_env_var:
+            return os.environ.get(self._capability_env_var)
+        return None
 
     # ------------------------------------------------------------------
     # Health
@@ -57,8 +75,25 @@ class ComfyUIClient:
 
     @property
     def is_default_url(self) -> bool:
-        """True if using the fallback URL (user didn't set COMFYUI_SERVER_URL)."""
-        return not os.environ.get("COMFYUI_SERVER_URL")
+        """True if neither the capability-specific nor shared env var is set."""
+        return not (self._capability_url() or os.environ.get("COMFYUI_SERVER_URL"))
+
+    def unavailable_reason(self) -> str:
+        """Human-readable explanation of why the server can't be reached."""
+        env_var_hint = self._capability_env_var or "COMFYUI_SERVER_URL"
+        if self._capability_env_var:
+            env_var_hint += " (or the shared COMFYUI_SERVER_URL)"
+        if self.is_default_url:
+            return (
+                f"No ComfyUI server found at {self.server_url} "
+                f"(default — no server URL configured).\n"
+                f"Set {env_var_hint} in your .env file to the address of "
+                f"your ComfyUI server (e.g. http://localhost:8188)."
+            )
+        return (
+            f"ComfyUI server not reachable at {self.server_url}.\n"
+            f"Check that ComfyUI is running and the URL is correct."
+        )
 
     def is_available(self) -> bool:
         """Return True if the ComfyUI server is reachable."""
@@ -69,20 +104,6 @@ class ComfyUIClient:
             return resp.status_code == 200
         except Exception:
             return False
-
-    def unavailable_reason(self) -> str:
-        """Human-readable explanation of why the server can't be reached."""
-        if self.is_default_url:
-            return (
-                f"No ComfyUI server found at {self.server_url} "
-                f"(default — no COMFYUI_SERVER_URL configured).\n"
-                f"Set COMFYUI_SERVER_URL in your .env file to the address of "
-                f"your ComfyUI server (e.g. http://localhost:8188)."
-            )
-        return (
-            f"ComfyUI server not reachable at {self.server_url}.\n"
-            f"Check that ComfyUI is running and the URL is correct."
-        )
 
     # ------------------------------------------------------------------
     # Model discovery

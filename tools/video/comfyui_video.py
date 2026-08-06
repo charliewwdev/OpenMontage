@@ -107,7 +107,9 @@ class ComfyUIVideo(BaseTool):
     install_instructions = (
         "Start a ComfyUI server and set COMFYUI_SERVER_URL "
         "(default http://localhost:8188).\n"
-        "Requires WAN 2.2 models and LightX2V LoRAs in ComfyUI's model directory."
+        "Requires WAN 2.2 models and LightX2V LoRAs in ComfyUI's model directory.\n"
+        "Running a separate ComfyUI instance for video? Set COMFYUI_VIDEO_SERVER_URL "
+        "instead -- it takes priority over COMFYUI_SERVER_URL for this tool only."
     )
     agent_skills = ["comfyui", "ai-video-gen", "ltx2"]
 
@@ -216,7 +218,7 @@ class ComfyUIVideo(BaseTool):
     user_visible_verification = ["Watch generated clip for motion coherence and artifacts"]
 
     def __init__(self) -> None:
-        self._client = ComfyUIClient()
+        self._client = ComfyUIClient(capability="video")
         self._last_progress_log = 0.0
 
     def _log_progress(self, data: dict) -> None:

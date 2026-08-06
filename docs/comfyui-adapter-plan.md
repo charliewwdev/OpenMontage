@@ -373,6 +373,17 @@ COMFYUI_POLL_TIMEOUT=600                    # max wait for image gen
 COMFYUI_VIDEO_TIMEOUT=900                   # max wait for video gen
 ```
 
+**Multi-server (optional):** point `comfyui_image` and `comfyui_video` at
+separate ComfyUI instances -- e.g. one GPU running FLUX 2, another running
+WAN 2.2 -- by setting a per-capability override. Each takes priority over
+`COMFYUI_SERVER_URL` for its own tool only; leave both unset and everything
+still talks to the single shared server.
+
+```bash
+COMFYUI_IMAGE_SERVER_URL=http://gpu-a:8188
+COMFYUI_VIDEO_SERVER_URL=http://gpu-b:8188
+```
+
 **For Docker Compose setups** (ComfyUI in a container):
 
 ```bash
@@ -485,8 +496,17 @@ pipeline definition, or any schema.
    `poll()` REST loop when it isn't installed or the connection fails —
    `resume_prompt_id` recovery behaves identically either way.
 
-3. **Multi-server:** Should the adapter support multiple ComfyUI instances
-   (e.g., one for images, one for video) via per-capability URLs?
+3. ~~**Multi-server:**~~ **Resolved.** `ComfyUIClient(capability="image"|"video")`
+   resolves its server URL from a per-capability env var first
+   (`COMFYUI_IMAGE_SERVER_URL` / `COMFYUI_VIDEO_SERVER_URL`), then the shared
+   `COMFYUI_SERVER_URL`, then the `http://localhost:8188` default. `comfyui_image`
+   and `comfyui_video` pass their capability at construction, so image and video
+   generation can point at different ComfyUI instances (different GPUs, different
+   model sets) with zero code changes -- single-server setups need no extra
+   configuration since both env vars are optional. `client.capability`/
+   `client.is_default_url`/`client.unavailable_reason()` all account for the
+   override, and `COMFYUI_SETUP_OFFER.per_capability_env_var_overrides` documents
+   it for the setup-offer surfacing in `provider_menu()`.
 
 4. **Music generation:** ACE-Step works in ComfyUI but OpenMontage needs a
    dedicated music-generation routing contract before adding `comfyui_music`.

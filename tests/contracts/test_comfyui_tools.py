@@ -369,6 +369,85 @@ class TestClientHelpers:
         assert seen["client_id"] == client.client_id
 
 
+class TestMultiServer:
+
+    def test_capability_env_var_takes_priority_over_shared(self, monkeypatch):
+        from tools._comfyui.client import ComfyUIClient
+
+        monkeypatch.setenv("COMFYUI_SERVER_URL", "http://shared:8188")
+        monkeypatch.setenv("COMFYUI_VIDEO_SERVER_URL", "http://video-gpu:8188")
+        client = ComfyUIClient(capability="video")
+        assert client.server_url == "http://video-gpu:8188"
+
+    def test_falls_back_to_shared_when_capability_var_unset(self, monkeypatch):
+        from tools._comfyui.client import ComfyUIClient
+
+        monkeypatch.setenv("COMFYUI_SERVER_URL", "http://shared:8188")
+        monkeypatch.delenv("COMFYUI_IMAGE_SERVER_URL", raising=False)
+        client = ComfyUIClient(capability="image")
+        assert client.server_url == "http://shared:8188"
+
+    def test_other_capability_env_var_does_not_leak_across_tools(self, monkeypatch):
+        from tools._comfyui.client import ComfyUIClient
+
+        monkeypatch.delenv("COMFYUI_SERVER_URL", raising=False)
+        monkeypatch.setenv("COMFYUI_IMAGE_SERVER_URL", "http://image-gpu:8188")
+        monkeypatch.delenv("COMFYUI_VIDEO_SERVER_URL", raising=False)
+        video_client = ComfyUIClient(capability="video")
+        assert video_client.server_url == "http://localhost:8188"
+
+    def test_explicit_server_url_wins_over_capability_env_var(self, monkeypatch):
+        from tools._comfyui.client import ComfyUIClient
+
+        monkeypatch.setenv("COMFYUI_VIDEO_SERVER_URL", "http://video-gpu:8188")
+        client = ComfyUIClient("http://explicit:1234", capability="video")
+        assert client.server_url == "http://explicit:1234"
+
+    def test_no_capability_behaves_as_before(self, monkeypatch):
+        from tools._comfyui.client import ComfyUIClient
+
+        monkeypatch.setenv("COMFYUI_SERVER_URL", "http://shared:8188")
+        client = ComfyUIClient()
+        assert client.server_url == "http://shared:8188"
+        assert client.is_default_url is False
+
+    def test_is_default_url_true_only_when_both_vars_unset(self, monkeypatch):
+        from tools._comfyui.client import ComfyUIClient
+
+        monkeypatch.delenv("COMFYUI_SERVER_URL", raising=False)
+        monkeypatch.delenv("COMFYUI_IMAGE_SERVER_URL", raising=False)
+        client = ComfyUIClient(capability="image")
+        assert client.is_default_url is True
+
+        monkeypatch.setenv("COMFYUI_IMAGE_SERVER_URL", "http://image-gpu:8188")
+        client2 = ComfyUIClient(capability="image")
+        assert client2.is_default_url is False
+
+    def test_unavailable_reason_mentions_capability_and_shared_var(self, monkeypatch):
+        from tools._comfyui.client import ComfyUIClient
+
+        monkeypatch.delenv("COMFYUI_SERVER_URL", raising=False)
+        monkeypatch.delenv("COMFYUI_VIDEO_SERVER_URL", raising=False)
+        client = ComfyUIClient(capability="video")
+        msg = client.unavailable_reason()
+        assert "COMFYUI_VIDEO_SERVER_URL" in msg
+        assert "COMFYUI_SERVER_URL" in msg
+
+    def test_image_and_video_tools_use_independent_servers(self, monkeypatch):
+        from tools.graphics.comfyui_image import ComfyUIImage
+        from tools.video.comfyui_video import ComfyUIVideo
+
+        monkeypatch.delenv("COMFYUI_SERVER_URL", raising=False)
+        monkeypatch.setenv("COMFYUI_IMAGE_SERVER_URL", "http://image-gpu:8188")
+        monkeypatch.setenv("COMFYUI_VIDEO_SERVER_URL", "http://video-gpu:8188")
+
+        image_tool = ComfyUIImage()
+        video_tool = ComfyUIVideo()
+
+        assert image_tool._client.server_url == "http://image-gpu:8188"
+        assert video_tool._client.server_url == "http://video-gpu:8188"
+
+
 class _FakeWSTimeout(Exception):
     pass
 

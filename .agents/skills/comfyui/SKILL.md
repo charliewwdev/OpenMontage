@@ -58,7 +58,9 @@ Use this skill before calling `comfyui_image`, `comfyui_video`, or `comfyui_musi
 
 ## Music (`comfyui_music`)
 
-- Unlike `comfyui_image`/`comfyui_video`, there is **no bundled workflow**. ACE-Step's ComfyUI node interface isn't standardized across custom node packs (`AceStepModelLoader` vs native `TextEncodeAceStepAudio`, etc.), so `workflow_json`/`workflow_path` + `output_node` are always required, not optional.
-- `prompt` is provenance/logging only -- it is never injected into the workflow. Bake the actual tags/lyrics into the workflow JSON yourself before calling, the same way you would patch a custom image/video workflow.
-- `output_node` should be the node that writes the final audio, typically ComfyUI's native `SaveAudio`. The client reads artifacts from that node's `"audio"` output key (parallel to `"images"` for image/video savers).
-- Provide `workflow_name`/`workflow_model`/`workflow_model_stack` for provenance exactly as you would for a custom image/video workflow -- there's no bundled model stack to fall back on here.
+- Bundled default is ACE-Step v1 (3.5B) text-to-audio, built from ComfyUI's *native* `TextEncodeAceStepAudio`/`EmptyAceStepLatentAudio` nodes (core, not a third-party pack) -- unlike ACE-Step 1.5 or other custom node packs, v1's interface is standardized enough to bundle safely.
+- `prompt` maps to the bundled workflow's `tags` field (style/genre/mood, e.g. `"upbeat electronic pop, female vocals"`), matching the same "prompt = music description" convention `suno_music` uses. `lyrics` is a separate optional field -- leave empty for instrumental, or use `[verse]`/`[chorus]`/`[bridge]` structure tags and `[zh]`/`[ja]`/`[ko]`-style language-code prefixes for non-English lines.
+- `duration_seconds`, `steps`, `cfg`, `lyrics_strength`, and `seed` are patchable on the bundled workflow. Missing `ace_step_v1_3.5b.safetensors` surfaces through the same `data.missing_models[]` contract as image/video.
+- Need ACE-Step 1.5, a different node pack, or a non-ACE-Step audio model? Fall back to `workflow_json`/`workflow_path` + `output_node`, exactly like a custom image/video workflow -- in that mode `prompt` becomes provenance/logging only again and must already be baked into the graph.
+- `output_node` (bundled or custom) should be the node that writes the final audio -- the bundled workflow's is `SaveAudioMP3`. The client reads artifacts from that node's `"audio"` output key (parallel to `"images"` for image/video savers).
+- For custom workflows, provide `workflow_name`/`workflow_model`/`workflow_model_stack` for provenance exactly as you would for a custom image/video workflow.

@@ -1,13 +1,11 @@
 """ComfyUI music generation via a local or remote ComfyUI server.
 
-No bundled workflow: ACE-Step's ComfyUI node interface is not standardized
-across custom node packs (``AceStepModelLoader`` vs native
-``TextEncodeAceStepAudio``, etc.), so a hardcoded template would break for
-most installs. This tool always runs a caller-supplied ``workflow_json`` or
-``workflow_path`` -- the same override contract ``comfyui_image``/
-``comfyui_video`` offer as an alternative to their bundled workflow, just
-mandatory here instead of optional. See the ``comfyui`` skill for how to
-convert a community ACE-Step workflow into a call.
+Default workflow: ACE-Step v1 (3.5B) text-to-audio using ComfyUI's native
+``TextEncodeAceStepAudio``/``EmptyAceStepLatentAudio`` nodes (built into
+ComfyUI core, not a third-party pack). Custom workflows are still accepted
+via ``workflow_json``/``workflow_path`` for other ACE-Step node packs, other
+versions (e.g. ACE-Step 1.5), or entirely different audio models -- the same
+override contract ``comfyui_image``/``comfyui_video`` offer.
 """
 
 from __future__ import annotations
@@ -32,12 +30,23 @@ from tools.base_tool import (
     ToolTier,
 )
 from tools._comfyui.client import ComfyUIClient, ComfyUIError
-from tools._comfyui.metadata import COMFYUI_SETUP_OFFER, workflow_hash
+from tools._comfyui.metadata import (
+    BUNDLED_MODEL_STACKS,
+    COMFYUI_SETUP_OFFER,
+    missing_models_payload,
+    model_stack,
+    workflow_hash,
+)
+
+_WORKFLOWS = Path(__file__).resolve().parent.parent / "_comfyui" / "workflows"
+
+# Model required by the bundled ACE-Step v1 workflow
+_REQUIRED_MODELS = ["ace_step_v1_3.5b.safetensors"]
 
 
 class ComfyUIMusic(BaseTool):
     name = "comfyui_music"
-    version = "0.1.0"
+    version = "0.2.0"
     tier = ToolTier.GENERATE
     capability = "music_generation"
     provider = "comfyui"
@@ -49,10 +58,10 @@ class ComfyUIMusic(BaseTool):
     dependencies = []  # checked at runtime via server health
     setup_offer = COMFYUI_SETUP_OFFER
     install_instructions = (
-        "Start a ComfyUI server with ACE-Step installed (any node pack) and "
-        "set COMFYUI_SERVER_URL (default http://localhost:8188).\n"
-        "There is no bundled workflow for this tool -- export your ACE-Step "
-        "graph in API format and pass it as workflow_json/workflow_path.\n"
+        "Start a ComfyUI server and set COMFYUI_SERVER_URL "
+        "(default http://localhost:8188).\n"
+        "Requires ace_step_v1_3.5b.safetensors in ComfyUI's checkpoints "
+        "directory for the bundled workflow.\n"
         "Running a separate ComfyUI instance for music? Set "
         "COMFYUI_MUSIC_SERVER_URL instead -- it takes priority over "
         "COMFYUI_SERVER_URL for this tool only."
@@ -62,59 +71,73 @@ class ComfyUIMusic(BaseTool):
     capabilities = ["generate_background_music", "generate_song", "generate_instrumental"]
     supports = {
         "seed": True,
+        "lyrics": True,
         "custom_workflow": True,
         "custom_output_node": True,
         "offline": True,
     }
     best_for = [
-        "local GPU music generation without API costs, using whatever ACE-Step node pack is installed",
-        "full control over sampling via custom ComfyUI workflows",
+        "local GPU music generation without API costs",
+        "instrumentals and songs with lyrics via the bundled ACE-Step v1 workflow",
+        "full control over sampling or other ACE-Step versions/node packs via custom ComfyUI workflows",
     ]
     not_good_for = [
         "setups without a running ComfyUI server",
-        "quick generation without first exporting/adapting an ACE-Step workflow",
         "CPU-only machines",
     ]
     fallback_tools = ["suno_music", "music_gen"]
 
     input_schema = {
         "type": "object",
-        "required": ["prompt", "output_node"],
+        "required": ["prompt"],
         "properties": {
             "prompt": {
                 "type": "string",
                 "description": (
-                    "Description of the desired music, for provenance/logging only. "
-                    "Not injected into the workflow -- bake the actual tags/lyrics "
-                    "into workflow_json/workflow_path before calling."
+                    "Style/mood/genre description (ACE-Step 'tags'), e.g. "
+                    "'upbeat electronic pop, female vocals, driving bassline'. "
+                    "Comma-separated tags work best. Not injected for custom workflows."
                 ),
             },
+            "lyrics": {
+                "type": "string",
+                "default": "",
+                "description": (
+                    "Optional lyrics. Leave empty for instrumental. Supports structure "
+                    "tags like [verse]/[chorus]/[bridge] and language-code prefixes "
+                    "(e.g. [zh], [ja]) for non-English lines."
+                ),
+            },
+            "duration_seconds": {"type": "number", "default": 120.0},
+            "steps": {"type": "integer", "default": 50},
+            "cfg": {"type": "number", "default": 5.0},
+            "lyrics_strength": {"type": "number", "default": 0.99},
             "seed": {"type": "integer", "description": "Random if omitted"},
             "output_path": {"type": "string", "description": "Where to save the audio"},
             "workflow_json": {
                 "type": "string",
-                "description": "Full ComfyUI ACE-Step workflow JSON (API format). Required if workflow_path is omitted.",
+                "description": "Optional full ComfyUI workflow JSON. Requires output_node.",
             },
             "workflow_path": {
                 "type": "string",
-                "description": "Path to a ComfyUI ACE-Step workflow JSON file. Required if workflow_json is omitted.",
+                "description": "Optional path to a ComfyUI workflow JSON file. Requires output_node.",
             },
             "output_node": {
                 "type": "string",
-                "description": "ComfyUI output node ID (e.g. the SaveAudio node) to download the artifact from.",
+                "description": "ComfyUI output node ID for custom workflow_json/workflow_path.",
             },
             "workflow_name": {
                 "type": "string",
-                "description": "Optional human-readable provenance label for the workflow.",
+                "description": "Optional human-readable provenance label for a custom workflow.",
             },
             "workflow_model": {
                 "type": "string",
-                "description": "Optional model/provenance label (e.g. 'ace-step-v1-3.5b').",
+                "description": "Optional model/provenance label for a custom workflow.",
             },
             "workflow_model_stack": {
                 "type": "array",
                 "description": (
-                    "Optional provenance metadata for workflow dependencies. "
+                    "Optional provenance metadata for custom workflow dependencies. "
                     "Items should include name, role, and node-pack origin when known."
                 ),
                 "items": {"type": "object"},
@@ -134,7 +157,7 @@ class ComfyUIMusic(BaseTool):
         cpu_cores=2, ram_mb=8000, vram_mb=8000, disk_mb=500, network_required=False,
     )
     retry_policy = RetryPolicy(max_retries=1, retryable_errors=["timeout"])
-    idempotency_key_fields = ["prompt", "seed", "workflow_json", "workflow_path", "output_node"]
+    idempotency_key_fields = ["prompt", "lyrics", "duration_seconds", "seed"]
     side_effects = ["writes audio file to output_path"]
     user_visible_verification = ["Listen to generated audio for mood, genre accuracy, and quality"]
 
@@ -145,21 +168,21 @@ class ComfyUIMusic(BaseTool):
     def get_status(self) -> ToolStatus:
         if not self._client.is_available():
             return ToolStatus.UNAVAILABLE
+        _, missing = self._client.check_models(_REQUIRED_MODELS)
+        if missing:
+            return ToolStatus.DEGRADED
         return ToolStatus.AVAILABLE
 
     def estimate_cost(self, inputs: dict[str, Any]) -> float:
         return 0.0
 
     def estimate_runtime(self, inputs: dict[str, Any]) -> float:
-        # Actual runtime depends entirely on the caller's custom workflow
-        # (steps, duration, sampler); this is a conservative flat estimate.
-        return 180.0
+        return float(inputs.get("steps", 50)) * 2.0
 
     def get_info(self) -> dict[str, Any]:
         info = super().get_info()
         info["setup_offer"] = self.setup_offer
-        info["bundled_workflow"] = None
-        info["custom_workflow_required"] = True
+        info["bundled_model_stack"] = BUNDLED_MODEL_STACKS["ace-step-1-t2a"]
         return info
 
     def _log_progress(self, data: dict) -> None:
@@ -173,35 +196,63 @@ class ComfyUIMusic(BaseTool):
             print(f"[comfyui_music] step {value}/{max_value}")
 
     def execute(self, inputs: dict[str, Any]) -> ToolResult:
-        if not (inputs.get("workflow_json") or inputs.get("workflow_path")):
+        custom_workflow = bool(inputs.get("workflow_json") or inputs.get("workflow_path"))
+        if custom_workflow and not inputs.get("output_node"):
             return ToolResult(
                 success=False,
                 error=(
-                    "comfyui_music requires workflow_json or workflow_path -- there "
-                    "is no bundled default. ACE-Step's ComfyUI node interface isn't "
-                    "standardized across custom node packs, so a hardcoded template "
-                    "would break for most installs. Export the ACE-Step workflow "
-                    "you actually have installed (API format) and pass it in."
+                    "Custom ComfyUI workflows require output_node so OpenMontage "
+                    "knows which ComfyUI node to download artifacts from."
                 ),
-            )
-
-        if not inputs.get("output_node"):
-            return ToolResult(
-                success=False,
-                error="output_node is required so OpenMontage knows which ComfyUI node to download the audio from.",
             )
 
         if not self._client.is_available():
             return ToolResult(success=False, error=self._client.unavailable_reason())
 
+        if not custom_workflow:
+            _, missing = self._client.check_models(_REQUIRED_MODELS)
+            if missing:
+                return ToolResult(
+                    success=False,
+                    data=missing_models_payload(
+                        missing,
+                        workflow_key="ace-step-1-t2a",
+                        workflow_name="ace-step-1-t2a.json",
+                    ),
+                    error=(
+                        f"ComfyUI server is running but missing required models: "
+                        f"{', '.join(missing)}.\n"
+                        f"See data.missing_models for destination hints and download URLs."
+                    ),
+                )
+
         start = time.time()
         seed = inputs.get("seed") or ComfyUIClient.random_seed()
         output_path = Path(inputs.get("output_path", f"comfyui_music_{seed}.mp3"))
-        output_node = str(inputs["output_node"])
 
         try:
-            workflow = self._load_custom_workflow(inputs)
-            provenance = self._workflow_provenance(inputs, output_node, workflow)
+            if custom_workflow:
+                workflow = self._load_custom_workflow(inputs)
+                output_node = str(inputs["output_node"])
+            else:
+                workflow = ComfyUIClient.load_workflow(_WORKFLOWS / "ace-step-1-t2a.json")
+                workflow = ComfyUIClient.patch_workflow(workflow, {
+                    "2": {
+                        "tags": inputs["prompt"],
+                        "lyrics": inputs.get("lyrics", ""),
+                        "lyrics_strength": inputs.get("lyrics_strength", 0.99),
+                    },
+                    "4": {"seconds": inputs.get("duration_seconds", 120.0)},
+                    "8": {
+                        "seed": seed,
+                        "steps": inputs.get("steps", 50),
+                        "cfg": inputs.get("cfg", 5.0),
+                    },
+                    "10": {"filename_prefix": output_path.stem},
+                })
+                output_node = "10"
+
+            provenance = self._workflow_provenance(inputs, custom_workflow, output_node, workflow)
             paths = self._client.generate(
                 workflow,
                 output_node=output_node,
@@ -229,13 +280,14 @@ class ComfyUIMusic(BaseTool):
             return ToolResult(success=False, error=f"ComfyUI music generation failed: {exc}")
 
         duration = self._probe_duration(paths[0])
-        model_name = self._model_name(inputs)
+        model_name = self._model_name(inputs, custom_workflow)
         return ToolResult(
             success=True,
             data={
                 "provider": "comfyui",
                 "model": model_name,
                 "prompt": inputs["prompt"],
+                "lyrics": inputs.get("lyrics", ""),
                 "duration_seconds": duration,
                 "output": str(paths[0]),
                 "format": paths[0].suffix.lstrip("."),
@@ -255,7 +307,9 @@ class ComfyUIMusic(BaseTool):
         return ComfyUIClient.load_workflow(Path(inputs["workflow_path"]))
 
     @staticmethod
-    def _model_name(inputs: dict[str, Any]) -> str:
+    def _model_name(inputs: dict[str, Any], custom_workflow: bool) -> str:
+        if not custom_workflow:
+            return "ace-step-v1-3.5b"
         return (
             inputs.get("workflow_model")
             or inputs.get("model")
@@ -265,8 +319,19 @@ class ComfyUIMusic(BaseTool):
 
     @staticmethod
     def _workflow_provenance(
-        inputs: dict[str, Any], output_node: str, workflow: dict[str, Any]
+        inputs: dict[str, Any],
+        custom_workflow: bool,
+        output_node: str,
+        workflow: dict[str, Any],
     ) -> dict[str, Any]:
+        if not custom_workflow:
+            return {
+                "source": "bundled",
+                "workflow": "ace-step-1-t2a.json",
+                "workflow_hash_sha256": workflow_hash(workflow),
+                "model_stack": model_stack("ace-step-1-t2a", inputs),
+                "output_node": output_node,
+            }
         stack = inputs.get("workflow_model_stack")
         return {
             "source": "user_supplied",

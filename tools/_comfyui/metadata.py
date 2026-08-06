@@ -184,6 +184,17 @@ BUNDLED_MODEL_STACKS: dict[str, list[dict[str, Any]]] = {
             ),
         },
     ],
+    "ace-step-1-t2a": [
+        {
+            "role": "checkpoint",
+            "name": "ace_step_v1_3.5b.safetensors",
+            "destination_hint": "ComfyUI/models/checkpoints/",
+            "download_url": (
+                "https://huggingface.co/Comfy-Org/ACE-Step_ComfyUI_repackaged/"
+                "blob/main/all_in_one/ace_step_v1_3.5b.safetensors"
+            ),
+        },
+    ],
 }
 
 

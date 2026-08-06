@@ -296,24 +296,33 @@ not promote ComfyUI for an operation whose bundled models are missing.
 
 ---
 
-### `comfyui_music` -- Music Generation (shipped, custom-workflow-only)
+### `comfyui_music` -- Music Generation (shipped, with a native-node bundled workflow)
 
 `tools/audio/comfyui_music.py`. `capability="music_generation"`, `provider="comfyui"`.
-Ships with **no bundled workflow** -- the ACE-Step node-pack fragmentation
-described below is real and unsolved, so instead of picking one pack and
-breaking for everyone else, the tool always requires a caller-supplied
-`workflow_json`/`workflow_path` + `output_node`, exactly like the image/video
-tools' *optional* override path, just mandatory here. `prompt` is accepted
-for provenance/logging only and is never injected into the workflow --
-tags/lyrics must already be baked into the graph before calling, same
-convention as image/video custom workflows.
 
-Originally not shipped because: the ComfyUI node interface for ACE-Step is
-not standardized -- there are multiple custom node packs with different
-class names (`AceStepModelLoader` vs native `TextEncodeAceStepAudio`, etc.).
-Shipping a workflow that only works with one specific custom node pack would
-break for most users. The custom-workflow-only design sidesteps this
-entirely: whichever node pack is installed, the caller exports it themselves.
+**Bundled default:** ACE-Step v1 (3.5B) text-to-audio, via `tools/_comfyui/workflows/ace-step-1-t2a.json`.
+The node-pack fragmentation that originally blocked this tool (`AceStepModelLoader`
+vs native `TextEncodeAceStepAudio`, etc.) turned out to be moot for ACE-Step v1:
+ComfyUI ships `TextEncodeAceStepAudio`/`EmptyAceStepLatentAudio` as **native core
+nodes** (`comfy_extras/nodes_ace.py`), not a third-party pack, and Comfy-Org's own
+[`workflow_templates`](https://github.com/Comfy-Org/workflow_templates) repo bundles
+an official ACE-Step-v1 template built entirely from those native nodes plus
+long-stable core nodes (`CheckpointLoaderSimple`, `KSampler`, `ModelSamplingSD3`,
+`VAEDecodeAudio`, `SaveAudioMP3`). Every node's `class_type` and input names in
+`ace-step-1-t2a.json` were cross-checked against ComfyUI's own source
+(`comfy_extras/nodes_ace.py`, `nodes_audio.py`, `nodes_latent.py`, `nodes.py`) --
+not guessed from the UI export -- since the UI-format template Comfy-Org ships
+isn't directly usable as the API-format JSON this client submits.
+
+`prompt` maps to ACE-Step's `tags` field (style/genre/mood description, matching
+the "prompt = description of desired music" convention `suno_music` already uses).
+`lyrics` is a separate optional field (empty for instrumental). `duration_seconds`,
+`steps`, `cfg`, `lyrics_strength`, and `seed` are all patchable; `shift` and the
+tonemap `multiplier` stay at the official template's defaults.
+
+Newer/different setups aren't locked out: `workflow_json`/`workflow_path` +
+`output_node` still works exactly like the image/video tools' override path --
+for ACE-Step 1.5, a different node pack, or a non-ACE-Step audio model entirely.
 
 **Selector integration:** no dedicated `music_selector` exists in OpenMontage
 (unlike `tts_selector`/`image_selector`/`video_selector`) -- music tools are
@@ -323,17 +332,16 @@ do. `fallback_tools = ["suno_music", "music_gen"]`.
 
 **Audio artifact schema:** `ToolResult.data` follows the same shape as the
 image/video tools (`provider`, `model`, `output`, `format`, `workflow_provenance`),
-plus `duration_seconds` -- a best-effort `ffprobe` probe of the downloaded
-file (`None` if `ffprobe` isn't on PATH), since a custom workflow gives no
-other reliable way to know actual output duration ahead of time.
+plus `lyrics` and `duration_seconds` -- the latter a best-effort `ffprobe` probe
+of the downloaded file (`None` if `ffprobe` isn't on PATH), since even the bundled
+workflow doesn't report actual rendered duration back through `/history`.
 
 **Workflow/output-node contract:** identical to image/video -- `output_node`
-must be the ID of the node that writes the final artifact (typically ComfyUI's
-native `SaveAudio` node). `ComfyUIClient.generate()`'s artifact extraction now
-also checks the `"audio"` output key (previously only `"images"`/`"gifs"`),
-which is what `SaveAudio` writes to in ComfyUI's `/history` response --
-this is the one part of the contract that *is* standardized regardless of
-which ACE-Step loader pack sits upstream of it.
+must be the ID of the node that writes the final artifact (the bundled workflow's
+is `SaveAudioMP3`, ComfyUI's native audio saver). `ComfyUIClient.generate()`'s
+artifact extraction now also checks the `"audio"` output key (previously only
+`"images"`/`"gifs"`), which is what `SaveAudioMP3`/`SaveAudio` write to in
+ComfyUI's `/history` response.
 
 ---
 
@@ -535,11 +543,12 @@ pipeline definition, or any schema.
    override, and `COMFYUI_SETUP_OFFER.per_capability_env_var_overrides` documents
    it for the setup-offer surfacing in `provider_menu()`.
 
-4. ~~**Music generation:**~~ **Resolved -- shipped as custom-workflow-only.**
+4. ~~**Music generation:**~~ **Resolved -- shipped with a bundled ACE-Step v1 workflow.**
    `comfyui_music` is a real tool now (not a hidden image/video override), routed
    through the existing `registry.get_by_capability("music_generation")` path
-   like `suno_music`/`music_gen`. It has no bundled workflow -- the node-pack
-   fragmentation that originally blocked this is real, so the tool always
-   requires caller-supplied `workflow_json`/`workflow_path` + `output_node`
-   rather than betting on one pack. See the `comfyui_music` section above for
-   the artifact schema and workflow/output-node contract.
+   like `suno_music`/`music_gen`. The node-pack fragmentation that originally
+   blocked this turned out not to apply to ACE-Step v1: its ComfyUI nodes are
+   native core nodes, not a third-party pack, so `ace-step-1-t2a.json` ships as
+   the default, verified node-by-node against ComfyUI's own source. Custom
+   `workflow_json`/`workflow_path` + `output_node` remains available for other
+   versions/packs. See the `comfyui_music` section above for the full contract.

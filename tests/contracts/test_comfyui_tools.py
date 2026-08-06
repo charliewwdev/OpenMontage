@@ -137,6 +137,7 @@ EXPECTED_WORKFLOWS = [
     "flux2-txt2img.json",
     "wan22-i2v-4step.json",
     "wan22-t2v-4step.json",
+    "ace-step-1-t2a.json",
 ]
 
 
@@ -651,6 +652,11 @@ class TestModelRequirements:
         assert len(_REQUIRED_MODELS_T2V) > 0
         assert any("t2v" in m.lower() for m in _REQUIRED_MODELS_T2V)
 
+    def test_music_tool_has_required_models(self):
+        from tools.audio.comfyui_music import _REQUIRED_MODELS
+        assert len(_REQUIRED_MODELS) > 0
+        assert any("ace_step" in m.lower() for m in _REQUIRED_MODELS)
+
 
 # ------------------------------------------------------------------
 # Custom workflow contract and provenance
@@ -863,16 +869,23 @@ class TestComfyUIMusic:
         assert tool.capability == "music_generation"
         assert tool.provider == "comfyui"
 
-    def test_requires_workflow_json_or_path(self):
+    def test_bundled_path_requires_no_workflow_json_or_output_node(self, tmp_path):
+        """Without workflow_json/workflow_path it should attempt the bundled
+        ACE-Step workflow, not demand a custom one."""
         tool = ComfyUIMusic()
         tool._client.is_available = lambda: True
+        tool._client.check_models = lambda required: (list(required), [])
+        tool._client.generate = lambda workflow, output_node, dest, **kwargs: [Path(dest)]
 
-        result = tool.execute({"prompt": "ambient pad", "output_node": "9"})
+        result = tool.execute({
+            "prompt": "ambient pad",
+            "output_path": str(tmp_path / "music.mp3"),
+        })
 
-        assert result.success is False
-        assert "workflow_json" in result.error or "workflow_path" in result.error
+        assert result.success is True
+        assert result.data["workflow_provenance"]["source"] == "bundled"
 
-    def test_requires_output_node(self):
+    def test_custom_workflow_without_output_node_errors(self):
         tool = ComfyUIMusic()
         tool._client.is_available = lambda: True
 
@@ -883,6 +896,52 @@ class TestComfyUIMusic:
 
         assert result.success is False
         assert "output_node" in result.error
+
+    def test_bundled_missing_models_returns_structured_payload(self):
+        tool = ComfyUIMusic()
+        tool._client.is_available = lambda: True
+        tool._client.check_models = lambda required: ([], list(required))
+
+        result = tool.execute({"prompt": "ambient pad"})
+
+        assert result.success is False
+        assert result.data["missing_models"][0]["name"] == "ace_step_v1_3.5b.safetensors"
+        assert result.data["missing_models"][0]["download_url"]
+
+    def test_bundled_generation_patches_tags_lyrics_and_seed(self, tmp_path):
+        tool = ComfyUIMusic()
+        tool._client.is_available = lambda: True
+        tool._client.check_models = lambda required: (list(required), [])
+        seen = {}
+
+        def fake_generate(workflow, output_node, dest, **kwargs):
+            seen["workflow"] = workflow
+            seen["output_node"] = output_node
+            return [Path(dest)]
+
+        tool._client.generate = fake_generate
+
+        result = tool.execute({
+            "prompt": "lofi hip hop, chill, rain sounds",
+            "lyrics": "[verse]\nquiet streets",
+            "duration_seconds": 45,
+            "seed": 777,
+            "output_path": str(tmp_path / "music.mp3"),
+        })
+
+        assert result.success is True
+        assert seen["output_node"] == "10"
+        assert seen["workflow"]["2"]["inputs"]["tags"] == "lofi hip hop, chill, rain sounds"
+        assert seen["workflow"]["2"]["inputs"]["lyrics"] == "[verse]\nquiet streets"
+        assert seen["workflow"]["4"]["inputs"]["seconds"] == 45
+        assert seen["workflow"]["8"]["inputs"]["seed"] == 777
+        assert result.data["model"] == "ace-step-v1-3.5b"
+
+    def test_get_status_degraded_when_model_missing(self):
+        tool = ComfyUIMusic()
+        tool._client.is_available = lambda: True
+        tool._client.check_models = lambda required: ([], list(required))
+        assert tool.get_status() == ToolStatus.DEGRADED
 
     def test_unavailable_server_reports_unavailable_reason(self):
         tool = ComfyUIMusic()

@@ -11,8 +11,9 @@ import json
 import os
 import random
 import time
+import uuid
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import requests
 
@@ -46,6 +47,9 @@ class ComfyUIClient:
             server_url
             or os.environ.get("COMFYUI_SERVER_URL", "http://localhost:8188")
         ).rstrip("/")
+        # Scopes websocket execution events to this client (see wait_ws) and
+        # is echoed back on /prompt so the server targets messages to us.
+        self.client_id = str(uuid.uuid4())
 
     # ------------------------------------------------------------------
     # Health
@@ -147,7 +151,7 @@ class ComfyUIClient:
         """Queue a workflow for execution.  Returns the ``prompt_id``."""
         resp = requests.post(
             f"{self.server_url}/prompt",
-            json={"prompt": workflow},
+            json={"prompt": workflow, "client_id": self.client_id},
             timeout=30,
         )
         try:
@@ -198,6 +202,117 @@ class ComfyUIClient:
             prompt_id=prompt_id,
         )
 
+    def wait_ws(
+        self,
+        prompt_id: str,
+        *,
+        timeout: int = 600,
+        interval: int = 5,
+        on_progress: Callable[[dict], None] | None = None,
+    ) -> dict:
+        """Block until *prompt_id* finishes, watching ComfyUI's websocket feed.
+
+        Reacts to server-pushed ``executing``/``progress``/``execution_error``
+        events instead of sleeping between REST polls, so completion and
+        errors are detected immediately rather than up to *interval* seconds
+        late. *on_progress*, if given, is called with each ``progress``
+        message's ``data`` dict (``value``, ``max``, ``node``, ``prompt_id``).
+
+        Requires the optional ``websocket-client`` package. Any transport
+        failure (missing dependency, connection refused, dropped socket,
+        malformed frame) propagates as a plain exception — callers should
+        catch it and fall back to :meth:`poll`, which is what :meth:`generate`
+        does. A genuine ComfyUI-side execution error or an unmet deadline is
+        raised as :class:`ComfyUIError` with ``prompt_id`` set, exactly like
+        :meth:`poll`, so ``resume_prompt_id`` recovery works the same way
+        regardless of which wait strategy was used.
+        """
+        import websocket  # websocket-client; optional, see docstring
+
+        ws_url = self.server_url.replace("http://", "ws://", 1).replace(
+            "https://", "wss://", 1
+        )
+        conn = websocket.create_connection(
+            f"{ws_url}/ws?clientId={self.client_id}", timeout=10
+        )
+        try:
+            conn.settimeout(interval)
+            deadline = time.time() + timeout
+            finished = False
+            while time.time() < deadline:
+                try:
+                    raw = conn.recv()
+                except websocket.WebSocketTimeoutException:
+                    continue
+                if not isinstance(raw, str):
+                    continue  # binary preview-image frame, not a status message
+                try:
+                    message = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                data = message.get("data", {})
+                if data.get("prompt_id") not in (None, prompt_id):
+                    continue  # another job sharing this connection
+                msg_type = message.get("type")
+                if msg_type == "progress":
+                    if on_progress:
+                        on_progress(data)
+                elif msg_type == "execution_error":
+                    raise ComfyUIError(
+                        f"Execution error: {data}", prompt_id=prompt_id
+                    )
+                elif msg_type == "executing" and data.get("node") is None:
+                    finished = True
+                    break
+        finally:
+            conn.close()
+
+        if not finished:
+            raise ComfyUIError(
+                f"Prompt {prompt_id} did not complete within {timeout}s "
+                f"(websocket wait). The job was not cancelled — resume with "
+                f"resume_prompt_id={prompt_id!r} and a longer timeout.",
+                prompt_id=prompt_id,
+            )
+
+        resp = requests.get(f"{self.server_url}/history/{prompt_id}", timeout=10)
+        resp.raise_for_status()
+        entry = resp.json().get(prompt_id)
+        if entry is None:
+            raise ComfyUIError(
+                f"No history entry for {prompt_id} after completion",
+                prompt_id=prompt_id,
+            )
+        return entry
+
+    def _wait(
+        self,
+        prompt_id: str,
+        *,
+        timeout: int,
+        interval: int,
+        on_progress: Callable[[dict], None] | None = None,
+    ) -> dict:
+        """Wait for *prompt_id*, preferring the websocket feed over polling.
+
+        Falls back to :meth:`poll` when ``websocket-client`` isn't installed
+        or the websocket can't be established/maintained. A genuine
+        :class:`ComfyUIError` (execution error or deadline reached) is never
+        swallowed by the fallback — only transport-level failures are. The
+        fallback gets whatever's left of *timeout*, not a fresh budget, so a
+        mid-wait websocket drop can't double the caller's worst-case wait.
+        """
+        started = time.time()
+        try:
+            return self.wait_ws(
+                prompt_id, timeout=timeout, interval=interval, on_progress=on_progress
+            )
+        except ComfyUIError:
+            raise
+        except Exception:
+            remaining = max(timeout - (time.time() - started), 0)
+            return self.poll(prompt_id, timeout=remaining, interval=interval)
+
     def download(
         self,
         filename: str,
@@ -247,15 +362,23 @@ class ComfyUIClient:
         timeout: int = 600,
         interval: int = 5,
         resume_prompt_id: str | None = None,
+        on_progress: Callable[[dict], None] | None = None,
     ) -> list[Path]:
-        """Submit → poll → download.  Returns list of artifact paths.
+        """Submit → wait → download.  Returns list of artifact paths.
 
         Pass ``resume_prompt_id`` (from a previous ``ComfyUIError.prompt_id``)
         to skip re-submitting an already-queued/running job and just resume
         waiting on it — the common recovery path after a timeout.
+
+        Waiting prefers ComfyUI's websocket feed (immediate completion/error
+        detection, optional live ``on_progress`` callback) and transparently
+        falls back to REST polling if ``websocket-client`` isn't installed or
+        the connection can't be used. See :meth:`_wait`.
         """
         prompt_id = resume_prompt_id or self.submit(workflow)
-        entry = self.poll(prompt_id, timeout=timeout, interval=interval)
+        entry = self._wait(
+            prompt_id, timeout=timeout, interval=interval, on_progress=on_progress
+        )
 
         outputs = entry.get("outputs", {})
         node_output = outputs.get(output_node, {})

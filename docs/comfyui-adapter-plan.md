@@ -474,9 +474,16 @@ pipeline definition, or any schema.
    user-provided via a config directory? Bundling gives reproducibility;
    external gives flexibility.
 
-2. **Async generation:** ComfyUI supports websocket connections for real-time
-   progress. Worth implementing for long video generations, or is polling
-   sufficient?
+2. ~~**Async generation:**~~ **Resolved.** `ComfyUIClient.generate()` now
+   waits via ComfyUI's websocket feed (`wait_ws()`) by default, reacting to
+   `executing`/`execution_error` events immediately instead of sleeping
+   between REST polls — completion and errors are caught without the
+   `interval`-seconds lag, and an optional `on_progress` callback gets live
+   `progress` events (`comfyui_video` uses this to print step progress on
+   long renders). No new hard dependency: `websocket-client` is an optional
+   import, and `_wait()` transparently falls back to the original
+   `poll()` REST loop when it isn't installed or the connection fails —
+   `resume_prompt_id` recovery behaves identically either way.
 
 3. **Multi-server:** Should the adapter support multiple ComfyUI instances
    (e.g., one for images, one for video) via per-capability URLs?

@@ -351,6 +351,187 @@ class TestClientHelpers:
         assert "myhost:9999" in msg
         assert "COMFYUI_SERVER_URL" not in msg
 
+    def test_submit_includes_client_id_for_websocket_targeting(self, monkeypatch):
+        from tools._comfyui.client import ComfyUIClient
+
+        client = ComfyUIClient("http://comfy.test")
+        seen = {}
+
+        def fake_post(url, json=None, timeout=None):
+            seen.update(json)
+            return type("R", (), {
+                "raise_for_status": lambda self: None,
+                "json": lambda self: {"prompt_id": "abc"},
+            })()
+
+        monkeypatch.setattr("tools._comfyui.client.requests.post", fake_post)
+        client.submit({"1": {"inputs": {}}})
+        assert seen["client_id"] == client.client_id
+
+
+class _FakeWSTimeout(Exception):
+    pass
+
+
+class _FakeWSConn:
+    def __init__(self, frames):
+        self._frames = list(frames)
+
+    def settimeout(self, value):
+        pass
+
+    def recv(self):
+        if not self._frames:
+            raise _FakeWSTimeout()
+        return self._frames.pop(0)
+
+    def close(self):
+        pass
+
+
+def _install_fake_websocket(monkeypatch, frames):
+    """Inject a fake `websocket` module so wait_ws() runs without the real
+    optional websocket-client dependency installed."""
+    import sys
+    import types
+
+    fake_module = types.SimpleNamespace(
+        WebSocketTimeoutException=_FakeWSTimeout,
+        create_connection=lambda url, timeout=10: _FakeWSConn(frames),
+    )
+    monkeypatch.setitem(sys.modules, "websocket", fake_module)
+
+
+class TestWebsocketWait:
+
+    def test_wait_ws_completes_on_executing_none_node(self, monkeypatch, tmp_path):
+        from tools._comfyui.client import ComfyUIClient
+
+        client = ComfyUIClient("http://comfy.test")
+        progress_events = []
+        frames = [
+            json.dumps({"type": "progress", "data": {
+                "value": 2, "max": 20, "prompt_id": "p1",
+            }}),
+            json.dumps({"type": "executing", "data": {
+                "node": None, "prompt_id": "p1",
+            }}),
+        ]
+        _install_fake_websocket(monkeypatch, frames)
+        monkeypatch.setattr(
+            "tools._comfyui.client.requests.get",
+            lambda *a, **k: type("R", (), {
+                "raise_for_status": lambda self: None,
+                "json": lambda self: {"p1": {"outputs": {"9": {}}}},
+            })(),
+        )
+
+        entry = client.wait_ws("p1", timeout=5, on_progress=progress_events.append)
+
+        assert entry == {"outputs": {"9": {}}}
+        assert progress_events == [{"value": 2, "max": 20, "prompt_id": "p1"}]
+
+    def test_wait_ws_execution_error_raises_with_prompt_id(self, monkeypatch):
+        from tools._comfyui.client import ComfyUIClient, ComfyUIError
+
+        client = ComfyUIClient("http://comfy.test")
+        frames = [
+            json.dumps({"type": "execution_error", "data": {
+                "prompt_id": "p2", "exception_message": "boom",
+            }}),
+        ]
+        _install_fake_websocket(monkeypatch, frames)
+
+        with pytest.raises(ComfyUIError) as excinfo:
+            client.wait_ws("p2", timeout=5)
+
+        assert excinfo.value.prompt_id == "p2"
+
+    def test_wait_ws_ignores_other_prompts_on_shared_connection(self, monkeypatch):
+        from tools._comfyui.client import ComfyUIClient
+
+        client = ComfyUIClient("http://comfy.test")
+        frames = [
+            # Another job's event on the same client_id -- must not trigger completion.
+            json.dumps({"type": "executing", "data": {
+                "node": None, "prompt_id": "someone-elses-job",
+            }}),
+            json.dumps({"type": "executing", "data": {
+                "node": None, "prompt_id": "p3",
+            }}),
+        ]
+        _install_fake_websocket(monkeypatch, frames)
+        monkeypatch.setattr(
+            "tools._comfyui.client.requests.get",
+            lambda *a, **k: type("R", (), {
+                "raise_for_status": lambda self: None,
+                "json": lambda self: {"p3": {"outputs": {}}},
+            })(),
+        )
+
+        entry = client.wait_ws("p3", timeout=5)
+        assert entry == {"outputs": {}}
+
+    def test_wait_ws_timeout_raises_comfyuierror_with_prompt_id(self, monkeypatch):
+        from tools._comfyui.client import ComfyUIClient, ComfyUIError
+
+        client = ComfyUIClient("http://comfy.test")
+        _install_fake_websocket(monkeypatch, frames=[])  # recv() always times out
+
+        with pytest.raises(ComfyUIError) as excinfo:
+            client.wait_ws("p4", timeout=0)
+
+        assert excinfo.value.prompt_id == "p4"
+
+    def test_wait_falls_back_to_poll_when_websocket_unavailable(self, monkeypatch):
+        """No websocket-client installed (or any transport failure) must
+        silently fall back to REST polling, not blow up the whole call."""
+        from tools._comfyui.client import ComfyUIClient
+        import sys
+
+        client = ComfyUIClient("http://comfy.test")
+        monkeypatch.delitem(sys.modules, "websocket", raising=False)
+        monkeypatch.setattr(
+            "builtins.__import__",
+            _raise_on_websocket_import(__import__),
+        )
+        monkeypatch.setattr(
+            client, "poll", lambda prompt_id, **kwargs: {"outputs": {"used": "poll"}}
+        )
+
+        entry = client._wait("p5", timeout=5, interval=5)
+        assert entry == {"outputs": {"used": "poll"}}
+
+    def test_wait_does_not_swallow_genuine_comfyuierror_from_websocket(self, monkeypatch):
+        """A real execution error detected over the websocket must propagate,
+        not be masked by a fallback-to-poll retry."""
+        from tools._comfyui.client import ComfyUIClient, ComfyUIError
+
+        client = ComfyUIClient("http://comfy.test")
+        frames = [
+            json.dumps({"type": "execution_error", "data": {
+                "prompt_id": "p6", "exception_message": "bad node",
+            }}),
+        ]
+        _install_fake_websocket(monkeypatch, frames)
+
+        def fail_poll(prompt_id, **kwargs):
+            raise AssertionError("poll() should not be called after a real ws error")
+
+        monkeypatch.setattr(client, "poll", fail_poll)
+
+        with pytest.raises(ComfyUIError) as excinfo:
+            client._wait("p6", timeout=5, interval=5)
+        assert excinfo.value.prompt_id == "p6"
+
+
+def _raise_on_websocket_import(real_import):
+    def _import(name, *args, **kwargs):
+        if name == "websocket":
+            raise ImportError("no module named websocket")
+        return real_import(name, *args, **kwargs)
+    return _import
+
 
 # ------------------------------------------------------------------
 # Model discovery (offline, no server needed)

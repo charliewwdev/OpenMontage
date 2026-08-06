@@ -217,6 +217,23 @@ class ComfyUIVideo(BaseTool):
 
     def __init__(self) -> None:
         self._client = ComfyUIClient()
+        self._last_progress_log = 0.0
+
+    def _log_progress(self, data: dict) -> None:
+        """Print a throttled progress line for long video renders.
+
+        Video jobs can run for tens of minutes; without this the process
+        looks hung. Throttled to once per 10s since ComfyUI pushes a
+        ``progress`` event per sampling step, which would otherwise flood
+        stdout on fast GPUs.
+        """
+        now = time.monotonic()
+        if now - self._last_progress_log < 10:
+            return
+        self._last_progress_log = now
+        value, max_value = data.get("value"), data.get("max")
+        if value is not None and max_value:
+            print(f"[comfyui_video] step {value}/{max_value}")
 
     def get_status(self) -> ToolStatus:
         if not self._client.is_available():
@@ -341,6 +358,7 @@ class ComfyUIVideo(BaseTool):
                 timeout=inputs.get("timeout_seconds", 3600),
                 interval=10,
                 resume_prompt_id=inputs.get("resume_prompt_id"),
+                on_progress=self._log_progress,
             )
 
         except ComfyUIError as exc:

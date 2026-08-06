@@ -17,13 +17,14 @@ from tools.base_tool import (
     ToolStatus,
     ToolTier,
 )
+from tools.audio.comfyui_music import ComfyUIMusic
 from tools.graphics.comfyui_image import ComfyUIImage
 from tools.graphics.image_selector import ImageSelector
 from tools.tool_registry import ToolRegistry
 from tools.video.video_selector import VideoSelector
 from tools.video.comfyui_video import ComfyUIVideo
 
-TOOLS = [ComfyUIImage, ComfyUIVideo]
+TOOLS = [ComfyUIImage, ComfyUIVideo, ComfyUIMusic]
 WORKFLOW_DIR = Path(__file__).resolve().parent.parent.parent / "tools" / "_comfyui" / "workflows"
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
@@ -322,6 +323,23 @@ class TestClientHelpers:
             resume_prompt_id="already-running-id",
         )
         assert paths == [tmp_path / "out.png"]
+
+    def test_generate_reads_audio_key_from_savaudio_node(self, monkeypatch, tmp_path):
+        """The native SaveAudio node writes outputs under "audio", not
+        "images"/"gifs" -- comfyui_music depends on this being handled."""
+        from tools._comfyui.client import ComfyUIClient
+
+        client = ComfyUIClient("http://comfy.test")
+        monkeypatch.setattr(client, "submit", lambda workflow: "p1")
+        monkeypatch.setattr(client, "poll", lambda prompt_id, **kwargs: {
+            "outputs": {"9": {"audio": [{
+                "filename": "track.flac", "subfolder": "", "type": "output",
+            }]}}
+        })
+        monkeypatch.setattr(client, "download", lambda filename, subfolder, dest, folder_type="output": Path(dest))
+
+        paths = client.generate({"9": {"inputs": {}}}, "9", tmp_path / "out.flac")
+        assert paths == [tmp_path / "out.flac"]
 
     def test_is_default_url_when_env_not_set(self, monkeypatch):
         from tools._comfyui.client import ComfyUIClient
@@ -836,6 +854,142 @@ class TestCustomWorkflowContract:
         assert provenance["source"] == "bundled"
         assert provenance["workflow_hash_sha256"]
         assert any(item["role"] == "vae" for item in provenance["model_stack"])
+
+
+class TestComfyUIMusic:
+
+    def test_capability_and_provider(self):
+        tool = ComfyUIMusic()
+        assert tool.capability == "music_generation"
+        assert tool.provider == "comfyui"
+
+    def test_requires_workflow_json_or_path(self):
+        tool = ComfyUIMusic()
+        tool._client.is_available = lambda: True
+
+        result = tool.execute({"prompt": "ambient pad", "output_node": "9"})
+
+        assert result.success is False
+        assert "workflow_json" in result.error or "workflow_path" in result.error
+
+    def test_requires_output_node(self):
+        tool = ComfyUIMusic()
+        tool._client.is_available = lambda: True
+
+        result = tool.execute({
+            "prompt": "ambient pad",
+            "workflow_json": json.dumps({"9": {"inputs": {}}}),
+        })
+
+        assert result.success is False
+        assert "output_node" in result.error
+
+    def test_unavailable_server_reports_unavailable_reason(self):
+        tool = ComfyUIMusic()
+        tool._client.is_available = lambda: False
+        tool._client.unavailable_reason = lambda: "no server here"
+
+        result = tool.execute({
+            "prompt": "ambient pad",
+            "workflow_json": json.dumps({"9": {"inputs": {}}}),
+            "output_node": "9",
+        })
+
+        assert result.success is False
+        assert result.error == "no server here"
+
+    def test_successful_generation_returns_provenance_and_duration(self, tmp_path, monkeypatch):
+        tool = ComfyUIMusic()
+        tool._client.is_available = lambda: True
+
+        dest_file = tmp_path / "music.mp3"
+
+        def fake_generate(workflow, output_node, dest, **kwargs):
+            Path(dest).write_bytes(b"fake-audio-bytes")
+            return [Path(dest)]
+
+        tool._client.generate = fake_generate
+        monkeypatch.setattr("shutil.which", lambda name: None)  # no ffprobe in test env
+
+        result = tool.execute({
+            "prompt": "upbeat synthwave",
+            "workflow_json": json.dumps({"9": {"inputs": {}}}),
+            "output_node": "9",
+            "output_path": str(dest_file),
+            "workflow_name": "my-ace-step-graph",
+            "workflow_model": "ace-step-v1-3.5b",
+        })
+
+        assert result.success is True
+        assert result.data["provider"] == "comfyui"
+        assert result.data["model"] == "ace-step-v1-3.5b"
+        assert result.data["output"] == str(dest_file)
+        assert result.data["format"] == "mp3"
+        assert result.data["duration_seconds"] is None  # ffprobe unavailable
+        provenance = result.data["workflow_provenance"]
+        assert provenance["source"] == "user_supplied"
+        assert provenance["output_node"] == "9"
+        assert provenance["workflow_hash_sha256"]
+
+    def test_timeout_surfaces_resumable_prompt_id(self, tmp_path):
+        from tools._comfyui.client import ComfyUIError
+
+        tool = ComfyUIMusic()
+        tool._client.is_available = lambda: True
+
+        def fake_generate(workflow, output_node, dest, **kwargs):
+            raise ComfyUIError("timed out", prompt_id="music-prompt-id")
+
+        tool._client.generate = fake_generate
+
+        result = tool.execute({
+            "prompt": "ambient pad",
+            "workflow_json": json.dumps({"9": {"inputs": {}}}),
+            "output_node": "9",
+            "output_path": str(tmp_path / "music.mp3"),
+        })
+
+        assert result.success is False
+        assert result.data["prompt_id"] == "music-prompt-id"
+        assert "resume_prompt_id" in result.error
+
+    def test_passes_timeout_and_resume_prompt_id_through(self, tmp_path):
+        tool = ComfyUIMusic()
+        tool._client.is_available = lambda: True
+        seen = {}
+
+        def fake_generate(workflow, output_node, dest, **kwargs):
+            seen.update(kwargs)
+            return [Path(dest)]
+
+        tool._client.generate = fake_generate
+
+        tool.execute({
+            "prompt": "ambient pad",
+            "workflow_json": json.dumps({"9": {"inputs": {}}}),
+            "output_node": "9",
+            "output_path": str(tmp_path / "music.mp3"),
+            "timeout_seconds": 3600,
+            "resume_prompt_id": "already-running-id",
+        })
+
+        assert seen["timeout"] == 3600
+        assert seen["resume_prompt_id"] == "already-running-id"
+
+    def test_registry_discovers_comfyui_music_under_music_generation(self):
+        registry = ToolRegistry()
+        tool = ComfyUIMusic()
+        registry.register(tool)
+        registry._discovered_packages.add("tools")
+
+        by_capability = registry.get_by_capability("music_generation")
+        assert any(t.name == "comfyui_music" for t in by_capability)
+
+    def test_uses_music_capability_env_var_for_multi_server(self, monkeypatch):
+        monkeypatch.delenv("COMFYUI_SERVER_URL", raising=False)
+        monkeypatch.setenv("COMFYUI_MUSIC_SERVER_URL", "http://music-gpu:8188")
+        tool = ComfyUIMusic()
+        assert tool._client.server_url == "http://music-gpu:8188"
 
 
 class TestComfyUISetupOffer:

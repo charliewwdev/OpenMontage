@@ -296,19 +296,44 @@ not promote ComfyUI for an operation whose bundled models are missing.
 
 ---
 
-### `comfyui_music` -- Music Generation (not shipped)
+### `comfyui_music` -- Music Generation (shipped, custom-workflow-only)
 
-We explored adding a `comfyui_music` tool using the ACE-Step 3.5B model.
-The model runs well in ComfyUI, but the ComfyUI node interface for
-ACE-Step is not standardized -- there are multiple custom node packs with
-different class names (`AceStepModelLoader` vs native `TextEncodeAceStepAudio`,
-etc.).  Shipping a workflow that only works with one specific custom node
-pack would break for most users.
+`tools/audio/comfyui_music.py`. `capability="music_generation"`, `provider="comfyui"`.
+Ships with **no bundled workflow** -- the ACE-Step node-pack fragmentation
+described below is real and unsolved, so instead of picking one pack and
+breaking for everyone else, the tool always requires a caller-supplied
+`workflow_json`/`workflow_path` + `output_node`, exactly like the image/video
+tools' *optional* override path, just mandatory here. `prompt` is accepted
+for provenance/logging only and is never injected into the workflow --
+tags/lyrics must already be baked into the graph before calling, same
+convention as image/video custom workflows.
 
-**Future path:** ACE-Step support should be revisited once OpenMontage decides
-the music-generation routing shape and a portable ComfyUI audio workflow
-contract. Current image/video workflow overrides are intentionally scoped to
-image and video artifacts, not arbitrary audio workflows.
+Originally not shipped because: the ComfyUI node interface for ACE-Step is
+not standardized -- there are multiple custom node packs with different
+class names (`AceStepModelLoader` vs native `TextEncodeAceStepAudio`, etc.).
+Shipping a workflow that only works with one specific custom node pack would
+break for most users. The custom-workflow-only design sidesteps this
+entirely: whichever node pack is installed, the caller exports it themselves.
+
+**Selector integration:** no dedicated `music_selector` exists in OpenMontage
+(unlike `tts_selector`/`image_selector`/`video_selector`) -- music tools are
+already routed directly via `registry.get_by_capability("music_generation")`,
+and `comfyui_music` participates in that the same way `suno_music`/`music_gen`
+do. `fallback_tools = ["suno_music", "music_gen"]`.
+
+**Audio artifact schema:** `ToolResult.data` follows the same shape as the
+image/video tools (`provider`, `model`, `output`, `format`, `workflow_provenance`),
+plus `duration_seconds` -- a best-effort `ffprobe` probe of the downloaded
+file (`None` if `ffprobe` isn't on PATH), since a custom workflow gives no
+other reliable way to know actual output duration ahead of time.
+
+**Workflow/output-node contract:** identical to image/video -- `output_node`
+must be the ID of the node that writes the final artifact (typically ComfyUI's
+native `SaveAudio` node). `ComfyUIClient.generate()`'s artifact extraction now
+also checks the `"audio"` output key (previously only `"images"`/`"gifs"`),
+which is what `SaveAudio` writes to in ComfyUI's `/history` response --
+this is the one part of the contract that *is* standardized regardless of
+which ACE-Step loader pack sits upstream of it.
 
 ---
 
@@ -373,15 +398,17 @@ COMFYUI_POLL_TIMEOUT=600                    # max wait for image gen
 COMFYUI_VIDEO_TIMEOUT=900                   # max wait for video gen
 ```
 
-**Multi-server (optional):** point `comfyui_image` and `comfyui_video` at
-separate ComfyUI instances -- e.g. one GPU running FLUX 2, another running
-WAN 2.2 -- by setting a per-capability override. Each takes priority over
-`COMFYUI_SERVER_URL` for its own tool only; leave both unset and everything
-still talks to the single shared server.
+**Multi-server (optional):** point `comfyui_image`, `comfyui_video`, and
+`comfyui_music` at separate ComfyUI instances -- e.g. one GPU running FLUX 2,
+another running WAN 2.2, another running ACE-Step -- by setting a
+per-capability override. Each takes priority over `COMFYUI_SERVER_URL` for
+its own tool only; leave all three unset and everything talks to the single
+shared server.
 
 ```bash
 COMFYUI_IMAGE_SERVER_URL=http://gpu-a:8188
 COMFYUI_VIDEO_SERVER_URL=http://gpu-b:8188
+COMFYUI_MUSIC_SERVER_URL=http://gpu-c:8188
 ```
 
 **For Docker Compose setups** (ComfyUI in a container):
@@ -496,20 +523,23 @@ pipeline definition, or any schema.
    `poll()` REST loop when it isn't installed or the connection fails —
    `resume_prompt_id` recovery behaves identically either way.
 
-3. ~~**Multi-server:**~~ **Resolved.** `ComfyUIClient(capability="image"|"video")`
+3. ~~**Multi-server:**~~ **Resolved.** `ComfyUIClient(capability="image"|"video"|"music")`
    resolves its server URL from a per-capability env var first
-   (`COMFYUI_IMAGE_SERVER_URL` / `COMFYUI_VIDEO_SERVER_URL`), then the shared
-   `COMFYUI_SERVER_URL`, then the `http://localhost:8188` default. `comfyui_image`
-   and `comfyui_video` pass their capability at construction, so image and video
-   generation can point at different ComfyUI instances (different GPUs, different
-   model sets) with zero code changes -- single-server setups need no extra
-   configuration since both env vars are optional. `client.capability`/
+   (`COMFYUI_IMAGE_SERVER_URL` / `COMFYUI_VIDEO_SERVER_URL` / `COMFYUI_MUSIC_SERVER_URL`),
+   then the shared `COMFYUI_SERVER_URL`, then the `http://localhost:8188` default.
+   All three tools pass their capability at construction, so image, video, and
+   music generation can each point at different ComfyUI instances (different GPUs,
+   different model sets) with zero code changes -- single-server setups need no extra
+   configuration since all three env vars are optional. `client.capability`/
    `client.is_default_url`/`client.unavailable_reason()` all account for the
    override, and `COMFYUI_SETUP_OFFER.per_capability_env_var_overrides` documents
    it for the setup-offer surfacing in `provider_menu()`.
 
-4. **Music generation:** ACE-Step works in ComfyUI but OpenMontage needs a
-   dedicated music-generation routing contract before adding `comfyui_music`.
-   The follow-up should decide selector integration, audio artifact schemas, and
-   a portable workflow/output-node contract rather than treating music as a
-   hidden image/video workflow override.
+4. ~~**Music generation:**~~ **Resolved -- shipped as custom-workflow-only.**
+   `comfyui_music` is a real tool now (not a hidden image/video override), routed
+   through the existing `registry.get_by_capability("music_generation")` path
+   like `suno_music`/`music_gen`. It has no bundled workflow -- the node-pack
+   fragmentation that originally blocked this is real, so the tool always
+   requires caller-supplied `workflow_json`/`workflow_path` + `output_node`
+   rather than betting on one pack. See the `comfyui_music` section above for
+   the artifact schema and workflow/output-node contract.

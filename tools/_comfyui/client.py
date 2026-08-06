@@ -404,8 +404,13 @@ class ComfyUIClient:
         outputs = entry.get("outputs", {})
         node_output = outputs.get(output_node, {})
 
-        # ComfyUI stores images and videos under the "images" key
-        items = node_output.get("images", []) or node_output.get("gifs", [])
+        # ComfyUI stores images/video frames under "images", legacy GIFs
+        # under "gifs", and the native SaveAudio node's output under "audio".
+        items = (
+            node_output.get("images", [])
+            or node_output.get("gifs", [])
+            or node_output.get("audio", [])
+        )
         if not items:
             raise ComfyUIError(
                 f"No output artifacts on node {output_node}. "

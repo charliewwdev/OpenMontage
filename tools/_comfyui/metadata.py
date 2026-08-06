@@ -24,6 +24,7 @@ COMFYUI_SETUP_OFFER: dict[str, Any] = {
     "per_capability_env_var_overrides": {
         "comfyui_image": "COMFYUI_IMAGE_SERVER_URL",
         "comfyui_video": "COMFYUI_VIDEO_SERVER_URL",
+        "comfyui_music": "COMFYUI_MUSIC_SERVER_URL",
     },
 }
 

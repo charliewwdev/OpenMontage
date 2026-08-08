@@ -45,6 +45,10 @@ class TTSSelector(BaseTool):
                 "type": "string",
                 "description": "Provider-specific voice ID. Passed through to the selected TTS provider.",
             },
+            "voice": {
+                "type": "string",
+                "description": "Provider-specific voice name or ID. fal.ai ElevenLabs accepts names such as Rachel.",
+            },
             "voice_language": {
                 "type": "string",
                 "enum": ["zh", "en"],
@@ -58,7 +62,7 @@ class TTSSelector(BaseTool):
             },
             "model_id": {
                 "type": "string",
-                "description": "TTS model to use (e.g. eleven_multilingual_v2). Passed through to provider.",
+                "description": "TTS model to use (e.g. eleven-v3 or eleven_multilingual_v2). Passed through to provider.",
             },
             "stability": {
                 "type": "number", "minimum": 0, "maximum": 1,
@@ -99,6 +103,24 @@ class TTSSelector(BaseTool):
                 "enum": ["text", "ssml"],
                 "default": "text",
                 "description": "Use 'ssml' only when the selected provider supports tags such as <break>.",
+            },
+            "language_code": {
+                "type": "string",
+                "description": "Provider-specific language code, such as en-US for Google or en for fal.ai ElevenLabs.",
+            },
+            "timestamps": {
+                "type": "boolean",
+                "default": False,
+                "description": "Request word timestamps when the selected provider supports them.",
+            },
+            "apply_text_normalization": {
+                "type": "string",
+                "enum": ["auto", "on", "off"],
+                "description": "Text normalization mode for providers that support it.",
+            },
+            "seed": {
+                "type": "integer",
+                "description": "Optional generation seed for providers that support reproducible speech.",
             },
             "voice_performance": {
                 "type": "object",

@@ -8,7 +8,10 @@ from __future__ import annotations
 
 import base64
 import os
+import socket
+import threading
 import time
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -28,6 +31,32 @@ from tools.google_credentials import (
     get_access_token,
     service_account_configured,
 )
+
+
+_IPV4_REQUEST_LOCK = threading.Lock()
+
+
+@contextmanager
+def _google_tts_network_family():
+    """Use IPv4 when the deployment key is restricted to the server's IPv4."""
+    force_ipv4 = os.environ.get("GOOGLE_TTS_FORCE_IPV4", "").lower() in {
+        "1",
+        "true",
+        "yes",
+    }
+    if not force_ipv4:
+        yield
+        return
+
+    import urllib3.util.connection
+
+    with _IPV4_REQUEST_LOCK:
+        original = urllib3.util.connection.allowed_gai_family
+        urllib3.util.connection.allowed_gai_family = lambda: socket.AF_INET
+        try:
+            yield
+        finally:
+            urllib3.util.connection.allowed_gai_family = original
 
 
 class GoogleTTS(BaseTool):
@@ -279,12 +308,13 @@ class GoogleTTS(BaseTool):
         elif api_key:
             headers["x-goog-api-key"] = api_key
 
-        response = requests.post(
-            url,
-            headers=headers,
-            json=payload,
-            timeout=120,
-        )
+        with _google_tts_network_family():
+            response = requests.post(
+                url,
+                headers=headers,
+                json=payload,
+                timeout=120,
+            )
         response.raise_for_status()
 
         audio_content = base64.b64decode(response.json()["audioContent"])

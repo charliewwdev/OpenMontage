@@ -184,6 +184,7 @@ stages:
       - diagram_gen
       - code_snippet
       - music_gen
+      - fal_elevenlabs_music
     tools_available:
       - tts_selector
       - image_selector
@@ -192,6 +193,7 @@ stages:
       - diagram_gen
       - code_snippet
       - music_gen
+      - fal_elevenlabs_music
     checkpoint_required: true
     human_approval_default: true
     review_focus:

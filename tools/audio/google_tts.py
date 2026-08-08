@@ -76,6 +76,7 @@ class GoogleTTS(BaseTool):
         "  GOOGLE_API_KEY or GEMINI_API_KEY remain supported for broader Google setups.\n"
         "  Google Cloud API key with Text-to-Speech enabled.\n"
         "  Enable the API at https://console.cloud.google.com/apis/library/texttospeech.googleapis.com\n"
+        "  Set GOOGLE_TTS_FORCE_IPV4=1 only when the key is restricted to the caller's IPv4.\n"
         "Auth option B — service account: set GOOGLE_APPLICATION_CREDENTIALS to the\n"
         "  path of a service-account JSON key (needs the 'google-auth' package)."
     )

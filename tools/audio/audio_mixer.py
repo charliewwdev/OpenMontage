@@ -184,6 +184,14 @@ class AudioMixer(BaseTool):
                 "default": 0.5,
                 "description": "Duration of fade in/out at segment boundaries (seconds).",
             },
+            "target_duration": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": (
+                    "full_mix only. Exact output length in seconds. Pads a short "
+                    "mix and trims a long mix so audio matches the composition."
+                ),
+            },
         },
     }
 
@@ -500,6 +508,15 @@ class AudioMixer(BaseTool):
         output_path.parent.mkdir(parents=True, exist_ok=True)
         normalize = inputs.get("normalize", True)
         ducking = inputs.get("ducking", {"enabled": True})
+        target_duration = inputs.get("target_duration")
+        target: float | None = None
+        if target_duration is not None:
+            try:
+                target = float(target_duration)
+            except (TypeError, ValueError):
+                return ToolResult(success=False, error="target_duration must be a positive number")
+            if target <= 0:
+                return ToolResult(success=False, error="target_duration must be greater than zero")
 
         speech_tracks = [t for t in tracks if t.get("role") in ("speech", "primary")]
         music_tracks = [t for t in tracks if t.get("role") in ("music", "secondary")]
@@ -547,7 +564,14 @@ class AudioMixer(BaseTool):
                 )
             else:
                 filter_parts.append(f"[a{speech_indices[0]}]acopy[speech_all]")
-            filter_parts.append("[speech_all]asplit=2[speech_key][speech_out]")
+            if target is not None:
+                filter_parts.append("[speech_all]asplit=2[speech_key_raw][speech_out]")
+                filter_parts.append(
+                    f"[speech_key_raw]apad=whole_dur={target},"
+                    f"atrim=duration={target},asetpts=PTS-STARTPTS[speech_key]"
+                )
+            else:
+                filter_parts.append("[speech_all]asplit=2[speech_key][speech_out]")
 
             # Mix music tracks together
             music_start = len(speech_tracks)
@@ -596,19 +620,34 @@ class AudioMixer(BaseTool):
                 f"{all_labels}amix=inputs={len(all_tracks)}:duration=longest:dropout_transition=2[premix]"
             )
 
+        # A ducked music stream is gated by the speech sidechain, so its tail
+        # can disappear when narration ends. If the caller knows the video
+        # duration, make that the authoritative mix length before loudness
+        # normalization: apad extends short audio and atrim caps long audio.
+        premix_label = "premix"
+        if target is not None:
+            filter_parts.append(
+                f"[premix]apad=whole_dur={target},atrim=duration={target},"
+                "asetpts=PTS-STARTPTS[premix_duration]"
+            )
+            premix_label = "premix_duration"
+
         # Normalize
         if normalize:
-            filter_parts.append(self._loudnorm_filter(inputs, "premix", "out"))
+            filter_parts.append(self._loudnorm_filter(inputs, premix_label, "out"))
             out_label = "[out]"
         else:
-            out_label = "[premix]"
+            out_label = f"[{premix_label}]"
 
         filter_complex = ";".join(p for p in filter_parts if p)
 
         cmd = ["ffmpeg", "-y"]
         cmd.extend(input_args)
         cmd.extend(["-filter_complex", filter_complex])
-        cmd.extend(["-map", out_label, str(output_path)])
+        cmd.extend(["-map", out_label])
+        if target is not None:
+            cmd.extend(["-t", str(target)])
+        cmd.append(str(output_path))
 
         self.run_command(cmd)
 
@@ -621,6 +660,7 @@ class AudioMixer(BaseTool):
                 "sfx_tracks": len(sfx_tracks),
                 "ducking_enabled": duck_enabled,
                 "normalized": normalize,
+                "target_duration": target_duration,
                 "output": str(output_path),
             },
             artifacts=[str(output_path)],

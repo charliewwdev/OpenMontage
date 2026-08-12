@@ -11,7 +11,7 @@
     "description": { "type": "string" },
     "category": {
       "type": "string",
-      "enum": ["talking_head", "generated", "hybrid", "screen_recording", "animation", "cinematic", "custom"]
+      "enum": ["talking_head", "generated", "hybrid", "screen_recording", "animation", "cinematic", "documentary", "custom"]
     },
     "stability": {
       "type": "string",

@@ -6,10 +6,10 @@ import {
   useVideoConfig,
 } from "remotion";
 
-interface HeroTitleProps {
+type HeroTitleProps = {
   title: string;
   subtitle?: string;
-}
+};
 
 export const HeroTitle: React.FC<HeroTitleProps> = ({ title, subtitle }) => {
   const frame = useCurrentFrame();

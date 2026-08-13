@@ -9,6 +9,7 @@ import builtins
 import base64
 import os
 import shutil
+from types import SimpleNamespace
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -186,6 +187,7 @@ class TestGoogleMusic:
         assert info["tier"] == "generate"
         assert info["capability"] == "music_generation"
         assert info["provider"] == "google"
+        assert info["agent_skills"] == ["lyria"]
 
     def test_duration_validation(self):
         tool = GoogleMusic()
@@ -570,16 +572,26 @@ class TestVeoVideo:
             called_kwargs = mock_client.models.generate_videos.call_args[1]
             assert called_kwargs["image"] is not None
 
-    def test_vertex_ai_mode_rejection(self):
+    def test_vertex_ai_mode_requires_inline_video_bytes(self):
         tool = VeoVideo()
         mock_client = MagicMock()
         mock_client.vertexai = True
-        if hasattr(mock_client, "_api_client"):
-            delattr(mock_client, "_api_client")
+        mock_client.models.generate_videos.return_value = SimpleNamespace(
+            done=True,
+            error=None,
+            response=SimpleNamespace(
+                generated_videos=[
+                    SimpleNamespace(video=SimpleNamespace(video_bytes=None))
+                ]
+            ),
+        )
 
         with (
             patch.dict(os.environ, {"GEMINI_API_KEY": "test_key"}),
-            patch("google.genai.Client", return_value=mock_client),
+            patch(
+                "tools.google_credentials.get_genai_client",
+                return_value=mock_client,
+            ),
         ):
             inputs = {
                 "prompt": "cinematic shot",
@@ -588,7 +600,7 @@ class TestVeoVideo:
             res = tool.execute(inputs)
             assert res.success is False
             assert res.error is not None
-            assert "only supported using the Gemini Developer API" in res.error
+            assert "without inline bytes" in res.error
 
     def test_missing_local_image_paths(self):
         tool = VeoVideo()

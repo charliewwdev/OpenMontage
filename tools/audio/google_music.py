@@ -44,7 +44,7 @@ class GoogleMusic(BaseTool):
         "  - Or set GOOGLE_APPLICATION_CREDENTIALS for Vertex AI service account."
     )
     fallback_tools = ["music_gen"]
-    agent_skills = ["music"]
+    agent_skills = ["lyria"]
 
     capabilities = [
         "generate_background_music",
@@ -146,7 +146,8 @@ class GoogleMusic(BaseTool):
             from tools.google_credentials import get_genai_client, GOOGLE_API_TIMEOUT_MS
 
             http_options = types.HttpOptions(timeout=GOOGLE_API_TIMEOUT_MS)
-            client = get_genai_client(http_options=http_options)
+            # Lyria 3 is served only from Vertex's global location.
+            client = get_genai_client(http_options=http_options, location="global")
         except ImportError as e:
             return ToolResult(
                 success=False,

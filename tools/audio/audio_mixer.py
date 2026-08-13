@@ -184,6 +184,14 @@ class AudioMixer(BaseTool):
                 "default": 0.5,
                 "description": "Duration of fade in/out at segment boundaries (seconds).",
             },
+            "target_duration": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "description": (
+                    "full_mix only. Exact output length in seconds. Pads a short "
+                    "mix and trims a long mix so audio matches the composition."
+                ),
+            },
         },
     }
 
@@ -212,6 +220,39 @@ class AudioMixer(BaseTool):
         # Clamp to a sane loudness range to avoid malformed ffmpeg args.
         target = max(-40.0, min(0.0, target))
         return f"[{in_label}]loudnorm=I={target}:LRA=11:TP=-1.5[{out_label}]"
+
+    def _track_filters(self, track: dict[str, Any]) -> list[str]:
+        """Build per-track filters on the source timeline before scheduling it.
+
+        ``afade=t=out`` defaults to ``st=0``. Applying it after ``adelay``
+        therefore fades the delay silence instead of the source audio, leaving
+        a delayed track silent by the time it starts. Fade source samples first
+        and add the timeline delay last so both fades follow the track itself.
+        """
+        filters = []
+        volume = track.get("volume", 1.0)
+        delay_ms = int(track.get("start_seconds", 0) * 1000)
+        fade_in = track.get("fade_in_seconds", 0)
+        fade_out = track.get("fade_out_seconds", 0)
+
+        if volume != 1.0:
+            filters.append(f"volume={volume}")
+        if fade_in > 0:
+            filters.append(f"afade=t=in:d={fade_in}")
+        if fade_out > 0:
+            duration_cmd = [
+                "ffprobe", "-v", "error",
+                "-show_entries", "format=duration",
+                "-of", "csv=p=0",
+                track["path"],
+            ]
+            duration = float(self.run_command(duration_cmd).stdout.strip().split("\n")[0])
+            fade_start = max(0.0, duration - float(fade_out))
+            filters.append(f"afade=t=out:st={fade_start}:d={fade_out}")
+        if delay_ms > 0:
+            filters.append(f"adelay={delay_ms}|{delay_ms}")
+
+        return filters
 
     def execute(self, inputs: dict[str, Any]) -> ToolResult:
         operation = inputs["operation"]
@@ -256,20 +297,7 @@ class AudioMixer(BaseTool):
 
         for i, track in enumerate(tracks):
             input_args.extend(["-i", track["path"]])
-            volume = track.get("volume", 1.0)
-            delay_ms = int(track.get("start_seconds", 0) * 1000)
-            fade_in = track.get("fade_in_seconds", 0)
-            fade_out = track.get("fade_out_seconds", 0)
-
-            filters = []
-            if volume != 1.0:
-                filters.append(f"volume={volume}")
-            if delay_ms > 0:
-                filters.append(f"adelay={delay_ms}|{delay_ms}")
-            if fade_in > 0:
-                filters.append(f"afade=t=in:d={fade_in}")
-            if fade_out > 0:
-                filters.append(f"afade=t=out:d={fade_out}")
+            filters = self._track_filters(track)
 
             if filters:
                 filter_chain = ",".join(filters)
@@ -480,6 +508,15 @@ class AudioMixer(BaseTool):
         output_path.parent.mkdir(parents=True, exist_ok=True)
         normalize = inputs.get("normalize", True)
         ducking = inputs.get("ducking", {"enabled": True})
+        target_duration = inputs.get("target_duration")
+        target: float | None = None
+        if target_duration is not None:
+            try:
+                target = float(target_duration)
+            except (TypeError, ValueError):
+                return ToolResult(success=False, error="target_duration must be a positive number")
+            if target <= 0:
+                return ToolResult(success=False, error="target_duration must be greater than zero")
 
         speech_tracks = [t for t in tracks if t.get("role") in ("speech", "primary")]
         music_tracks = [t for t in tracks if t.get("role") in ("music", "secondary")]
@@ -500,20 +537,7 @@ class AudioMixer(BaseTool):
 
         for i, track in enumerate(all_tracks):
             input_args.extend(["-i", track["path"]])
-            volume = track.get("volume", 1.0)
-            delay_ms = int(track.get("start_seconds", 0) * 1000)
-            fade_in = track.get("fade_in_seconds", 0)
-            fade_out = track.get("fade_out_seconds", 0)
-
-            filters = []
-            if volume != 1.0:
-                filters.append(f"volume={volume}")
-            if delay_ms > 0:
-                filters.append(f"adelay={delay_ms}|{delay_ms}")
-            if fade_in > 0:
-                filters.append(f"afade=t=in:d={fade_in}")
-            if fade_out > 0:
-                filters.append(f"afade=t=out:d={fade_out}")
+            filters = self._track_filters(track)
 
             if filters:
                 filter_chain = ",".join(filters)
@@ -540,7 +564,14 @@ class AudioMixer(BaseTool):
                 )
             else:
                 filter_parts.append(f"[a{speech_indices[0]}]acopy[speech_all]")
-            filter_parts.append("[speech_all]asplit=2[speech_key][speech_out]")
+            if target is not None:
+                filter_parts.append("[speech_all]asplit=2[speech_key_raw][speech_out]")
+                filter_parts.append(
+                    f"[speech_key_raw]apad=whole_dur={target},"
+                    f"atrim=duration={target},asetpts=PTS-STARTPTS[speech_key]"
+                )
+            else:
+                filter_parts.append("[speech_all]asplit=2[speech_key][speech_out]")
 
             # Mix music tracks together
             music_start = len(speech_tracks)
@@ -589,19 +620,34 @@ class AudioMixer(BaseTool):
                 f"{all_labels}amix=inputs={len(all_tracks)}:duration=longest:dropout_transition=2[premix]"
             )
 
+        # A ducked music stream is gated by the speech sidechain, so its tail
+        # can disappear when narration ends. If the caller knows the video
+        # duration, make that the authoritative mix length before loudness
+        # normalization: apad extends short audio and atrim caps long audio.
+        premix_label = "premix"
+        if target is not None:
+            filter_parts.append(
+                f"[premix]apad=whole_dur={target},atrim=duration={target},"
+                "asetpts=PTS-STARTPTS[premix_duration]"
+            )
+            premix_label = "premix_duration"
+
         # Normalize
         if normalize:
-            filter_parts.append(self._loudnorm_filter(inputs, "premix", "out"))
+            filter_parts.append(self._loudnorm_filter(inputs, premix_label, "out"))
             out_label = "[out]"
         else:
-            out_label = "[premix]"
+            out_label = f"[{premix_label}]"
 
         filter_complex = ";".join(p for p in filter_parts if p)
 
         cmd = ["ffmpeg", "-y"]
         cmd.extend(input_args)
         cmd.extend(["-filter_complex", filter_complex])
-        cmd.extend(["-map", out_label, str(output_path)])
+        cmd.extend(["-map", out_label])
+        if target is not None:
+            cmd.extend(["-t", str(target)])
+        cmd.append(str(output_path))
 
         self.run_command(cmd)
 
@@ -614,6 +660,7 @@ class AudioMixer(BaseTool):
                 "sfx_tracks": len(sfx_tracks),
                 "ducking_enabled": duck_enabled,
                 "normalized": normalize,
+                "target_duration": target_duration,
                 "output": str(output_path),
             },
             artifacts=[str(output_path)],

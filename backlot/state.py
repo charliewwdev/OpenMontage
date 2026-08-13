@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import re
+from functools import lru_cache
 from pathlib import Path
 from typing import Any, Optional
 
@@ -59,6 +60,7 @@ def _rel(project_dir: Path, path: Path) -> str:
 # Pipeline / stages
 # ---------------------------------------------------------------------------
 
+@lru_cache(maxsize=32)
 def _load_pipeline_meta(pipeline_type: Optional[str]) -> dict[str, Any]:
     """Stage order + gate flags from the manifest; graceful fallback."""
     if pipeline_type and pipeline_type != "unknown":
@@ -69,6 +71,10 @@ def _load_pipeline_meta(pipeline_type: Optional[str]) -> dict[str, Any]:
                 {
                     "name": s["name"],
                     "gated": bool(s.get("human_approval_default", False)),
+                    "produces": [
+                        str(name) for name in (s.get("produces") or [])
+                        if isinstance(name, str) and name
+                    ],
                 }
                 for s in manifest.get("stages", [])
                 if isinstance(s, dict) and s.get("name")
@@ -83,7 +89,7 @@ def _load_pipeline_meta(pipeline_type: Optional[str]) -> dict[str, Any]:
             pass
     return {
         "pipeline_type": pipeline_type or "unknown",
-        "stages": [{"name": s, "gated": False} for s in FALLBACK_STAGES],
+        "stages": [{"name": s, "gated": False, "produces": []} for s in FALLBACK_STAGES],
         "known": False,
     }
 
@@ -152,6 +158,7 @@ def _build_stage_rail(
         entry: dict[str, Any] = {
             "name": name,
             "gated": stage_def["gated"],
+            "produces": list(stage_def.get("produces") or []),
             "status": status or "pending",
             "timestamp": cp.get("timestamp") if cp else None,
             "review": cp.get("review") if cp else None,
@@ -188,6 +195,11 @@ def _build_stage_rail(
         entry = {
             "name": name,
             "gated": False,
+            "produces": [
+                str(artifact_name)
+                for artifact_name in (cp.get("artifacts") or {})
+                if isinstance(artifact_name, str) and artifact_name
+            ],
             "status": cp.get("status") or "unknown",
             "timestamp": cp.get("timestamp"),
             "review": cp.get("review"),

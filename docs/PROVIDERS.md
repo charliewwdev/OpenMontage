@@ -53,19 +53,19 @@ AZURE_SPEECH_REGION=         # Speech resource region, e.g. eastus
 
 # MULTI-MODEL GATEWAY (one key, 6+ tools)
 FAL_KEY=                     # FLUX, Recraft, Kling, Veo, MiniMax video
-MINIMAX_API_KEY=             # MiniMax first-party image generation
+MINIMAX_API_KEY=             # MiniMax first-party image + MiniMax H3 video generation
 ATLASCLOUD_API_KEY=          # Atlas Cloud image/video gateway
 
 # KLING OFFICIAL DIRECT API
 KLING_API_KEY=               # Official Kling video, image, TTS, avatar, lip sync
 KLING_API_BASE_URL=          # Optional; default https://api-singapore.klingai.com
 
-# VOLCENGINE ARK DIRECT SEEDANCE 2.0 API
+# VOLCENGINE ARK DIRECT SEEDANCE 2.0 / 2.5 API
 ARK_API_KEY=                 # API key body only; do not include the "Bearer " prefix
 
 # VIDEO
 HEYGEN_API_KEY=              # HeyGen avatar video gateway
-RUNWAY_API_KEY=              # Runway Gen-4 video (direct)
+RUNWAY_API_KEY=              # Runway native + Seedance 2.5, Gemini Omni, MiniMax H3
 SUNO_API_KEY=                # Suno music generation
 
 # TENCLOUD HUNYUAN VIDEO
@@ -74,7 +74,33 @@ TENCENT_TOKENHUB_API_KEY=    # Tencent Hunyuan cloud video via TokenHub API
 # LOCAL (no keys needed — just GPU + install)
 VIDEO_GEN_LOCAL_ENABLED=     # Set to "true" for local video gen
 VIDEO_GEN_LOCAL_MODEL=       # wan2.1-1.3b, wan2.1-14b, hunyuan-1.5, ltx2-local, cogvideo-5b
+
+# COMFYUI (optional overrides; localhost:8188 is the default)
+COMFYUI_SERVER_URL=          # Local ComfyUI server for shared workflows
+COMFYUI_VIDEO_SERVER_URL=    # Optional video-specific ComfyUI server
 ```
+
+---
+
+## Current Video Model Coverage
+
+The following integrations are based on documented, currently exposed model
+identifiers. Provider pages without a public API contract were not given
+speculative model strings.
+
+| Model | Direct provider | fal.ai | Runway | ComfyUI Partner Nodes | Local ComfyUI |
+|-------|-----------------|--------|--------|-----------------------|---------------|
+| **Gemini Omni Flash** | Google `gemini_omni_video` | `gemini_omni_fal` (T2V, I2V, references, editing) | `runway_video` model `gemini_omni_flash` | `GeminiVideoOmni` (hosted, paid credits) | Not available as local weights |
+| **Seedance 2.5** | Volcengine `seedance_ark` model variant `2.5` | `seedance_video` model version `2.5` | `runway_video` model `seedance2_5` | `ByteDance2TextToVideoNode` (hosted, paid credits) | Not available as local weights |
+| **MiniMax H3** | `minimax_video` model `MiniMax-H3` | `minimax_fal_video` (`hailuo-03`) | `runway_video` model `hailuo3` | `MinimaxHailuo03TextToVideoNode` (hosted, paid credits) | Supported with official open weights and an exported API workflow |
+
+ComfyUI Partner Nodes run inside the ComfyUI graph but call hosted services;
+they require network access, a logged-in Comfy account, and prepaid credits.
+Only the MiniMax H3 open-weight workflow in this table is a local model path.
+
+Replicate, HeyGen, and Higgsfield were not updated for these exact model
+versions because their public API documentation did not expose a current,
+stable contract for them at the time of this update.
 
 ---
 
@@ -162,7 +188,7 @@ The `req_key` for video is `jimeng_ti2v_v30_pro`. Success code is `10000`. Task 
 
 ---
 
-### Volcengine Ark — Direct Seedance 2.0 Video Generation
+### Volcengine Ark — Direct Seedance 2.0 and 2.5 Video Generation
 
 > **Official direct Seedance API.** Calls Volcengine Ark without routing through fal.ai or Replicate, while keeping those existing provider paths available as independent fallbacks.
 
@@ -173,7 +199,7 @@ The `req_key` for video is `jimeng_ti2v_v30_pro`. Success code is `10000`. Task 
 #### Setup
 
 1. Open the [Volcengine Ark API key console](https://console.volcengine.com/ark/region:cn-beijing/apiKey)
-2. Enable the Seedance 2.0 model family and confirm that the account has balance or a valid resource package
+2. Enable the Seedance model family and confirm that the account has balance or a valid resource package
 3. Create a long-lived API key
 4. Add the key body to `.env`: `ARK_API_KEY=...`
 
@@ -191,6 +217,7 @@ ARK_CNY_PER_USD=7.2
 
 | Variant | Default model ID | Output |
 |---------|------------------|--------|
+| 2.5 | `doubao-seedance-2-5-260628` | 480p or 720p; 4–30 seconds |
 | Standard | `doubao-seedance-2-0-260128` | 480p, 720p, 1080p, or 4K |
 | Fast | `doubao-seedance-2-0-fast-260128` | 480p or 720p |
 | Mini | `doubao-seedance-2-0-mini-260615` | 480p or 720p |
@@ -204,6 +231,12 @@ The adapter supports:
 - synchronized audio, optional last-frame return, web search for text-only requests, and output download
 - pre-submit dry-run and token-based cost estimates
 
+Seedance 2.5 accepts up to 30 image, 10 video, and 10 audio references.
+Select it with `model: "2.5"` (or its exact model ID). Because the public
+documentation does not establish a stable default token price for this model,
+OpenMontage requires `custom_price_cny_per_million_tokens` before presenting a
+cost estimate; unknown pricing is never reported as free.
+
 Local reference videos are intentionally rejected because the public API does not document video Data URI support. Use a provider-accessible HTTPS URL or an Ark asset reference instead.
 
 #### API and billing notes
@@ -214,9 +247,9 @@ The asynchronous API flow is:
 
 Queued tasks can be cancelled with `DELETE /contents/generations/tasks/{id}`. Task records are retained for a limited period, and successful result URLs are short-lived, so the tool downloads outputs promptly.
 
-Ark bills Seedance 2.0 by completion tokens. Rates vary by model, resolution, and whether the request includes reference video. OpenMontage estimates cost before submission and reconciles against provider-returned usage when available. Check the Ark console for current rates before a paid run; custom endpoint IDs require an explicit custom price so unknown pricing is never treated as free.
+Ark bills Seedance by completion tokens. Rates vary by model, resolution, and whether the request includes reference video. OpenMontage estimates cost before submission and reconciles against provider-returned usage when available. Check the Ark console for current rates before a paid run; custom endpoint IDs and Seedance 2.5 require an explicit custom price so unknown pricing is never treated as free.
 
-Official references: [model list](https://www.volcengine.com/docs/82379/1330310?lang=zh), [create task](https://www.volcengine.com/docs/82379/1520757?lang=zh), [query task](https://www.volcengine.com/docs/82379/1521309?lang=zh).
+Official references: [Seedance model list](https://www.volcengine.com/docs/82379/1366799), [create task](https://www.volcengine.com/docs/82379/1520757?lang=zh), [query task](https://www.volcengine.com/docs/82379/1521309?lang=zh).
 
 ---
 
@@ -279,7 +312,9 @@ reference-image inputs are normalized to the provider's `images` array.
 
 > **Broad single-key coverage.** One API key unlocks image and video providers across multiple models.
 
-**Tools unlocked:** `flux_image`, `recraft_image`, `seedream_image`, `kling_video`, `veo_video`, `minimax_video`, `fal_elevenlabs_tts`, `fal_elevenlabs_music`
+**Tools unlocked:** `flux_image`, `recraft_image`, `seedream_image`,
+`kling_video`, `veo_video`, `seedance_video`, `gemini_omni_fal`,
+`minimax_fal_video`, `fal_elevenlabs_tts`, `fal_elevenlabs_music`
 **Env var:** `FAL_KEY`
 
 #### Setup
@@ -308,7 +343,9 @@ No subscription — pure pay-as-you-go, no minimum spend.
 | Model | Price | Per $1 |
 |-------|-------|--------|
 | Kling 2.5 Turbo Pro | $0.07/sec | 14 seconds |
-| MiniMax | ~$0.05/sec | 20 seconds |
+| Seedance 2.5 | endpoint-dependent | 4–30 seconds |
+| Gemini Omni Flash | endpoint-dependent | 3–10 seconds |
+| MiniMax H3 (`hailuo-03`) | endpoint-dependent | 4–15 seconds |
 | Veo 3 | $0.40/sec | 2.5 seconds |
 | WAN 2.5 | $0.05/sec | 20 seconds |
 
@@ -320,13 +357,13 @@ select it through `tts_selector` with `preferred_provider: "fal.ai"`.
 
 ---
 
-### MiniMax — Official Direct Image API
+### MiniMax — Official Direct Image and Video API
 
-> **Low-cost first-party image generation.** The direct MiniMax API supports
-> seeded text-to-image, character subject references, custom dimensions, and
-> global or mainland-China routing without a gateway.
+> **First-party image and video generation.** The direct MiniMax API supports
+> seeded image generation plus MiniMax H3 video generation with text, first/last
+> frames, image/video/audio references, and global or mainland-China routing.
 
-**Tool unlocked:** `minimax_image`
+**Tools unlocked:** `minimax_image`, `minimax_video`
 
 **Env var:** `MINIMAX_API_KEY`
 
@@ -339,6 +376,19 @@ select it through `tts_selector` with `preferred_provider: "fal.ai"`.
 3. Add `MINIMAX_API_KEY=...` to `.env`.
 4. For a mainland-China account, also set `MINIMAX_REGION=cn`.
 
+`MINIMAX_BASE_URL` may be used for a documented private/enterprise endpoint
+override. The default global and mainland-China hosts are selected from
+`MINIMAX_REGION`.
+
+#### MiniMax H3 video
+
+Use `minimax_video` with `model: "MiniMax-H3"`. The tool uses the v2 task
+contract (`POST /v2/video_generation`, then
+`GET /v2/query/video_generation/{task_id}`) and supports 4–15 second 2K clips.
+Older Hailuo models continue to use the v1 API. MiniMax H3 reference generation
+can combine images, video, and audio; reference audio requires a visual
+reference.
+
 #### Pricing
 
 | Models | Global pay-as-you-go price |
@@ -349,8 +399,8 @@ MiniMax also offers subscription token plans with included daily image quota.
 OpenMontage conservatively reports the standard pay-as-you-go amount in cost
 estimates and generation results.
 
-The tool is automatically discoverable through `image_selector`; choose it
-with `preferred_provider: "minimax"`.
+The tools are automatically discoverable through the image and video selectors;
+choose them with `preferred_provider: "minimax"`.
 
 ---
 
@@ -839,9 +889,11 @@ Google TTS offers 700+ voices across 50+ languages. Voice names follow the patte
 
 ---
 
-### Runway — Gen-3/Gen-4 Video
+### Runway — Native and Third-Party Video Models
 
-> **Highest-rated AI video quality.** #1 on Elo rankings. Professional-grade video generation with Gen-3 Alpha Turbo, Gen-4 Turbo, and Gen-4 Aleph models.
+> **Multi-model production API.** OpenMontage supports current Runway-native
+> models plus documented third-party Seedance 2.5, Gemini Omni Flash, and
+> MiniMax H3/Hailuo 3.0 routes.
 
 **Tools unlocked:** `runway_video`
 **Env var:** `RUNWAY_API_KEY`
@@ -862,13 +914,25 @@ Google TTS offers 700+ voices across 50+ languages. Voice names follow the patte
 | Pro | $28/mo | 2,250 | ~90 seconds Gen-4 |
 | Unlimited | $76/mo | Unlimited (Explore Mode) | Unlimited Gen-4 Turbo |
 
-**API pricing (approximate):**
+**API pricing (Runway credits are $0.01 each):**
 
 | Model | Price per second |
 |-------|-----------------|
-| Gen-3 Alpha Turbo | ~$0.05 |
 | Gen-4 Turbo | ~$0.05 |
-| Gen-4 Aleph | ~$0.15 |
+| Gen-4.5 | ~$0.12 |
+| Seedance 2.5 | ~$0.20 at 480p / ~$0.30 at 720p |
+| Gemini Omni Flash | ~$0.10 generation / ~$0.11 video editing |
+| MiniMax H3 (`hailuo3`) | ~$0.10 at 768P / ~$0.15 at 2K |
+
+Seedance 2.5 supports text, image, and video inputs, 4–30 second outputs, and
+up to 30 image, 10 video, and 10 audio references. Gemini Omni Flash supports
+3–10 second text/image generation plus video editing with up to five image
+references. Hailuo 3.0 is Runway's MiniMax H3 route and supports 5–15 second
+outputs at 768P or 2K. The adapter maps each model to its exact request field
+names instead of sending a generic payload.
+
+Gen-3 Alpha Turbo and Gen-4 Aleph were removed from the Runway API on
+2026-07-30 and are not offered by the tool.
 
 **Free tier:** 125 one-time credits (no monthly renewal). Enough for about 5 seconds of Gen-4 video. API access requires a paid subscription.
 
@@ -1140,6 +1204,43 @@ piper --download-dir ~/.piper/models --model en_US-lessac-medium
 
 ---
 
+### ComfyUI Video — Local Workflows and Hosted Partner Nodes
+
+**Tool:** `comfyui_video`
+
+**Optional env vars:** `COMFYUI_SERVER_URL` (default
+`http://localhost:8188`) and `COMFYUI_VIDEO_SERVER_URL` (video-specific
+override).
+
+The bundled WAN 2.2 workflows and caller-supplied local workflows execute on
+the ComfyUI machine. MiniMax H3 is available as an official open-weight local
+workflow; pass the official workflow exported in API format using
+`workflow_json` or `workflow_path`, plus its `output_node`.
+
+The MiniMax H3 local stack includes the pruned INT8 diffusion model, Qwen3-VL
+text encoder, video VAE, and audio VAE. OpenMontage exposes the official
+download URLs and destination folders in tool metadata rather than silently
+downloading large weights.
+
+The same tool also supports these ComfyUI Partner Nodes:
+
+| `model_family` | Node | Execution | Approximate cost |
+|----------------|------|-----------|------------------|
+| `gemini_omni_flash` | `GeminiVideoOmni` | Hosted Partner Node | ~$0.146/sec |
+| `seedance_2.5` | `ByteDance2TextToVideoNode` | Hosted Partner Node | ~$0.148/sec 480p; ~$0.333/sec 720p |
+| `minimax_h3_api` | `MinimaxHailuo03TextToVideoNode` | Hosted Partner Node | ~$0.129/sec 768P; ~$0.186/sec 2K |
+| `minimax_h3_local` | official MiniMax H3 graph | Local GPU | No API charge |
+
+Partner Nodes are not offline: they require current ComfyUI, network access, a
+logged-in Comfy account, and prepaid credits. Prices are estimates converted
+from Comfy credits (211 credits = $1); actual metered usage is authoritative.
+
+Official references: [Partner Node overview](https://docs.comfy.org/tutorials/partner-nodes/overview),
+[pricing](https://docs.comfy.org/tutorials/partner-nodes/pricing), and
+[MiniMax H3 local tutorial](https://docs.comfy.org/tutorials/video/minimax/minimax-h3).
+
+---
+
 ### Local Video Generation (GPU Required)
 
 > **Free AI video generation.** Requires an NVIDIA GPU with sufficient VRAM.
@@ -1255,10 +1356,11 @@ These tools require only FFmpeg or Python packages — no GPU, no API key.
 | **Google** | `GOOGLE_API_KEY` (or `GEMINI_API_KEY`) | `google_tts`, `google_imagen`, `google_music`, `gemini_omni_video`, `veo_video` | Free tier (TTS) + paid |
 | **ElevenLabs** | `ELEVENLABS_API_KEY` | `elevenlabs_tts`, `music_gen` | Free tier + paid |
 | **fish.audio** | `FISH_AUDIO_API_KEY` | `fish_audio_tts` | Free tier (s2.1-pro-free) + paid |
-| **fal.ai** | `FAL_KEY` | `flux_image`, `recraft_image`, `kling_video`, `veo_video`, `minimax_video` | Pay-as-you-go |
+| **fal.ai** | `FAL_KEY` | `flux_image`, `recraft_image`, `kling_video`, `veo_video`, `seedance_video`, `gemini_omni_fal`, `minimax_fal_video` | Pay-as-you-go |
 | **Atlas Cloud** | `ATLASCLOUD_API_KEY` | `atlas_image`, `atlas_video` | Pay-as-you-go |
 | **Kling Official** | `KLING_API_KEY` | `kling_official_video`, `kling_official_image`, `kling_tts`, `kling_avatar`, `kling_lip_sync` | Pay-as-you-go |
 | **Volcengine Ark** | `ARK_API_KEY` | `seedance_ark` | Pay-as-you-go |
+| **MiniMax direct** | `MINIMAX_API_KEY` | `minimax_image`, `minimax_video` | Pay-as-you-go |
 | **OpenAI** | `OPENAI_API_KEY` | `openai_tts`, `openai_image` | Paid only |
 | **xAI** | `XAI_API_KEY` | `grok_image`, `grok_video` | Paid only |
 | **Runway** | `RUNWAY_API_KEY` | `runway_video` | Free trial + paid |
@@ -1269,6 +1371,7 @@ These tools require only FFmpeg or Python packages — no GPU, no API key.
 | **Local GPU** | `VIDEO_GEN_LOCAL_ENABLED` | `wan_video`, `hunyuan_video`, `cogvideo_video`, `ltx_video_local` | Free (GPU required) |
 | **Local Diffusion** | — (install only) | `local_diffusion` | Free (GPU required) |
 | **Modal** | `MODAL_LTX2_ENDPOINT_URL` | `ltx_video_modal` | Self-hosted cloud |
+| **ComfyUI** | optional server URL overrides | `comfyui_video` | Local GPU, or paid Partner Node credits |
 
 ---
 
@@ -1279,7 +1382,7 @@ How many providers cover each capability:
 | Capability | Cloud Providers | Local Providers | Free Options |
 |-----------|----------------|-----------------|--------------|
 | **Image Generation** | FLUX, Kling Official, Grok, Google Imagen, GPT Image 2, Recraft | Local Diffusion | Pexels, Pixabay (stock) |
-| **Video Generation** | Grok, Kling Official, Kling via fal.ai, Seedance via Volcengine Ark, Runway, Veo, Gemini Omni, Higgsfield, MiniMax, HeyGen, Tencent Hunyuan | WAN, Hunyuan, CogVideo, LTX | Pexels, Pixabay (stock) |
+| **Video Generation** | Grok, Kling Official, fal.ai, Seedance via Volcengine Ark, Runway, Veo, Gemini Omni, Higgsfield, MiniMax, HeyGen, Tencent Hunyuan, ComfyUI Partner Nodes | WAN, Hunyuan, CogVideo, LTX, ComfyUI WAN, ComfyUI MiniMax H3 | Pexels, Pixabay (stock) |
 | **Text-to-Speech** | Azure AI Speech, ElevenLabs, fish.audio, Google TTS, Kling Official, OpenAI | Piper | Piper, Google free tier, ElevenLabs free tier, Azure free tier, fish.audio s2.1-pro-free |
 | **Music Generation** | ElevenLabs, Suno, Google Lyria | — | ElevenLabs free tier |
 | **Post-Production** | — | FFmpeg (compose, stitch, trim, mix, enhance, grade) | All free |

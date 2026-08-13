@@ -16,6 +16,17 @@ Use this skill before calling `comfyui_image`, `comfyui_video`, or `comfyui_musi
 - Long waits (video, music) prefer ComfyUI's websocket feed for immediate completion/error detection and transparently fall back to REST polling if `websocket-client` isn't installed. Either way, a timeout is recoverable: pass the error's `prompt_id` back in as `resume_prompt_id` to resume waiting on the same job instead of resubmitting it.
 - Export workflows with ComfyUI's API-format JSON, not the UI layout format. If a downloaded workflow will not submit, re-export it from ComfyUI with API format enabled.
 
+### Partner Nodes are hosted
+
+- `gemini_omni_flash`, `seedance_2.5`, and `minimax_h3_api` in
+  `comfyui_video` are official ComfyUI Partner Nodes. They call hosted APIs and
+  require network access, a logged-in Comfy account, and prepaid credits.
+- Do not describe Partner Nodes as local, offline, or free merely because the
+  graph runs in a local ComfyUI process.
+- `minimax_h3_local` is a separate open-weight path. It requires the official
+  MiniMax H3 workflow exported in API format, its `output_node`, and the model
+  stack reported by the tool.
+
 ## Choosing a Workflow
 
 - Use bundled workflows when the requested operation matches and the local machine has the required models and VRAM.

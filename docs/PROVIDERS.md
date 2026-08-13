@@ -20,10 +20,11 @@ Everything you need to know about every provider in OpenMontage — setup instru
 | 8 | **pay-as-you-go** | Kling Official | Official direct Kling video, image, TTS, avatar, and lip-sync API, separate from fal.ai Kling |
 | 9 | **pay-as-you-go** | Volcengine Ark | Official direct Seedance 2.0 Standard/Fast/Mini API |
 | 10 | **$12/month** | Runway | Gen-4 video — highest quality AI video |
-| 11 | **pay-as-you-go** | HeyGen | Avatar videos, multi-model video gateway |
-| 12 | **pay-as-you-go** | Suno | Full song generation with vocals and lyrics |
-| 13 | **$0 + GPU** | Local video gen | WAN 2.1, Hunyuan, CogVideo, LTX — free, offline |
-| 14 | **$0 + GPU** | Local Diffusion | Stable Diffusion images — free, offline |
+| 11 | **pay-as-you-go** | Hunyuan cloud video | Chinese-friendly T2V + I2V |
+| 12 | **pay-as-you-go** | HeyGen | Avatar videos, multi-model video gateway |
+| 13 | **pay-as-you-go** | Suno | Full song generation with vocals and lyrics |
+| 14 | **$0 + GPU** | Local video gen | WAN 2.1, Hunyuan, CogVideo, LTX — free, offline |
+| 15 | **$0 + GPU** | Local Diffusion | Stable Diffusion images — free, offline |
 
 ### Environment Variable Summary
 
@@ -65,6 +66,9 @@ ARK_API_KEY=                 # API key body only; do not include the "Bearer " p
 HEYGEN_API_KEY=              # HeyGen avatar video gateway
 RUNWAY_API_KEY=              # Runway Gen-4 video (direct)
 SUNO_API_KEY=                # Suno music generation
+
+# TENCLOUD HUNYUAN VIDEO
+TENCENT_TOKENHUB_API_KEY=    # Tencent Hunyuan cloud video via TokenHub API
 
 # LOCAL (no keys needed — just GPU + install)
 VIDEO_GEN_LOCAL_ENABLED=     # Set to "true" for local video gen
@@ -497,6 +501,79 @@ Start with `speech_rate: 0` for natural Mandarin delivery. If the approved forma
 #### Pricing
 
 Doubao Speech 2.0 is billed by character package or usage in Volcengine. OpenMontage estimates cost from text length and prefers provider-returned usage metadata when available.
+
+---
+
+### Tencent Hunyuan Cloud — Video Generation
+
+> **Tencent Hunyuan (腾讯混元) cloud video generation via TokenHub API.** Generates
+> videos from text or images using Tencent's Hunyuan models through the Tencent
+> TokenHub API — an OpenAI-compatible gateway (tokenhub.tencentmaas.com) with
+> simple Bearer-token authentication. No TC3-HMAC-SHA256 signing required.
+
+**Tools unlocked:** `hunyuan_cloud_video`
+**Env var:** `TENCENT_TOKENHUB_API_KEY`
+
+#### Setup
+
+1. Go to the [Tencent Cloud TokenHub console](https://console.cloud.tencent.com/tokenhub).
+2. Create an application or navigate to the **API Key** section.
+3. Generate an API key and copy its value.
+4. Add to `.env`:
+   ```bash
+   TENCENT_TOKENHUB_API_KEY=your-tokenhub-api-key
+   ```
+
+#### What It's Best For
+
+- **Chinese-friendly prompt understanding** — Hunyuan models natively understand Chinese prompts better than most Western APIs
+- **Simple auth** — Bearer token, no complex signing (just an HTTP Authorization header)
+- **Direct Tencent Cloud quota** — uses your own Tencent Cloud credits, not a third-party gateway mark-up
+- **Both T2V and I2V** — one API key unlocks text-to-video and image-to-video
+
+#### API Notes
+
+TokenHub uses a **submit-then-poll** pattern:
+
+```text
+# Submit a generation task
+POST https://tokenhub.tencentmaas.com/v1/api/video/submit
+Authorization: Bearer ${TENCENT_TOKENHUB_API_KEY}
+
+# Poll for results
+POST https://tokenhub.tencentmaas.com/v1/api/video/query
+Authorization: Bearer ${TENCENT_TOKENHUB_API_KEY}
+```
+
+| Model | Type | Pricing |
+|-------|------|---------|
+| `hy-video-1.5` | Text-to-video | 1.5 credits (~$0.25) |
+| `yt-video-2.0` | Image-to-video | 2–5 credits (~$0.33–0.83) |
+
+Resolution options: **720p** (default) or **1080p**.
+
+A watermark (`logo_add`) is added by default. Set `logo_add: 0` to disable it (requires console approval from Tencent).
+
+**Schema constraints:**
+- **Prompt:** max 200 UTF-8 characters
+- **Image:** max 10MB, 50–5000 px per side, aspect ratio 1:4 to 4:1
+- **Formats:** jpg, png, jpeg, webp, bmp, tiff
+
+#### Fallback Tools
+
+If `hunyuan_cloud_video` returns an error, the agent may retry with: `jimeng_video`, `kling_official_video`, `minimax_video`
+
+#### Pricing
+
+Tencent TokenHub uses a credit-based pricing system (1 credit = 1.2 RMB ≈ $0.167 USD):
+
+| Model | Resolution | Credits | Estimated USD |
+|-------|-----------|---------|---------------|
+| HY-Video-1.5 | any | 1.5 | ~$0.25 |
+| YT-Video-2.0 | 480p | 2 | ~$0.33 |
+| YT-Video-2.0 | 720p / 1080p | 5 | ~$0.83 |
+
+> **Free tier:** Tencent occasionally offers new-user credits for TokenHub. Check the [TokenHub console](https://console.cloud.tencent.com/tokenhub) for current promotions.
 
 ---
 
@@ -1101,6 +1178,7 @@ These tools require only FFmpeg or Python packages — no GPU, no API key.
 | **Higgsfield** | `HIGGSFIELD_API_KEY` + `HIGGSFIELD_API_SECRET` | `higgsfield_video` | Subscription ($15-84/mo) |
 | **HeyGen** | `HEYGEN_API_KEY` | `heygen_video` | Pay-as-you-go |
 | **Suno** | `SUNO_API_KEY` | `suno_music` | Pay-as-you-go |
+| **Tencent Hunyuan** | `TENCENT_TOKENHUB_API_KEY` | `hunyuan_cloud_video` | Pay-as-you-go (~$0.25–0.83/gen) |
 | **Local GPU** | `VIDEO_GEN_LOCAL_ENABLED` | `wan_video`, `hunyuan_video`, `cogvideo_video`, `ltx_video_local` | Free (GPU required) |
 | **Local Diffusion** | — (install only) | `local_diffusion` | Free (GPU required) |
 | **Modal** | `MODAL_LTX2_ENDPOINT_URL` | `ltx_video_modal` | Self-hosted cloud |
@@ -1114,7 +1192,7 @@ How many providers cover each capability:
 | Capability | Cloud Providers | Local Providers | Free Options |
 |-----------|----------------|-----------------|--------------|
 | **Image Generation** | FLUX, Kling Official, Grok, Google Imagen, GPT Image 2, Recraft | Local Diffusion | Pexels, Pixabay (stock) |
-| **Video Generation** | Grok, Kling Official, Kling via fal.ai, Seedance via Volcengine Ark, Runway, Veo, Gemini Omni, Higgsfield, MiniMax, HeyGen | WAN, Hunyuan, CogVideo, LTX | Pexels, Pixabay (stock) |
+| **Video Generation** | Grok, Kling Official, Kling via fal.ai, Seedance via Volcengine Ark, Runway, Veo, Gemini Omni, Higgsfield, MiniMax, HeyGen, Tencent Hunyuan | WAN, Hunyuan, CogVideo, LTX | Pexels, Pixabay (stock) |
 | **Text-to-Speech** | ElevenLabs, fish.audio, Google TTS, Kling Official, OpenAI | Piper | Piper, Google free tier, ElevenLabs free tier, fish.audio s2.1-pro-free |
 | **Music Generation** | ElevenLabs, Suno, Google Lyria | — | ElevenLabs free tier |
 | **Post-Production** | — | FFmpeg (compose, stitch, trim, mix, enhance, grade) | All free |

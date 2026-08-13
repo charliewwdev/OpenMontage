@@ -392,6 +392,38 @@ class CorpusBuilder(BaseTool):
             except Exception as e:
                 cache_snapshot = {"error": f"{type(e).__name__}: {e}"}
 
+            # Per-candidate tolerance is useful only while at least one item
+            # survives. If every discovered candidate fails, reporting success
+            # persists an empty index and hides a systemic codec/CLIP failure
+            # until retrieval. A no-result or skip-only run remains valid.
+            total_failure = bool(candidates_seen) and not added_ids and not skipped
+            if total_failure:
+                first_errors = "; ".join(
+                    item["error"]
+                    for item in errors
+                    if item.get("phase") == "process"
+                )[:400]
+                return ToolResult(
+                    success=False,
+                    error=(
+                        f"All {failed} of {candidates_seen} candidates failed to "
+                        "process; corpus index is empty. Check the media decoder "
+                        "and the CLIP `transformers`/`torch` compatibility. "
+                        f"First errors: {first_errors or '(none recorded)'}"
+                    ),
+                    data={
+                        "corpus_dir": str(corpus_dir),
+                        "queries_run": len(queries),
+                        "candidates_seen": candidates_seen,
+                        "clips_added": 0,
+                        "clips_skipped_existing": skipped,
+                        "clips_failed": failed,
+                        "total_corpus_size": len(corp),
+                        "errors": errors[:25],
+                    },
+                    duration_seconds=round(elapsed, 2),
+                )
+
             return ToolResult(
                 success=True,
                 data={

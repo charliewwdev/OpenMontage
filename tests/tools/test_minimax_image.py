@@ -54,6 +54,75 @@ def test_status_requires_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     assert tool.get_status() == ToolStatus.AVAILABLE
 
 
+def test_cost_estimate_and_result_report_paid_images(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    monkeypatch.setenv("MINIMAX_API_KEY", "test-key")
+    monkeypatch.setattr(
+        requests,
+        "post",
+        lambda *args, **kwargs: FakeResponse(
+            json_data={
+                "data": {
+                    "image_base64": [
+                        base64.b64encode(b"one").decode("ascii"),
+                        base64.b64encode(b"two").decode("ascii"),
+                    ]
+                },
+                "base_resp": {"status_code": 0},
+            }
+        ),
+    )
+
+    tool = MiniMaxImage()
+    inputs = {
+        "prompt": "A lighthouse at dusk",
+        "response_format": "base64",
+        "n": 2,
+        "output_path": str(tmp_path / "image.png"),
+    }
+    assert tool.estimate_cost(inputs) == pytest.approx(0.007)
+    result = tool.execute(inputs)
+    assert result.success, result.error
+    assert result.cost_usd == pytest.approx(0.007)
+
+
+def test_image_selector_can_route_to_minimax(
+    monkeypatch: pytest.MonkeyPatch, tmp_path
+) -> None:
+    from tools.graphics.image_selector import ImageSelector
+
+    monkeypatch.setenv("MINIMAX_API_KEY", "test-key")
+    monkeypatch.setattr(
+        requests,
+        "post",
+        lambda *args, **kwargs: FakeResponse(
+            json_data={
+                "data": {
+                    "image_base64": [base64.b64encode(b"image").decode("ascii")]
+                },
+                "base_resp": {"status_code": 0},
+            }
+        ),
+    )
+    tool = MiniMaxImage()
+    selector = ImageSelector()
+    monkeypatch.setattr(selector, "_providers", lambda: [tool])
+
+    result = selector.execute(
+        {
+            "prompt": "A lighthouse at dusk",
+            "preferred_provider": "minimax",
+            "response_format": "base64",
+            "output_path": str(tmp_path / "selected.png"),
+        }
+    )
+
+    assert result.success, result.error
+    assert result.data["selected_provider"] == "minimax"
+    assert result.data["selected_tool"] == "minimax_image"
+
+
 @pytest.mark.parametrize(
     ("region", "expected_base_url"),
     [

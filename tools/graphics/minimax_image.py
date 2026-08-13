@@ -24,6 +24,8 @@ from tools.base_tool import (
 MODELS = ["image-01", "image-01-live"]
 DEFAULT_MODEL = "image-01"
 DEFAULT_REGION = "global"
+# Official global pay-as-you-go rate for image-01/image-01-live.
+PRICE_PER_IMAGE_USD = 0.0035
 REGION_BASE_URLS = {
     "global": "https://api.minimax.io",
     "global_en": "https://api.minimax.io",
@@ -48,7 +50,9 @@ class MiniMaxImage(BaseTool):
         "Set MINIMAX_API_KEY to your MiniMax API key. "
         "Optionally set MINIMAX_REGION to global or cn."
     )
-    agent_skills = ["flux-best-practices"]
+    # MiniMax is not a FLUX model. Use the provider-neutral visual direction
+    # skill until a dedicated MiniMax prompting skill is available.
+    agent_skills = ["visual-style"]
 
     capabilities = ["generate_image", "text_to_image"]
     supports = {
@@ -209,6 +213,9 @@ class MiniMaxImage(BaseTool):
     def _safe_error(exc: Exception, api_key: str) -> str:
         return str(exc).replace(api_key, "[redacted]") if api_key else str(exc)
 
+    def estimate_cost(self, inputs: dict[str, Any]) -> float:
+        return PRICE_PER_IMAGE_USD * int(inputs.get("n", 1))
+
     def execute(self, inputs: dict[str, Any]) -> ToolResult:
         api_key = os.environ.get("MINIMAX_API_KEY", "")
         if not api_key:
@@ -285,6 +292,7 @@ class MiniMaxImage(BaseTool):
                 "request_id": data.get("id"),
             },
             artifacts=outputs,
+            cost_usd=self.estimate_cost(inputs),
             duration_seconds=round(time.time() - start, 2),
             model=payload["model"],
         )

@@ -189,11 +189,29 @@ The ASR tool (`qwen3-asr-flash-filetrans`) uses an async submit-poll pattern. Au
 
 ---
 
+### Tencent Hunyuan Cloud — Image Generation
+
+> **Chinese-friendly first-party image generation.** `hunyuan_image` accesses
+> Hunyuan Image 3.0 through Tencent TokenHub with Bearer-token authentication.
+> It supports seeded text-to-image, up to three reference images, custom
+> resolutions, prompt rewriting, and watermark controls.
+
+**Tool unlocked:** `hunyuan_image`
+
+**Env var:** `TENCENT_TOKENHUB_API_KEY`
+
+Generate an API key in the Tencent Cloud TokenHub console and add it to
+`.env`. The tool reports approximately $0.08 per generated image based on
+TokenHub's credit price. It is available through `image_selector`; shared
+reference-image inputs are normalized to the provider's `images` array.
+
+---
+
 ### fal.ai — Multi-Model Gateway
 
 > **Broad single-key coverage.** One API key unlocks image and video providers across multiple models.
 
-**Tools unlocked:** `flux_image`, `recraft_image`, `seedream_image`, `kling_video`, `veo_video`, `minimax_video`
+**Tools unlocked:** `flux_image`, `recraft_image`, `seedream_image`, `kling_video`, `veo_video`, `minimax_video`, `fal_elevenlabs_tts`, `fal_elevenlabs_music`
 **Env var:** `FAL_KEY`
 
 #### Setup
@@ -227,6 +245,10 @@ No subscription — pure pay-as-you-go, no minimum spend.
 | WAN 2.5 | $0.05/sec | 20 seconds |
 
 **Free tier:** None — but $0 to start, you only pay for what you use.
+
+The same key can also access ElevenLabs speech and music through fal.ai. Use
+`fal_elevenlabs_tts` when direct ElevenLabs credentials are unavailable, or
+select it through `tts_selector` with `preferred_provider: "fal.ai"`.
 
 ---
 
@@ -488,7 +510,7 @@ costs about $0.015. OpenMontage estimates cost from character count. See
 
 ### Google — TTS + Imagen + Music + Video (Shared Key)
 
-> **One key, five tools.** Google Cloud TTS has 700+ voices in 50+ languages — the strongest localization option. Imagen 4 generates high-quality images. Google Lyria generates high-quality background music. Gemini Omni Flash supports conversational video editing, and direct Veo generation covers premium short video clips.
+> **One key, five tools.** Google Cloud TTS has 700+ voices in 50+ languages — the strongest localization option. `google_imagen` supports both Imagen 4 and Gemini 2.5 Flash Image, including projects without Imagen catalog access. Google Lyria generates high-quality background music. Gemini Omni Flash supports conversational video editing, and direct Veo generation covers premium short video clips.
 
 **Tools unlocked:** `google_tts`, `google_imagen`, `google_music`, `gemini_omni_video`, `veo_video`
 **Env var:** `GOOGLE_API_KEY` (or `GEMINI_API_KEY` — either works; `GEMINI_API_KEY` takes precedence)
@@ -529,8 +551,14 @@ The free tiers apply *independently* — you get 1M Standard AND 1M WaveNet AND 
 | Imagen 4 Fast | $0.02 |
 | Imagen 4 Standard | $0.04 |
 | Imagen 4 Ultra | $0.06 |
+| Gemini 2.5 Flash Image (`gemini-2.5-flash-image`) | $0.039 |
 
 **Free tier for Imagen:** None. Paid tier only.
+
+To select the Gemini backend through the governed `image_selector`, pass
+`preferred_provider: "google_imagen"` and
+`model_name: "gemini-2.5-flash-image"`. The selector maps its neutral
+`model_name` field to the provider's `model` input.
 
 #### Gemini Omni Video Pricing
 

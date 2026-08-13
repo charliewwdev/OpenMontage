@@ -695,6 +695,7 @@ class TestCapabilityMetadata:
             "dashscope",
             "doubao",
             "elevenlabs",
+            "fal.ai",
             "google_tts",
             "kling_official",
             "openai",

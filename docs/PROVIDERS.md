@@ -18,11 +18,12 @@ Everything you need to know about every provider in OpenMontage — setup instru
 | 6 | **~$0.05/image** | OpenAI | GPT Image 2 images + OpenAI TTS |
 | 7 | **~$0.04/image** | Google Imagen | Imagen 4 images (shares the Google API key) |
 | 8 | **pay-as-you-go** | Kling Official | Official direct Kling video, image, TTS, avatar, and lip-sync API, separate from fal.ai Kling |
-| 9 | **$12/month** | Runway | Gen-4 video — highest quality AI video |
-| 10 | **pay-as-you-go** | HeyGen | Avatar videos, multi-model video gateway |
-| 11 | **pay-as-you-go** | Suno | Full song generation with vocals and lyrics |
-| 12 | **$0 + GPU** | Local video gen | WAN 2.1, Hunyuan, CogVideo, LTX — free, offline |
-| 13 | **$0 + GPU** | Local Diffusion | Stable Diffusion images — free, offline |
+| 9 | **pay-as-you-go** | Volcengine Ark | Official direct Seedance 2.0 Standard/Fast/Mini API |
+| 10 | **$12/month** | Runway | Gen-4 video — highest quality AI video |
+| 11 | **pay-as-you-go** | HeyGen | Avatar videos, multi-model video gateway |
+| 12 | **pay-as-you-go** | Suno | Full song generation with vocals and lyrics |
+| 13 | **$0 + GPU** | Local video gen | WAN 2.1, Hunyuan, CogVideo, LTX — free, offline |
+| 14 | **$0 + GPU** | Local Diffusion | Stable Diffusion images — free, offline |
 
 ### Environment Variable Summary
 
@@ -56,6 +57,9 @@ MINIMAX_API_KEY=             # MiniMax first-party image generation
 # KLING OFFICIAL DIRECT API
 KLING_API_KEY=               # Official Kling video, image, TTS, avatar, lip sync
 KLING_API_BASE_URL=          # Optional; default https://api-singapore.klingai.com
+
+# VOLCENGINE ARK DIRECT SEEDANCE 2.0 API
+ARK_API_KEY=                 # API key body only; do not include the "Bearer " prefix
 
 # VIDEO
 HEYGEN_API_KEY=              # HeyGen avatar video gateway
@@ -150,6 +154,64 @@ The `req_key` for video is `jimeng_ti2v_v30_pro`. Success code is `10000`. Task 
 | Model | Price |
 |------|-------|
 | Jimeng 3.0 Pro (video) | ~$0.05/sec (check Volcengine console for actual rate) |
+
+---
+
+### Volcengine Ark — Direct Seedance 2.0 Video Generation
+
+> **Official direct Seedance API.** Calls Volcengine Ark without routing through fal.ai or Replicate, while keeping those existing provider paths available as independent fallbacks.
+
+**Tool unlocked:** `seedance_ark`
+
+**Env var:** `ARK_API_KEY`
+
+#### Setup
+
+1. Open the [Volcengine Ark API key console](https://console.volcengine.com/ark/region:cn-beijing/apiKey)
+2. Enable the Seedance 2.0 model family and confirm that the account has balance or a valid resource package
+3. Create a long-lived API key
+4. Add the key body to `.env`: `ARK_API_KEY=...`
+
+Do not include the `Bearer ` prefix in the environment value. The tool adds the authorization scheme when it sends a request.
+
+Optional overrides:
+
+```bash
+ARK_SEEDANCE_MODEL=doubao-seedance-2-0-260128
+ARK_BASE_URL=https://ark.cn-beijing.volces.com/api/v3
+ARK_CNY_PER_USD=7.2
+```
+
+#### Models and capabilities
+
+| Variant | Default model ID | Output |
+|---------|------------------|--------|
+| Standard | `doubao-seedance-2-0-260128` | 480p, 720p, 1080p, or 4K |
+| Fast | `doubao-seedance-2-0-fast-260128` | 480p or 720p |
+| Mini | `doubao-seedance-2-0-mini-260615` | 480p or 720p |
+
+The adapter supports:
+
+- text-to-video, first-frame image-to-video, and multimodal reference-to-video
+- local image and audio inputs encoded as validated Data URIs
+- remote reference image, video, and audio URLs
+- task create, query, cancel, and bounded polling
+- synchronized audio, optional last-frame return, web search for text-only requests, and output download
+- pre-submit dry-run and token-based cost estimates
+
+Local reference videos are intentionally rejected because the public API does not document video Data URI support. Use a provider-accessible HTTPS URL or an Ark asset reference instead.
+
+#### API and billing notes
+
+The asynchronous API flow is:
+
+`POST /contents/generations/tasks` → `GET /contents/generations/tasks/{id}` → download the successful result URL.
+
+Queued tasks can be cancelled with `DELETE /contents/generations/tasks/{id}`. Task records are retained for a limited period, and successful result URLs are short-lived, so the tool downloads outputs promptly.
+
+Ark bills Seedance 2.0 by completion tokens. Rates vary by model, resolution, and whether the request includes reference video. OpenMontage estimates cost before submission and reconciles against provider-returned usage when available. Check the Ark console for current rates before a paid run; custom endpoint IDs require an explicit custom price so unknown pricing is never treated as free.
+
+Official references: [model list](https://www.volcengine.com/docs/82379/1330310?lang=zh), [create task](https://www.volcengine.com/docs/82379/1520757?lang=zh), [query task](https://www.volcengine.com/docs/82379/1521309?lang=zh).
 
 ---
 
@@ -1032,6 +1094,7 @@ These tools require only FFmpeg or Python packages — no GPU, no API key.
 | **fish.audio** | `FISH_AUDIO_API_KEY` | `fish_audio_tts` | Free tier (s2.1-pro-free) + paid |
 | **fal.ai** | `FAL_KEY` | `flux_image`, `recraft_image`, `kling_video`, `veo_video`, `minimax_video` | Pay-as-you-go |
 | **Kling Official** | `KLING_API_KEY` | `kling_official_video`, `kling_official_image`, `kling_tts`, `kling_avatar`, `kling_lip_sync` | Pay-as-you-go |
+| **Volcengine Ark** | `ARK_API_KEY` | `seedance_ark` | Pay-as-you-go |
 | **OpenAI** | `OPENAI_API_KEY` | `openai_tts`, `openai_image` | Paid only |
 | **xAI** | `XAI_API_KEY` | `grok_image`, `grok_video` | Paid only |
 | **Runway** | `RUNWAY_API_KEY` | `runway_video` | Free trial + paid |
@@ -1051,7 +1114,7 @@ How many providers cover each capability:
 | Capability | Cloud Providers | Local Providers | Free Options |
 |-----------|----------------|-----------------|--------------|
 | **Image Generation** | FLUX, Kling Official, Grok, Google Imagen, GPT Image 2, Recraft | Local Diffusion | Pexels, Pixabay (stock) |
-| **Video Generation** | Grok, Kling Official, Kling via fal.ai, Runway, Veo, Gemini Omni, Higgsfield, MiniMax, HeyGen | WAN, Hunyuan, CogVideo, LTX | Pexels, Pixabay (stock) |
+| **Video Generation** | Grok, Kling Official, Kling via fal.ai, Seedance via Volcengine Ark, Runway, Veo, Gemini Omni, Higgsfield, MiniMax, HeyGen | WAN, Hunyuan, CogVideo, LTX | Pexels, Pixabay (stock) |
 | **Text-to-Speech** | ElevenLabs, fish.audio, Google TTS, Kling Official, OpenAI | Piper | Piper, Google free tier, ElevenLabs free tier, fish.audio s2.1-pro-free |
 | **Music Generation** | ElevenLabs, Suno, Google Lyria | — | ElevenLabs free tier |
 | **Post-Production** | — | FFmpeg (compose, stitch, trim, mix, enhance, grade) | All free |

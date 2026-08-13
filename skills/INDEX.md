@@ -59,6 +59,10 @@ Key capability families to look for in the output:
 | `enhancement` | — | Mixed providers |
 | `analysis` | — | Mixed providers |
 | `character_animation` | — | Local character specs, SVG rigs, pose libraries, action timelines, previews, and QA |
+| `3d_world_generation` | — | Local semantic terrain, procedural scattering, explicit landmarks, diagnostics, and HyperFrames/Three.js fly-through workspaces |
+| `3d_asset_acquisition` | — | Rights-safe local GLTF/GLB catalogs and provenance |
+| `3d_asset_generation` | — | Atlas/fal textured mesh generation and reconstruction for unique scene assets |
+| `3d_world_rendering` | — | Blender assembly and production rendering of detailed worlds |
 | `graphics` | — | Local rendering tools |
 | `music_library` | — | Discovers user-provided local tracks |
 | `music_search` | — | Discovers royalty-free search/download providers |
@@ -109,6 +113,7 @@ Key capability families to look for in the output:
 | ManimCE Usage | `creative/manim-usage.md` | Scene composition, animation timing, color usage | `manimce-best-practices` |
 | Image Gen Usage | `creative/image-gen-usage.md` | Prompt consistency, hero reference, batch strategy | `flux-best-practices`, `bfl-api` |
 | Image Provider Usage | `creative/image-provider-usage.md` | Provider selection (FLUX/Grok/OpenAI/Recraft/stock), cost-quality tradeoffs | `flux-best-practices`, `bfl-api`, `grok-media` |
+| 3D World Generation | `creative/3d-world-generation.md` | Semantic world planning, asset sourcing/generation, Blender assembly, and fidelity review | `3d-asset-generation`, `threejs-world-generation` |
 | B-Roll Planning | `creative/broll-planning.md` | Stock vs. generated decision, query construction, footage evaluation | — |
 | Stock Sourcing Usage | `creative/stock-sourcing-usage.md` | Pexels/Pixabay usage, parameters, licensing, integration | — |
 | Scene Detect Usage | `creative/scene-detect-usage.md` | Threshold tuning, algorithm selection, content presets | â€" |
@@ -131,6 +136,7 @@ Pipeline type skills provide production guidance for specific video formats, ind
 | Long-Form | `creative/long-form.md` | YouTube 10+ min â€" chapters, retention, end screens |
 | Screen Recording | `creative/screen-recording.md` | Code walkthroughs, tutorials, software demos |
 | Animation Pipeline | `creative/animation-pipeline.md` | Motion graphics, easing, transitions, composition |
+| 3D World Generation | `creative/3d-world-generation.md` | Continuous Three.js terrain worlds with semantic regions, explicit blockout/production tiers, licensed GLTF/PBR assets, diagnostics, and deterministic camera paths |
 | Character Animation Pipeline | `pipelines/character-animation/` | Rigged local cartoon characters, pose libraries, action timelines, SVG/Canvas/Remotion/HyperFrames rendering |
 | Cinematic | `creative/cinematic.md` | Letterbox, film pacing, layered audio, color grading |
 
@@ -312,7 +318,7 @@ Claude Code accesses them via symlinks in `.claude/skills/`.
 | **TTS & Audio** | `text-to-speech`, `speech-to-text` (whisper, default STT), `azure-speech-to-text` (optional cloud STT), `music`, `sound-effects`, `elevenlabs`, `agents`, `setup-api-key` | `elevenlabs/skills`, `digitalsamba/claude-code-video-toolkit` |
 | **Image Generation** | `flux-best-practices`, `bfl-api`, `grok-media` | `black-forest-labs/skills`, local OpenMontage skill |
 | **Math Animation** | `manimce-best-practices`, `manimgl-best-practices`, `manim-composer` | `adithya-s-k/manim_skill` |
-| **3D Graphics** | `threejs-animation`, `threejs-fundamentals`, `threejs-geometry`, `threejs-interaction`, `threejs-lighting`, `threejs-loaders`, `threejs-materials`, `threejs-postprocessing`, `threejs-shaders`, `threejs-textures` | `cloudai-x/threejs-skills` |
+| **3D Graphics** | `threejs-world-generation` (OpenMontage semantic-world workflow), `threejs-animation`, `threejs-fundamentals`, `threejs-geometry`, `threejs-interaction`, `threejs-lighting`, `threejs-loaders`, `threejs-materials`, `threejs-postprocessing`, `threejs-shaders`, `threejs-textures` | Local OpenMontage skill + `cloudai-x/threejs-skills` |
 | **Diagrams** | `beautiful-mermaid`, `d3-viz` | `intellectronica/agent-skills`, `davila7/claude-code-templates` |
 | **Animation** | `framer-motion`, `lottie-bodymovin` | `pproenca/dot-skills`, `dylantarre/animation-principles` |
 | **Design** | `tailwind-design-system`, `web-design-guidelines`, `vercel-react-best-practices`, `vercel-composition-patterns` | `wshobson/agents`, `vercel-labs/agent-skills` |

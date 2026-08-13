@@ -34,26 +34,3 @@ def test_tts_key_uses_header_and_is_redacted_from_errors(monkeypatch, tmp_path):
     assert result.success is False
     assert secret not in result.error
     assert "[REDACTED]" in result.error
-
-
-def test_production_adapter_can_force_google_tts_to_ipv4(monkeypatch, tmp_path):
-    import socket
-
-    import requests
-    import urllib3.util.connection
-
-    monkeypatch.setenv("GOOGLE_TTS_API_KEY", "test-key")
-    monkeypatch.setenv("GOOGLE_TTS_FORCE_IPV4", "1")
-    original = urllib3.util.connection.allowed_gai_family
-
-    def inspect_request(url, **kwargs):
-        assert urllib3.util.connection.allowed_gai_family() == socket.AF_INET
-        raise requests.HTTPError("safe expected failure")
-
-    monkeypatch.setattr(requests, "post", inspect_request)
-    result = GoogleTTS().execute(
-        {"text": "safe test sentence", "output_path": str(tmp_path / "speech.mp3")}
-    )
-
-    assert result.success is False
-    assert urllib3.util.connection.allowed_gai_family is original

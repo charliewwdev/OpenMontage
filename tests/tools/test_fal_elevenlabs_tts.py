@@ -37,6 +37,32 @@ def test_registry_discovers_fal_tts(monkeypatch):
     assert tool.get_status() == ToolStatus.AVAILABLE
 
 
+def test_tts_selector_routes_to_fal_provider(monkeypatch):
+    from tools.audio.tts_selector import TTSSelector
+    from tools.base_tool import ToolResult
+
+    monkeypatch.setenv("FAL_KEY", "test-key")
+    tool = FalElevenLabsTTS()
+    selector = TTSSelector()
+    monkeypatch.setattr(selector, "_providers", lambda: [tool])
+    monkeypatch.setattr(
+        selector,
+        "_select_best_tool",
+        lambda _inputs, _candidates, _context: (tool, None),
+    )
+    monkeypatch.setattr(
+        tool,
+        "execute",
+        lambda inputs: ToolResult(success=True, data={"received": inputs}),
+    )
+    result = selector.execute(
+        {"text": "hello", "preferred_provider": "fal.ai", "voice_id": "Rachel"}
+    )
+    assert result.success
+    assert result.data["selected_tool"] == "fal_elevenlabs_tts"
+    assert result.data["selected_provider"] == "fal.ai"
+
+
 def test_execute_submits_once_and_downloads_audio(tmp_path, monkeypatch):
     monkeypatch.setenv("FAL_KEY", "test-key")
     output_path = tmp_path / "speech.mp3"

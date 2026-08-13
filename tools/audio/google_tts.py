@@ -8,10 +8,7 @@ from __future__ import annotations
 
 import base64
 import os
-import socket
-import threading
 import time
-from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -33,32 +30,6 @@ from tools.google_credentials import (
 )
 
 
-_IPV4_REQUEST_LOCK = threading.Lock()
-
-
-@contextmanager
-def _google_tts_network_family():
-    """Use IPv4 when the deployment key is restricted to the server's IPv4."""
-    force_ipv4 = os.environ.get("GOOGLE_TTS_FORCE_IPV4", "").lower() in {
-        "1",
-        "true",
-        "yes",
-    }
-    if not force_ipv4:
-        yield
-        return
-
-    import urllib3.util.connection
-
-    with _IPV4_REQUEST_LOCK:
-        original = urllib3.util.connection.allowed_gai_family
-        urllib3.util.connection.allowed_gai_family = lambda: socket.AF_INET
-        try:
-            yield
-        finally:
-            urllib3.util.connection.allowed_gai_family = original
-
-
 class GoogleTTS(BaseTool):
     name = "google_tts"
     version = "0.1.0"
@@ -76,7 +47,6 @@ class GoogleTTS(BaseTool):
         "  GOOGLE_API_KEY or GEMINI_API_KEY remain supported for broader Google setups.\n"
         "  Google Cloud API key with Text-to-Speech enabled.\n"
         "  Enable the API at https://console.cloud.google.com/apis/library/texttospeech.googleapis.com\n"
-        "  Set GOOGLE_TTS_FORCE_IPV4=1 only when the key is restricted to the caller's IPv4.\n"
         "Auth option B — service account: set GOOGLE_APPLICATION_CREDENTIALS to the\n"
         "  path of a service-account JSON key (needs the 'google-auth' package)."
     )
@@ -309,13 +279,12 @@ class GoogleTTS(BaseTool):
         elif api_key:
             headers["x-goog-api-key"] = api_key
 
-        with _google_tts_network_family():
-            response = requests.post(
-                url,
-                headers=headers,
-                json=payload,
-                timeout=120,
-            )
+        response = requests.post(
+            url,
+            headers=headers,
+            json=payload,
+            timeout=120,
+        )
         response.raise_for_status()
 
         audio_content = base64.b64decode(response.json()["audioContent"])

@@ -192,7 +192,7 @@ The ASR tool (`qwen3-asr-flash-filetrans`) uses an async submit-poll pattern. Au
 
 > **Broad single-key coverage.** One API key unlocks image and video providers across multiple models.
 
-**Tools unlocked:** `flux_image`, `recraft_image`, `kling_video`, `veo_video`, `minimax_video`
+**Tools unlocked:** `flux_image`, `recraft_image`, `kling_video`, `veo_video`, `minimax_video`, `fal_elevenlabs_tts`, `fal_elevenlabs_music`
 **Env var:** `FAL_KEY`
 
 #### Setup
@@ -224,6 +224,10 @@ No subscription — pure pay-as-you-go, no minimum spend.
 | WAN 2.5 | $0.05/sec | 20 seconds |
 
 **Free tier:** None — but $0 to start, you only pay for what you use.
+
+The same key can also access ElevenLabs speech and music through fal.ai. Use
+`fal_elevenlabs_tts` when direct ElevenLabs credentials are unavailable, or
+select it through `tts_selector` with `preferred_provider: "fal.ai"`.
 
 ---
 

@@ -355,7 +355,7 @@ Doubao Speech 2.0 is billed by character package or usage in Volcengine. OpenMon
 > simple Bearer-token authentication. No TC3-HMAC-SHA256 signing required.
 
 **Tools unlocked:** `hunyuan_cloud_video`
-**Env vars:** `TENCENT_TOKENHUB_API_KEY` (required), `TENCENT_TOKENHUB_MODEL` (optional, overrides the default model)
+**Env var:** `TENCENT_TOKENHUB_API_KEY`
 
 #### Setup
 
@@ -365,7 +365,6 @@ Doubao Speech 2.0 is billed by character package or usage in Volcengine. OpenMon
 4. Add to `.env`:
    ```bash
    TENCENT_TOKENHUB_API_KEY=your-tokenhub-api-key
-   # TENCENT_TOKENHUB_MODEL=hy-video-1.5  # optional model override
    ```
 
 #### What It's Best For

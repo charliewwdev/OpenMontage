@@ -199,7 +199,10 @@ class TestIdempotencyKeys:
 
     def test_includes_all_output_affecting_fields(self):
         fields = HunyuanCloudVideo().idempotency_key_fields
-        for field in ("prompt", "operation", "model", "image_url", "resolution"):
+        for field in (
+            "prompt", "operation", "model", "image_url", "image_path",
+            "resolution", "logo_add",
+        ):
             assert field in fields, f"missing idempotency field: {field}"
 
     def test_excludes_execution_only_fields(self):
@@ -357,6 +360,28 @@ class TestToolSpecific:
         )
         assert result.success is False
         assert "image_url" in result.error or "image_path" in result.error
+
+    @pytest.mark.parametrize(
+        ("operation", "model", "expected"),
+        [
+            ("text_to_video", "yt-video-2.0", "hy-video-1.5"),
+            ("image_to_video", "hy-video-1.5", "yt-video-2.0"),
+        ],
+    )
+    def test_incompatible_model_operation_fails_before_submit(
+        self, hunyuan_env, monkeypatch, operation, model, expected
+    ):
+        monkeypatch.setattr(
+            HunyuanCloudVideo,
+            "_generate",
+            lambda *args, **kwargs: pytest.fail("must not submit a paid task"),
+        )
+        inputs = {"prompt": "test", "operation": operation, "model": model}
+        if operation == "image_to_video":
+            inputs["image_url"] = "https://example.com/frame.png"
+        result = HunyuanCloudVideo().execute(inputs)
+        assert not result.success
+        assert expected in (result.error or "")
 
     def test_i2v_both_url_and_path_fails(self, hunyuan_env, tmp_path):
         img = tmp_path / "ref.jpg"
@@ -587,37 +612,16 @@ class TestExecuteWithMocks:
         assert result.success, result.error
         assert output_path.read_bytes() == b"fake-i2v-local-video"
 
-    def test_explicit_model_takes_priority(self, hunyuan_env, tmp_path, monkeypatch):
-        """When model is explicitly set, it should be used for both T2V and I2V."""
-        task_id = "model-override-1"
-        calls = _install_fake_requests(
-            monkeypatch,
-            post_responses=[
-                FakeResponse({
-                    "id": task_id, "request_id": "req-sub", "object": "video",
-                    "created_at": 1700000000, "status": "queued",
-                }),
-                FakeResponse({
-                    "request_id": "req-poll", "object": "video",
-                    "status": "completed", "progress": 100,
-                    "data": {"url": "https://example.com/out.mp4"},
-                }),
-            ],
-            get_responses=[FakeResponse(content=b"data")],
-        )
-
+    def test_explicit_incompatible_model_is_rejected(self, hunyuan_env):
         result = HunyuanCloudVideo().execute({
             "prompt": "test",
             "operation": "image_to_video",
             "model": "hy-video-1.5",
             "image_url": "https://example.com/frame.jpg",
-            "poll_interval_seconds": 0.1,
-            "output_path": str(tmp_path / "out.mp4"),
         })
 
-        assert result.success, result.error
-        assert result.data["model"] == "hy-video-1.5"
-        assert calls["post"][0]["json"]["model"] == "hy-video-1.5"
+        assert not result.success
+        assert "yt-video-2.0" in (result.error or "")
 
     def test_polling_retries_until_success(self, hunyuan_env, tmp_path, monkeypatch):
         """Polling should retry when status is queued/running, then succeed."""
@@ -730,6 +734,39 @@ class TestRegistryDiscovery:
         assert local.provider == "hunyuan"
         assert cloud.runtime == ToolRuntime.API
         assert local.runtime == ToolRuntime.LOCAL_GPU
+
+    def test_video_selector_routes_to_hunyuan_cloud(self, hunyuan_env, monkeypatch):
+        from tools.base_tool import ToolResult
+        from tools.video.video_selector import VideoSelector
+
+        tool = HunyuanCloudVideo()
+        selector = VideoSelector()
+        monkeypatch.setattr(selector, "_providers", lambda: [tool])
+        monkeypatch.setattr(
+            selector,
+            "_select_best_tool",
+            lambda _inputs, _candidates, _context: (tool, None),
+        )
+        monkeypatch.setattr(
+            tool,
+            "execute",
+            lambda inputs: ToolResult(
+                success=True,
+                data={"received": inputs},
+                artifacts=[inputs["output_path"]],
+            ),
+        )
+
+        result = selector.execute(
+            {
+                "prompt": "test",
+                "preferred_provider": "hunyuan_cloud",
+                "output_path": "out.mp4",
+            }
+        )
+        assert result.success
+        assert result.data["selected_tool"] == "hunyuan_cloud_video"
+        assert result.data["selected_provider"] == "hunyuan_cloud"
 
 
 # ------------------------------------------------------------------

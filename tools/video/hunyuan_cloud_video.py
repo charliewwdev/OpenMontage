@@ -53,7 +53,7 @@ class HunyuanCloudVideo(BaseTool):
     determinism = Determinism.STOCHASTIC
     runtime = ToolRuntime.API
 
-    dependencies = []
+    dependencies = ["env:TENCENT_TOKENHUB_API_KEY"]
     install_instructions = (
         "Set TENCENT_TOKENHUB_API_KEY to your Tencent Cloud TokenHub API key.\n"
         "  Get it at https://console.cloud.tencent.com/tokenhub"
@@ -171,7 +171,9 @@ class HunyuanCloudVideo(BaseTool):
         "operation",
         "model",
         "image_url",
+        "image_path",
         "resolution",
+        "logo_add",
     ]
     side_effects = [
         "writes video file to output_path",
@@ -251,6 +253,16 @@ class HunyuanCloudVideo(BaseTool):
             )
 
         operation = inputs.get("operation", "text_to_video")
+        model = self._resolve_model(inputs)
+        expected_model = _MODEL_I2V if operation == "image_to_video" else _MODEL_T2V
+        if model != expected_model:
+            return ToolResult(
+                success=False,
+                error=(
+                    f"Model '{model}' is not compatible with operation '{operation}'. "
+                    f"Use '{expected_model}'."
+                ),
+            )
         if operation == "image_to_video" and not inputs.get("image_url") and not inputs.get("image_path"):
             return ToolResult(
                 success=False,

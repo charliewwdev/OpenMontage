@@ -20,7 +20,7 @@ class ImageSelector(BaseTool):
     provider = "selector"
     stability = ToolStability.BETA
     runtime = ToolRuntime.HYBRID
-    agent_skills = ["flux-best-practices", "bfl-api"]
+    agent_skills = ["flux-best-practices", "bfl-api", "atlas-cloud"]
 
     capabilities = [
         "generate_image", "search_image", "download_image",
@@ -68,6 +68,10 @@ class ImageSelector(BaseTool):
             "model_name": {
                 "type": "string",
                 "description": "Provider-specific model name passed through when supported.",
+            },
+            "model": {
+                "type": "string",
+                "description": "Exact provider model id, e.g. an Atlas Cloud live model route.",
             },
             "generation_mode": {
                 "type": "string",
@@ -289,6 +293,7 @@ class ImageSelector(BaseTool):
                 "element_list",
                 "api_family",
                 "model_name",
+                "model",
                 "image_reference",
                 "image_fidelity",
                 "human_fidelity",
@@ -396,6 +401,16 @@ class ImageSelector(BaseTool):
         return serialized
 
     def _filter_candidates(self, inputs: dict[str, Any], candidates: list[BaseTool]) -> list[BaseTool]:
+        exact_model = inputs.get("model")
+        if exact_model:
+            model_matches = [
+                tool for tool in candidates
+                if exact_model in getattr(tool, "input_schema", {}).get("properties", {}).get("model", {}).get("enum", [])
+                or exact_model in tool.get_info().get("model_catalog", {})
+            ]
+            if model_matches:
+                candidates = model_matches
+
         # A caller-supplied custom workflow is provider-specific (ComfyUI graph
         # JSON). Route it only to custom-workflow-capable providers whose server
         # is reachable — bundled-model readiness is irrelevant in that case.

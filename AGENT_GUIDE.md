@@ -711,6 +711,8 @@ The `.agents/skills/` directory is large. When you're not coming in through a to
 - **Do not skip stage director skills.** Before executing any pipeline stage, read its director skill. The skill contains the quality bar, the workflow, and the review criteria.
 - Do not use deleted legacy names such as `tts_cloud`, `tts_engine`, or `video_gen`.
 - Do not hardcode provider names, API key names, or setup URLs. Read them from the registry's `install_instructions` and `dependencies` fields.
+- Do not tell a restricted shared-installation user to add credentials manually, create a `.env`, or export a key. Surface the unavailable provider as an administrator setup request and continue only with centrally provisioned capabilities.
+- Before offering a direct vendor credential, check the registry for an available wrapper through an already configured provider (for example, a partner model hosted by fal.ai).
 - Do not begin asset generation before user approval on the production plan.
 - Do not hide degraded paths. Record substitutions and blocked options explicitly.
 - Do not present a single unavailable tool in isolation. Always show the full capability picture: "X of Y providers configured for this capability."

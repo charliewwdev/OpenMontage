@@ -695,6 +695,7 @@ class TestCapabilityMetadata:
             "doubao",
             "elevenlabs",
             "fish_audio",
+            "fal.ai",
             "google_tts",
             "kling_official",
             "openai",

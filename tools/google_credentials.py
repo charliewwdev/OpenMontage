@@ -18,6 +18,12 @@ from typing import Any
 # Broad scope that covers Cloud Text-to-Speech and Vertex AI prediction.
 CLOUD_PLATFORM_SCOPE = "https://www.googleapis.com/auth/cloud-platform"
 
+
+def resolve_google_location(location: str | None = None) -> str:
+    """Return a Vertex location, treating blank env values as unset."""
+
+    return location or os.environ.get("GOOGLE_CLOUD_LOCATION") or "us-central1"
+
 # Shared constants for long-running Google/Vertex AI generation calls (e.g. music, video)
 GOOGLE_API_TIMEOUT_SECONDS = 600
 GOOGLE_API_TIMEOUT_MS = GOOGLE_API_TIMEOUT_SECONDS * 1000
@@ -38,8 +44,15 @@ def has_google_credentials() -> bool:
     )
 
 
-def get_genai_client(http_options: Any | None = None) -> Any:
-    """Lazily import and initialize the Google GenAI Client based on configured credentials."""
+def get_genai_client(
+    http_options: Any | None = None,
+    location: str | None = None,
+) -> Any:
+    """Initialize Google GenAI using the configured credential mode.
+
+    ``location`` overrides the Vertex region for globally hosted models. It is
+    deliberately ignored by the API-key backend, which has no region setting.
+    """
     from google import genai
 
     api_key = os.environ.get("GOOGLE_API_KEY") or os.environ.get("GEMINI_API_KEY")
@@ -51,7 +64,7 @@ def get_genai_client(http_options: Any | None = None) -> Any:
     if use_vertex or (not api_key and service_account_configured()):
         kwargs = {
             "vertexai": True,
-            "location": os.environ.get("GOOGLE_CLOUD_LOCATION", "us-central1"),
+            "location": resolve_google_location(location),
             "http_options": http_options,
         }
         project_id = resolve_project_id()

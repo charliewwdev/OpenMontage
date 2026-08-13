@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 from typing import Optional
 
@@ -147,18 +148,22 @@ async def _watch_projects() -> None:
             hub.publish(pid)
 
 
+@asynccontextmanager
+async def _lifespan(app: FastAPI):
+    """Own and cleanly stop the project watcher with FastAPI's lifespan API."""
+
+    task = asyncio.create_task(_watch_projects())
+    app.state.watch_task = task
+    try:
+        yield
+    finally:
+        task.cancel()
+        with suppress(asyncio.CancelledError):
+            await task
+
+
 def create_app() -> FastAPI:
-    app = FastAPI(title="Backlot", docs_url=None, redoc_url=None)
-
-    @app.on_event("startup")
-    async def _startup() -> None:
-        app.state.watch_task = asyncio.create_task(_watch_projects())
-
-    @app.on_event("shutdown")
-    async def _shutdown() -> None:
-        task = getattr(app.state, "watch_task", None)
-        if task:
-            task.cancel()
+    app = FastAPI(title="Backlot", docs_url=None, redoc_url=None, lifespan=_lifespan)
 
     # ---- API ----------------------------------------------------------
 

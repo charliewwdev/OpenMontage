@@ -50,6 +50,7 @@ AZURE_SPEECH_REGION=         # Speech resource region, e.g. eastus
 
 # MULTI-MODEL GATEWAY (one key, 6+ tools)
 FAL_KEY=                     # FLUX, Recraft, Kling, Veo, MiniMax video
+MINIMAX_API_KEY=             # MiniMax first-party image generation
 
 # KLING OFFICIAL DIRECT API
 KLING_API_KEY=               # Official Kling video, image, TTS, avatar, lip sync
@@ -192,7 +193,7 @@ The ASR tool (`qwen3-asr-flash-filetrans`) uses an async submit-poll pattern. Au
 
 > **Broad single-key coverage.** One API key unlocks image and video providers across multiple models.
 
-**Tools unlocked:** `flux_image`, `recraft_image`, `kling_video`, `veo_video`, `minimax_video`
+**Tools unlocked:** `flux_image`, `recraft_image`, `seedream_image`, `kling_video`, `veo_video`, `minimax_video`
 **Env var:** `FAL_KEY`
 
 #### Setup
@@ -213,6 +214,8 @@ No subscription — pure pay-as-you-go, no minimum spend.
 | FLUX Pro v1.1 | $0.05/image | 20 images |
 | FLUX Dev | $0.03/image | 33 images |
 | Recraft v3 | ~$0.04/image | 25 images |
+| Seedream 5 Pro (up to 1536x1536) | $0.0675/image | ~14 images |
+| Seedream 5 Pro (up to 2048x2048) | $0.135/image | ~7 images |
 
 **Video generation:**
 
@@ -224,6 +227,40 @@ No subscription — pure pay-as-you-go, no minimum spend.
 | WAN 2.5 | $0.05/sec | 20 seconds |
 
 **Free tier:** None — but $0 to start, you only pay for what you use.
+
+---
+
+### MiniMax — Official Direct Image API
+
+> **Low-cost first-party image generation.** The direct MiniMax API supports
+> seeded text-to-image, character subject references, custom dimensions, and
+> global or mainland-China routing without a gateway.
+
+**Tool unlocked:** `minimax_image`
+
+**Env var:** `MINIMAX_API_KEY`
+
+**Optional region:** `MINIMAX_REGION=global` (default) or `cn`
+
+#### Setup
+
+1. Create a MiniMax Open Platform account.
+2. Generate an API key in the account's API-key page.
+3. Add `MINIMAX_API_KEY=...` to `.env`.
+4. For a mainland-China account, also set `MINIMAX_REGION=cn`.
+
+#### Pricing
+
+| Models | Global pay-as-you-go price |
+|--------|----------------------------|
+| `image-01`, `image-01-live` | $0.0035 per generated image |
+
+MiniMax also offers subscription token plans with included daily image quota.
+OpenMontage conservatively reports the standard pay-as-you-go amount in cost
+estimates and generation results.
+
+The tool is automatically discoverable through `image_selector`; choose it
+with `preferred_provider: "minimax"`.
 
 ---
 

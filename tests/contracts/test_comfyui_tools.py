@@ -305,6 +305,7 @@ class TestClientHelpers:
 
     def test_generate_resume_prompt_id_skips_resubmit(self, monkeypatch, tmp_path):
         from tools._comfyui.client import ComfyUIClient
+        import sys
 
         client = ComfyUIClient("http://comfy.test")
 
@@ -312,6 +313,14 @@ class TestClientHelpers:
             raise AssertionError("submit() should not be called when resuming")
 
         monkeypatch.setattr(client, "submit", fail_submit)
+        _install_fake_websocket(monkeypatch, frames=[])
+        monkeypatch.setattr(
+            sys.modules["websocket"],
+            "create_connection",
+            lambda *a, **k: (_ for _ in ()).throw(
+                AssertionError("resumed jobs must use history polling")
+            ),
+        )
         monkeypatch.setattr(client, "poll", lambda prompt_id, **kwargs: {
             "outputs": {"9": {"images": [{
                 "filename": "resumed.png", "subfolder": "", "type": "output",
@@ -502,6 +511,29 @@ def _install_fake_websocket(monkeypatch, frames):
 
 class TestWebsocketWait:
 
+    def test_wait_ws_returns_job_completed_before_connection(self, monkeypatch):
+        from tools._comfyui.client import ComfyUIClient
+        import sys
+
+        client = ComfyUIClient("http://comfy.test")
+        _install_fake_websocket(monkeypatch, frames=[])
+        monkeypatch.setattr(
+            sys.modules["websocket"],
+            "create_connection",
+            lambda *a, **k: (_ for _ in ()).throw(
+                AssertionError("completed history must avoid websocket connection")
+            ),
+        )
+        monkeypatch.setattr(
+            "tools._comfyui.client.requests.get",
+            lambda *a, **k: type("R", (), {
+                "raise_for_status": lambda self: None,
+                "json": lambda self: {"done": {"outputs": {"9": {}}}},
+            })(),
+        )
+
+        assert client.wait_ws("done", timeout=5) == {"outputs": {"9": {}}}
+
     def test_wait_ws_completes_on_executing_none_node(self, monkeypatch, tmp_path):
         from tools._comfyui.client import ComfyUIClient
 
@@ -516,11 +548,12 @@ class TestWebsocketWait:
             }}),
         ]
         _install_fake_websocket(monkeypatch, frames)
+        history_calls = iter(({}, {}, {"p1": {"outputs": {"9": {}}}}))
         monkeypatch.setattr(
             "tools._comfyui.client.requests.get",
             lambda *a, **k: type("R", (), {
                 "raise_for_status": lambda self: None,
-                "json": lambda self: {"p1": {"outputs": {"9": {}}}},
+                "json": lambda self: next(history_calls),
             })(),
         )
 
@@ -936,6 +969,27 @@ class TestComfyUIMusic:
         assert seen["workflow"]["4"]["inputs"]["seconds"] == 45
         assert seen["workflow"]["8"]["inputs"]["seed"] == 777
         assert result.data["model"] == "ace-step-v1-3.5b"
+
+    def test_bundled_generation_preserves_seed_zero(self, tmp_path):
+        tool = ComfyUIMusic()
+        tool._client.is_available = lambda: True
+        tool._client.check_models = lambda required: (list(required), [])
+        seen = {}
+
+        def fake_generate(workflow, output_node, dest, **kwargs):
+            seen["seed"] = workflow["8"]["inputs"]["seed"]
+            return [Path(dest)]
+
+        tool._client.generate = fake_generate
+        result = tool.execute({
+            "prompt": "deterministic test",
+            "seed": 0,
+            "output_path": str(tmp_path / "music.mp3"),
+        })
+
+        assert result.success is True
+        assert result.seed == 0
+        assert seen["seed"] == 0
 
     def test_get_status_degraded_when_model_missing(self):
         tool = ComfyUIMusic()

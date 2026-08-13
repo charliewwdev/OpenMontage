@@ -199,17 +199,8 @@ class ComfyUIClient:
         """Block until *prompt_id* finishes.  Returns the history entry."""
         deadline = time.time() + timeout
         while time.time() < deadline:
-            resp = requests.get(
-                f"{self.server_url}/history/{prompt_id}", timeout=10
-            )
-            resp.raise_for_status()
-            history = resp.json()
-            if prompt_id in history:
-                entry = history[prompt_id]
-                status = entry.get("status", {})
-                if status.get("status_str") == "error":
-                    msgs = status.get("messages", [])
-                    raise ComfyUIError(f"Execution error: {msgs}", prompt_id=prompt_id)
+            entry = self._history_entry(prompt_id)
+            if entry is not None:
                 return entry
             time.sleep(interval)
         raise ComfyUIError(
@@ -222,6 +213,28 @@ class ComfyUIClient:
             f"prompt_id to resume waiting without resubmitting.",
             prompt_id=prompt_id,
         )
+
+    def _history_entry(self, prompt_id: str) -> dict | None:
+        """Return a completed history entry, or ``None`` while it is absent."""
+        resp = requests.get(f"{self.server_url}/history/{prompt_id}", timeout=10)
+        resp.raise_for_status()
+        entry = resp.json().get(prompt_id)
+        if entry is None:
+            return None
+        status = entry.get("status", {})
+        if status.get("status_str") == "error":
+            msgs = status.get("messages", [])
+            raise ComfyUIError(f"Execution error: {msgs}", prompt_id=prompt_id)
+        return entry
+
+    def _history_entry_if_reachable(self, prompt_id: str) -> dict | None:
+        """Best-effort history probe while the websocket remains usable."""
+        try:
+            return self._history_entry(prompt_id)
+        except ComfyUIError:
+            raise
+        except Exception:
+            return None
 
     def wait_ws(
         self,
@@ -250,6 +263,12 @@ class ComfyUIClient:
         """
         import websocket  # websocket-client; optional, see docstring
 
+        # History is authoritative and websocket events are not replayed. The
+        # job may already have finished between submit() and this wait call.
+        entry = self._history_entry_if_reachable(prompt_id)
+        if entry is not None:
+            return entry
+
         ws_url = self.server_url.replace("http://", "ws://", 1).replace(
             "https://", "wss://", 1
         )
@@ -260,10 +279,19 @@ class ComfyUIClient:
             conn.settimeout(interval)
             deadline = time.time() + timeout
             finished = False
+            # Close the remaining race between the first history probe and
+            # websocket connection establishment. Events after this point are
+            # queued on the open socket; earlier completion is in history.
+            entry = self._history_entry_if_reachable(prompt_id)
+            if entry is not None:
+                return entry
             while time.time() < deadline:
                 try:
                     raw = conn.recv()
                 except websocket.WebSocketTimeoutException:
+                    entry = self._history_entry_if_reachable(prompt_id)
+                    if entry is not None:
+                        return entry
                     continue
                 if not isinstance(raw, str):
                     continue  # binary preview-image frame, not a status message
@@ -289,6 +317,9 @@ class ComfyUIClient:
             conn.close()
 
         if not finished:
+            entry = self._history_entry_if_reachable(prompt_id)
+            if entry is not None:
+                return entry
             raise ComfyUIError(
                 f"Prompt {prompt_id} did not complete within {timeout}s "
                 f"(websocket wait). The job was not cancelled — resume with "
@@ -296,9 +327,7 @@ class ComfyUIClient:
                 prompt_id=prompt_id,
             )
 
-        resp = requests.get(f"{self.server_url}/history/{prompt_id}", timeout=10)
-        resp.raise_for_status()
-        entry = resp.json().get(prompt_id)
+        entry = self._history_entry(prompt_id)
         if entry is None:
             raise ComfyUIError(
                 f"No history entry for {prompt_id} after completion",
@@ -397,9 +426,15 @@ class ComfyUIClient:
         the connection can't be used. See :meth:`_wait`.
         """
         prompt_id = resume_prompt_id or self.submit(workflow)
-        entry = self._wait(
-            prompt_id, timeout=timeout, interval=interval, on_progress=on_progress
-        )
+        if resume_prompt_id:
+            # A prompt resumed by a new client instance was submitted with the
+            # original instance's client_id, so its websocket events are not
+            # guaranteed to reach this socket. Poll authoritative history.
+            entry = self.poll(prompt_id, timeout=timeout, interval=interval)
+        else:
+            entry = self._wait(
+                prompt_id, timeout=timeout, interval=interval, on_progress=on_progress
+            )
 
         outputs = entry.get("outputs", {})
         node_output = outputs.get(output_node, {})

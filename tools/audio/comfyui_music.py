@@ -227,7 +227,9 @@ class ComfyUIMusic(BaseTool):
                 )
 
         start = time.time()
-        seed = inputs.get("seed") or ComfyUIClient.random_seed()
+        seed = inputs.get("seed")
+        if seed is None:
+            seed = ComfyUIClient.random_seed()
         output_path = Path(inputs.get("output_path", f"comfyui_music_{seed}.mp3"))
 
         try:

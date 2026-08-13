@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
 import jsonschema
@@ -10,6 +11,7 @@ import jsonschema
 from tools.base_tool import ToolStatus
 from tools.graphics import atlas_3d, fal_3d
 from tools.graphics.atlas_3d import Atlas3D
+from tools.graphics import blender_world
 from tools.graphics.blender_world import BlenderWorld, first_missing_frame
 from tools.graphics.fal_3d import Fal3D
 from tools.tool_registry import ToolRegistry
@@ -62,10 +64,23 @@ def test_fal_cost_matrix_and_input_validation(monkeypatch, tmp_path):
     assert not result.success
 
 
-def test_blender_doctor_uses_verified_portable_runtime():
+def test_blender_doctor_reports_detected_runtime(monkeypatch, tmp_path):
+    executable = tmp_path / "blender"
+    executable.write_bytes(b"")
+    monkeypatch.setattr(blender_world, "find_blender", lambda: executable)
+    monkeypatch.setattr(blender_world.subprocess, "run", lambda *args, **kwargs: subprocess.CompletedProcess(
+        args=args[0], returncode=0, stdout="OPENMONTAGE_BLENDER=4.5.10 LTS\n", stderr="",
+    ))
     result = BlenderWorld().execute({"operation": "doctor"})
     assert result.success, result.error
     assert result.data["version_line"].startswith("OPENMONTAGE_BLENDER=4.5.10")
+
+
+def test_blender_doctor_explains_missing_optional_runtime(monkeypatch):
+    monkeypatch.setattr(blender_world, "find_blender", lambda: None)
+    result = BlenderWorld().execute({"operation": "doctor"})
+    assert not result.success
+    assert "Blender not found" in (result.error or "")
 
 
 def test_blender_resume_finds_first_missing_contiguous_frame(tmp_path):

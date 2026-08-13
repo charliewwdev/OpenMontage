@@ -50,4 +50,3 @@ All supported routes are paid. Confirm the exact provider/model before calling
 and review the result for identity continuity, cuts, lip sync, audio artifacts,
 and prompt adherence. ComfyUI Partner Nodes use prepaid Comfy credits and are
 not an offline fallback.
-

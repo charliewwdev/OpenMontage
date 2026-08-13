@@ -44,4 +44,3 @@ The direct MiniMax v2 route currently outputs 2K and supports 4–15 seconds.
 Runway's Hailuo 3.0 route supports 768P/2K and documents 5–15 seconds. Partner
 Nodes require network access and credits. Only the open-weight ComfyUI route is
 local/offline after all models are installed.
-

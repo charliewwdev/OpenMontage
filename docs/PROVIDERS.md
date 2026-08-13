@@ -51,6 +51,7 @@ AZURE_SPEECH_REGION=         # Speech resource region, e.g. eastus
 # MULTI-MODEL GATEWAY (one key, 6+ tools)
 FAL_KEY=                     # FLUX, Recraft, Kling, Veo, MiniMax video
 MINIMAX_API_KEY=             # MiniMax first-party image generation
+ATLASCLOUD_API_KEY=          # Atlas Cloud image/video gateway
 
 # KLING OFFICIAL DIRECT API
 KLING_API_KEY=               # Official Kling video, image, TTS, avatar, lip sync
@@ -265,6 +266,32 @@ estimates and generation results.
 
 The tool is automatically discoverable through `image_selector`; choose it
 with `preferred_provider: "minimax"`.
+
+---
+
+### Atlas Cloud — Image and Video Gateway
+
+**Tools:** `atlas_image`, `atlas_video`
+**Env var:** `ATLASCLOUD_API_KEY` (aliases: `ATLAS_CLOUD_API_KEY`, `ATLAS_API_KEY`)
+**Skill:** `.agents/skills/atlas-cloud/SKILL.md`
+
+Atlas Cloud provides one endpoint and key for the following explicitly cataloged
+routes. OpenMontage validates each model's real schema instead of treating task
+suffixes or parameter names as interchangeable.
+
+| Family | Supported routes | Current Atlas rate |
+|---|---|---:|
+| Seedance 2.5 | text/image/reference to video | $0.134/sec |
+| Seedance 2.0 | text/image/reference to video | $0.112/sec |
+| Gemini Omni Flash | text/image/reference to video; video edit; developer text/image/reference | $0.112–0.140/sec |
+| MiniMax H3 | text/image/reference to video | $0.100/sec |
+| Seedream 5.0 Pro | text to image; edit; layer decomposition | $0.022–0.045/image |
+| GPT Image 2 | text to image; edit | $0.009–0.010/image |
+| Nano Banana 2 | text to image; edit | $0.080/image |
+
+Inspect `get_info()["model_catalog"]` for exact IDs, operations, media shapes,
+durations, and resolutions. Prices are estimates sourced from each model's
+machine-readable Atlas page and should be reconfirmed before a paid batch.
 
 ---
 
@@ -976,6 +1003,7 @@ These tools require only FFmpeg or Python packages — no GPU, no API key.
 | **Google** | `GOOGLE_API_KEY` (or `GEMINI_API_KEY`) | `google_tts`, `google_imagen`, `google_music`, `gemini_omni_video`, `veo_video` | Free tier (TTS) + paid |
 | **ElevenLabs** | `ELEVENLABS_API_KEY` | `elevenlabs_tts`, `music_gen` | Free tier + paid |
 | **fal.ai** | `FAL_KEY` | `flux_image`, `recraft_image`, `kling_video`, `veo_video`, `minimax_video` | Pay-as-you-go |
+| **Atlas Cloud** | `ATLASCLOUD_API_KEY` | `atlas_image`, `atlas_video` | Pay-as-you-go |
 | **Kling Official** | `KLING_API_KEY` | `kling_official_video`, `kling_official_image`, `kling_tts`, `kling_avatar`, `kling_lip_sync` | Pay-as-you-go |
 | **OpenAI** | `OPENAI_API_KEY` | `openai_tts`, `openai_image` | Paid only |
 | **xAI** | `XAI_API_KEY` | `grok_image`, `grok_video` | Paid only |

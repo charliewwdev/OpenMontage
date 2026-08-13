@@ -89,6 +89,31 @@ def test_gemini_model_routes_to_generate_content(imagen_tool, tmp_path):
     assert calls[0]["config"].image_config.aspect_ratio == "16:9"
 
 
+def test_image_selector_maps_model_name_to_google_model(
+    imagen_tool, monkeypatch, tmp_path
+):
+    """The governed selector must be able to reach the Gemini backend."""
+    from tools.graphics.image_selector import ImageSelector
+
+    tool, calls = imagen_tool
+    selector = ImageSelector()
+    monkeypatch.setattr(selector, "_providers", lambda: [tool])
+
+    result = selector.execute(
+        {
+            "prompt": "a flower",
+            "preferred_provider": "google_imagen",
+            "model_name": "gemini-2.5-flash-image",
+            "output_path": str(tmp_path / "selected.png"),
+        }
+    )
+
+    assert result.success, result.error
+    assert calls[0]["model"] == "gemini-2.5-flash-image"
+    assert result.data["selected_tool"] == "google_imagen"
+    assert result.data["model"] == "gemini-2.5-flash-image"
+
+
 def test_gemini_cost_estimate_is_per_image():
     from tools.graphics.google_imagen import GoogleImagen
 

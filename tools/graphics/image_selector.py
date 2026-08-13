@@ -242,6 +242,14 @@ class ImageSelector(BaseTool):
             props = tool.input_schema.get("properties", {})
             if "query" in props and "query" not in adapted:
                 adapted["query"] = adapted.get("prompt", "")
+            # The selector exposes a provider-neutral ``model_name`` field,
+            # while several providers call the same input ``model``.
+            if (
+                "model_name" in adapted
+                and "model" in props
+                and "model" not in adapted
+            ):
+                adapted["model"] = adapted["model_name"]
 
         # Strip selector-only keys that downstream tools don't understand
         adapted.pop("preferred_provider", None)

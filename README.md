@@ -253,6 +253,7 @@ XAI_API_KEY=your-key           # xAI Grok image edits/generation + Grok video ge
 GOOGLE_API_KEY=your-key        # Google Imagen images, Google TTS (700+ voices)
 
 # More video providers:
+ARK_API_KEY=your-key           # Volcengine Ark direct — Seedance 2.0 Standard/Fast/Mini
 HEYGEN_API_KEY=your-key        # HeyGen — VEO, Sora, Runway, Kling via single gateway
 RUNWAY_API_KEY=your-key        # Runway Gen-4 direct
 ```
@@ -483,12 +484,13 @@ Each tool declares which Layer 3 skills it relies on. The agent reads Layer 1 to
 > **Full setup guide with pricing and free tiers:** [`docs/PROVIDERS.md`](docs/PROVIDERS.md)
 
 <details>
-<summary><strong>Video Generation — 15 providers</strong></summary>
+<summary><strong>Video Generation — 16 providers</strong></summary>
 
 | Provider | Type | Notes |
 |----------|------|-------|
 | **Kling (fal.ai)** | Cloud API | High quality, fast via fal.ai gateway |
 | **Kling Official** | Cloud API | Official direct API with separate `kling_official` provider |
+| **Seedance 2.0 (Volcengine Ark)** | Cloud API | Official direct API with separate `seedance_ark` provider |
 | **Runway Gen-4** | Cloud API | Cinematic quality, Gen-3 Alpha Turbo / Gen-4 Turbo / Gen-4 Aleph |
 | **Google Veo 3** | Cloud API | Long-form, cinematic. Via fal.ai or HeyGen. |
 | **Grok Imagine Video** | Cloud API | Strong reference-image video and xAI-native short-form generation |

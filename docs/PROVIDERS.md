@@ -193,7 +193,7 @@ The ASR tool (`qwen3-asr-flash-filetrans`) uses an async submit-poll pattern. Au
 
 > **Broad single-key coverage.** One API key unlocks image and video providers across multiple models.
 
-**Tools unlocked:** `flux_image`, `recraft_image`, `kling_video`, `veo_video`, `minimax_video`
+**Tools unlocked:** `flux_image`, `recraft_image`, `seedream_image`, `kling_video`, `veo_video`, `minimax_video`
 **Env var:** `FAL_KEY`
 
 #### Setup
@@ -214,6 +214,8 @@ No subscription — pure pay-as-you-go, no minimum spend.
 | FLUX Pro v1.1 | $0.05/image | 20 images |
 | FLUX Dev | $0.03/image | 33 images |
 | Recraft v3 | ~$0.04/image | 25 images |
+| Seedream 5 Pro (up to 1536x1536) | $0.0675/image | ~14 images |
+| Seedream 5 Pro (up to 2048x2048) | $0.135/image | ~7 images |
 
 **Video generation:**
 

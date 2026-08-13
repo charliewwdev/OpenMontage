@@ -18,6 +18,14 @@ COMFYUI_SETUP_OFFER: dict[str, Any] = {
         "free local video generation through ComfyUI workflows",
         "community workflow_json/workflow_path execution",
     ],
+    # Optional: point image/video generation at separate ComfyUI instances
+    # (e.g. different GPUs). Each overrides COMFYUI_SERVER_URL for its own
+    # tool only; single-server setups can ignore this entirely.
+    "per_capability_env_var_overrides": {
+        "comfyui_image": "COMFYUI_IMAGE_SERVER_URL",
+        "comfyui_video": "COMFYUI_VIDEO_SERVER_URL",
+        "comfyui_music": "COMFYUI_MUSIC_SERVER_URL",
+    },
 }
 
 
@@ -173,6 +181,17 @@ BUNDLED_MODEL_STACKS: dict[str, list[dict[str, Any]]] = {
             "download_url": (
                 "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/"
                 "tree/main/split_files/loras"
+            ),
+        },
+    ],
+    "ace-step-1-t2a": [
+        {
+            "role": "checkpoint",
+            "name": "ace_step_v1_3.5b.safetensors",
+            "destination_hint": "ComfyUI/models/checkpoints/",
+            "download_url": (
+                "https://huggingface.co/Comfy-Org/ACE-Step_ComfyUI_repackaged/"
+                "blob/main/all_in_one/ace_step_v1_3.5b.safetensors"
             ),
         },
     ],

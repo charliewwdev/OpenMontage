@@ -57,6 +57,10 @@
             "minimum": 0,
             "description": "Duration of transition in seconds"
           },
+          "backgroundColor": {
+            "type": "string",
+            "description": "Backing color used behind this cut by composition runtimes"
+          },
           "reason": { "type": "string" }
         },
         "additionalProperties": false

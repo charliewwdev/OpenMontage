@@ -6,34 +6,10 @@ import {
   Sequence,
   interpolate,
   spring,
-  staticFile,
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
 import { loadFont } from "@remotion/google-fonts/SpaceGrotesk";
-
-// Resolve asset path — handle URLs, absolute paths (Windows/Unix), and public/ relative paths
-function resolveAsset(src: string): string {
-  if (src.startsWith("http://") || src.startsWith("https://") || src.startsWith("data:")) {
-    return src;
-  }
-  // Strip any file:// prefix
-  const clean = src.replace(/^file:\/\/\/?/, "");
-  // Absolute paths (Unix: /foo, Windows: C:\foo or C:/foo) — convert to file:// URI
-  // staticFile() only accepts relative paths within public/, so absolute paths must bypass it
-  if (clean.startsWith("/") || /^[A-Za-z]:[\\/]/.test(clean)) {
-    const posix = clean.replace(/\\/g, "/");
-    // POSIX absolute paths already have a leading "/" — file:// + posix
-    // gives exactly three slashes. Windows drive paths (C:/...) need the
-    // extra slash added explicitly. Do not merge these branches — adding
-    // "file:///" unconditionally double-slashes POSIX paths (file:////...).
-    if (posix.startsWith("/")) {
-      return `file://${posix}`;
-    }
-    return `file:///${posix}`;
-  }
-  return staticFile(clean);
-}
 import { TextCard } from "./components/TextCard";
 import { StatCard } from "./components/StatCard";
 import { CalloutBox } from "./components/CalloutBox";
@@ -54,6 +30,7 @@ import type { TerminalStep } from "./components/TerminalScene";
 import { ScreenshotScene } from "./components/ScreenshotScene";
 import type { ScreenshotStep } from "./components/ScreenshotScene";
 import { ProviderChip } from "./components/ProviderChip";
+import { resolveAsset } from "./lib/resolveAsset";
 import type { ParticleType } from "./components/ParticleOverlay";
 import { resolveTheme, type ThemeConfig, DEFAULT_THEME } from "./Root";
 
@@ -254,6 +231,7 @@ interface Cut {
   animation?: string;
   transition_in?: string;
   transition_out?: string;
+  transition_duration?: number;
   transform?: {
     animation?: string;
     scale?: number;
@@ -425,22 +403,49 @@ const ImageScene: React.FC<{ src: string; animation?: string }> = ({
 // Enhanced Video Scene
 // ---------------------------------------------------------------------------
 
-const VideoScene: React.FC<{ src: string; startFrom?: number }> = ({
+const VideoScene: React.FC<{
+  src: string;
+  startFrom?: number;
+  transitionIn?: string;
+  transitionOut?: string;
+  transitionDuration?: number;
+  sceneDurationSeconds: number;
+  backgroundColor?: string;
+}> = ({
   src,
   startFrom = 0,
+  transitionIn,
+  transitionOut,
+  transitionDuration,
+  sceneDurationSeconds,
+  backgroundColor = "#0F172A",
 }) => {
   const frame = useCurrentFrame();
-  const { fps, durationInFrames } = useVideoConfig();
+  const { fps } = useVideoConfig();
+  const durationInFrames = Math.max(1, Math.round(sceneDurationSeconds * fps));
 
-  const fadeIn = spring({ frame, fps, config: { damping: 20 } });
-  const fadeOutStart = durationInFrames - 8;
-  const fadeOut = interpolate(frame, [fadeOutStart, durationInFrames], [1, 0.3], {
-    extrapolateLeft: "clamp",
-    extrapolateRight: "clamp",
-  });
+  const hardIn = ["cut", "none"].includes((transitionIn || "").toLowerCase());
+  const hardOut = ["cut", "none"].includes((transitionOut || "").toLowerCase());
+  const transitionFrames = Math.max(
+    1,
+    Math.round((transitionDuration ?? 8 / fps) * fps),
+  );
+  const fadeIn = hardIn
+    ? 1
+    : interpolate(frame, [0, transitionFrames], [0, 1], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      });
+  const fadeOutStart = Math.max(0, durationInFrames - transitionFrames);
+  const fadeOut = hardOut
+    ? 1
+    : interpolate(frame, [fadeOutStart, durationInFrames], [1, 0], {
+        extrapolateLeft: "clamp",
+        extrapolateRight: "clamp",
+      });
 
   return (
-    <AbsoluteFill style={{ background: "#0F172A" }}>
+    <AbsoluteFill style={{ background: backgroundColor }}>
       <OffthreadVideo
         src={resolveAsset(src)}
         startFrom={Math.round(startFrom * fps)}
@@ -721,7 +726,17 @@ const SceneRenderer: React.FC<{ cut: Cut; theme: ThemeConfig }> = ({ cut, theme 
   }
 
   if (cut.source && isVideo(cut.source)) {
-    return maybeWrapWithBg(<VideoScene src={cut.source} startFrom={cut.source_in_seconds ?? 0} />);
+    return maybeWrapWithBg(
+      <VideoScene
+        src={cut.source}
+        startFrom={cut.source_in_seconds ?? 0}
+        transitionIn={cut.transition_in}
+        transitionOut={cut.transition_out}
+        transitionDuration={cut.transition_duration}
+        sceneDurationSeconds={cut.out_seconds - cut.in_seconds}
+        backgroundColor={cut.backgroundColor}
+      />,
+    );
   }
 
   // Final fallback — try as image if source exists, otherwise show text_card
@@ -741,7 +756,7 @@ const OverlayRenderer: React.FC<{ overlay: Overlay }> = ({ overlay }) => {
   if (overlay.type === "section_title") {
     return (
       <SectionTitle
-        title={overlay.text}
+        title={overlay.text ?? ""}
         subtitle={overlay.subtitle}
         accentColor={overlay.accentColor}
         position={(overlay.position as any) || "top-left"}
@@ -751,7 +766,7 @@ const OverlayRenderer: React.FC<{ overlay: Overlay }> = ({ overlay }) => {
   if (overlay.type === "stat_reveal") {
     return (
       <StatReveal
-        stat={overlay.text}
+        stat={overlay.text ?? ""}
         label={overlay.subtitle}
         accentColor={overlay.accentColor}
         position={(overlay.position as any) || "bottom-right"}
@@ -759,7 +774,7 @@ const OverlayRenderer: React.FC<{ overlay: Overlay }> = ({ overlay }) => {
     );
   }
   if (overlay.type === "hero_title") {
-    return <HeroTitle title={overlay.text} subtitle={overlay.subtitle} />;
+    return <HeroTitle title={overlay.text ?? ""} subtitle={overlay.subtitle} />;
   }
   if (overlay.type === "provider_chip" && overlay.providers) {
     return (

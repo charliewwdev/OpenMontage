@@ -19,7 +19,7 @@ import os
 import time
 from pathlib import Path
 from typing import Any
-from xml.sax.saxutils import escape
+from xml.sax.saxutils import escape, quoteattr
 
 from tools.base_tool import (
     BaseTool,
@@ -201,23 +201,21 @@ class AzureTTS(BaseTool):
         return self.RECOMMENDED_VOICES.get(voice.lower(), voice)
 
     def _build_ssml(self, inputs: dict[str, Any], voice: str) -> str:
-        locale = inputs.get("locale", "en-US")
-        rate = inputs.get("rate", "0%")
-        pitch = inputs.get("pitch", "0%")
+        locale = str(inputs.get("locale", "en-US"))
+        rate = str(inputs.get("rate", "0%"))
+        pitch = str(inputs.get("pitch", "0%"))
         style = inputs.get("style")
         text = escape(inputs["text"])
 
-        inner = f'<prosody rate="{escape(rate)}" pitch="{escape(pitch)}">{text}</prosody>'
+        inner = f"<prosody rate={quoteattr(rate)} pitch={quoteattr(pitch)}>{text}</prosody>"
         if style:
-            inner = (
-                f'<mstts:express-as style="{escape(style)}">{inner}</mstts:express-as>'
-            )
+            inner = f"<mstts:express-as style={quoteattr(str(style))}>{inner}</mstts:express-as>"
         return (
             f'<speak version="1.0" '
             f'xmlns="http://www.w3.org/2001/10/synthesis" '
             f'xmlns:mstts="https://www.w3.org/2001/mstts" '
-            f'xml:lang="{locale}">'
-            f'<voice name="{voice}">{inner}</voice></speak>'
+            f"xml:lang={quoteattr(locale)}>"
+            f"<voice name={quoteattr(voice)}>{inner}</voice></speak>"
         )
 
     def execute(self, inputs: dict[str, Any]) -> ToolResult:

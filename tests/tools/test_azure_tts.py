@@ -6,6 +6,7 @@ construction, and execute() guardrails.
 """
 
 import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
@@ -148,6 +149,20 @@ class TestSSML:
         ssml = t._build_ssml({"text": "Hallo", "locale": "de-DE"}, "de-DE-KatjaNeural")
         assert 'xml:lang="de-DE"' in ssml
 
+    def test_ssml_quotes_in_attributes_remain_well_formed(self):
+        t = AzureTTS()
+        ssml = t._build_ssml(
+            {
+                "text": 'She said "hello" & waved',
+                "locale": 'en-US" data-bad="yes',
+                "rate": '0%" data-bad="yes',
+                "style": 'calm" data-bad="yes',
+            },
+            'en-US-GuyNeural" data-bad="yes',
+        )
+        root = ET.fromstring(ssml)
+        assert all("data-bad" not in element.attrib for element in root.iter())
+
     def test_host_prefers_explicit_endpoint(self, monkeypatch):
         monkeypatch.setenv("AZURE_TTS_ENDPOINT", "https://custom.tts.example.com/")
         assert AzureTTS()._host() == "https://custom.tts.example.com"
@@ -200,6 +215,39 @@ class TestExecute:
         assert captured["headers"]["Ocp-Apim-Subscription-Key"] == "fake-key"
         assert captured["headers"]["X-Microsoft-OutputFormat"] == "audio-48khz-192kbitrate-mono-mp3"
         assert b"Hello world" in captured["body"]
+
+    def test_selector_adapts_shared_controls_for_azure(self, azure_env, tmp_path, monkeypatch):
+        import requests
+        from tools.audio.tts_selector import TTSSelector
+
+        captured = {}
+
+        def fake_post(url, headers=None, data=None, timeout=None):
+            captured["body"] = data.decode("utf-8")
+            return _FakeResponse()
+
+        monkeypatch.setattr(requests, "post", fake_post)
+        monkeypatch.setattr(TTSSelector, "_providers", lambda self: [AzureTTS()])
+
+        result = TTSSelector().execute(
+            {
+                "text": "Selector narration",
+                "preferred_provider": "azure",
+                "voice_id": "jenny",
+                "speaking_rate": 1.1,
+                "pitch": 2,
+                "style": 0.8,
+                "output_format": "mp3_44100_128",
+                "output_path": str(tmp_path / "selector.mp3"),
+            }
+        )
+
+        assert result.success
+        assert result.data["selected_tool"] == "azure_tts"
+        assert result.data["voice"] == "en-US-JennyNeural"
+        assert 'rate="+10%"' in captured["body"]
+        assert 'pitch="+2st"' in captured["body"]
+        assert "express-as" not in captured["body"]
 
     def test_wav_output_format(self, azure_env, tmp_path, monkeypatch):
         import requests

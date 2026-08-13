@@ -1194,10 +1194,17 @@ class SeedanceArkVideo(BaseTool):
 
     def _probe_audio_bytes(self, decoded: bytes, mime: str) -> float:
         suffix = ".wav" if mime == "audio/wav" else ".mp3"
-        with tempfile.NamedTemporaryFile(suffix=suffix) as temp:
+        # Windows does not allow ffprobe to reopen a NamedTemporaryFile while
+        # Python still holds the file handle. Close it before probing, then
+        # remove it explicitly on every path.
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as temp:
             temp.write(decoded)
             temp.flush()
-            return self._probe_local_audio_duration(Path(temp.name))
+            temp_path = Path(temp.name)
+        try:
+            return self._probe_local_audio_duration(temp_path)
+        finally:
+            temp_path.unlink(missing_ok=True)
 
     @staticmethod
     def _probe_local_audio_duration(path: Path) -> float:

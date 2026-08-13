@@ -434,7 +434,7 @@ allowance). OpenMontage estimates cost from the transcribed audio duration. See
 
 ### Google — TTS + Imagen + Music + Video (Shared Key)
 
-> **One key, five tools.** Google Cloud TTS has 700+ voices in 50+ languages — the strongest localization option. Imagen 4 generates high-quality images. Google Lyria generates high-quality background music. Gemini Omni Flash supports conversational video editing, and direct Veo generation covers premium short video clips.
+> **One key, five tools.** Google Cloud TTS has 700+ voices in 50+ languages — the strongest localization option. `google_imagen` supports both Imagen 4 and Gemini 2.5 Flash Image, including projects without Imagen catalog access. Google Lyria generates high-quality background music. Gemini Omni Flash supports conversational video editing, and direct Veo generation covers premium short video clips.
 
 **Tools unlocked:** `google_tts`, `google_imagen`, `google_music`, `gemini_omni_video`, `veo_video`
 **Env var:** `GOOGLE_API_KEY` (or `GEMINI_API_KEY` — either works; `GEMINI_API_KEY` takes precedence)
@@ -475,8 +475,14 @@ The free tiers apply *independently* — you get 1M Standard AND 1M WaveNet AND 
 | Imagen 4 Fast | $0.02 |
 | Imagen 4 Standard | $0.04 |
 | Imagen 4 Ultra | $0.06 |
+| Gemini 2.5 Flash Image (`gemini-2.5-flash-image`) | $0.039 |
 
 **Free tier for Imagen:** None. Paid tier only.
+
+To select the Gemini backend through the governed `image_selector`, pass
+`preferred_provider: "google_imagen"` and
+`model_name: "gemini-2.5-flash-image"`. The selector maps its neutral
+`model_name` field to the provider's `model` input.
 
 #### Gemini Omni Video Pricing
 

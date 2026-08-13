@@ -242,6 +242,14 @@ class ImageSelector(BaseTool):
             props = tool.input_schema.get("properties", {})
             if "query" in props and "query" not in adapted:
                 adapted["query"] = adapted.get("prompt", "")
+            # The selector exposes a provider-neutral ``model_name`` field,
+            # while several providers call the same input ``model``.
+            if (
+                "model_name" in adapted
+                and "model" in props
+                and "model" not in adapted
+            ):
+                adapted["model"] = adapted["model_name"]
             if "n" in adapted and "num_images" in props and "num_images" not in adapted:
                 adapted["num_images"] = adapted["n"]
 

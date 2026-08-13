@@ -210,7 +210,7 @@ class TTSSelector(BaseTool):
         if tool is None:
             return ToolResult(success=False, error="No TTS provider available.")
 
-        result = tool.execute(inputs)
+        result = tool.execute(self._adapt_inputs(tool, inputs))
         if result.success:
             result.data.setdefault("selected_tool", tool.name)
             result.data["selected_provider"] = tool.provider
@@ -223,6 +223,37 @@ class TTSSelector(BaseTool):
                 if t.name != tool.name and t.get_status().value == "available"
             ]
         return result
+
+    @staticmethod
+    def _adapt_inputs(tool: BaseTool, inputs: dict[str, Any]) -> dict[str, Any]:
+        """Translate capability-level controls to provider-native inputs."""
+        adapted = dict(inputs)
+        if tool.name != "azure_tts":
+            return adapted
+
+        if inputs.get("voice_id") and not inputs.get("voice"):
+            adapted["voice"] = inputs["voice_id"]
+
+        speed = inputs.get("speaking_rate", inputs.get("speed"))
+        if speed is not None and "rate" not in inputs:
+            percent = round((float(speed) - 1.0) * 100)
+            adapted["rate"] = f"{percent:+d}%" if percent else "0%"
+
+        pitch = inputs.get("pitch")
+        if isinstance(pitch, (int, float)):
+            adapted["pitch"] = f"{pitch:+g}st" if pitch else "0%"
+
+        # The selector's numeric style is ElevenLabs-specific. Azure's style
+        # is a named express-as value such as "calm" or "newscast".
+        if not isinstance(inputs.get("style"), str):
+            adapted.pop("style", None)
+
+        output_format = str(inputs.get("output_format", ""))
+        if output_format.startswith("mp3"):
+            adapted["output_format"] = "mp3"
+        elif output_format.startswith(("wav", "riff", "pcm")):
+            adapted["output_format"] = "wav"
+        return adapted
 
     def _select_best_tool(
         self,

@@ -1529,6 +1529,31 @@ class VideoCompose(BaseTool):
         if render_runtime == "remotion" and remotion_atelier_requested:
             return self._render_via_atelier(inputs, edit_decisions)
 
+        # HyperFrames is HTML-first and therefore atelier by default for hero
+        # work. When a project-local authored workspace already exists, route
+        # before the stock cut/asset requirements so hyperframes_compose can
+        # validate and render it without overwriting index.html.
+        hyperframes_atelier_requested = (
+            render_runtime == "hyperframes"
+            and (
+                edit_decisions.get("composition_mode") == "atelier"
+                or edit_decisions.get("renderer_family") == "bespoke"
+                or bool(edit_decisions.get("bespoke", {}).get("entry"))
+            )
+        )
+        if hyperframes_atelier_requested:
+            output_path = Path(inputs.get("output_path", "renders/output.mp4"))
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            profile = inputs.get("profile") or inputs.get("output_profile")
+            return self._render_via_hyperframes(
+                inputs=inputs,
+                edit_decisions=edit_decisions,
+                asset_manifest=asset_manifest or {"version": "1.0", "assets": []},
+                resolved_cuts=list(edit_decisions.get("cuts") or []),
+                output_path=output_path,
+                profile=profile,
+            )
+
         if not asset_manifest:
             return ToolResult(success=False, error="asset_manifest required for render")
 
@@ -1734,8 +1759,13 @@ class VideoCompose(BaseTool):
                     )
                     playbook_data = None
 
+        authored_workspace = (
+            edit_decisions.get("composition_mode") == "atelier"
+            or edit_decisions.get("renderer_family") == "bespoke"
+            or bool(edit_decisions.get("bespoke", {}).get("entry"))
+        )
         hf_inputs: dict[str, Any] = {
-            "operation": "render",
+            "operation": "render_existing" if authored_workspace else "render",
             "workspace_path": workspace_path,
             "output_path": str(output_path),
             "edit_decisions": dict(edit_decisions, cuts=resolved_cuts),
@@ -1753,6 +1783,10 @@ class VideoCompose(BaseTool):
             hf_inputs["strict"] = inputs["strict"]
         if "skip_contrast" in inputs:
             hf_inputs["skip_contrast"] = inputs["skip_contrast"]
+        if "strict_check" in inputs:
+            hf_inputs["strict_check"] = inputs["strict_check"]
+        if "snapshots" in inputs:
+            hf_inputs["snapshots"] = inputs["snapshots"]
 
         render_result = HyperFramesCompose().execute(hf_inputs)
 

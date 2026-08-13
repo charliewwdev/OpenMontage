@@ -104,6 +104,53 @@ OpenMontage now uses those published rates in the Grok tool estimators.
 
 ---
 
+### Volcengine Jimeng — 即梦 AI Video Generation
+
+> **Direct ByteDance API via V4 signing.** Calls the Volcengine visual API (visual.volcengineapi.com) with HMAC-SHA256 request signing using IAM AK/SK credentials. Supports text-to-video and image-to-video via Jimeng 3.0 Pro.
+
+**Tools unlocked:** `jimeng_video`
+**Env vars:** `VOLC_ACCESSKEY` (Access Key ID) + `VOLC_SECRETKEY` (Secret Access Key)
+
+#### Setup
+
+1. Go to [console.volcengine.com/iam/keymanage](https://console.volcengine.com/iam/keymanage)
+2. Create a Volcengine account if you don't have one
+3. Create an Access Key pair (AK + SK)
+4. Ensure your account has access to Jimeng AI (即梦) video generation service
+5. Add to `.env`: `VOLC_ACCESSKEY=...` and `VOLC_SECRETKEY=...`
+
+#### What it's best for
+
+- Direct ByteDance/Volcengine API quota usage
+- Jimeng 3.0 Pro text-to-video and image-to-video
+- Chinese-language prompt understanding
+- Configurable frame count (121=5s, 241=10s) and aspect ratio
+
+#### API notes
+
+Authentication uses Volcengine IAM V4 signing (HMAC-SHA256), not a Bearer token. The signing process builds a canonical request, derives a signing key from SK → date → region → service, and signs the request.
+
+API flow: `POST ?Action=CVSync2AsyncSubmitTask` → poll `POST ?Action=CVSync2AsyncGetResult` → download `video_url`.
+
+The implementation uses the compatible generic `CVSync2Async*` route (API version `2022-08-31`) rather than the model-specific `2024-06-06` actions presented in the public API explorer. This is intentional — the generic route supports the same Jimeng 3.0 Pro model via `req_key` while remaining stable across model updates.
+
+The `req_key` for video is `jimeng_ti2v_v30_pro`. Success code is `10000`. Task statuses: `in_queue`, `generating`, `done`, `not_found`, `expired`.
+
+**Authoritative API reference:** [Jimeng TI2V V30 Pro SubmitTask](https://api.volcengine.com/api-docs/view?action=JimengTI2VV30PROSubmitTask&serviceCode=cv&version=2024-06-06)
+
+**Schema constraints** (enforced by `input_schema` to prevent paid-call failures):
+- `prompt`: max 800 characters
+- `frames`: must be exactly `121` (5s) or `241` (10s) at 24fps
+- `seed`: `-1` for random, or any non-negative integer
+
+#### Pricing
+
+| Model | Price |
+|------|-------|
+| Jimeng 3.0 Pro (video) | ~$0.05/sec (check Volcengine console for actual rate) |
+
+---
+
 ### Alibaba DashScope — Qwen Image + TTS + ASR
 
 > **Best for Chinese-language production.** One key unlocks Qwen-Image generation, Qwen-TTS Mandarin narration, and Qwen-ASR with word-level timestamps — the only DashScope path that provides word-level granularity for subtitle alignment.

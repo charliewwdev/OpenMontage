@@ -26,11 +26,11 @@ The backend model is chosen with the `model` **HTTP header**, not a body field. 
 `model` is **required — there is no default**. Pass one of:
 
 - `s2.1-pro` — latest generation. Best quality: inline emotion tags, 80+ languages, multi-speaker. Hero narration.
-- `s2.1-pro-free` — **promotional** free access to s2.1-pro. Drafts, samples, and validation runs at $0 during the promo window only. Per the [fish.audio announcement](https://fish.audio/ar/blog/s2-1-pro-free-api/?articleLocale=en): free through end of July 2026, subject to Fair Use, no SLA/latency guarantee, requests may be retained, and commercial use is restricted. Never route production or client narration through it.
+- `s2.1-pro-free` — **promotional** free access to s2.1-pro. Drafts, samples, and validation runs at $0 during the promo window only. Per the [fish.audio announcement](https://fish.audio/ko/blog/s2-1-pro-free-api/?articleLocale=en): free through August 31, 2026, subject to Fair Use, no SLA/latency guarantee, requests may be retained, and commercial use is restricted. Never route production or client narration through it.
 - `s2-pro` — first S2 generation. Stable high quality with emotion-tag support.
 - `s1` — previous flagship. Kept for compatibility with existing integrations.
 
-Billing is **per UTF-8 byte of input text** (not per character). CJK text and emoji cost 3-4x an ASCII character of the same visible length. Approximate: `s1` / `s2-pro` / `s2.1-pro` ≈ $15 per 1M bytes, `s2.1-pro-free` = $0 during the promo window only (the tool's `estimate_cost()` switches to the paid `s2.1-pro` rate after end of July 2026). Verify current pricing at https://fish.audio before large batches.
+Billing is **per UTF-8 byte of input text** (not per character). CJK text and emoji cost 3-4x an ASCII character of the same visible length. Current list pricing: `s1` / `s2-pro` / `s2.1-pro` = $15 per 1M bytes, `s2.1-pro-free` = $0 during the promo window only (the tool's `estimate_cost()` switches to the paid `s2.1-pro` rate after August 31, 2026). Verify current pricing at https://docs.fish.audio/developer-guide/models-pricing/pricing-and-rate-limits before large batches.
 
 ## Inline emotion tags (S2 models only)
 

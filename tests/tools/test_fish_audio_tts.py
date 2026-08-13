@@ -80,9 +80,13 @@ class TestModelContract:
         assert result.success is False
         assert "Unknown fish.audio model" in result.error
 
-    def test_schema_declares_model_required(self):
+    def test_schema_requires_model_or_selector_alias(self):
         schema = FishAudioTTS.input_schema
-        assert "model" in schema["required"]
+        assert schema["required"] == ["text"]
+        assert {tuple(option["required"]) for option in schema["anyOf"]} == {
+            ("model",),
+            ("model_id",),
+        }
         assert "model_id" in schema["properties"]
 
     def test_model_id_alias_accepted(self, api_key, tmp_path):
@@ -252,12 +256,12 @@ class TestCost:
 
     def test_s2_1_pro_free_costs_zero_during_promo_window(self):
         tool = FishAudioTTS()
-        with patch.object(FishAudioTTS, "_today", return_value=date(2026, 7, 1)):
+        with patch.object(FishAudioTTS, "_today", return_value=date(2026, 8, 31)):
             assert tool.estimate_cost({"text": "same text here", "model": "s2.1-pro-free"}) == 0.0
 
     def test_s2_1_pro_free_charged_at_paid_rate_after_promo_window(self):
         tool = FishAudioTTS()
-        with patch.object(FishAudioTTS, "_today", return_value=date(2026, 8, 1)):
+        with patch.object(FishAudioTTS, "_today", return_value=date(2026, 9, 1)):
             free_after = tool.estimate_cost({"text": "same text here", "model": "s2.1-pro-free"})
             paid = tool.estimate_cost({"text": "same text here", "model": "s2.1-pro"})
         assert free_after == paid

@@ -77,7 +77,11 @@ class FishAudioTTS(BaseTool):
 
     input_schema = {
         "type": "object",
-        "required": ["text", "model"],
+        "required": ["text"],
+        "anyOf": [
+            {"required": ["model"]},
+            {"required": ["model_id"]},
+        ],
         "properties": {
             "text": {"type": "string", "description": "Text to convert to speech"},
             "model": {
@@ -229,11 +233,11 @@ class FishAudioTTS(BaseTool):
     _DEFAULT_RATE = 0.000015
 
     # s2.1-pro-free is a promotion, not a durable free tier: free API access runs
-    # through the end of July 2026, subject to Fair Use, with no SLA/latency
+    # through August 31, 2026, subject to Fair Use, with no SLA/latency
     # guarantee, possible request retention, and commercial-use restrictions
     # (https://fish.audio/ar/blog/s2-1-pro-free-api/?articleLocale=en). After the
     # window, cost planning falls back to the paid s2.1-pro rate.
-    _S21_PRO_FREE_PROMO_END = date(2026, 7, 31)
+    _S21_PRO_FREE_PROMO_END = date(2026, 8, 31)
 
     # Effective API defaults for output-affecting inputs. Applied when computing
     # the idempotency key so an omitted field and its explicit default hash the

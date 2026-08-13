@@ -52,12 +52,12 @@ class HunyuanImage(BaseTool):
     determinism = Determinism.SEEDED
     runtime = ToolRuntime.API
 
-    dependencies = []
+    dependencies = ["env:TENCENT_TOKENHUB_API_KEY"]
     install_instructions = (
         "Set TENCENT_TOKENHUB_API_KEY to your Tencent Cloud TokenHub API key.\n"
         "  Get it at https://console.cloud.tencent.com/tokenhub"
     )
-    agent_skills = []
+    agent_skills = ["visual-style"]
 
     capabilities = ["generate_image", "text_to_image"]
     supports = {
@@ -196,6 +196,7 @@ class HunyuanImage(BaseTool):
         "seed",
         "revise",
         "logo_add",
+        "logo_param",
     ]
     side_effects = [
         "writes image file to output_path",

@@ -188,6 +188,24 @@ The ASR tool (`qwen3-asr-flash-filetrans`) uses an async submit-poll pattern. Au
 
 ---
 
+### Tencent Hunyuan Cloud — Image Generation
+
+> **Chinese-friendly first-party image generation.** `hunyuan_image` accesses
+> Hunyuan Image 3.0 through Tencent TokenHub with Bearer-token authentication.
+> It supports seeded text-to-image, up to three reference images, custom
+> resolutions, prompt rewriting, and watermark controls.
+
+**Tool unlocked:** `hunyuan_image`
+
+**Env var:** `TENCENT_TOKENHUB_API_KEY`
+
+Generate an API key in the Tencent Cloud TokenHub console and add it to
+`.env`. The tool reports approximately $0.08 per generated image based on
+TokenHub's credit price. It is available through `image_selector`; shared
+reference-image inputs are normalized to the provider's `images` array.
+
+---
+
 ### fal.ai — Multi-Model Gateway
 
 > **Broad single-key coverage.** One API key unlocks image and video providers across multiple models.

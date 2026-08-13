@@ -46,6 +46,18 @@ def test_hunyuan_image_metadata():
     assert info["supports"]["reference_image"] is True
     assert info["supports"]["prompt_rewrite"] is True
     assert info["supports"]["negative_prompt"] is False
+    assert "env:TENCENT_TOKENHUB_API_KEY" in info["dependencies"]
+    assert "visual-style" in info["agent_skills"]
+
+
+def test_idempotency_includes_custom_watermark():
+    from tools.graphics.hunyuan_image import HunyuanImage
+
+    tool = HunyuanImage()
+    base = {"prompt": "x"}
+    assert tool.idempotency_key(base) != tool.idempotency_key(
+        {**base, "logo_param": {"logo_url": "https://example.com/logo.png"}}
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -353,6 +365,40 @@ def test_execute_returns_error_without_api_key(monkeypatch):
     result = HunyuanImage().execute({"prompt": "a cat"})
     assert not result.success
     assert "TENCENT_TOKENHUB_API_KEY" in result.error
+
+
+def test_image_selector_maps_shared_reference_input(monkeypatch, tmp_path):
+    from tools.base_tool import ToolResult
+    from tools.graphics.hunyuan_image import HunyuanImage
+    from tools.graphics.image_selector import ImageSelector
+
+    monkeypatch.setenv("TENCENT_TOKENHUB_API_KEY", "test-key")
+    tool = HunyuanImage()
+    selector = ImageSelector()
+    monkeypatch.setattr(selector, "_providers", lambda: [tool])
+    monkeypatch.setattr(
+        selector,
+        "_select_best_tool",
+        lambda _inputs, _candidates, _context: (tool, None),
+    )
+    observed = {}
+
+    def fake_execute(inputs):
+        observed.update(inputs)
+        return ToolResult(success=True, data={}, artifacts=[inputs["output_path"]])
+
+    monkeypatch.setattr(tool, "execute", fake_execute)
+    result = selector.execute(
+        {
+            "prompt": "adapt this frame",
+            "preferred_provider": "hunyuan_cloud",
+            "image_path": str(tmp_path / "reference.png"),
+            "output_path": str(tmp_path / "out.png"),
+        }
+    )
+    assert result.success
+    assert observed["images"] == [str(tmp_path / "reference.png")]
+    assert result.data["selected_tool"] == "hunyuan_image"
 
 
 # ---------------------------------------------------------------------------

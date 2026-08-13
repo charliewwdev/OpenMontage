@@ -36,7 +36,9 @@ class ElevenLabsTTS(BaseTool):
     install_instructions = (
         "Set the ELEVENLABS_API_KEY environment variable:\n"
         "  export ELEVENLABS_API_KEY=your_key_here\n"
-        "Get a key at https://elevenlabs.io"
+        "Get a key at https://elevenlabs.io\n"
+        "If fal_elevenlabs_tts is available, use it instead to access ElevenLabs "
+        "speech through fal.ai without a separate ElevenLabs key."
     )
     fallback = "openai_tts"
     fallback_tools = ["openai_tts", "piper_tts"]

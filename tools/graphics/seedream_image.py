@@ -31,24 +31,21 @@ class SeedreamImage(BaseTool):
     determinism = Determinism.STOCHASTIC
     runtime = ToolRuntime.API
 
-    dependencies = []
+    dependencies = ["env:FAL_KEY"]
     install_instructions = (
         "Set FAL_KEY to your fal.ai API key.\n"
         "  Get one at https://fal.ai/dashboard/keys"
     )
-    agent_skills = []
+    agent_skills = ["visual-style"]
 
     capabilities = [
         "generate_image",
-        "generate_logo",
-        "generate_vector",
         "text_to_image",
         "structured_designs",
         "dense_layouts",
         "multi_language_text",
     ]
     supports = {
-        "svg_output": True,
         "text_rendering": True,
         "color_palette": True,
         "custom_size": True,
@@ -57,8 +54,7 @@ class SeedreamImage(BaseTool):
         "multi_language_text": True,
     }
     best_for = [
-        "logos and brand assets",
-        "SVG vector output",
+        "raster brand and campaign assets",
         "images with accurate text rendering",
         "structured designs and dense layouts",
         "multi-language text rendering (14 languages)",
@@ -79,7 +75,9 @@ class SeedreamImage(BaseTool):
                     "default": "auto_2K",
                 },
                 "num_images": {
-                    "type": "number",
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 4,
                     "default": 1,
                 },
                 "output_format": {
@@ -99,7 +97,13 @@ class SeedreamImage(BaseTool):
         cpu_cores=1, ram_mb=512, vram_mb=0, disk_mb=100, network_required=True
     )
     retry_policy = RetryPolicy(max_retries=2, retryable_errors=["rate_limit", "timeout"])
-    idempotency_key_fields = ["image_size", "output_format"]
+    idempotency_key_fields = [
+        "prompt",
+        "image_size",
+        "output_format",
+        "num_images",
+        "enable_safety_checker",
+    ]
     side_effects = ["writes image file to output_path", "calls fal.ai queue API"]
     user_visible_verification = ["Inspect generated image for brand accuracy and text readability"]
 
@@ -127,6 +131,20 @@ class SeedreamImage(BaseTool):
         unit_price = size_price_map.get(image_size, 0.135)
         return round(unit_price * num_images, 4)
 
+    @staticmethod
+    def _output_paths(
+        output_path: str | None, count: int, output_format: str
+    ) -> list[Path]:
+        path = Path(output_path or f"seedream_image.{output_format}")
+        if not path.suffix:
+            path = path.with_suffix(f".{output_format}")
+        if count == 1:
+            return [path]
+        return [
+            path.with_name(f"{path.stem}_{index}{path.suffix}")
+            for index in range(1, count + 1)
+        ]
+
     def execute(self, inputs: dict[str, Any]) -> ToolResult:
         import requests
 
@@ -139,12 +157,21 @@ class SeedreamImage(BaseTool):
 
         start = time.time()
         prompt = inputs["prompt"]
+        num_images = inputs.get("num_images", 1)
+        if isinstance(num_images, bool) or not isinstance(num_images, int):
+            return ToolResult(
+                success=False, error="num_images must be an integer from 1 to 4."
+            )
+        if not 1 <= num_images <= 4:
+            return ToolResult(
+                success=False, error="num_images must be between 1 and 4."
+            )
         submit_url = "https://queue.fal.run/bytedance/seedream/v5/pro/text-to-image"
         payload: dict[str, Any] = {
             "prompt": prompt,
             "image_size": inputs.get("image_size", "auto_2K"),
             "output_format": inputs.get("output_format", "jpeg"),
-            "num_images": inputs.get("num_images", 1),
+            "num_images": num_images,
             "enable_safety_checker": inputs.get("enable_safety_checker", True),
         }
 
@@ -209,20 +236,18 @@ class SeedreamImage(BaseTool):
             if not images:
                 raise RuntimeError("Seedream completed but no images returned")
 
+            ext = inputs.get("output_format", "jpeg")
+            expected_paths = self._output_paths(
+                inputs.get("output_path"), len(images), ext
+            )
             output_paths = []
-            for idx, img in enumerate(images):
+            for img, output_path in zip(images, expected_paths):
                 image_url = img.get("url")
                 if not image_url:
                     continue
                 image_resp = requests.get(image_url, timeout=60)
                 image_resp.raise_for_status()
 
-                ext = inputs.get("output_format", "jpeg")
-                if len(images) > 1:
-                    filename = f"seedream_image_{idx + 1}.{ext}"
-                else:
-                    filename = f"seedream_image.{ext}"
-                output_path = Path(inputs.get("output_path", filename))
                 output_path.parent.mkdir(parents=True, exist_ok=True)
                 output_path.write_bytes(image_resp.content)
                 output_paths.append(str(output_path))

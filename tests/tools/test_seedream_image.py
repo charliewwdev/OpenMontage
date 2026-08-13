@@ -154,7 +154,7 @@ class TestCostEstimation:
         cost = seedream_tool.estimate_cost({"image_size": size, "num_images": 1})
         assert cost == pytest.approx(expected)
 
-    @pytest.mark.parametrize("n",[1, 2, 5, 10])
+    @pytest.mark.parametrize("n", [1, 2, 3, 4])
     def test_cost_scales_with_num_images(self, seedream_tool, n):
         cost = seedream_tool.estimate_cost({"image_size": "auto_2K", "num_images": n})
         assert cost == pytest.approx(round(0.135 * n, 4))
@@ -205,6 +205,16 @@ class TestAsyncPolling:
 # ========== Validation & Error Handling ==========
 
 class TestValidation:
+    @pytest.mark.parametrize("value", [0, 5, 1.5, True])
+    def test_num_images_rejects_invalid_values(
+        self, seedream_tool, mock_requests, value
+    ):
+        mock_post, _ = mock_requests
+        result = seedream_tool.execute({"prompt": "t", "num_images": value})
+        assert not result.success
+        assert "num_images" in (result.error or "")
+        mock_post.assert_not_called()
+
     def test_missing_api_key_returns_error(self, monkeypatch):
         monkeypatch.delenv("FAL_KEY", raising=False)
         monkeypatch.delenv("FAL_AI_API_KEY", raising=False)
@@ -260,3 +270,30 @@ class TestMetadata:
         inputs = {"prompt": "c", "image_size": "square", "num_images": 2, "output_path": str(tmp_path / "c.jpeg")}
         result = seedream_tool.execute(inputs)
         assert result.cost_usd == pytest.approx(seedream_tool.estimate_cost(inputs))
+
+    def test_image_selector_routes_count_and_returns_distinct_artifacts(
+        self, seedream_tool, tmp_path, mock_requests, monkeypatch
+    ):
+        from tools.graphics.image_selector import ImageSelector
+
+        mock_post, mock_get = mock_requests
+        _setup_mock_execution(mock_post, mock_get, num_images=2)
+        selector = ImageSelector()
+        monkeypatch.setattr(selector, "_providers", lambda: [seedream_tool])
+
+        result = selector.execute(
+            {
+                "prompt": "campaign artwork",
+                "preferred_provider": "bytedance",
+                "n": 2,
+                "output_path": str(tmp_path / "selected.png"),
+            }
+        )
+
+        assert result.success, result.error
+        assert result.data["selected_tool"] == "seedream_image"
+        assert len(set(result.artifacts)) == 2
+        assert {Path(path).name for path in result.artifacts} == {
+            "selected_1.png",
+            "selected_2.png",
+        }

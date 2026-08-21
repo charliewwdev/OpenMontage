@@ -73,7 +73,7 @@ TENCENT_TOKENHUB_API_KEY=    # Tencent Hunyuan cloud video via TokenHub API
 
 # LOCAL (no keys needed — just GPU + install)
 VIDEO_GEN_LOCAL_ENABLED=     # Set to "true" for local video gen
-VIDEO_GEN_LOCAL_MODEL=       # wan2.1-1.3b, wan2.1-14b, hunyuan-1.5, ltx2-local, cogvideo-5b
+VIDEO_GEN_LOCAL_MODEL=       # wan2.2-ti2v-5b, wan2.1-1.3b, wan2.1-14b, hunyuan-1.5, ltx2-local, cogvideo-5b
 
 # COMFYUI (optional overrides; localhost:8188 is the default)
 COMFYUI_SERVER_URL=          # Local ComfyUI server for shared workflows
@@ -1261,8 +1261,9 @@ pip install diffusers transformers accelerate torch pillow requests
 VIDEO_GEN_LOCAL_ENABLED=true
 
 # 3. Choose a model based on your GPU VRAM
-VIDEO_GEN_LOCAL_MODEL=wan2.1-1.3b      # 6GB+ VRAM (entry-level)
-VIDEO_GEN_LOCAL_MODEL=wan2.1-14b       # 24GB+ VRAM (best local quality)
+VIDEO_GEN_LOCAL_MODEL=wan2.2-ti2v-5b   # 12GB+ VRAM (default; 720p @ 24fps, T2V+I2V+V2V)
+VIDEO_GEN_LOCAL_MODEL=wan2.1-1.3b      # 6GB+ VRAM (entry-level, text-to-video only)
+VIDEO_GEN_LOCAL_MODEL=wan2.1-14b       # 24GB+ VRAM (best Wan 2.1 quality)
 VIDEO_GEN_LOCAL_MODEL=hunyuan-1.5      # 12GB+ VRAM
 VIDEO_GEN_LOCAL_MODEL=ltx2-local       # 8GB+ VRAM (fastest)
 VIDEO_GEN_LOCAL_MODEL=cogvideo-5b      # 10GB+ VRAM
@@ -1273,14 +1274,76 @@ VIDEO_GEN_LOCAL_MODEL=cogvideo-2b      # 6GB+ VRAM (lightest)
 
 | Model | VRAM | Quality | Speed | Best for |
 |-------|------|---------|-------|----------|
-| **WAN 2.1 (1.3B)** | 6GB | Good | Fast | Entry-level GPU, quick iteration |
-| **WAN 2.1 (14B)** | 24GB | Excellent | Slow | Best quality-to-VRAM ratio |
+| **WAN 2.2 TI2V (5B)** | 12GB | Excellent | Medium | Default. 720p @ 24fps, one checkpoint for T2V/I2V/V2V |
+| **WAN 2.1 (1.3B)** | 6GB | Good | Fast | Entry-level GPU, quick iteration (text-to-video only) |
+| **WAN 2.1 (14B)** | 24GB | Excellent | Slow | Best Wan 2.1 quality |
 | **Hunyuan 1.5** | 12GB | Very good | Medium | Mid-range GPUs |
 | **LTX-2** | 8GB | Good | Fastest | Quick drafts, lowest latency |
 | **CogVideo (5B)** | 10GB | Good | Medium | Balanced option |
 | **CogVideo (2B)** | 6GB | Fair | Fast | Low-VRAM experimentation |
 
-**All local models support:** Image-to-video, text-to-video, offline generation, seeded reproducibility.
+**All local models support:** text-to-video, offline generation, seeded reproducibility.
+
+#### WAN 2.2 — the full operation matrix
+
+`wan_video` drives one checkpoint across every Wan task. The `operation` input selects
+the diffusers pipeline; the tool refuses an operation the chosen variant has no weights for.
+
+| `operation` | What it does | Extra inputs |
+|-------------|--------------|--------------|
+| `text_to_video` | Prompt to clip | — |
+| `image_to_video` | Animate a still | `reference_image_path` / `reference_image_url` |
+| `video_to_video` | Restyle an existing clip | `source_video_path`, `strength` |
+| `first_last_frame` | Interpolate between two stills | `reference_image_*` + `last_image_*` |
+| `text_to_image` | Single frame, saved as PNG | — |
+
+Geometry is snapped to what the VAE can encode, so you can ask for any size: frame counts
+land on `4k + 1`, and width/height land on a multiple of 32 for the TI2V line (its 16x VAE
+plus 2x patching is why 720p is **1280x704**, not 1280x720) or 16 elsewhere.
+
+#### Clips longer than five seconds
+
+Wan is trained for roughly a five-second pass. Ask for more with `duration_seconds` and the
+tool chains segments: each continuation is seeded with the previous segment's last frame,
+regenerates it as its own frame 0, and that duplicate is dropped at the seam.
+
+```python
+wan_video.execute({
+    "prompt": "A red convertible on a coastal road at golden hour",
+    "duration_seconds": 30,          # -> 720 frames @ 24fps -> 6 chained segments
+    "width": 704, "height": 480,
+    "num_inference_steps": 20,
+    "offload_mode": "sequential",
+    "segment_prompts": [...],        # optional shot list, one entry per segment
+})
+```
+
+Chaining drifts: every hop conditions on already-generated pixels, so contrast and colour
+creep. `correct_drift` (on by default) re-grades each segment to the opening segment's
+channel statistics. Pass `segment_prompts` to steer the clip through a shot list instead of
+repeating one prompt six times.
+
+#### Fitting a 12GB card
+
+`precision` (`auto`/`bf16`/`int8`/`int4`) and `offload_mode` (`auto`/`model`/`sequential`)
+both default to `auto` and are picked from visible VRAM.
+
+A bf16 5B transformer is ~10GB resident. With `offload_mode="model"` that leaves almost
+nothing for activations on a 12GB card — measured peak was 10.85GB at just 512x320.
+`offload_mode="sequential"` streams one submodule at a time: the same card then peaks at
+**1.97GB** and renders 704x480 comfortably, at the cost of ~4s per denoising step of PCIe
+traffic. On a 12GB GPU `auto` selects it for you.
+
+> **NVIDIA driver note.** If the loaded kernel module and the installed userspace libraries
+> are different versions, `nvmlInit` fails. CUDA compute still runs, but PyTorch calls NVML
+> while composing an out-of-memory report — so real OOMs surface as an internal assert, and
+> bitsandbytes (`int8`/`int4`) cannot load at all. Compare `cat /proc/driver/nvidia/version`
+> with `nvidia-smi`; if they disagree, reboot. `wan_video` detects this and says so.
+
+
+Image-to-video is *not* universal — Wan 2.1 never shipped 1.3B I2V weights and CogVideo is
+text-only. Each variant's real capability list is `operations` in `tools/video/_shared.py`,
+and `wan_video` refuses an operation the selected checkpoint cannot do.
 
 ---
 

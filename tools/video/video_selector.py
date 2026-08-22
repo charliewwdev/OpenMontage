@@ -386,6 +386,9 @@ class VideoSelector(BaseTool):
 
         env_hint = os.environ.get("VIDEO_GEN_LOCAL_MODEL", "").lower()
         env_map = {
+            "wan2.2-ti2v-5b": "wan",
+            "wan2.2-t2v-a14b": "wan",
+            "wan2.2-i2v-a14b": "wan",
             "wan2.1-1.3b": "wan",
             "wan2.1-14b": "wan",
             "hunyuan-1.5": "hunyuan",

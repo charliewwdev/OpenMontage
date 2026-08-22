@@ -393,22 +393,30 @@ class CorpusBuilder(BaseTool):
                 cache_snapshot = {"error": f"{type(e).__name__}: {e}"}
 
             # Per-candidate tolerance is useful only while at least one item
-            # survives. If every discovered candidate fails, reporting success
-            # persists an empty index and hides a systemic codec/CLIP failure
-            # until retrieval. A no-result or skip-only run remains valid.
-            total_failure = bool(candidates_seen) and not added_ids and not skipped
+            # survives. If every candidate we processed fails, reporting success
+            # persists an index with no new rows and hides a systemic codec/CLIP
+            # failure until retrieval. Keyed on `failed`, not on `skipped`:
+            # already-present clips say nothing about whether processing worked,
+            # so a run that skips one clip and fails the other nine is still a
+            # total failure. A no-result or skip-only run (failed == 0) is valid.
+            total_failure = bool(candidates_seen) and not added_ids and failed > 0
             if total_failure:
                 first_errors = "; ".join(
                     item["error"]
                     for item in errors
                     if item.get("phase") == "process"
                 )[:400]
+                index_state = (
+                    "corpus index is empty"
+                    if not skipped
+                    else f"no clips added ({skipped} already present)"
+                )
                 return ToolResult(
                     success=False,
                     error=(
-                        f"All {failed} of {candidates_seen} candidates failed to "
-                        "process; corpus index is empty. Check the media decoder "
-                        "and the CLIP `transformers`/`torch` compatibility. "
+                        f"All {failed} processed candidate(s) failed, of "
+                        f"{candidates_seen} seen; {index_state}. Check the media "
+                        "decoder and the CLIP `transformers`/`torch` compatibility. "
                         f"First errors: {first_errors or '(none recorded)'}"
                     ),
                     data={

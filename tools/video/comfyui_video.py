@@ -173,6 +173,7 @@ class ComfyUIVideo(BaseTool):
                     "seedance_2.5",
                     "minimax_h3_api",
                     "minimax_h3_local",
+                    "ltx_2.5_local",
                 ],
                 "default": "wan2.2",
                 "description": (
@@ -418,6 +419,12 @@ class ComfyUIVideo(BaseTool):
             "seedance_2.5": "ByteDance2TextToVideoNode",
             "minimax_h3_api": "MinimaxHailuo03TextToVideoNode",
         }
+        if model_family == "ltx_2.5_local" and not custom_workflow:
+            return ToolResult(
+                success=False,
+                error="LTX-2.5 local requires an installed model stack and an exported ComfyUI API workflow via workflow_path/workflow_json plus output_node. No older LTX or WAN fallback is performed.",
+                data={"model": "LTX-2.5", "setup_required": True},
+            )
         if model_family == "minimax_h3_local" and not custom_workflow:
             return ToolResult(
                 success=False,
@@ -668,6 +675,8 @@ class ComfyUIVideo(BaseTool):
                 "seedance_2.5": "Seedance 2.5 (ComfyUI Partner Node)",
                 "minimax_h3_api": "MiniMax-H3 (ComfyUI Partner Node)",
             }.get(str(inputs.get("model_family", "wan2.2")), "custom-comfyui-model")
+        if str(inputs.get("model_family")) == "ltx_2.5_local":
+            return inputs.get("workflow_model") or "LTX-2.5 (local ComfyUI workflow)"
         if str(inputs.get("model_family")) == "minimax_h3_local":
             return inputs.get("workflow_model") or "MiniMax-H3 (local ComfyUI workflow)"
         return (

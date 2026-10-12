@@ -109,7 +109,12 @@ export VOLCENGINE_API_KEY='...'   # or ARK_API_KEY
 ./scripts/coolify_set_drama_keys.sh
 ```
 
-### Acceptance checklist (雪风开源版对照)
+### Product target
+
+对齐 **有彩视界在线版** 信息架构与影视工坊正式 UI（片库英雄区、建片场、六步侧栏、风格库弹层）。  
+平台导航已铺：创作 Agent / 创作中心 / 有彩画布 / 个人资产 / 灵感广场（能力逐项接入；非其云积分 SaaS）。
+
+### Acceptance checklist (影视工坊 · 在线版对照)
 
 1. 创建片场：片名 / 题材 / 39 风格 / 画幅 / 创作需求 + AI 优化需求  
 2. 剧本：分批生成、续写、改写、逐集编辑、定稿 / 批量定稿；同步实体档案  

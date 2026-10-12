@@ -16,9 +16,15 @@ def _now() -> str:
 
 
 def slugify(name: str) -> str:
+    import hashlib
+
     s = re.sub(r"[^\w\u4e00-\u9fff\-]+", "-", name.strip(), flags=re.UNICODE)
     s = re.sub(r"-+", "-", s).strip("-").lower()
-    return s[:64] or "drama-project"
+    ascii_only = re.sub(r"[^a-z0-9\-]+", "", s)
+    if len(ascii_only) >= 2:
+        return ascii_only[:64]
+    digest = hashlib.sha1(name.strip().encode("utf-8")).hexdigest()[:8]
+    return f"drama-{digest}"
 
 
 def new_id(prefix: str = "") -> str:

@@ -11,7 +11,7 @@ Product UI learns from short-drama workspaces (六步工作流 + 编导台 / 画
 | Dockerfile | `studio/Dockerfile` |
 | Docker Build Context | `/` (repo root) |
 | Port | `8787` |
-| Domain | e.g. `drama.dtok.io` (Coolify TLS) |
+| Domain | `https://openmontage.dtok.io` (aaPanel → `:8787`) |
 
 ## Environment variables
 
@@ -21,11 +21,13 @@ Copy from [`studio/.env.example`](.env.example). Minimum:
 HOST=0.0.0.0
 PORT=8787
 PROJECTS_ROOT=/data/projects
-STUDIO_PUBLIC_URL=https://drama.dtok.io
+STUDIO_PUBLIC_URL=https://openmontage.dtok.io
 API_BASE_URL=https://api-app.dtok.io/api/v1
 ```
 
 `API_BASE_URL` follows the same public API shape as **dtok-app** (`AppConstants.apiBaseUrl = https://api-app.dtok.io/api/v1`). Generation keys (`FAL_KEY`, `OPENAI_API_KEY`, …) mirror the root [`.env.example`](../.env.example).
+
+> **Domain note:** Drama Studio public host is **`openmontage.dtok.io`**. Do **not** use `studio.dtok.io` (DTok 短剧平台管理后台) or other occupied `*.dtok.io` hosts.
 
 ## Persistent projects volume
 
@@ -75,8 +77,8 @@ In Coolify → Keys & Tokens, create a token with **write** (read-only tokens re
 ```bash
 export COOLIFY_TOKEN='...'          # write scope
 export COOLIFY_URL='https://cicd.dtok.io'
-# optional custom domain:
-# export STUDIO_DOMAIN='https://drama.dtok.io'
+# optional custom domain (default openmontage.dtok.io):
+# export STUDIO_DOMAIN='https://openmontage.dtok.io'
 ./scripts/deploy_coolify_drama_studio.sh
 ```
 

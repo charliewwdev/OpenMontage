@@ -596,6 +596,63 @@ def patch_shot(store: ProjectStore, project_id: str, shot_id: str, fields: dict)
     raise FileNotFoundError("shot not found")
 
 
+def add_shot(store: ProjectStore, project_id: str, episode_id: str) -> dict:
+    state = store.load(project_id)
+    if not state:
+        raise FileNotFoundError("project not found")
+    ep = next((e for e in state.get("episodes") or [] if e["id"] == episode_id), None)
+    if not ep:
+        raise FileNotFoundError("episode not found")
+    existing = [
+        s
+        for s in (state.get("shots") or [])
+        if s.get("episodeId") == episode_id and not s.get("deletedAt")
+    ]
+    order = max((int(s.get("shotOrder") or 0) for s in existing), default=0) + 1
+    ts = _now()
+    shot = {
+        "id": new_id("sh_"),
+        "projectId": project_id,
+        "episodeId": episode_id,
+        "shotOrder": order,
+        "prompt": "",
+        "duration": 5,
+        "referenceEntityIds": [],
+        "status": "pending",
+        "providerTaskId": None,
+        "error": None,
+        "selectedVideoId": None,
+        "videos": [],
+        "sceneName": "",
+        "action": "",
+        "dialogue": "",
+        "createdAt": ts,
+        "updatedAt": ts,
+    }
+    state.setdefault("shots", []).append(shot)
+    store.save(state)
+    return shot
+
+
+def soft_delete_shot(store: ProjectStore, project_id: str, shot_id: str) -> dict:
+    state = store.load(project_id)
+    if not state:
+        raise FileNotFoundError("project not found")
+    for s in state.get("shots") or []:
+        if s["id"] == shot_id and not s.get("deletedAt"):
+            if s.get("status") == "generating":
+                raise RuntimeError("生成中不可删除")
+            s["deletedAt"] = _now()
+            s["updatedAt"] = _now()
+            # drop from edit clips
+            for edit in state.get("edits") or []:
+                if edit.get("episodeId") == s.get("episodeId"):
+                    edit["clips"] = [c for c in (edit.get("clips") or []) if c.get("shotId") != shot_id]
+            store.save(state)
+            return s
+    raise FileNotFoundError("shot not found")
+
+
 def _download(url: str, dest: Path) -> None:
     dest.parent.mkdir(parents=True, exist_ok=True)
     with urllib.request.urlopen(url, timeout=300) as resp:

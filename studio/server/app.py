@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import mimetypes
 import os
+import re
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -13,7 +14,9 @@ from urllib.parse import parse_qs, urlparse
 
 ROOT = Path(os.environ.get("OPENMONTAGE_ROOT", Path(__file__).resolve().parents[2])).resolve()
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from bootstrap import bootstrap_project, slugify  # noqa: E402
 from lib.drama_status import summarize  # noqa: E402
 from lib.pipeline_loader import get_stage_order, load_pipeline  # noqa: E402
 from lib.subgraph_validate import validate_subgraph, validate_subgraph_file  # noqa: E402
@@ -44,13 +47,27 @@ SIX_STEPS = [
     {"id": "edit", "label": "剪辑", "artifacts": ["storyboard", "ledger", "metrics"]},
 ]
 
+CAPABILITY_ENV = [
+    ("FAL_KEY", "fal.ai 图像/视频"),
+    ("OPENAI_API_KEY", "OpenAI"),
+    ("GOOGLE_API_KEY", "Google / Gemini"),
+    ("PEXELS_API_KEY", "Pexels 库存"),
+    ("PIXABAY_API_KEY", "Pixabay 库存"),
+    ("ARK_API_KEY", "Seedance / Ark"),
+    ("DASHSCOPE_API_KEY", "DashScope"),
+    ("ELEVENLABS_API_KEY", "ElevenLabs TTS"),
+    ("MINIMAX_API_KEY", "MiniMax"),
+    ("KLING_API_KEY", "Kling"),
+    ("REPLICATE_API_TOKEN", "Replicate"),
+]
+
 
 def _json_response(handler: BaseHTTPRequestHandler, code: int, payload: dict) -> None:
     body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
     handler.send_response(code)
     handler.send_header("Content-Type", "application/json; charset=utf-8")
     handler.send_header("Access-Control-Allow-Origin", "*")
-    handler.send_header("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS")
+    handler.send_header("Access-Control-Allow-Methods", "GET, POST, PATCH, PUT, OPTIONS")
     handler.send_header("Access-Control-Allow-Headers", "Content-Type")
     handler.send_header("Content-Length", str(len(body)))
     handler.end_headers()
@@ -73,7 +90,7 @@ def _safe_project(name: str) -> Path | None:
     return path
 
 
-def _load_artifact(project: Path, kind: str):
+def _artifact_path(project: Path, kind: str) -> Path | None:
     rel = ARTIFACT_FILES.get(kind)
     if not rel:
         return None
@@ -81,10 +98,26 @@ def _load_artifact(project: Path, kind: str):
     if not path.exists() and kind == "character_bible":
         alt = project / "bible" / "character_bible.json"
         if alt.exists():
-            path = alt
-    if not path.exists():
+            return alt
+    return path
+
+
+def _load_artifact(project: Path, kind: str):
+    path = _artifact_path(project, kind)
+    if not path or not path.exists():
         return None
     return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _save_artifact(project: Path, kind: str, data: dict) -> Path:
+    path = _artifact_path(project, kind)
+    if path is None:
+        raise ValueError(f"unknown artifact kind: {kind}")
+    # Prefer top-level character_bible.json for writes
+    if kind == "character_bible":
+        path = project / "character_bible.json"
+    path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return path
 
 
 def _project_bundle(name: str) -> dict:
@@ -110,12 +143,31 @@ def _project_bundle(name: str) -> dict:
         else:
             state = "empty"
         step_status.append({"id": step["id"], "label": step["label"], "state": state, "present": present})
+    source = ""
+    novel = project / "source" / "NOVEL.md"
+    if novel.exists():
+        source = novel.read_text(encoding="utf-8")[:4000]
     return {
         "name": name,
         "path": str(project),
         "artifacts": arts,
         "steps": step_status,
         "status": summarize(project),
+        "source_excerpt": source,
+    }
+
+
+def _capabilities() -> dict:
+    keys = []
+    for env_key, label in CAPABILITY_ENV:
+        present = bool(os.environ.get(env_key) or (env_key == "FAL_KEY" and os.environ.get("FAL_AI_API_KEY")))
+        keys.append({"key": env_key, "label": label, "configured": present})
+    configured = sum(1 for k in keys if k["configured"])
+    return {
+        "configured": configured,
+        "total": len(keys),
+        "keys": keys,
+        "mode": "online" if configured else "offline-bootstrap",
     }
 
 
@@ -127,7 +179,6 @@ def _serve_static(handler: BaseHTTPRequestHandler, url_path: str) -> bool:
     if not str(candidate).startswith(str(DIST_DIR)):
         return False
     if not candidate.is_file():
-        # SPA fallback
         candidate = DIST_DIR / "index.html"
         if not candidate.is_file():
             return False
@@ -140,6 +191,38 @@ def _serve_static(handler: BaseHTTPRequestHandler, url_path: str) -> bool:
     handler.end_headers()
     handler.wfile.write(data)
     return True
+
+
+def _export_timeline(storyboard: dict, ledger: dict | None) -> dict:
+    jobs = {j.get("shot_id"): j for j in (ledger or {}).get("jobs") or []}
+    clips = []
+    t = 0.0
+    for shot in storyboard.get("shots") or []:
+        dur = float(shot.get("duration_sec") or 3)
+        job = jobs.get(shot["id"]) or {}
+        clips.append(
+            {
+                "shot_id": shot["id"],
+                "start": round(t, 3),
+                "end": round(t + dur, 3),
+                "duration_sec": dur,
+                "description": shot.get("description"),
+                "dialogue": shot.get("dialogue"),
+                "status": job.get("status") or "pending",
+                "clip_path": job.get("clip_path") or shot.get("clip_path"),
+                "keyframe_path": job.get("keyframe_path") or shot.get("keyframe_path"),
+            }
+        )
+        t += dur
+    return {
+        "episode_id": storyboard.get("episode_id"),
+        "aspect_ratio": storyboard.get("aspect_ratio") or "9:16",
+        "total_duration_sec": round(t, 3),
+        "clips": clips,
+        "ffmpeg_concat": "\n".join(
+            f"file '{c['clip_path']}'" for c in clips if c.get("clip_path")
+        ),
+    }
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -181,8 +264,12 @@ class Handler(BaseHTTPRequestHandler):
                         {"id": "canvas", "label": "画布"},
                         {"id": "edit", "label": "剪辑室"},
                     ],
+                    "capabilities": _capabilities(),
                 },
             )
+
+        if path == "/api/capabilities":
+            return _json_response(self, 200, _capabilities())
 
         if path == "/api/pipeline/short-drama":
             manifest = load_pipeline("short-drama")
@@ -232,7 +319,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/projects":
             names = []
             if PROJECTS_ROOT.is_dir():
-                names = sorted([p.name for p in PROJECTS_ROOT.iterdir() if p.is_dir() and not p.name.startswith(".")])
+                names = sorted(
+                    [p.name for p in PROJECTS_ROOT.iterdir() if p.is_dir() and not p.name.startswith(".")]
+                )
             return _json_response(self, 200, {"projects": names, "root": str(PROJECTS_ROOT)})
 
         if path == "/api/project/bundle":
@@ -290,6 +379,19 @@ class Handler(BaseHTTPRequestHandler):
                 return _json_response(self, 404, {"error": "shot_jobs.json not found"})
             return _json_response(self, 200, {"ledger": data})
 
+        if path == "/api/project/export/timeline":
+            name = (qs.get("name") or [None])[0]
+            if not name:
+                return _json_response(self, 400, {"error": "name required"})
+            project = _safe_project(name)
+            if not project:
+                return _json_response(self, 400, {"error": "invalid project"})
+            sb = _load_artifact(project, "storyboard")
+            if not sb:
+                return _json_response(self, 404, {"error": "storyboard missing"})
+            ledger = _load_artifact(project, "ledger")
+            return _json_response(self, 200, {"timeline": _export_timeline(sb, ledger)})
+
         if path.startswith("/api/"):
             return _json_response(self, 404, {"error": "not found"})
 
@@ -297,7 +399,16 @@ class Handler(BaseHTTPRequestHandler):
             return None
         return _json_response(self, 404, {"error": "UI not built; run npm run build in studio/"})
 
+    def do_PUT(self) -> None:
+        return self._write()
+
+    def do_PATCH(self) -> None:
+        return self._write()
+
     def do_POST(self) -> None:
+        return self._write()
+
+    def _write(self) -> None:
         parsed = urlparse(self.path)
         path = parsed.path
         body = _read_json(self)
@@ -309,6 +420,97 @@ class Handler(BaseHTTPRequestHandler):
                 errors = validate_subgraph(body.get("document") or {})
                 result = {"valid": not errors, "errors": errors}
             return _json_response(self, 200, result)
+
+        if path == "/api/projects":
+            title = (body.get("title") or "").strip()
+            source = (body.get("source_text") or body.get("novel") or "").strip()
+            name = (body.get("name") or title or "").strip()
+            if not title or not source:
+                return _json_response(self, 400, {"error": "title and source_text required"})
+            if len(source) < 20:
+                return _json_response(self, 400, {"error": "source_text too short (min ~20 chars)"})
+            try:
+                result = bootstrap_project(
+                    PROJECTS_ROOT,
+                    name=name,
+                    title=title,
+                    source_text=source,
+                    aspect_ratio=body.get("aspect_ratio") or "9:16",
+                    visual_style=body.get("visual_style") or "当代都市夜戏，电影感冷暖对比",
+                )
+            except FileExistsError as exc:
+                return _json_response(self, 409, {"error": str(exc)})
+            except Exception as exc:
+                return _json_response(self, 500, {"error": str(exc)})
+            bundle = _project_bundle(result["name"])
+            return _json_response(self, 201, {"created": result, "bundle": bundle})
+
+        if path == "/api/project/artifact":
+            name = body.get("project") or body.get("name")
+            kind = body.get("kind")
+            data = body.get("data")
+            if not name or not kind or data is None:
+                return _json_response(self, 400, {"error": "project, kind, data required"})
+            project = _safe_project(name)
+            if not project or not project.is_dir():
+                return _json_response(self, 404, {"error": "project not found"})
+            if kind not in ARTIFACT_FILES:
+                return _json_response(self, 400, {"error": "unknown kind"})
+            _save_artifact(project, kind, data)
+            return _json_response(self, 200, {"ok": True, "kind": kind, "data": data})
+
+        if path == "/api/project/storyboard/patch":
+            name = body.get("project")
+            shot_id = body.get("shot_id")
+            patch = body.get("patch") or {}
+            if not name or not shot_id:
+                return _json_response(self, 400, {"error": "project and shot_id required"})
+            project = _safe_project(name)
+            if not project:
+                return _json_response(self, 400, {"error": "invalid project"})
+            sb_path = project / "storyboard.json"
+            if not sb_path.exists():
+                return _json_response(self, 404, {"error": "storyboard missing"})
+            storyboard = json.loads(sb_path.read_text(encoding="utf-8"))
+            found = False
+            for shot in storyboard.get("shots", []):
+                if shot.get("id") == shot_id:
+                    shot.update(patch)
+                    found = True
+                    break
+            if not found:
+                return _json_response(self, 404, {"error": "shot not found"})
+            _save_artifact(project, "storyboard", storyboard)
+            return _json_response(self, 200, {"storyboard": storyboard})
+
+        if path == "/api/project/storyboard/reorder":
+            name = body.get("project")
+            order = body.get("shot_ids") or []
+            if not name or not order:
+                return _json_response(self, 400, {"error": "project and shot_ids required"})
+            project = _safe_project(name)
+            if not project:
+                return _json_response(self, 400, {"error": "invalid project"})
+            sb = _load_artifact(project, "storyboard")
+            if not sb:
+                return _json_response(self, 404, {"error": "storyboard missing"})
+            by_id = {s["id"]: s for s in sb.get("shots") or []}
+            shots = []
+            for i, sid in enumerate(order, 1):
+                if sid not in by_id:
+                    return _json_response(self, 400, {"error": f"unknown shot {sid}"})
+                shot = dict(by_id[sid])
+                shot["index"] = i
+                shots.append(shot)
+            # append any missing
+            for sid, shot in by_id.items():
+                if sid not in order:
+                    shot = dict(shot)
+                    shot["index"] = len(shots) + 1
+                    shots.append(shot)
+            sb["shots"] = shots
+            _save_artifact(project, "storyboard", sb)
+            return _json_response(self, 200, {"storyboard": sb})
 
         if path == "/api/project/ledger/invalidate":
             name = body.get("project")
@@ -335,29 +537,99 @@ class Handler(BaseHTTPRequestHandler):
                 {"success": result.success, "data": result.data, "error": result.error},
             )
 
-        if path == "/api/project/storyboard/patch":
+        if path == "/api/project/ledger/sync":
             name = body.get("project")
-            shot_id = body.get("shot_id")
-            patch = body.get("patch") or {}
-            if not name or not shot_id:
-                return _json_response(self, 400, {"error": "project and shot_id required"})
+            if not name:
+                return _json_response(self, 400, {"error": "project required"})
             project = _safe_project(name)
             if not project:
                 return _json_response(self, 400, {"error": "invalid project"})
-            sb_path = project / "storyboard.json"
-            if not sb_path.exists():
+            sb = _load_artifact(project, "storyboard")
+            if not sb:
                 return _json_response(self, 404, {"error": "storyboard missing"})
-            storyboard = json.loads(sb_path.read_text(encoding="utf-8"))
-            found = False
-            for shot in storyboard.get("shots", []):
-                if shot.get("id") == shot_id:
-                    shot.update(patch)
-                    found = True
+            from tools.pipeline.shot_job_manager import ShotJobManager
+
+            ledger_path = project / "shot_jobs.json"
+            result = ShotJobManager().execute(
+                {
+                    "operation": "create_from_storyboard",
+                    "ledger_path": str(ledger_path),
+                    "storyboard": sb,
+                    "episode_id": sb.get("episode_id") or "ep01",
+                    "concurrency": int(body.get("concurrency") or 2),
+                    "max_retries": 2,
+                    "default_subgraph_id": "keyframe-i2v-qa",
+                }
+            )
+            code = 200 if result.success else 400
+            return _json_response(
+                self,
+                code,
+                {
+                    "success": result.success,
+                    "ledger": (result.data or {}).get("ledger") if result.success else None,
+                    "error": result.error,
+                },
+            )
+
+        if path == "/api/project/ledger/mark":
+            name = body.get("project")
+            shot_id = body.get("shot_id")
+            status = body.get("status")
+            if not name or not shot_id or not status:
+                return _json_response(self, 400, {"error": "project, shot_id, status required"})
+            project = _safe_project(name)
+            if not project:
+                return _json_response(self, 400, {"error": "invalid project"})
+            from tools.pipeline.shot_job_manager import ShotJobManager
+
+            ledger_path = project / "shot_jobs.json"
+            result = ShotJobManager().execute(
+                {
+                    "operation": "mark",
+                    "ledger_path": str(ledger_path),
+                    "shot_id": shot_id,
+                    "status": status,
+                    "clip_path": body.get("clip_path"),
+                    "keyframe_path": body.get("keyframe_path"),
+                    "error": body.get("error"),
+                }
+            )
+            code = 200 if result.success else 400
+            return _json_response(
+                self,
+                code,
+                {"success": result.success, "data": result.data, "error": result.error},
+            )
+
+        if path == "/api/project/bible/upsert":
+            name = body.get("project")
+            entity = body.get("entity")  # character | location | prop
+            item = body.get("item") or {}
+            if not name or entity not in {"character", "location", "prop"} or not item.get("id"):
+                return _json_response(self, 400, {"error": "project, entity, item.id required"})
+            project = _safe_project(name)
+            if not project:
+                return _json_response(self, 400, {"error": "invalid project"})
+            bible = _load_artifact(project, "character_bible") or {
+                "version": "1.0",
+                "characters": [],
+                "locations": [],
+                "props": [],
+            }
+            key = {"character": "characters", "location": "locations", "prop": "props"}[entity]
+            arr = list(bible.get(key) or [])
+            replaced = False
+            for i, existing in enumerate(arr):
+                if existing.get("id") == item["id"]:
+                    arr[i] = {**existing, **item}
+                    replaced = True
                     break
-            if not found:
-                return _json_response(self, 404, {"error": "shot not found"})
-            sb_path.write_text(json.dumps(storyboard, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
-            return _json_response(self, 200, {"storyboard": storyboard})
+            if not replaced:
+                arr.append(item)
+            bible[key] = arr
+            _save_artifact(project, "character_bible", bible)
+            return _json_response(self, 200, {"bible": bible})
 
         return _json_response(self, 404, {"error": "not found"})
 

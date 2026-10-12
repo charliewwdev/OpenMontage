@@ -5,7 +5,7 @@
 #   export COOLIFY_TOKEN='...'
 # Optional:
 #   export COOLIFY_URL='https://cicd.dtok.io'   # or http://66.29.128.32:8000
-#   export STUDIO_DOMAIN='https://drama.dtok.io'
+#   export STUDIO_DOMAIN='https://openmontage.dtok.io'
 #   export COOLIFY_APP_UUID='...'  # if set, only trigger deploy (skip create)
 #
 # Usage:
@@ -117,7 +117,7 @@ PY
   echo "==> Created app uuid=${COOLIFY_APP_UUID}"
 
   echo "==> Setting environment variables"
-  PUBLIC_URL="${STUDIO_DOMAIN:-https://drama.dtok.io}"
+  PUBLIC_URL="${STUDIO_DOMAIN:-https://openmontage.dtok.io}"
   while IFS='=' read -r key val; do
     [[ -z "$key" ]] && continue
     payload=$(KEY="$key" VAL="$val" python3 -c 'import json,os; print(json.dumps({"key":os.environ["KEY"],"value":os.environ["VAL"],"is_preview":False,"is_build_time":False,"is_literal":True,"is_shown_once":False}))')

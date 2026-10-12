@@ -52,7 +52,7 @@ export function Library({ projects, config, onOpen, onCreate, onDeleted, onRefre
           <div className="flex flex-col justify-between p-7 md:p-10">
             <div className="flex items-center gap-3 text-xs font-bold uppercase tracking-[.2em] text-white/55">
               <Clapperboard className="h-4 w-4 text-[var(--timecode)]" />
-              OpenMontage · 影视工坊
+              影视工坊 · Local production desk
             </div>
             <div className="mt-12 max-w-3xl">
               <h1 className="display-type text-4xl font-semibold leading-tight md:text-6xl">

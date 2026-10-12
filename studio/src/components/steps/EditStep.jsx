@@ -1,5 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
+import { ArrowDown, ArrowUp, Download, Film, Loader2, Plus, Save, Scissors, Trash2 } from "lucide-react";
 import { api } from "../../api";
+import { toast } from "../../lib/toast";
+
+function clipId() {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random()}`;
+}
+
+function fullClip(shot) {
+  return {
+    id: clipId(),
+    shotId: shot.id,
+    enabled: true,
+    start: 0,
+    end: shot.selectedVideo?.duration || shot.duration || 5,
+  };
+}
 
 export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh }) {
   const episodes = useMemo(
@@ -8,195 +26,360 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh })
   );
   const [episodeId, setEpisodeId] = useState(episodes[0]?.id || "");
   const [clips, setClips] = useState([]);
+  const [selectedClipId, setSelectedClipId] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [rendering, setRendering] = useState(false);
 
-  useEffect(() => {
-    if (!episodeId && episodes[0]) setEpisodeId(episodes[0].id);
-  }, [episodes, episodeId]);
-
-  const edit = (bundle?.edits || []).find((e) => e.episodeId === episodeId);
-  const shots = useMemo(
+  const episode = episodes.find((item) => item.id === episodeId);
+  const readyShots = useMemo(
     () =>
       (bundle?.shots || [])
-        .filter((s) => s.episodeId === episodeId && !s.deletedAt)
+        .filter((shot) => shot.episodeId === episodeId && !shot.deletedAt && shot.selectedVideo?.url)
         .sort((a, b) => a.shotOrder - b.shotOrder),
     [bundle?.shots, episodeId],
   );
+  const draft = (bundle?.edits || []).find((edit) => edit.episodeId === episodeId);
+  const selectedClip = clips.find((clip) => clip.id === selectedClipId) || clips[0] || null;
+  const selectedShot = selectedClip
+    ? readyShots.find((shot) => shot.id === selectedClip.shotId) || null
+    : null;
+  const totalDuration = clips
+    .filter((clip) => clip.enabled !== false)
+    .reduce((sum, clip) => sum + Math.max(0, Number(clip.end || 0) - Number(clip.start || 0)), 0);
+  const ratio = bundle?.project?.ratio || "9:16";
 
   useEffect(() => {
-    if (edit?.clips) setClips(edit.clips);
-    else setClips([]);
-  }, [edit?.id, edit?.updatedAt, episodeId]);
+    if (episodeId && !episodes.some((item) => item.id === episodeId)) {
+      setEpisodeId(episodes[0]?.id || "");
+    }
+  }, [episodes, episodeId]);
+
+  useEffect(() => {
+    const existing = (bundle?.edits || []).find((edit) => edit.episodeId === episodeId);
+    const next = existing?.clips?.length ? existing.clips : readyShots.map(fullClip);
+    setClips(next);
+    setSelectedClipId(next[0]?.id || null);
+    // only when episode changes
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [episodeId]);
 
   const apply = (res) => {
     if (res?.bundle) onBundle?.(res.bundle);
     else onRefresh?.();
   };
 
-  const ensure = async () => {
-    if (!episodeId) return;
-    setBusyMsg("从分镜构建时间线…");
+  const updateClip = (id, fields) => {
+    setClips((current) => current.map((clip) => (clip.id === id ? { ...clip, ...fields } : clip)));
+  };
+
+  const move = (index, direction) => {
+    setClips((current) => {
+      const target = index + direction;
+      if (target < 0 || target >= current.length) return current;
+      const next = [...current];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  };
+
+  const addClip = (shot) => {
+    const next = fullClip(shot);
+    setClips((current) => [...current, next]);
+    setSelectedClipId(next.id);
+  };
+
+  const save = async (quiet = false) => {
+    if (!episode) return null;
+    setSaving(true);
+    setBusyMsg?.(quiet ? "" : "保存剪辑草稿…");
     try {
       const res = await api(`/api/projects/${encodeURIComponent(projectId)}/edits`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "ensure", episodeId }),
+        body: JSON.stringify({ action: "save", episodeId: episode.id, clips }),
       });
       apply(res);
-      if (res.edit?.clips) setClips(res.edit.clips);
-    } catch (e) {
-      window.alert(String(e.message || e));
+      if (!quiet) toast.success("剪辑草稿已保存");
+      return res.edit;
+    } catch (error) {
+      toast.error(String(error.message || error));
+      return null;
     } finally {
-      setBusyMsg("");
+      setSaving(false);
+      setBusyMsg?.("");
     }
   };
 
-  const save = async () => {
-    setBusyMsg("保存剪辑草稿…");
+  const render = async () => {
+    if (!episode || !clips.some((clip) => clip.enabled !== false)) {
+      return toast.error("至少启用一个片段");
+    }
+    setRendering(true);
+    setBusyMsg?.("FFmpeg 导出中…");
     try {
+      await save(true);
       const res = await api(`/api/projects/${encodeURIComponent(projectId)}/edits`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "save", episodeId, clips }),
+        body: JSON.stringify({ action: "export", episodeId: episode.id }),
       });
       apply(res);
-    } catch (e) {
-      window.alert(String(e.message || e));
+      toast.success("FFmpeg 已完成本集成片");
+    } catch (error) {
+      toast.error(String(error.message || error));
     } finally {
-      setBusyMsg("");
+      setRendering(false);
+      setBusyMsg?.("");
     }
   };
 
-  const exportMp4 = async () => {
-    setBusyMsg("FFmpeg 导出中…");
-    const t0 = performance.now();
-    try {
-      await save();
-      const res = await api(`/api/projects/${encodeURIComponent(projectId)}/edits`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "export", episodeId }),
-      });
-      apply(res);
-      setBusyMsg(`导出完成（${((performance.now() - t0) / 1000).toFixed(1)}s）`);
-      setTimeout(() => setBusyMsg(""), 2000);
-    } catch (e) {
-      setBusyMsg("");
-      window.alert(String(e.message || e));
-    }
+  const resetFromShots = () => {
+    const next = readyShots.map(fullClip);
+    setClips(next);
+    setSelectedClipId(next[0]?.id || null);
   };
-
-  const updateClip = (idx, patch) => {
-    setClips((list) => list.map((c, i) => (i === idx ? { ...c, ...patch } : c)));
-  };
-
-  const shotById = Object.fromEntries(shots.map((s) => [s.id, s]));
-  const enabledCount = clips.filter((c) => c.enabled !== false).length;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4">
-      <header className="flex flex-wrap items-end justify-between gap-3">
+    <div className="mx-auto max-w-[1500px] space-y-5">
+      <section className="panel flex flex-col gap-5 p-5 md:p-6 xl:flex-row xl:items-end xl:justify-between">
         <div>
-          <h2 className="display-type text-3xl">剪辑室</h2>
-          <p className="mt-1 text-sm text-[var(--muted)]">按分镜建时间线 · 启用/禁用 · 入出点 · FFmpeg 成片</p>
+          <div className="label">Local edit suite</div>
+          <h3 className="display-type text-2xl font-semibold">分集剪辑台</h3>
+          <p className="mt-1 text-sm text-[var(--muted)]">
+            调整顺序和入出点，草稿写入本地项目；最终由本机 FFmpeg 生成 MP4。
+          </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <select className="field !w-auto !py-1.5" value={episodeId} onChange={(e) => setEpisodeId(e.target.value)}>
-            {episodes.map((ep) => (
-              <option key={ep.id} value={ep.id}>
-                EP{ep.episodeNumber} {ep.title || ""}
-              </option>
-            ))}
-          </select>
-          <button type="button" className="btn-ghost" onClick={() => void ensure()}>
-            从分镜重建
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="min-w-56">
+            <span className="label">分集</span>
+            <select className="field" value={episodeId} onChange={(e) => setEpisodeId(e.target.value)}>
+              {!episodes.length && <option value="">无分集</option>}
+              {episodes.map((item) => (
+                <option key={item.id} value={item.id}>
+                  第{item.episodeNumber}集 · {item.title || "未命名"}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={saving || !episode}
+            onClick={() => void save()}
+          >
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} 保存草稿
           </button>
-          <button type="button" className="btn-ghost" disabled={!clips.length} onClick={() => void save()}>
-            保存草稿
-          </button>
-          <button type="button" className="btn-primary" disabled={!clips.length} onClick={() => void exportMp4()}>
-            导出 MP4
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={rendering || !clips.some((c) => c.enabled !== false)}
+            onClick={() => void render()}
+          >
+            {rendering ? <Loader2 className="h-4 w-4 animate-spin" /> : <Film className="h-4 w-4" />}
+            {rendering ? "本机合成中…" : "导出本集 MP4"}
           </button>
         </div>
-      </header>
-
-      {edit?.outputUrl ? (
-        <section className="panel space-y-2 p-4">
-          <p className="text-xs text-[var(--muted)]">最新成片预览</p>
-          <video className="max-h-[360px] w-full rounded-xl bg-black" controls src={edit.outputUrl} />
-        </section>
-      ) : null}
-
-      <section className="panel overflow-hidden">
-        <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-2 text-xs text-[var(--muted)]">
-          <span>
-            片段 {clips.length} · 启用 {enabledCount}
-          </span>
-          {!clips.length && (
-            <button type="button" className="text-[var(--run)] underline" onClick={() => void ensure()}>
-              构建时间线
-            </button>
-          )}
-        </div>
-        <ul className="divide-y divide-[var(--line)]">
-          {clips.map((clip, idx) => {
-            const shot = shotById[clip.shotId];
-            const videoUrl = shot?.selectedVideo?.url;
-            return (
-              <li key={clip.shotId || idx} className="flex flex-wrap items-center gap-3 px-4 py-3">
-                <label className="flex items-center gap-2 text-xs">
-                  <input
-                    type="checkbox"
-                    checked={clip.enabled !== false}
-                    onChange={(e) => updateClip(idx, { enabled: e.target.checked })}
-                  />
-                  启用
-                </label>
-                <span className="timecode w-16 text-xs">
-                  #{String(shot?.shotOrder || idx + 1).padStart(2, "0")}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="line-clamp-1 text-sm">{shot?.prompt || clip.shotId}</p>
-                  {videoUrl ? (
-                    <video className="mt-1 h-16 rounded bg-black" src={videoUrl} muted />
-                  ) : (
-                    <span className="text-[11px] text-[var(--danger)]">无选用 TAKE</span>
-                  )}
-                </div>
-                <label className="text-[11px] text-[var(--muted)]">
-                  入点
-                  <input
-                    type="number"
-                    min={0}
-                    step={0.1}
-                    className="field ml-1 !w-20 !py-1"
-                    value={clip.start ?? 0}
-                    onChange={(e) => updateClip(idx, { start: Number(e.target.value) || 0 })}
-                  />
-                </label>
-                <label className="text-[11px] text-[var(--muted)]">
-                  出点
-                  <input
-                    type="number"
-                    min={0}
-                    step={0.1}
-                    className="field ml-1 !w-20 !py-1"
-                    value={clip.end ?? ""}
-                    onChange={(e) =>
-                      updateClip(idx, { end: e.target.value === "" ? null : Number(e.target.value) })
-                    }
-                    placeholder="末尾"
-                  />
-                </label>
-              </li>
-            );
-          })}
-          {!clips.length && (
-            <li className="px-4 py-12 text-center text-sm text-[var(--muted)]">
-              在分镜台选用 TAKE 后，点击「从分镜重建」生成时间线
-            </li>
-          )}
-        </ul>
       </section>
+
+      {!episode ? (
+        <div className="panel py-24 text-center text-sm text-[var(--muted)]">请先创建分集。</div>
+      ) : readyShots.length === 0 ? (
+        <div className="panel flex flex-col items-center border-dashed py-24 text-center">
+          <Scissors className="mb-4 h-10 w-10 text-[var(--projector)]" />
+          <strong>本集还没有可剪辑视频</strong>
+          <p className="mt-2 text-sm text-[var(--muted)]">先到分镜步骤生成并选定至少一个视频版本。</p>
+        </div>
+      ) : (
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_430px]">
+          <section className="panel overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--line)] bg-[var(--panel-muted)] px-5 py-3">
+              <div className="timecode text-xs text-[var(--muted)]">
+                TIMELINE · {clips.filter((c) => c.enabled !== false).length} CLIPS · {totalDuration.toFixed(1)} SEC
+              </div>
+              <div className="flex items-center gap-2">
+                <select
+                  className="field !w-44 !py-1.5"
+                  defaultValue=""
+                  onChange={(event) => {
+                    const shot = readyShots.find((item) => item.id === event.target.value);
+                    if (shot) addClip(shot);
+                    event.target.value = "";
+                  }}
+                >
+                  <option value="">追加分镜片段…</option>
+                  {readyShots.map((shot) => (
+                    <option key={shot.id} value={shot.id}>
+                      镜头 {shot.shotOrder}
+                    </option>
+                  ))}
+                </select>
+                <button type="button" className="btn-secondary !min-h-8 !py-1.5" onClick={resetFromShots}>
+                  按分镜重置
+                </button>
+              </div>
+            </div>
+            <div className="scrollbar-thin max-h-[calc(100vh-230px)] space-y-2 overflow-y-auto p-4">
+              {clips.map((clip, index) => {
+                const shot = readyShots.find((item) => item.id === clip.shotId);
+                if (!shot) return null;
+                const active = selectedClipId === clip.id;
+                const max = shot.selectedVideo?.duration || shot.duration || 5;
+                return (
+                  <div
+                    key={clip.id}
+                    onClick={() => setSelectedClipId(clip.id)}
+                    className={`grid cursor-pointer gap-3 rounded-xl border p-3 transition md:grid-cols-[34px_110px_1fr_auto] md:items-center ${
+                      active
+                        ? "border-[var(--projector)] bg-[var(--projector)]/5"
+                        : "border-[var(--line)] bg-white hover:border-[#b8c1cc]"
+                    }`}
+                  >
+                    <label className="flex items-center justify-center">
+                      <input
+                        type="checkbox"
+                        checked={clip.enabled !== false}
+                        onChange={(e) => updateClip(clip.id, { enabled: e.target.checked })}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </label>
+                    <div className="relative aspect-video overflow-hidden rounded-lg bg-black">
+                      <video src={shot.selectedVideo.url} muted preload="metadata" className="h-full w-full object-cover" />
+                      <span className="timecode absolute bottom-1 left-1 rounded bg-black/65 px-1.5 text-[9px] text-white">
+                        S{String(shot.shotOrder).padStart(2, "0")}
+                      </span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold">镜头 {shot.shotOrder}</p>
+                      <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                        <label className="text-[var(--muted)]">
+                          入点
+                          <input
+                            className="field mt-1 !py-1.5"
+                            type="number"
+                            min={0}
+                            max={Math.max(0, Number(clip.end || max) - 0.1)}
+                            step={0.1}
+                            value={clip.start ?? 0}
+                            onChange={(e) =>
+                              updateClip(clip.id, {
+                                start: Math.max(0, Math.min(Number(e.target.value), Number(clip.end || max) - 0.1)),
+                              })
+                            }
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </label>
+                        <label className="text-[var(--muted)]">
+                          出点
+                          <input
+                            className="field mt-1 !py-1.5"
+                            type="number"
+                            min={Number(clip.start || 0) + 0.1}
+                            max={max}
+                            step={0.1}
+                            value={clip.end ?? max}
+                            onChange={(e) =>
+                              updateClip(clip.id, {
+                                end: Math.max(Number(clip.start || 0) + 0.1, Math.min(Number(e.target.value), max)),
+                              })
+                            }
+                            onClick={(e) => e.stopPropagation()}
+                          />
+                        </label>
+                      </div>
+                    </div>
+                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        type="button"
+                        className="btn-quiet !min-h-8 !px-2"
+                        disabled={index === 0}
+                        onClick={() => move(index, -1)}
+                      >
+                        <ArrowUp className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-quiet !min-h-8 !px-2"
+                        disabled={index === clips.length - 1}
+                        onClick={() => move(index, 1)}
+                      >
+                        <ArrowDown className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-quiet !min-h-8 !px-2 hover:!text-[var(--danger)]"
+                        onClick={() => setClips((current) => current.filter((item) => item.id !== clip.id))}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+              {clips.length === 0 ? (
+                <button
+                  type="button"
+                  className="flex w-full flex-col items-center py-16 text-sm text-[var(--muted)]"
+                  onClick={resetFromShots}
+                >
+                  <Plus className="mb-2 h-5 w-5" />
+                  把全部分镜加入时间线
+                </button>
+              ) : null}
+            </div>
+          </section>
+
+          <aside className="space-y-4">
+            <div className="overflow-hidden rounded-[18px] bg-[var(--navy)] p-4 text-white">
+              <div className="timecode mb-3 flex justify-between text-[10px] text-white/45">
+                <span>PROGRAM MONITOR</span>
+                <span>{ratio}</span>
+              </div>
+              <div
+                className={`flex items-center justify-center overflow-hidden rounded-xl bg-black ${
+                  ratio === "9:16" ? "mx-auto aspect-[9/16] max-h-[520px]" : "aspect-video"
+                }`}
+              >
+                {selectedShot?.selectedVideo?.url ? (
+                  <video
+                    key={selectedShot.selectedVideo.url}
+                    src={selectedShot.selectedVideo.url}
+                    controls
+                    className="h-full w-full object-contain"
+                  />
+                ) : (
+                  <Film className="h-10 w-10 text-white/15" />
+                )}
+              </div>
+              {selectedClip ? (
+                <div className="timecode mt-3 text-center text-[10px] text-[var(--timecode)]">
+                  IN {Number(selectedClip.start || 0).toFixed(1)} / OUT{" "}
+                  {Number(selectedClip.end || 0).toFixed(1)} / DUR{" "}
+                  {(Number(selectedClip.end || 0) - Number(selectedClip.start || 0)).toFixed(1)}
+                </div>
+              ) : null}
+            </div>
+            {draft?.outputUrl ? (
+              <div className="panel p-4">
+                <div className="label">Latest export</div>
+                <video
+                  src={draft.outputUrl}
+                  controls
+                  preload="metadata"
+                  className="aspect-video w-full rounded-xl bg-black object-contain"
+                />
+                <a href={draft.outputUrl} download={`第${episode.episodeNumber}集.mp4`} className="btn-secondary mt-3 w-full">
+                  <Download className="h-4 w-4" /> 下载本集成片
+                </a>
+              </div>
+            ) : null}
+            <div className="panel-muted p-4 text-xs leading-6 text-[var(--muted)]">
+              <strong className="block text-[var(--ink)]">本机导出说明</strong>
+              需要系统 PATH 中可调用 <code className="timecode">ffmpeg</code>
+              。导出会统一画幅、30fps、H.264/AAC。
+            </div>
+          </aside>
+        </div>
+      )}
     </div>
   );
 }

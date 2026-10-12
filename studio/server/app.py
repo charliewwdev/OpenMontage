@@ -17,6 +17,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from drama_service import (  # noqa: E402
+    add_shot,
     continue_script,
     ensure_edit_draft,
     export_edit_mp4,
@@ -36,6 +37,7 @@ from drama_service import (  # noqa: E402
     select_take,
     set_episode_status,
     soft_delete_entity,
+    soft_delete_shot,
     start_shot_video,
     upload_entity_image,
     upsert_entity,
@@ -395,6 +397,12 @@ class Handler(BaseHTTPRequestHandler):
                 if op == "generate":
                     shots = generate_storyboard(STORE, pid, body["episodeId"])
                     return _json(self, 200, {"shots": shots, "bundle": STORE.bundle(pid)})
+                if op == "add":
+                    shot = add_shot(STORE, pid, body["episodeId"])
+                    return _json(self, 200, {"shot": shot, "bundle": STORE.bundle(pid)})
+                if op == "delete":
+                    soft_delete_shot(STORE, pid, body["shotId"])
+                    return _json(self, 200, STORE.bundle(pid))
                 if op == "patch":
                     shot = patch_shot(STORE, pid, body["shotId"], body.get("patch") or body)
                     return _json(self, 200, {"shot": shot, "bundle": STORE.bundle(pid)})

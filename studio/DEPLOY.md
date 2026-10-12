@@ -63,3 +63,44 @@ cd studio && npm run dev       # :5173 proxies /api
 ## Health
 
 `GET /api/health` → `{ "ok": true, ... }` (Coolify healthcheck uses this).
+
+## One-shot create + continuous verify
+
+Code is on `origin/main` (`https://github.com/charliewwdev/OpenMontage`).
+
+### 1. Create the Coolify app (needs **write** API token)
+
+In Coolify → Keys & Tokens, create a token with **write** (read-only tokens return `Missing required permissions: write`).
+
+```bash
+export COOLIFY_TOKEN='...'          # write scope
+export COOLIFY_URL='https://cicd.dtok.io'
+# optional custom domain:
+# export STUDIO_DOMAIN='https://drama.dtok.io'
+./scripts/deploy_coolify_drama_studio.sh
+```
+
+Or in Coolify UI: New Resource → Public Repository →
+
+| Field | Value |
+| --- | --- |
+| Repo | `https://github.com/charliewwdev/OpenMontage` |
+| Branch | `main` |
+| Build Pack | Dockerfile |
+| Dockerfile | `/studio/Dockerfile` |
+| Base directory | `/` |
+| Port | `8787` |
+| Health | `/api/health` |
+| Auto Deploy | on |
+| Watch paths | `studio/**` (+ related paths in script) |
+
+### 2. Wire GitHub Actions (every fix → online)
+
+Repo secrets:
+
+- `COOLIFY_TOKEN` — write token
+- `COOLIFY_DRAMA_STUDIO_UUID` — app uuid from step 1
+- `COOLIFY_URL` — optional, default `https://cicd.dtok.io`
+
+Workflow: [`.github/workflows/deploy-drama-studio.yml`](../.github/workflows/deploy-drama-studio.yml)  
+Push to `main` under `studio/**` (etc.) → Coolify rebuild → open the FQDN to verify.

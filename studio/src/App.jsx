@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "./api";
+import { toast } from "./lib/toast";
 import { Library } from "./components/Library";
 import { CreateProjectPage } from "./components/CreateProjectPage";
 import { StudioShell } from "./components/StudioShell";
+import { PlatformShell } from "./components/PlatformShell";
 
 export default function App() {
   const [screen, setScreen] = useState("library");
+  const [platformNav, setPlatformNav] = useState("workshop");
   const [projects, setProjects] = useState([]);
   const [projectId, setProjectId] = useState("");
   const [bundle, setBundle] = useState(null);
@@ -28,9 +31,10 @@ export default function App() {
       setBundle(b);
       if (!quiet) setStep("script");
       setScreen("studio");
+      setPlatformNav("workshop");
     } catch (e) {
       setBundle(null);
-      window.alert(String(e.message || e));
+      toast.error(String(e.message || e));
     } finally {
       if (!quiet) setLoading(false);
     }
@@ -50,8 +54,19 @@ export default function App() {
     refreshProjects().catch(() => {});
   }, [refreshProjects]);
 
+  const onPlatformNavigate = (id, item) => {
+    if (!item?.available) {
+      toast.info(`${item?.label || id} 按有彩视界在线版规划建设中，当前请使用影视工坊。`);
+      return;
+    }
+    setPlatformNav(id);
+    if (id === "workshop" && screen === "studio") return;
+    setScreen("library");
+  };
+
+  let body = null;
   if (screen === "create") {
-    return (
+    body = (
       <CreateProjectPage
         config={config}
         onBack={() => setScreen("library")}
@@ -61,10 +76,8 @@ export default function App() {
         }}
       />
     );
-  }
-
-  if (screen === "studio") {
-    return (
+  } else if (screen === "studio") {
+    body = (
       <StudioShell
         projectId={projectId}
         bundle={bundle}
@@ -84,22 +97,31 @@ export default function App() {
         }}
       />
     );
+  } else {
+    body = (
+      <Library
+        projects={projects}
+        config={config}
+        onOpen={(id) => void loadProject(id)}
+        onCreate={() => setScreen("create")}
+        onDeleted={(id) => {
+          setProjects((list) => list.filter((p) => p.id !== id));
+          if (projectId === id) {
+            setProjectId("");
+            setBundle(null);
+          }
+        }}
+        onRefresh={() => void refreshProjects()}
+      />
+    );
   }
 
+  // Studio page already has its own navy rail; hide platform rail there for density parity with online workshop.
+  if (screen === "studio") return body;
+
   return (
-    <Library
-      projects={projects}
-      config={config}
-      onOpen={(id) => void loadProject(id)}
-      onCreate={() => setScreen("create")}
-      onDeleted={(id) => {
-        setProjects((list) => list.filter((p) => p.id !== id));
-        if (projectId === id) {
-          setProjectId("");
-          setBundle(null);
-        }
-      }}
-      onRefresh={() => void refreshProjects()}
-    />
+    <PlatformShell active={platformNav} onNavigate={onPlatformNavigate}>
+      {body}
+    </PlatformShell>
   );
 }

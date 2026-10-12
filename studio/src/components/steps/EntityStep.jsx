@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ImagePlus, Plus, Save, Users } from "lucide-react";
+import { ImagePlus, Plus, Save, Sparkles, Users } from "lucide-react";
 import { api } from "../../api";
 
 const CONFIG = {
@@ -36,6 +36,11 @@ function itemBlurb(item) {
   return item.appearance || item.description || item.look || item.visual || item.summary || "暂无视觉描述";
 }
 
+function mediaUrl(project, rel) {
+  if (!rel) return null;
+  return `/api/media/${encodeURIComponent(project)}/${rel.split("/").map(encodeURIComponent).join("/")}`;
+}
+
 export function EntityStep({ kind, project, view, onBundle }) {
   const config = CONFIG[kind];
   const items = useMemo(() => itemList(view, kind), [view, kind]);
@@ -49,6 +54,7 @@ export function EntityStep({ kind, project, view, onBundle }) {
   const [newDesc, setNewDesc] = useState("");
 
   const selected = items.find((i) => i.id === selectedId) || items[0] || null;
+  const preview = mediaUrl(project, selected?.selected_image || selected?.reference_image);
 
   useEffect(() => {
     if (!selected) {
@@ -70,6 +76,7 @@ export function EntityStep({ kind, project, view, onBundle }) {
         ...selected,
         id: selected.id || `${config.entity}_${Date.now()}`,
         name,
+        display_name: name,
       };
       if (config.entity === "character") item.appearance = draft;
       else item.description = draft;
@@ -78,9 +85,29 @@ export function EntityStep({ kind, project, view, onBundle }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ project, entity: config.entity, item }),
       });
-      setStatus("已保存到素材档案");
       const bundle = await api(`/api/project/bundle?name=${encodeURIComponent(project)}`);
       onBundle?.(bundle);
+      setStatus("已保存到素材档案");
+    } catch (e) {
+      setStatus(String(e.message || e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const generateRef = async () => {
+    if (!selected) return;
+    setSaving(true);
+    setStatus("");
+    try {
+      await save();
+      const res = await api("/api/project/entity/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ project, entity: config.entity, item_id: selected.id }),
+      });
+      onBundle?.(res.bundle);
+      setStatus("定妆 / 参考板已生成");
     } catch (e) {
       setStatus(String(e.message || e));
     } finally {
@@ -95,6 +122,7 @@ export function EntityStep({ kind, project, view, onBundle }) {
       const item = {
         id: `${config.entity}_${Date.now()}`,
         name: newName.trim(),
+        display_name: newName.trim(),
       };
       if (config.entity === "character") item.appearance = newDesc.trim();
       else item.description = newDesc.trim();
@@ -139,52 +167,69 @@ export function EntityStep({ kind, project, view, onBundle }) {
       ) : (
         <div className="grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
           <div className="panel max-h-[70vh] space-y-1 overflow-y-auto p-2 scrollbar-thin">
-            {items.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={`flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left transition ${
-                  selected?.id === item.id ? "bg-[var(--panel-muted)]" : "hover:bg-[var(--panel-muted)]/70"
-                }`}
-                onClick={() => setSelectedId(item.id)}
-              >
-                <div
-                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[var(--line)] bg-white"
-                  style={{ boxShadow: `inset 0 0 0 2px ${config.accent}22` }}
+            {items.map((item) => {
+              const thumb = mediaUrl(project, item.selected_image || item.reference_image);
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`flex w-full items-start gap-3 rounded-xl px-3 py-3 text-left transition ${
+                    selected?.id === item.id ? "bg-[var(--panel-muted)]" : "hover:bg-[var(--panel-muted)]/70"
+                  }`}
+                  onClick={() => setSelectedId(item.id)}
                 >
-                  <ImagePlus className="h-4 w-4 text-[var(--muted)]" />
-                </div>
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold">{item.name || item.id}</div>
-                  <div className="mt-1 line-clamp-2 text-[11px] leading-4 text-[var(--muted)]">{itemBlurb(item)}</div>
-                </div>
-              </button>
-            ))}
+                  <div
+                    className="flex h-14 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[var(--line)] bg-white"
+                    style={{ boxShadow: `inset 0 0 0 2px ${config.accent}22` }}
+                  >
+                    {thumb ? <img src={thumb} alt="" className="h-full w-full object-cover" /> : <ImagePlus className="h-4 w-4 text-[var(--muted)]" />}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-semibold">{item.name || item.id}</div>
+                    <div className="mt-1 line-clamp-2 text-[11px] leading-4 text-[var(--muted)]">{itemBlurb(item)}</div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
           {selected ? (
-            <div className="panel p-5 md:p-6">
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <div>
-                  <div className="timecode text-[10px] text-[var(--muted)]">{selected.id}</div>
-                  <h4 className="display-type text-xl font-semibold">{selected.name || "未命名"}</h4>
+            <div className="space-y-4">
+              <div className="panel overflow-hidden">
+                <div className="flex aspect-[3/4] max-h-[360px] items-center justify-center bg-[var(--navy)]">
+                  {preview ? (
+                    <img src={preview} alt={selected.name} className="h-full w-full object-contain" />
+                  ) : (
+                    <div className="px-6 text-center text-sm text-white/45">尚未生成参考板</div>
+                  )}
                 </div>
-                <button type="button" className="btn-primary" disabled={saving} onClick={save}>
-                  <Save className="h-4 w-4" />
-                  {saving ? "保存中…" : "保存"}
-                </button>
               </div>
-              <label className="mb-4 block">
-                <span className="label">名称</span>
-                <input className="field" value={name} onChange={(e) => setName(e.target.value)} />
-              </label>
-              <label className="block">
-                <span className="label">视觉描述</span>
-                <textarea className="field min-h-56 resize-y leading-7" value={draft} onChange={(e) => setDraft(e.target.value)} />
-              </label>
-              {status ? <p className="mt-3 text-xs text-[var(--muted)]">{status}</p> : null}
-              <div className="panel-muted mt-4 p-4 text-xs leading-5 text-[var(--muted)]">
-                生产级流程会在此绑定定妆参考图 / 三视图版本。当前可编辑档案字段；生成接口接入后即可批量出图。
+              <div className="panel p-5 md:p-6">
+                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="timecode text-[10px] text-[var(--muted)]">{selected.id}</div>
+                    <h4 className="display-type text-xl font-semibold">{selected.name || "未命名"}</h4>
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="button" className="btn-secondary" disabled={saving} onClick={generateRef}>
+                      <Sparkles className="h-4 w-4" />
+                      生成参考板
+                    </button>
+                    <button type="button" className="btn-primary" disabled={saving} onClick={save}>
+                      <Save className="h-4 w-4" />
+                      {saving ? "保存中…" : "保存"}
+                    </button>
+                  </div>
+                </div>
+                <label className="mb-4 block">
+                  <span className="label">名称</span>
+                  <input className="field" value={name} onChange={(e) => setName(e.target.value)} />
+                </label>
+                <label className="block">
+                  <span className="label">视觉描述</span>
+                  <textarea className="field min-h-40 resize-y leading-7" value={draft} onChange={(e) => setDraft(e.target.value)} />
+                </label>
+                {status ? <p className="mt-3 text-xs text-[var(--muted)]">{status}</p> : null}
               </div>
             </div>
           ) : null}

@@ -1,8 +1,8 @@
-"""Offline / online shot generation worker for Drama Studio.
+"""Shot generation worker for Drama Studio.
 
-Offline mode (default): renders SVG keyframe boards from storyboard text so
-the product is usable without provider keys. Online mode hooks are reserved
-for when FAL_KEY / ARK_API_KEY etc. are present.
+Produces:
+1. SVG keyframe boards (browser preview, always)
+2. Short MP4 clips via FFmpeg (when available) so Edit can export a real episode
 """
 
 from __future__ import annotations
@@ -15,11 +15,6 @@ from typing import Any
 
 _LOCK = threading.Lock()
 
-
-def _mgr():
-    from tools.pipeline.shot_job_manager import ShotJobManager
-
-    return ShotJobManager()
 _STATE: dict[str, Any] = {
     "running": False,
     "project": None,
@@ -27,7 +22,14 @@ _STATE: dict[str, Any] = {
     "failed": 0,
     "last_error": None,
     "updated_at": None,
+    "mode": "offline",
 }
+
+
+def _mgr():
+    from tools.pipeline.shot_job_manager import ShotJobManager
+
+    return ShotJobManager()
 
 
 def get_state() -> dict[str, Any]:
@@ -53,7 +55,6 @@ def _svg_keyframe(shot: dict, style: str, aspect: str) -> str:
         w, h = 1080, 1080
     else:
         w, h = 720, 1280
-    # Prefer text nodes (no foreignObject) for broad SVG preview support
     lines = []
     buf = desc_raw
     while buf and len(lines) < 6:
@@ -78,7 +79,7 @@ def _svg_keyframe(shot: dict, style: str, aspect: str) -> str:
   <text x="56" y="130" fill="#f4efe6" font-family="Georgia, serif" font-size="22">{intent}</text>
   {text_block}
   <text x="56" y="{h-120}" fill="#f0c9a8" font-family="Georgia, serif" font-size="24">「{dialogue}」</text>
-  <text x="56" y="{h-60}" fill="rgba(255,255,255,0.55)" font-family="sans-serif" font-size="16">{style_e} · offline board</text>
+  <text x="56" y="{h-60}" fill="rgba(255,255,255,0.55)" font-family="sans-serif" font-size="16">{style_e} · board</text>
 </svg>
 """
 
@@ -89,9 +90,19 @@ def _write_keyframe(project: Path, shot: dict, bible: dict | None) -> Path:
     path = out_dir / f"{shot['id']}.svg"
     style = (bible or {}).get("visual_style") or "当代都市夜戏"
     aspect = shot.get("aspect_ratio") or "9:16"
-    # storyboard-level aspect may be elsewhere; caller can pass via shot
     path.write_text(_svg_keyframe(shot, style, aspect), encoding="utf-8")
     return path
+
+
+def _write_clip(project: Path, shot: dict, aspect: str) -> Path | None:
+    try:
+        from export_mp4 import ffmpeg_available, render_clip_from_board
+    except ImportError:
+        from studio.server.export_mp4 import ffmpeg_available, render_clip_from_board  # type: ignore
+
+    if not ffmpeg_available():
+        return None
+    return render_clip_from_board(project, shot, aspect=aspect)
 
 
 def _process_batch(project: Path, storyboard: dict, bible: dict | None, limit: int) -> dict:
@@ -113,22 +124,31 @@ def _process_batch(project: Path, storyboard: dict, bible: dict | None, limit: i
         shot.setdefault("aspect_ratio", aspect)
         try:
             kf = _write_keyframe(project, shot, bible)
-            mark = mgr.execute(
-                {
-                    "operation": "mark",
-                    "ledger_path": str(ledger_path),
-                    "job_id": job["job_id"],
-                    "status": "needs_review",
-                    "provider": "studio-offline",
-                    "model": "svg-board",
-                    "keyframe_path": str(kf.relative_to(project)),
-                    "cost_usd": 0,
-                }
-            )
+            clip = _write_clip(project, shot, aspect)
+            mark_payload = {
+                "operation": "mark",
+                "ledger_path": str(ledger_path),
+                "job_id": job["job_id"],
+                "status": "needs_review" if clip else "needs_review",
+                "provider": "studio-offline",
+                "model": "ffmpeg-board" if clip else "svg-board",
+                "keyframe_path": str(kf.relative_to(project)),
+                "cost_usd": 0,
+            }
+            if clip:
+                mark_payload["clip_path"] = str(clip.relative_to(project))
+            mark = mgr.execute(mark_payload)
             if not mark.success:
                 raise RuntimeError(mark.error)
             processed += 1
-            results.append({"shot_id": job["shot_id"], "status": "needs_review", "keyframe": str(kf)})
+            results.append(
+                {
+                    "shot_id": job["shot_id"],
+                    "status": "needs_review",
+                    "keyframe": str(kf),
+                    "clip": str(clip) if clip else None,
+                }
+            )
         except Exception as exc:
             failed += 1
             mgr.execute(
@@ -149,10 +169,16 @@ def start_generate(project: Path, storyboard: dict, bible: dict | None, limit: i
     if st.get("running"):
         return {"started": False, "error": "generator already running", "state": st}
 
+    try:
+        from export_mp4 import ffmpeg_available
+    except ImportError:
+        from studio.server.export_mp4 import ffmpeg_available  # type: ignore
+
+    mode = "offline+ffmpeg" if ffmpeg_available() else "offline-svg"
+
     def _run() -> None:
-        _set(running=True, project=project.name, processed=0, failed=0, last_error=None)
+        _set(running=True, project=project.name, processed=0, failed=0, last_error=None, mode=mode)
         try:
-            # ensure ledger exists
             ledger_path = project / "shot_jobs.json"
             if not ledger_path.exists():
                 _mgr().execute(
@@ -166,7 +192,6 @@ def start_generate(project: Path, storyboard: dict, bible: dict | None, limit: i
                         "default_subgraph_id": "keyframe-i2v-qa",
                     }
                 )
-            # drain pending until empty or idle batch
             total_p = total_f = 0
             while True:
                 out = _process_batch(project, storyboard, bible, limit)
@@ -175,7 +200,6 @@ def start_generate(project: Path, storyboard: dict, bible: dict | None, limit: i
                 _set(processed=total_p, failed=total_f)
                 if out["batch_size"] == 0:
                     break
-                # small yield so API can poll
                 time.sleep(0.05)
         except Exception as exc:
             _set(last_error=str(exc))
@@ -188,7 +212,6 @@ def start_generate(project: Path, storyboard: dict, bible: dict | None, limit: i
 
 
 def generate_sync(project: Path, storyboard: dict, bible: dict | None, limit: int = 3) -> dict:
-    """Synchronous single-batch helper for smoke tests."""
     ledger_path = project / "shot_jobs.json"
     if not ledger_path.exists():
         _mgr().execute(
@@ -200,3 +223,39 @@ def generate_sync(project: Path, storyboard: dict, bible: dict | None, limit: in
             }
         )
     return _process_batch(project, storyboard, bible, limit)
+
+
+def write_entity_board(project: Path, entity: str, item: dict, visual_style: str = "") -> Path:
+    """Write a reference SVG board for character / location / prop."""
+    out_dir = project / "renders" / "entities" / entity
+    out_dir.mkdir(parents=True, exist_ok=True)
+    eid = item.get("id") or "entity"
+    name = xml.escape(str(item.get("name") or item.get("display_name") or eid)[:40])
+    blurb = xml.escape(
+        str(item.get("appearance") or item.get("description") or item.get("look") or "")[:200]
+    )
+    style = xml.escape((visual_style or "短剧定妆")[:60])
+    kind_label = {"character": "角色定妆", "location": "场景空镜", "prop": "关键道具"}.get(entity, entity)
+    path = out_dir / f"{eid}.svg"
+    path.write_text(
+        f"""<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="720" height="960" viewBox="0 0 720 960">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#101827"/>
+      <stop offset="100%" stop-color="#1f3a44"/>
+    </linearGradient>
+  </defs>
+  <rect width="100%" height="100%" fill="url(#bg)"/>
+  <rect x="32" y="32" width="656" height="896" rx="20" fill="none" stroke="#56c7c1" stroke-opacity="0.45"/>
+  <text x="56" y="90" fill="#f2b84b" font-family="sans-serif" font-size="18">{kind_label}</text>
+  <text x="56" y="150" fill="#ffffff" font-family="Georgia, serif" font-size="40">{name}</text>
+  <foreignObject x="56" y="200" width="608" height="560">
+    <div xmlns="http://www.w3.org/1999/xhtml" style="color:#e8eef2;font:22px/1.6 Georgia,serif;white-space:pre-wrap">{blurb}</div>
+  </foreignObject>
+  <text x="56" y="900" fill="rgba(255,255,255,0.45)" font-family="sans-serif" font-size="16">{style}</text>
+</svg>
+""",
+        encoding="utf-8",
+    )
+    return path

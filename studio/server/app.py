@@ -17,9 +17,10 @@ ROOT = Path(os.environ.get("OPENMONTAGE_ROOT", Path(__file__).resolve().parents[
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from bootstrap import bootstrap_project, slugify  # noqa: E402
+from bootstrap import bootstrap_project, rebuild_project, slugify  # noqa: E402
+from export_mp4 import export_episode_mp4, ffmpeg_available  # noqa: E402
 from generate_worker import get_state as get_generate_state  # noqa: E402
-from generate_worker import start_generate  # noqa: E402
+from generate_worker import start_generate, write_entity_board  # noqa: E402
 from lib.drama_status import summarize  # noqa: E402
 from lib.pipeline_loader import get_stage_order, load_pipeline  # noqa: E402
 from lib.subgraph_validate import validate_subgraph, validate_subgraph_file  # noqa: E402
@@ -171,6 +172,8 @@ def _capabilities() -> dict:
         "total": len(keys),
         "keys": keys,
         "mode": "online" if configured else "offline-bootstrap",
+        "ffmpeg": ffmpeg_available(),
+        "export_ready": True,
     }
 
 
@@ -396,7 +399,45 @@ class Handler(BaseHTTPRequestHandler):
             return _json_response(self, 200, {"timeline": _export_timeline(sb, ledger)})
 
         if path == "/api/project/generate/status":
-            return _json_response(self, 200, {"state": get_generate_state()})
+            state = get_generate_state()
+            # Flatten for UI polling (running / processed at top level)
+            return _json_response(self, 200, {**state, "state": state})
+
+        if path == "/api/project/source":
+            name = (qs.get("name") or [None])[0]
+            if not name:
+                return _json_response(self, 400, {"error": "name required"})
+            project = _safe_project(name)
+            if not project or not project.is_dir():
+                return _json_response(self, 404, {"error": "project not found"})
+            novel = project / "source" / "NOVEL.md"
+            text = novel.read_text(encoding="utf-8") if novel.exists() else ""
+            return _json_response(
+                self,
+                200,
+                {"project": name, "source": text, "chars": len(text)},
+            )
+
+        if path == "/api/project/exports":
+            name = (qs.get("name") or [None])[0]
+            if not name:
+                return _json_response(self, 400, {"error": "name required"})
+            project = _safe_project(name)
+            if not project or not project.is_dir():
+                return _json_response(self, 404, {"error": "project not found"})
+            export_dir = project / "exports"
+            items = []
+            if export_dir.is_dir():
+                for p in sorted(export_dir.glob("*.mp4"), key=lambda x: x.stat().st_mtime, reverse=True):
+                    items.append(
+                        {
+                            "path": str(p.relative_to(project)),
+                            "url": f"/api/media/{name}/{p.relative_to(project)}",
+                            "bytes": p.stat().st_size,
+                            "mtime": int(p.stat().st_mtime),
+                        }
+                    )
+            return _json_response(self, 200, {"exports": items, "ffmpeg": ffmpeg_available()})
 
         if path.startswith("/api/media/"):
             parts = path.split("/")
@@ -456,7 +497,7 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/projects":
             title = (body.get("title") or "").strip()
-            source = (body.get("source_text") or body.get("novel") or "").strip()
+            source = (body.get("source_text") or body.get("novel") or body.get("brief") or "").strip()
             name = (body.get("name") or title or "").strip()
             if not title or not source:
                 return _json_response(self, 400, {"error": "title and source_text required"})
@@ -468,8 +509,11 @@ class Handler(BaseHTTPRequestHandler):
                     name=name,
                     title=title,
                     source_text=source,
-                    aspect_ratio=body.get("aspect_ratio") or "9:16",
-                    visual_style=body.get("visual_style") or "当代都市夜戏，电影感冷暖对比",
+                    aspect_ratio=body.get("aspect_ratio") or body.get("ratio") or "9:16",
+                    visual_style=body.get("visual_style")
+                    or body.get("visualStyle")
+                    or "当代都市夜戏，电影感冷暖对比",
+                    genre=body.get("genre") or "都市逆袭",
                 )
             except FileExistsError as exc:
                 return _json_response(self, 409, {"error": str(exc)})
@@ -477,6 +521,96 @@ class Handler(BaseHTTPRequestHandler):
                 return _json_response(self, 500, {"error": str(exc)})
             bundle = _project_bundle(result["name"])
             return _json_response(self, 201, {"created": result, "bundle": bundle})
+
+        if path == "/api/project/rebuild":
+            name = body.get("project") or body.get("name")
+            source = (body.get("source_text") or body.get("novel") or "").strip()
+            if not name or not source:
+                return _json_response(self, 400, {"error": "project and source_text required"})
+            if len(source) < 20:
+                return _json_response(self, 400, {"error": "source_text too short"})
+            project = _safe_project(name)
+            if not project or not project.is_dir():
+                return _json_response(self, 404, {"error": "project not found"})
+            try:
+                result = rebuild_project(
+                    project,
+                    title=(body.get("title") or "").strip() or None,
+                    source_text=source,
+                    aspect_ratio=body.get("aspect_ratio"),
+                    visual_style=body.get("visual_style"),
+                    genre=body.get("genre"),
+                )
+            except Exception as exc:
+                return _json_response(self, 500, {"error": str(exc)})
+            return _json_response(self, 200, {"rebuilt": result, "bundle": _project_bundle(name)})
+
+        if path == "/api/project/entity/generate":
+            name = body.get("project")
+            entity = body.get("entity")
+            item_id = body.get("item_id") or body.get("id")
+            if not name or entity not in {"character", "location", "prop"} or not item_id:
+                return _json_response(self, 400, {"error": "project, entity, item_id required"})
+            project = _safe_project(name)
+            if not project or not project.is_dir():
+                return _json_response(self, 404, {"error": "project not found"})
+            bible = _load_artifact(project, "character_bible") or {}
+            key = {"character": "characters", "location": "locations", "prop": "props"}[entity]
+            item = next((x for x in (bible.get(key) or []) if x.get("id") == item_id), None)
+            if not item:
+                return _json_response(self, 404, {"error": "entity not found"})
+            path_svg = write_entity_board(
+                project, entity, item, visual_style=bible.get("visual_style") or ""
+            )
+            rel = str(path_svg.relative_to(project))
+            # persist reference on bible item
+            item = {**item, "reference_image": rel, "selected_image": rel}
+            arr = list(bible.get(key) or [])
+            for i, existing in enumerate(arr):
+                if existing.get("id") == item_id:
+                    arr[i] = item
+                    break
+            bible[key] = arr
+            _save_artifact(project, "character_bible", bible)
+            return _json_response(
+                self,
+                200,
+                {
+                    "ok": True,
+                    "path": rel,
+                    "url": f"/api/media/{name}/{rel}",
+                    "bible": bible,
+                    "bundle": _project_bundle(name),
+                },
+            )
+
+        if path == "/api/project/export/mp4":
+            name = body.get("project") or body.get("name")
+            if not name:
+                return _json_response(self, 400, {"error": "project required"})
+            project = _safe_project(name)
+            if not project or not project.is_dir():
+                return _json_response(self, 404, {"error": "project not found"})
+            sb = _load_artifact(project, "storyboard")
+            if not sb:
+                return _json_response(self, 404, {"error": "storyboard missing"})
+            ledger = _load_artifact(project, "ledger")
+            try:
+                result = export_episode_mp4(
+                    project, sb, ledger, shot_ids=body.get("shot_ids")
+                )
+            except Exception as exc:
+                return _json_response(self, 500, {"error": str(exc), "ffmpeg": ffmpeg_available()})
+            # write lightweight metrics
+            metrics = {
+                "version": "1.0",
+                "last_export": result,
+                "ffmpeg": True,
+            }
+            (project / "production_metrics.json").write_text(
+                json.dumps(metrics, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+            )
+            return _json_response(self, 200, {**result, "bundle": _project_bundle(name)})
 
         if path == "/api/project/artifact":
             name = body.get("project") or body.get("name")

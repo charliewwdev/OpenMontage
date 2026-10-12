@@ -37,11 +37,11 @@ COPY workflow_defs ./workflow_defs
 COPY studio/server ./studio/server
 COPY --from=ui /ui/dist ./studio/dist
 
-# Optional demo project baked in (overridable via volume mount on PROJECTS_ROOT)
-COPY projects/midnight-sms-ep01 ./projects/midnight-sms-ep01
+# Seed project lives in-repo (projects/ is gitignored for agent corpora)
+COPY studio/seed/welcome-ep01 ./studio/seed/welcome-ep01
 
 RUN mkdir -p /data/projects \
-  && cp -R ./projects/midnight-sms-ep01 /data/projects/midnight-sms-ep01 \
+  && cp -R ./studio/seed/welcome-ep01 /data/projects/welcome-ep01 \
   && useradd -m -u 10001 studio \
   && chown -R studio:studio /app /data
 

@@ -7,16 +7,19 @@ import json
 import mimetypes
 import os
 import re
+import shutil
 import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 ROOT = Path(os.environ.get("OPENMONTAGE_ROOT", Path(__file__).resolve().parents[2])).resolve()
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from bootstrap import bootstrap_project, slugify  # noqa: E402
+from generate_worker import get_state as get_generate_state  # noqa: E402
+from generate_worker import start_generate  # noqa: E402
 from lib.drama_status import summarize  # noqa: E402
 from lib.pipeline_loader import get_stage_order, load_pipeline  # noqa: E402
 from lib.subgraph_validate import validate_subgraph, validate_subgraph_file  # noqa: E402
@@ -392,6 +395,36 @@ class Handler(BaseHTTPRequestHandler):
             ledger = _load_artifact(project, "ledger")
             return _json_response(self, 200, {"timeline": _export_timeline(sb, ledger)})
 
+        if path == "/api/project/generate/status":
+            return _json_response(self, 200, {"state": get_generate_state()})
+
+        if path.startswith("/api/media/"):
+            parts = path.split("/")
+            if len(parts) < 5:
+                return _json_response(self, 400, {"error": "bad media path"})
+            name = unquote(parts[3])
+            rel = unquote("/".join(parts[4:]))
+            project = _safe_project(name)
+            if not project or not project.is_dir():
+                return _json_response(self, 404, {"error": "project not found"})
+            if ".." in rel.split("/"):
+                return _json_response(self, 400, {"error": "invalid path"})
+            file_path = (project / rel).resolve()
+            if not str(file_path).startswith(str(project)) or not file_path.is_file():
+                return _json_response(self, 404, {"error": "file not found"})
+            data = file_path.read_bytes()
+            ctype = mimetypes.guess_type(str(file_path))[0] or "application/octet-stream"
+            if file_path.suffix.lower() == ".svg":
+                ctype = "image/svg+xml"
+            self.send_response(200)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Cache-Control", "public, max-age=60")
+            self.end_headers()
+            self.wfile.write(data)
+            return None
+
         if path.startswith("/api/"):
             return _json_response(self, 404, {"error": "not found"})
 
@@ -630,6 +663,32 @@ class Handler(BaseHTTPRequestHandler):
             bible[key] = arr
             _save_artifact(project, "character_bible", bible)
             return _json_response(self, 200, {"bible": bible})
+
+        if path == "/api/project/generate":
+            name = body.get("project")
+            if not name:
+                return _json_response(self, 400, {"error": "project required"})
+            project = _safe_project(name)
+            if not project or not project.is_dir():
+                return _json_response(self, 404, {"error": "project not found"})
+            sb = _load_artifact(project, "storyboard")
+            if not sb:
+                return _json_response(self, 404, {"error": "storyboard missing"})
+            bible = _load_artifact(project, "character_bible")
+            limit = int(body.get("limit") or 3)
+            result = start_generate(project, sb, bible, limit=limit)
+            code = 200 if result.get("started") else 409
+            return _json_response(self, code, result)
+
+        if path == "/api/project/delete":
+            name = body.get("project") or body.get("name")
+            if not name:
+                return _json_response(self, 400, {"error": "project required"})
+            project = _safe_project(name)
+            if not project or not project.is_dir():
+                return _json_response(self, 404, {"error": "project not found"})
+            shutil.rmtree(project)
+            return _json_response(self, 200, {"ok": True, "deleted": name})
 
         return _json_response(self, 404, {"error": "not found"})
 

@@ -1,0 +1,51 @@
+{
+  "version": "1.0",
+  "visual_style": "当代都市夜戏，冷青与琥珀对比",
+  "palette": [
+    "#0B1C24",
+    "#E8F2F5",
+    "#C45C26",
+    "#5B8C9A"
+  ],
+  "characters": [
+    {
+      "id": "char_周屿",
+      "display_name": "周屿",
+      "role": "protagonist",
+      "appearance": "周屿，短剧角色，外貌待定稿",
+      "wardrobe_variants": [
+        {
+          "id": "w_default",
+          "label": "默认",
+          "description": "日常装"
+        }
+      ]
+    },
+    {
+      "id": "char_林夏",
+      "display_name": "林夏",
+      "role": "supporting",
+      "appearance": "林夏，短剧角色，外貌待定稿",
+      "wardrobe_variants": [
+        {
+          "id": "w_default",
+          "label": "默认",
+          "description": "日常装"
+        }
+      ]
+    }
+  ],
+  "locations": [
+    {
+      "id": "loc_sc01",
+      "name": "林夏：别回那通电话。",
+      "description": "周屿：太晚了。信号已经发出去了。"
+    },
+    {
+      "id": "loc_sc02",
+      "name": "空荡的便利店灯管闪了一下。林夏把手机扣在",
+      "description": "林夏：我们还有最后三分钟。\n周屿：够改写结局吗？"
+    }
+  ],
+  "props": []
+}

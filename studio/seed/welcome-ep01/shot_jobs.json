@@ -1,0 +1,81 @@
+{
+  "version": "1.0",
+  "episode_id": "ep01",
+  "concurrency": 2,
+  "max_retries": 2,
+  "paused": false,
+  "default_subgraph_id": "keyframe-i2v-qa",
+  "jobs": [
+    {
+      "job_id": "job_0001",
+      "shot_id": "ep01_sc01_sh00",
+      "scene_id": "ep01_sc01",
+      "status": "pending",
+      "subgraph_id": "keyframe-i2v-qa",
+      "attempt": 0,
+      "cost_usd": 0,
+      "params": {
+        "duration_sec": 3,
+        "shot_intent": "establishing"
+      }
+    },
+    {
+      "job_id": "job_0002",
+      "shot_id": "ep01_sc01_sh01",
+      "scene_id": "ep01_sc01",
+      "status": "pending",
+      "subgraph_id": "keyframe-i2v-qa",
+      "attempt": 0,
+      "cost_usd": 0,
+      "params": {
+        "duration_sec": 4,
+        "shot_intent": "dialogue"
+      }
+    },
+    {
+      "job_id": "job_0003",
+      "shot_id": "ep01_sc02_sh00",
+      "scene_id": "ep01_sc02",
+      "status": "pending",
+      "subgraph_id": "keyframe-i2v-qa",
+      "attempt": 0,
+      "cost_usd": 0,
+      "params": {
+        "duration_sec": 3,
+        "shot_intent": "establishing"
+      }
+    },
+    {
+      "job_id": "job_0004",
+      "shot_id": "ep01_sc02_sh01",
+      "scene_id": "ep01_sc02",
+      "status": "pending",
+      "subgraph_id": "keyframe-i2v-qa",
+      "attempt": 0,
+      "cost_usd": 0,
+      "params": {
+        "duration_sec": 4,
+        "shot_intent": "dialogue"
+      }
+    },
+    {
+      "job_id": "job_0005",
+      "shot_id": "ep01_sc02_sh02",
+      "scene_id": "ep01_sc02",
+      "status": "pending",
+      "subgraph_id": "keyframe-i2v-qa",
+      "attempt": 0,
+      "cost_usd": 0,
+      "params": {
+        "duration_sec": 4,
+        "shot_intent": "dialogue"
+      }
+    }
+  ],
+  "stats": {
+    "pending": 5,
+    "running": 0,
+    "succeeded": 0,
+    "failed": 0
+  }
+}

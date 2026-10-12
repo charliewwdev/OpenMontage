@@ -1,0 +1,42 @@
+# Local / Coolify-compatible Drama Studio stack
+# Usage:
+#   docker compose -f docker-compose.studio.yml up --build
+# Coolify: point Dockerfile to studio/Dockerfile, context = repo root, port 8787
+
+services:
+  drama-studio:
+    build:
+      context: .
+      dockerfile: studio/Dockerfile
+    image: openmontage-drama-studio:local
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8787}:8787"
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "8787"
+      OPENMONTAGE_ROOT: /app
+      PROJECTS_ROOT: /data/projects
+      STUDIO_DIST: /app/studio/dist
+      STUDIO_PUBLIC_URL: ${STUDIO_PUBLIC_URL:-http://localhost:8787}
+      API_BASE_URL: ${API_BASE_URL:-https://api-app.dtok.io/api/v1}
+      # Optional generation keys (same names as repo .env.example / dtok-style secrets)
+      FAL_KEY: ${FAL_KEY:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      PEXELS_API_KEY: ${PEXELS_API_KEY:-}
+      PIXABAY_API_KEY: ${PIXABAY_API_KEY:-}
+      ARK_API_KEY: ${ARK_API_KEY:-}
+      DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
+    volumes:
+      - drama_projects:/data/projects
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8787/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  drama_projects:

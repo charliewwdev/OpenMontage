@@ -1,32 +1,41 @@
 # Drama Studio UI
 
-Product UI for OpenMontage short-drama (not Cursor `.canvas.tsx`).
+Deployable product UI for OpenMontage short-drama (not Cursor `.canvas.tsx`).
 
-## Modes
+Design references: 雪风六步工作流、Bomiio 编导台/无限画布/剪辑室、影策自由画布 + Agent。
 
-### 编辑流程 (Lab)
+## Product shell
 
-- Top swimlane: main-chain stages from `short-drama` manifest
-- Drill-down: subgraph IR graphs (`workflow_defs/subgraphs`)
-- Palette conceptually = agents/tools/controls (v1 lists presets)
-- NL graph edits: prefer Cursor EP + IR patch; Studio chat hints the workflow
+### 六步导航
 
-### 制作中 (Production)
+`剧本 → 角色 → 场景 → 道具 → 分镜 → 剪辑` — status from project artifacts (`script`, `character_bible`, `storyboard`, `shot_jobs`, …).
 
-- Shot DAG from `projects/<name>/storyboard.json`
-- Status colors from `shot_jobs.json` ledger
-- Inspector: shot fields + Rerun (invalidate ledger job)
-- Chat: surgical edits (`仰拍`, `时长 N 秒`) → storyboard patch + ledger invalidate
+### 三台
 
-## Run
+| Desk | Role |
+| --- | --- |
+| **编导台** | Script scenes, character bible, locations, props, storyboard grid |
+| **画布** | Shot DAG · short-drama main chain · subgraph IR (`workflow_defs/subgraphs`) |
+| **剪辑室** | Phone preview + timeline from storyboard durations / ledger colors |
 
-See [`studio/README.md`](../studio/README.md).
+### Agent bar
+
+Surgical NL edits (`仰拍`, `时长 N 秒`) → storyboard patch + ledger invalidate.
+
+## Run / deploy
+
+See [`studio/README.md`](../studio/README.md) and [`studio/DEPLOY.md`](../studio/DEPLOY.md).
+
+Coolify (`https://cicd.dtok.io/`): Dockerfile `studio/Dockerfile`, context repo root, port `8787`, env from `studio/.env.example` (API URL pattern matches dtok-app `https://api-app.dtok.io/api/v1`).
 
 ## API
 
-`studio/server/app.py` on `:8787`:
+`studio/server/app.py`:
 
+- `GET /api/health`, `/api/config`
 - `GET /api/pipeline/short-drama`
-- `GET /api/subgraphs`, `GET /api/subgraphs/:id/graph`
-- `GET /api/projects`, `/api/project/storyboard`, `/api/project/ledger`, `/api/project/status`
+- `GET /api/subgraphs`, `/api/subgraphs/:id/graph`
+- `GET /api/projects`, `/api/project/bundle`, `/api/project/artifact`
+- `GET /api/project/storyboard`, `/api/project/ledger`, `/api/project/status`
 - `POST /api/project/storyboard/patch`, `/api/project/ledger/invalidate`, `/api/subgraphs/validate`
+- Non-`/api` routes serve `studio/dist` (SPA)

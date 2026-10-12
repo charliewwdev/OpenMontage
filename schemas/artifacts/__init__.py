@@ -31,6 +31,12 @@ ARTIFACT_NAMES = [
     "final_review",
     "character_qa_report",
     "video_analysis_brief",
+    "episode_breakdown",
+    "character_bible",
+    "storyboard",
+    "shot_job_ledger",
+    "drama_qa_report",
+    "production_metrics",
 ]
 
 

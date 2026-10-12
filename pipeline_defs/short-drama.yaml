@@ -1,0 +1,313 @@
+name: short-drama
+version: "1.0"
+description: >
+  Dialogue-driven AI short-drama pipeline. Turns a creative brief, novel excerpt,
+  or script into episodic scene trees, character bibles, shot storyboards,
+  keyframe-to-video generation via shot job ledger + subgraphs, then edit/compose.
+  Scheme F: main chain is this manifest; shot routing/generation lives in subgraphs.
+category: cinematic
+stability: beta
+default_checkpoint_policy: guided
+
+reference_input:
+  supported: true
+  analysis_depth: deep
+  analysis_tools:
+    - video_analyzer
+    - transcript_fetcher
+    - video_downloader
+    - scene_detect
+    - frame_sampler
+
+orchestration:
+  mode: executive-producer
+  skill: pipelines/short-drama/executive-producer
+  budget_default_usd: 25.00
+  max_revisions_per_stage: 3
+  max_send_backs: 3
+  max_wall_time_minutes: 180
+
+extensions:
+  custom_scripts: true
+  custom_playbooks: true
+  custom_skills: true
+  custom_tools: false
+
+subgraph_refs:
+  shot_generation: workflow_defs/subgraphs/keyframe-i2v-qa.workflow.json
+  model_routing: workflow_defs/subgraphs/video-router.workflow.json
+  audio_pack: workflow_defs/subgraphs/audio-pack.workflow.json
+  fallback_escalate: workflow_defs/subgraphs/fallback-escalate.workflow.json
+
+required_skills:
+  - pipelines/short-drama/executive-producer
+  - pipelines/short-drama/research-director
+  - pipelines/short-drama/proposal-director
+  - pipelines/short-drama/script-director
+  - pipelines/short-drama/episode-breakdown-director
+  - pipelines/short-drama/character-bible-director
+  - pipelines/short-drama/storyboard-director
+  - pipelines/short-drama/asset-director
+  - pipelines/short-drama/edit-director
+  - pipelines/short-drama/compose-director
+  - pipelines/short-drama/publish-director
+  - meta/reviewer
+  - meta/checkpoint-protocol
+  - meta/subgraph-runner
+  - meta/animation-runtime-selector
+  - creative/drama-shot-routing
+
+compatible_playbooks:
+  recommended:
+    - flat-motion-graphics
+  also_works:
+    - clean-professional
+  custom_allowed: true
+
+stages:
+  - name: research
+    skill: pipelines/short-drama/research-director
+    produces:
+      - research_brief
+    tools_available:
+      - web_search
+    checkpoint_required: true
+    human_approval_default: false
+    review_focus:
+      - Genre, platform format, and reference short-drama beats are concrete
+      - Vertical vs horizontal delivery is explicit
+      - Consistency strategy (bible + reference images) is noted
+    success_criteria:
+      - Schema-valid research_brief artifact
+      - At least 3 differentiated short-drama directions identified
+
+  - name: proposal
+    skill: pipelines/short-drama/proposal-director
+    required_artifacts_in:
+      - research_brief
+    optional_artifacts_in:
+      - source_media_review
+      - video_analysis_brief
+    produces:
+      - proposal_packet
+      - decision_log
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: true
+    review_focus:
+      - Episode count, aspect ratio, and per-episode duration are locked
+      - Cost estimate covers keyframes + I2V + TTS honestly
+      - Render runtime shortlist presented when both Remotion and HyperFrames exist
+      - First-episode-only default is explicit when multi-episode schema is used
+    success_criteria:
+      - Schema-valid proposal_packet
+      - At least 3 concept options
+      - Delivery promise and budget present
+
+  - name: script
+    skill: pipelines/short-drama/script-director
+    required_artifacts_in:
+      - proposal_packet
+    produces:
+      - script
+    tools_available:
+      - transcriber
+    checkpoint_required: true
+    human_approval_default: true
+    review_focus:
+      - Dialogue beats drive the drama; narration is secondary
+      - Speakers map to intended bible characters
+      - Hook and cliffhanger are present for short-form
+    success_criteria:
+      - Schema-valid script
+      - speakers and/or dialogue_beats present for dialogue-led concepts
+
+  - name: episode_breakdown
+    skill: pipelines/short-drama/episode-breakdown-director
+    required_artifacts_in:
+      - script
+      - proposal_packet
+    produces:
+      - episode_breakdown
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: true
+    review_focus:
+      - Episode/scene tree is navigable (E→S ids stable)
+      - Active episode for first production pass is set
+      - Scene purposes cover hook → turn → cliffhanger
+    success_criteria:
+      - Schema-valid episode_breakdown
+      - At least one episode with at least one scene
+
+  - name: character_bible
+    skill: pipelines/short-drama/character-bible-director
+    required_artifacts_in:
+      - episode_breakdown
+      - script
+    produces:
+      - character_bible
+    tools_available:
+      - image_selector
+      - character_bible_store
+    checkpoint_required: true
+    human_approval_default: true
+    review_focus:
+      - Every speaking role has appearance + reference image plan
+      - Voice bindings are declared when TTS is available
+      - Locations used in active episode have cards
+    success_criteria:
+      - Schema-valid character_bible
+      - Bible store path written under the project
+
+  - name: storyboard
+    skill: pipelines/short-drama/storyboard-director
+    required_artifacts_in:
+      - episode_breakdown
+      - character_bible
+      - script
+    produces:
+      - storyboard
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: true
+    review_focus:
+      - Every shot has shot_intent, duration, and prompts
+      - Character/location ids resolve to bible entries
+      - subgraph_refs inherited from pipeline defaults
+    success_criteria:
+      - Schema-valid storyboard
+      - Shots cover the active episode scenes
+
+  - name: assets
+    skill: pipelines/short-drama/asset-director
+    required_artifacts_in:
+      - storyboard
+      - character_bible
+    optional_artifacts_in:
+      - script
+      - episode_breakdown
+    produces:
+      - asset_manifest
+      - shot_job_ledger
+    required_tools:
+      - shot_job_manager
+      - image_selector
+      - video_selector
+    optional_tools:
+      - tts_selector
+      - audio_mixer
+      - lip_sync
+      - subtitle_gen
+      - music_gen
+      - pixabay_music
+      - drama_visual_qa
+      - subgraph_validate
+    tools_available:
+      - shot_job_manager
+      - image_selector
+      - video_selector
+      - tts_selector
+      - audio_mixer
+      - lip_sync
+      - subtitle_gen
+      - music_gen
+      - pixabay_music
+      - drama_visual_qa
+      - subgraph_validate
+      - character_bible_store
+    subgraph_refs:
+      shot_generation: workflow_defs/subgraphs/keyframe-i2v-qa.workflow.json
+      model_routing: workflow_defs/subgraphs/video-router.workflow.json
+    checkpoint_required: true
+    human_approval_default: true
+    review_focus:
+      - All shot jobs go through shot_job_manager (no naked batch video_selector)
+      - Keyframe → I2V path followed unless user approved T2V exception
+      - Bible references attached on character-bearing shots
+      - Failed jobs resumed or escalated via fallback subgraph
+    success_criteria:
+      - Schema-valid asset_manifest and shot_job_ledger
+      - Succeeded jobs have clip paths on disk
+
+  - name: edit
+    skill: pipelines/short-drama/edit-director
+    required_artifacts_in:
+      - storyboard
+      - asset_manifest
+    optional_artifacts_in:
+      - script
+      - shot_job_ledger
+    produces:
+      - edit_decisions
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: false
+    review_focus:
+      - Dialogue track alignment is planned
+      - Cut order matches storyboard shot order unless intentional
+      - Subtitles planned for dialogue shots
+    success_criteria:
+      - Schema-valid edit_decisions
+      - Full active-episode runtime covered
+
+  - name: compose
+    skill: pipelines/short-drama/compose-director
+    required_artifacts_in:
+      - edit_decisions
+      - asset_manifest
+    optional_artifacts_in:
+      - storyboard
+      - shot_job_ledger
+    produces:
+      - render_report
+      - final_review
+      - drama_qa_report
+      - production_metrics
+    required_tools:
+      - video_compose
+      - audio_mixer
+    optional_tools:
+      - video_stitch
+      - video_trimmer
+      - color_grade
+      - drama_visual_qa
+      - subtitle_gen
+    tools_available:
+      - video_compose
+      - hyperframes_compose
+      - audio_mixer
+      - video_stitch
+      - video_trimmer
+      - color_grade
+      - drama_visual_qa
+      - subtitle_gen
+    checkpoint_required: true
+    human_approval_default: true
+    review_focus:
+      - render_runtime matches proposal lock
+      - Drama QA critical findings resolved or waived
+      - production_metrics recorded
+    success_criteria:
+      - Schema-valid render_report and final_review
+      - Output file exists
+
+  - name: publish
+    skill: pipelines/short-drama/publish-director
+    required_artifacts_in:
+      - render_report
+      - final_review
+    optional_artifacts_in:
+      - proposal_packet
+      - production_metrics
+      - episode_breakdown
+    produces:
+      - publish_log
+    tools_available: []
+    checkpoint_required: true
+    human_approval_default: true
+    review_focus:
+      - Vertical platform metadata is correct when 9:16
+      - Episode id labeled in exports
+    success_criteria:
+      - Schema-valid publish_log

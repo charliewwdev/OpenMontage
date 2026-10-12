@@ -111,11 +111,21 @@
                 "review_focus": { "type": "array", "items": { "type": "string" } }
               }
             }
+          },
+          "subgraph_refs": {
+            "type": "object",
+            "description": "Named subgraph workflow paths used by this stage (Scheme F layer A)",
+            "additionalProperties": { "type": "string" }
           }
         },
         "additionalProperties": false
       },
       "minItems": 1
+    },
+    "subgraph_refs": {
+      "type": "object",
+      "description": "Pipeline-level default subgraph workflow paths",
+      "additionalProperties": { "type": "string" }
     },
     "default_checkpoint_policy": {
       "type": "string",

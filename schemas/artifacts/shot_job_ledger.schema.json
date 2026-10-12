@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openmontage/artifacts/shot_job_ledger",
+  "title": "Shot Job Ledger",
+  "description": "Queue ledger for per-shot generation jobs in short-drama Map runtime.",
+  "type": "object",
+  "required": ["version", "episode_id", "jobs"],
+  "properties": {
+    "version": { "type": "string", "const": "1.0" },
+    "episode_id": { "type": "string" },
+    "concurrency": { "type": "integer", "minimum": 1, "default": 3 },
+    "max_retries": { "type": "integer", "minimum": 0, "default": 2 },
+    "paused": { "type": "boolean", "default": false },
+    "default_subgraph_id": {
+      "type": "string",
+      "default": "keyframe-i2v-qa"
+    },
+    "provider_fallback_chain": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "jobs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["job_id", "shot_id", "status"],
+        "properties": {
+          "job_id": { "type": "string" },
+          "shot_id": { "type": "string" },
+          "scene_id": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "running", "succeeded", "failed", "needs_review", "rewriting"]
+          },
+          "subgraph_id": { "type": "string" },
+          "provider": { "type": "string" },
+          "model": { "type": "string" },
+          "attempt": { "type": "integer", "minimum": 0, "default": 0 },
+          "cost_usd": { "type": "number", "minimum": 0 },
+          "keyframe_path": { "type": "string" },
+          "clip_path": { "type": "string" },
+          "error": { "type": "string" },
+          "updated_at": { "type": "string" },
+          "params": { "type": "object" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "stats": {
+      "type": "object",
+      "properties": {
+        "pending": { "type": "integer", "minimum": 0 },
+        "running": { "type": "integer", "minimum": 0 },
+        "succeeded": { "type": "integer", "minimum": 0 },
+        "failed": { "type": "integer", "minimum": 0 },
+        "needs_review": { "type": "integer", "minimum": 0 },
+        "rewriting": { "type": "integer", "minimum": 0 },
+        "total_cost_usd": { "type": "number", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "metadata": { "type": "object" }
+  },
+  "additionalProperties": false
+}

@@ -229,12 +229,15 @@ If the folder has tracks, the proposal and asset stages should present them as o
 | `clip-factory` | Many clips from one long source | beta |
 | `podcast-repurpose` | Podcast highlights and derivatives | beta |
 | `cinematic` | Trailer, teaser, and mood-led edits | production |
+| `short-drama` | AI short-drama / 短剧 (dialogue, bible, storyboard, shot ledger + subgraphs) | beta |
 | `animation` | Motion-graphics and animation-first videos | production |
 | `character-animation` | Local rigged cartoon characters and reusable character acting | beta |
 | `hybrid` | Source footage plus support visuals | production |
 | `avatar-spokesperson` | Presenter-led avatar or lip-sync videos | production |
 | `localization-dub` | Subtitle, dub, and translated variants | beta |
 | `framework-smoke` | Test: minimal 2-stage smoke test | test |
+
+**Short-drama routing:** requests like “做成短剧”, “小说转视频分集”, “竖屏连续剧” → `short-drama`. Read `pipeline_defs/short-drama.yaml`, `skills/meta/subgraph-runner.md`, and `docs/workflow-ir.md`. Batch shot generation must go through `shot_job_manager` (never naked `video_selector` batches). Optional Studio UI: `studio/` (`docs/drama-studio-ui.md`).
 
 > **Beta pipelines** have not been fully audited. They work, but expect rough edges. Mention this when the user selects one.
 

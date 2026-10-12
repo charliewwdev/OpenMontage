@@ -1,0 +1,54 @@
+{
+  "id": "audio-pack",
+  "version": "1.0",
+  "title": "Dialogue audio pack",
+  "description": "TTS for shot dialogue with optional lip sync hook.",
+  "entry": "tts",
+  "max_reworks": 1,
+  "nodes": [
+    {
+      "id": "tts",
+      "type": "tool",
+      "label": "Generate speech",
+      "tool": {
+        "name": "tts_selector",
+        "params": {
+          "text": "{{shot.dialogue}}",
+          "voice_id": "{{voice.voice_id}}",
+          "preferred_provider": "{{voice.tts_provider}}"
+        }
+      }
+    },
+    {
+      "id": "maybe_lipsync",
+      "type": "code",
+      "label": "Flag lip sync",
+      "code": {
+        "assign": {
+          "audio.needs_lip_sync": "{{shot.needs_lip_sync}}"
+        }
+      }
+    },
+    {
+      "id": "lipsync",
+      "type": "tool",
+      "label": "Lip sync",
+      "tool": {
+        "name": "lip_sync",
+        "params": {
+          "video_path": "{{clip.path}}",
+          "audio_path": "{{tts.path}}"
+        }
+      }
+    }
+  ],
+  "edges": [
+    { "from": "tts", "to": "maybe_lipsync", "port": "success" },
+    {
+      "from": "maybe_lipsync",
+      "to": "lipsync",
+      "port": "default",
+      "when": "{{shot.needs_lip_sync}} == True"
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "id": "video-router",
+  "version": "1.0",
+  "title": "Drama video provider router",
+  "description": "Route shot_intent to preferred video providers.",
+  "entry": "route",
+  "max_reworks": 0,
+  "nodes": [
+    {
+      "id": "route",
+      "type": "router",
+      "label": "Route by shot_intent",
+      "router": {
+        "field": "shot.shot_intent",
+        "routes": [
+          {
+            "match": "dialogue",
+            "set": {
+              "chosen_provider": "seedance",
+              "needs_native_audio": true
+            }
+          },
+          {
+            "match": "action",
+            "set": {
+              "chosen_provider": "kling",
+              "needs_native_audio": false
+            }
+          },
+          {
+            "match": "camera_move",
+            "set": {
+              "chosen_provider": "runway",
+              "needs_native_audio": false
+            }
+          },
+          {
+            "match": "effect",
+            "set": {
+              "chosen_provider": "higgsfield",
+              "needs_native_audio": false
+            }
+          }
+        ],
+        "default": {
+          "chosen_provider": "minimax",
+          "needs_native_audio": false
+        }
+      }
+    },
+    {
+      "id": "emit",
+      "type": "code",
+      "label": "Emit routing decision",
+      "code": {
+        "assign": {
+          "routing.provider": "{{chosen_provider}}",
+          "routing.shot_id": "{{shot.id}}"
+        }
+      }
+    }
+  ],
+  "edges": [
+    { "from": "route", "to": "emit", "port": "default" }
+  ]
+}

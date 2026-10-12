@@ -53,6 +53,38 @@
       },
       "minItems": 1
     },
+    "speakers": {
+      "type": "array",
+      "description": "Named speakers for dialogue-driven productions (short-drama).",
+      "items": {
+        "type": "object",
+        "required": ["id", "display_name"],
+        "properties": {
+          "id": { "type": "string" },
+          "display_name": { "type": "string" },
+          "character_bible_id": { "type": "string" },
+          "voice_notes": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "dialogue_beats": {
+      "type": "array",
+      "description": "Optional dialogue-centric beats for short-drama scripts.",
+      "items": {
+        "type": "object",
+        "required": ["id", "speaker_id", "text"],
+        "properties": {
+          "id": { "type": "string" },
+          "speaker_id": { "type": "string" },
+          "text": { "type": "string" },
+          "section_id": { "type": "string" },
+          "emotion": { "type": "string" },
+          "stage_direction": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
     "metadata": { "type": "object" }
   },
   "additionalProperties": false

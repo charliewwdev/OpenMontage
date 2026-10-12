@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openmontage/workflows/subgraph",
+  "title": "Subgraph Workflow IR",
+  "description": "Composable subgraph for Scheme F layer A. No top-level map (Map lives in shot_job_manager).",
+  "type": "object",
+  "required": ["id", "version", "entry", "nodes", "edges"],
+  "properties": {
+    "id": { "type": "string" },
+    "version": { "type": "string" },
+    "title": { "type": "string" },
+    "description": { "type": "string" },
+    "entry": { "type": "string" },
+    "max_reworks": { "type": "integer", "minimum": 0, "default": 2 },
+    "nodes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "type"],
+        "properties": {
+          "id": { "type": "string" },
+          "type": {
+            "type": "string",
+            "enum": ["agent", "tool", "router", "human_gate", "code"]
+          },
+          "label": { "type": "string" },
+          "agent": {
+            "type": "object",
+            "properties": {
+              "skill": { "type": "string" },
+              "role": { "type": "string" },
+              "inputs_schema": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "outputs_schema": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            },
+            "additionalProperties": false
+          },
+          "tool": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "params": { "type": "object" }
+            },
+            "required": ["name"],
+            "additionalProperties": false
+          },
+          "router": {
+            "type": "object",
+            "properties": {
+              "field": { "type": "string" },
+              "routes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["match", "set"],
+                  "properties": {
+                    "match": { "type": "string" },
+                    "set": { "type": "object" }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "default": { "type": "object" }
+            },
+            "additionalProperties": false
+          },
+          "code": {
+            "type": "object",
+            "properties": {
+              "assign": {
+                "type": "object",
+                "additionalProperties": { "type": "string" },
+                "description": "Target key → expression string"
+              }
+            },
+            "additionalProperties": false
+          },
+          "human_gate": {
+            "type": "object",
+            "properties": {
+              "prompt": { "type": "string" }
+            },
+            "additionalProperties": false
+          },
+          "config": { "type": "object" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "edges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["from", "to"],
+        "properties": {
+          "from": { "type": "string" },
+          "to": { "type": "string" },
+          "port": {
+            "type": "string",
+            "enum": ["default", "success", "failure", "rework", "approve", "reject"],
+            "default": "default"
+          },
+          "when": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "metadata": { "type": "object" }
+  },
+  "additionalProperties": false
+}

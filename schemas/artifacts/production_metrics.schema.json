@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openmontage/artifacts/production_metrics",
+  "title": "Production Metrics",
+  "description": "Operational KPIs for a short-drama episode or project.",
+  "type": "object",
+  "required": ["version", "scope_id", "metrics"],
+  "properties": {
+    "version": { "type": "string", "const": "1.0" },
+    "scope": {
+      "type": "string",
+      "enum": ["episode", "project"],
+      "default": "episode"
+    },
+    "scope_id": { "type": "string" },
+    "metrics": {
+      "type": "object",
+      "required": [
+        "usable_rate",
+        "cost_per_minute_usd",
+        "generation_wall_minutes",
+        "rework_rate",
+        "human_intervention_count"
+      ],
+      "properties": {
+        "usable_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Fraction of shots that passed QA without critical rework"
+        },
+        "cost_per_minute_usd": { "type": "number", "minimum": 0 },
+        "total_cost_usd": { "type": "number", "minimum": 0 },
+        "output_duration_seconds": { "type": "number", "minimum": 0 },
+        "generation_wall_minutes": { "type": "number", "minimum": 0 },
+        "rework_rate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Fraction of jobs that required at least one retry/rework"
+        },
+        "human_intervention_count": { "type": "integer", "minimum": 0 },
+        "shots_total": { "type": "integer", "minimum": 0 },
+        "shots_succeeded": { "type": "integer", "minimum": 0 },
+        "shots_failed": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "recorded_at": { "type": "string" },
+    "metadata": { "type": "object" }
+  },
+  "additionalProperties": false
+}

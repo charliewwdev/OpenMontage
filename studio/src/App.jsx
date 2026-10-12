@@ -7,47 +7,26 @@ import { StudioShell } from "./components/StudioShell";
 export default function App() {
   const [screen, setScreen] = useState("library");
   const [projects, setProjects] = useState([]);
-  const [previewBundles, setPreviewBundles] = useState({});
-  const [project, setProject] = useState("");
+  const [projectId, setProjectId] = useState("");
   const [bundle, setBundle] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [desk, setDesk] = useState("director");
   const [step, setStep] = useState("script");
-  const [pipeline, setPipeline] = useState(null);
-  const [subgraphs, setSubgraphs] = useState([]);
-  const [selectedSubgraph, setSelectedSubgraph] = useState(null);
-  const [subgraphDoc, setSubgraphDoc] = useState(null);
-  const [canvasSource, setCanvasSource] = useState("shots");
-  const [caps, setCaps] = useState(null);
-  const [genState, setGenState] = useState(null);
+  const [config, setConfig] = useState(null);
+  const [busyMsg, setBusyMsg] = useState("");
 
   const refreshProjects = useCallback(async () => {
     const d = await api("/api/projects");
-    const list = d.projects || [];
-    setProjects(list);
-    const previews = {};
-    await Promise.all(
-      list.slice(0, 12).map(async (name) => {
-        try {
-          previews[name] = await api(`/api/project/bundle?name=${encodeURIComponent(name)}`);
-        } catch {
-          /* ignore */
-        }
-      }),
-    );
-    setPreviewBundles(previews);
-    return list;
+    setProjects(d.projects || []);
+    return d.projects || [];
   }, []);
 
-  const loadProject = useCallback(async (name, quiet = false) => {
+  const loadProject = useCallback(async (id, quiet = false) => {
     if (!quiet) setLoading(true);
-    setProject(name);
+    setProjectId(id);
     try {
-      const b = await api(`/api/project/bundle?name=${encodeURIComponent(name)}`);
+      const b = await api(`/api/projects/${encodeURIComponent(id)}`);
       setBundle(b);
-      setPreviewBundles((prev) => ({ ...prev, [name]: b }));
       if (!quiet) setStep("script");
-      setDesk("director");
       setScreen("studio");
     } catch (e) {
       setBundle(null);
@@ -57,72 +36,27 @@ export default function App() {
     }
   }, []);
 
+  const refreshBundle = useCallback(async () => {
+    if (!projectId) return null;
+    const b = await api(`/api/projects/${encodeURIComponent(projectId)}`);
+    setBundle(b);
+    return b;
+  }, [projectId]);
+
   useEffect(() => {
-    api("/api/pipeline/short-drama").then(setPipeline).catch(() => {});
-    api("/api/subgraphs")
-      .then((d) => setSubgraphs(d.subgraphs || []))
-      .catch(() => {});
     api("/api/config")
-      .then((c) => setCaps(c.capabilities || c))
+      .then(setConfig)
       .catch(() => {});
     refreshProjects().catch(() => {});
   }, [refreshProjects]);
 
-  useEffect(() => {
-    if (!selectedSubgraph) {
-      setSubgraphDoc(null);
-      return;
-    }
-    api(`/api/subgraphs/${selectedSubgraph}/graph`)
-      .then((d) => setSubgraphDoc(d.document))
-      .catch(() => setSubgraphDoc(null));
-  }, [selectedSubgraph]);
-
-  useEffect(() => {
-    if (!project || !genState?.running) return undefined;
-    const t = setInterval(async () => {
-      try {
-        const st = await api(`/api/project/generate/status?name=${encodeURIComponent(project)}`);
-        setGenState(st);
-        if (!st.running) {
-          const b = await api(`/api/project/bundle?name=${encodeURIComponent(project)}`);
-          setBundle(b);
-        }
-      } catch {
-        /* ignore */
-      }
-    }, 1200);
-    return () => clearInterval(t);
-  }, [project, genState?.running]);
-
-  const runGenerate = async () => {
-    if (!project) return;
-    try {
-      const res = await api("/api/project/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ project, limit: 8 }),
-      });
-      setGenState(res.state || { running: true });
-    } catch (e) {
-      window.alert(String(e.message || e));
-    }
-  };
-
   if (screen === "create") {
     return (
       <CreateProjectPage
+        config={config}
         onBack={() => setScreen("library")}
-        onCreated={(name, createdBundle) => {
-          setProjects((list) => (list.includes(name) ? list : [name, ...list]));
-          if (createdBundle) {
-            setPreviewBundles((prev) => ({ ...prev, [name]: createdBundle }));
-            setBundle(createdBundle);
-          }
-          setProject(name);
-          setDesk("director");
-          setStep("script");
-          setScreen("studio");
+        onCreated={(id) => {
+          void loadProject(id);
           void refreshProjects();
         }}
       />
@@ -132,32 +66,22 @@ export default function App() {
   if (screen === "studio") {
     return (
       <StudioShell
-        project={project}
+        projectId={projectId}
         bundle={bundle}
         loading={loading}
-        desk={desk}
-        setDesk={setDesk}
         step={step}
         setStep={setStep}
+        config={config}
+        busyMsg={busyMsg}
+        setBusyMsg={setBusyMsg}
         onBack={() => {
           setScreen("library");
           void refreshProjects();
         }}
-        onRefresh={() => void loadProject(project, true)}
+        onRefresh={() => void refreshBundle()}
         onBundle={(b) => {
-          if (b?.artifacts) setBundle(b);
-          else if (b) setBundle(b);
+          if (b) setBundle(b);
         }}
-        pipeline={pipeline}
-        subgraphs={subgraphs}
-        selectedSubgraph={selectedSubgraph}
-        setSelectedSubgraph={setSelectedSubgraph}
-        subgraphDoc={subgraphDoc}
-        canvasSource={canvasSource}
-        setCanvasSource={setCanvasSource}
-        genState={genState}
-        onGenerate={runGenerate}
-        caps={caps}
       />
     );
   }
@@ -165,22 +89,17 @@ export default function App() {
   return (
     <Library
       projects={projects}
-      bundles={previewBundles}
-      caps={caps}
-      onOpen={(name) => void loadProject(name)}
+      config={config}
+      onOpen={(id) => void loadProject(id)}
       onCreate={() => setScreen("create")}
       onDeleted={(id) => {
-        setProjects((list) => list.filter((p) => p !== id));
-        setPreviewBundles((prev) => {
-          const next = { ...prev };
-          delete next[id];
-          return next;
-        });
-        if (project === id) {
-          setProject("");
+        setProjects((list) => list.filter((p) => p.id !== id));
+        if (projectId === id) {
+          setProjectId("");
           setBundle(null);
         }
       }}
+      onRefresh={() => void refreshProjects()}
     />
   );
 }

@@ -151,15 +151,42 @@ button:disabled {
   color: #b72f42;
 }
 
-.btn-quiet {
+.btn-quiet,
+.btn-ghost {
   border: 1px solid transparent;
   background: transparent;
   color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 38px;
+  border-radius: 10px;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.875rem;
+  font-weight: 650;
 }
 
-.btn-quiet:hover:not(:disabled) {
+.btn-quiet:hover:not(:disabled),
+.btn-ghost:hover:not(:disabled) {
   background: rgba(16, 24, 39, 0.06);
   color: var(--ink);
+}
+
+.chip,
+.chip-active {
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.chip-active {
+  border-color: var(--navy);
+  background: var(--navy);
+  color: #fff;
 }
 
 .btn-primary:disabled,

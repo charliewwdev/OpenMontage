@@ -23,9 +23,12 @@ PORT=8787
 PROJECTS_ROOT=/data/projects
 STUDIO_PUBLIC_URL=https://openmontage.dtok.io
 API_BASE_URL=https://api-app.dtok.io/api/v1
+# Required for Xuefeng-parity generation (no offline fake scripts):
+DEEPSEEK_API_KEY=
+VOLCENGINE_API_KEY=   # or ARK_API_KEY — Seedream + Seedance
 ```
 
-`API_BASE_URL` follows the same public API shape as **dtok-app** (`AppConstants.apiBaseUrl = https://api-app.dtok.io/api/v1`). Generation keys (`FAL_KEY`, `OPENAI_API_KEY`, …) mirror the root [`.env.example`](../.env.example).
+`API_BASE_URL` follows the same public API shape as **dtok-app**. Without `DEEPSEEK_API_KEY` / Volcengine keys, the UI works but script/image/video generation returns clear errors.
 
 > **Domain note:** Drama Studio public host is **`openmontage.dtok.io`**. Do **not** use `studio.dtok.io` (DTok 短剧平台管理后台) or other occupied `*.dtok.io` hosts.
 
@@ -95,6 +98,25 @@ Or in Coolify UI: New Resource → Public Repository →
 | Health | `/api/health` |
 | Auto Deploy | on |
 | Watch paths | `studio/**` (+ related paths in script) |
+
+### Keys for Xuefeng-parity generation
+
+```bash
+export COOLIFY_TOKEN='...'
+export COOLIFY_APP_UUID='x096iqdmsnez39b4sp6bbaan'
+export DEEPSEEK_API_KEY='...'
+export VOLCENGINE_API_KEY='...'   # or ARK_API_KEY
+./scripts/coolify_set_drama_keys.sh
+```
+
+### Acceptance checklist (雪风开源版对照)
+
+1. 创建片场：片名 / 题材 / 39 风格 / 画幅 / 创作需求 + AI 优化需求  
+2. 剧本：分批生成、续写、改写、逐集编辑、定稿 / 批量定稿；同步实体档案  
+3. 角色/场景/道具：出图、三视图、批量、重绘、上传、版本切换、软删除  
+4. 分镜：定稿拆镜、参考图≤9、Seedance 模型/分辨率、批量、TAKE 评分备注选用  
+5. 剪辑：时间线、启用/禁用、入出点、草稿、FFmpeg MP4 预览  
+6. 壳层：左侧 01–06 + 计数、片库进度条、确认弹层、灯箱、耗时反馈  
 
 ### 2. Wire GitHub Actions (every fix → online)
 

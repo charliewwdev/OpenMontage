@@ -41,7 +41,7 @@ export function VideoStylePicker({ value, onChange, disabled = false, styles }) 
         aria-haspopup="dialog"
         disabled={disabled}
         onClick={() => setOpen(true)}
-        className="flex w-full items-center gap-3 overflow-hidden rounded-2xl border border-[var(--line)] bg-white p-3 text-left transition hover:border-[#aeb8c6] hover:bg-[#fbfcfd] disabled:cursor-not-allowed disabled:opacity-55"
+        className="flex w-full items-center gap-3 overflow-hidden rounded-2xl border border-[var(--line-strong)] bg-white/[.03] p-3 text-left transition hover:border-white/25 hover:bg-white/[.05] disabled:cursor-not-allowed disabled:opacity-55"
       >
         {selectedStyle?.previewImageUrl ? (
           <span className="relative h-14 w-20 shrink-0 overflow-hidden rounded-lg bg-[#dfe4ea]">
@@ -108,7 +108,7 @@ export function VideoStylePicker({ value, onChange, disabled = false, styles }) 
                         key={style.id}
                         type="button"
                         className={`overflow-hidden rounded-2xl border text-left transition ${
-                          active ? "border-[var(--projector)] ring-2 ring-[var(--projector)]/30" : "border-[var(--line)] hover:border-[#aeb8c6]"
+                          active ? "border-[#7c6cff] ring-2 ring-[#7c6cff]/35" : "border-[var(--line)] hover:border-white/25"
                         }`}
                         onClick={() => {
                           onChange(style.promptValue || style.generationPrompt);
@@ -120,7 +120,7 @@ export function VideoStylePicker({ value, onChange, disabled = false, styles }) 
                             <img src={style.previewImageUrl} alt="" className="h-full w-full object-cover" />
                           ) : null}
                           {active ? (
-                            <span className="absolute right-2 top-2 rounded-full bg-[var(--projector)] p-1 text-[var(--navy)]">
+                            <span className="absolute right-2 top-2 rounded-full bg-[var(--gradient)] p-1 text-white">
                               <Check className="h-3.5 w-3.5" />
                             </span>
                           ) : null}

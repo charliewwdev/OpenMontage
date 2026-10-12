@@ -2,38 +2,53 @@ import {
   Clapperboard,
   Compass,
   Film,
-  LayoutGrid,
+  HelpCircle,
   Library,
   Sparkles,
+  Tv,
+  Trophy,
   Wand2,
   Workflow,
+  FolderKanban,
+  CreditCard,
+  Gift,
+  BookOpen,
+  Moon,
 } from "lucide-react";
 
 const NAV = [
-  { id: "workshop", label: "影视工坊", note: "剧本到成片", icon: Film, available: true },
-  { id: "agent", label: "创作 Agent", note: "一句话出片", icon: Sparkles, available: false },
-  { id: "tools", label: "创作中心", note: "多模态工具", icon: Wand2, available: false },
-  { id: "canvas", label: "有彩画布", note: "节点无限画布", icon: Workflow, available: false },
-  { id: "assets", label: "个人资产", note: "云端素材库", icon: Library, available: false },
-  { id: "inspire", label: "灵感广场", note: "作品与模板", icon: Compass, available: false },
+  { id: "assets", label: "个人资产", icon: FolderKanban, available: false },
+  { id: "skills", label: "Skill 专家", icon: BookOpen, available: false },
+  { id: "tools", label: "创作中心", icon: Wand2, available: false },
+  { id: "agent", label: "创作 Agent", icon: Sparkles, available: false },
+  { id: "workshop", label: "影视工坊", icon: Film, available: true },
+  { id: "canvas", label: "有彩画布", icon: Workflow, available: false },
+  { id: "inspire", label: "灵感广场", icon: Compass, available: false },
+  { id: "tv", label: "有彩TV", icon: Tv, available: false },
+  { id: "cup", label: "视界杯", icon: Trophy, available: false },
+  { id: "nav", label: "资源导航", icon: Library, available: false },
+  { id: "help", label: "帮助中心", icon: HelpCircle, available: false },
+  { id: "credits", label: "积分充值", icon: CreditCard, available: false },
+  { id: "refer", label: "推荐计划", icon: Gift, available: false },
 ];
 
-export function PlatformShell({ active = "workshop", onNavigate, children }) {
+export function PlatformShell({ active = "workshop", brand = "OpenMontage", onNavigate, children }) {
   return (
-    <div className="flex min-h-screen bg-[var(--stage)]">
-      <aside className="hidden w-[220px] shrink-0 flex-col border-r border-[var(--line)] bg-white md:flex">
-        <div className="border-b border-[var(--line)] px-4 py-5">
-          <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--navy)] text-[var(--projector)]">
+    <div className="flex min-h-screen bg-[var(--stage)] text-[var(--ink)]">
+      <aside className="hidden w-[220px] shrink-0 flex-col border-r border-[var(--line)] bg-[#0a0b10] md:flex">
+        <div className="px-4 py-5">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--gradient)] text-white shadow-[0_0_24px_rgba(124,108,255,.35)]">
               <Clapperboard className="h-4 w-4" />
             </span>
             <div>
-              <div className="text-sm font-semibold">OpenMontage</div>
+              <div className="text-sm font-semibold tracking-wide">{brand}</div>
               <div className="text-[10px] text-[var(--muted)]">对齐有彩视界在线版</div>
             </div>
           </div>
         </div>
-        <nav className="flex-1 space-y-1 p-2">
+
+        <nav className="scrollbar-thin flex-1 space-y-0.5 overflow-y-auto px-2 pb-4">
           {NAV.map((item) => {
             const Icon = item.icon;
             const selected = active === item.id;
@@ -41,33 +56,42 @@ export function PlatformShell({ active = "workshop", onNavigate, children }) {
               <button
                 key={item.id}
                 type="button"
-                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm transition ${
                   selected
-                    ? "bg-[var(--navy)] text-white"
+                    ? "nav-active text-white"
                     : item.available
-                      ? "text-[var(--ink)] hover:bg-[var(--panel-muted)]"
-                      : "text-[var(--muted)] opacity-70 hover:bg-[var(--panel-muted)]"
+                      ? "text-white/70 hover:bg-white/[.04] hover:text-white"
+                      : "text-white/35 hover:bg-white/[.03] hover:text-white/55"
                 }`}
                 onClick={() => onNavigate?.(item.id, item)}
               >
-                <Icon className="h-4 w-4 shrink-0" />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-sm font-medium">{item.label}</span>
-                  <span className={`block text-[10px] ${selected ? "text-white/55" : "text-[var(--muted)]"}`}>
-                    {item.available ? item.note : `${item.note} · 建设中`}
-                  </span>
-                </span>
+                <Icon className={`h-4 w-4 shrink-0 ${selected ? "text-[#b7acff]" : ""}`} />
+                <span className="min-w-0 flex-1 truncate">{item.label}</span>
                 {!item.available ? (
-                  <LayoutGrid className="h-3 w-3 opacity-40" />
+                  <span className="rounded-md bg-white/[.06] px-1.5 py-0.5 text-[9px] text-white/35">soon</span>
                 ) : null}
               </button>
             );
           })}
         </nav>
-        <div className="border-t border-[var(--line)] p-3 text-[10px] leading-5 text-[var(--muted)]">
-          影视工坊已对齐六步生产线。Agent / 画布 / 素材库 / 灵感广场按在线版信息架构铺开，能力逐步接入 OpenMontage 多模型工具。
+
+        <div className="border-t border-[var(--line)] p-3">
+          <div className="mb-3 flex items-center gap-2 rounded-xl border border-[var(--line)] bg-white/[.03] px-3 py-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--gradient)] text-xs font-bold">
+              OM
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-xs font-semibold">本地工坊</div>
+              <div className="text-[10px] text-[var(--muted)]">无积分 · 密钥自备</div>
+            </div>
+            <Moon className="h-3.5 w-3.5 text-white/35" />
+          </div>
+          <p className="px-1 text-[10px] leading-5 text-white/30">
+            影视工坊已接通六步生产线；其余入口按有彩在线版信息架构预留。
+          </p>
         </div>
       </aside>
+
       <div className="min-w-0 flex-1">{children}</div>
     </div>
   );

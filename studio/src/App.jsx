@@ -4,6 +4,7 @@ import { toast } from "./lib/toast";
 import { Library } from "./components/Library";
 import { CreateProjectPage } from "./components/CreateProjectPage";
 import { StudioShell } from "./components/StudioShell";
+import { PlatformShell } from "./components/PlatformShell";
 
 export default function App() {
   const [screen, setScreen] = useState("library");
@@ -14,6 +15,7 @@ export default function App() {
   const [step, setStep] = useState("script");
   const [config, setConfig] = useState(null);
   const [busyMsg, setBusyMsg] = useState("");
+  const [nav, setNav] = useState("workshop");
 
   const refreshProjects = useCallback(async () => {
     const d = await api("/api/projects");
@@ -29,6 +31,7 @@ export default function App() {
       setBundle(b);
       if (!quiet) setStep("script");
       setScreen("studio");
+      setNav("workshop");
     } catch (e) {
       setBundle(null);
       toast.error(String(e.message || e));
@@ -51,8 +54,20 @@ export default function App() {
     refreshProjects().catch(() => {});
   }, [refreshProjects]);
 
+  const onNavigate = (id, item) => {
+    setNav(id);
+    if (!item?.available) {
+      toast.info(`${item?.label || id} 对齐有彩在线版入口，能力建设中`);
+      return;
+    }
+    if (id === "workshop") {
+      setScreen("library");
+    }
+  };
+
+  let body;
   if (screen === "create") {
-    return (
+    body = (
       <CreateProjectPage
         config={config}
         onBack={() => setScreen("library")}
@@ -62,10 +77,8 @@ export default function App() {
         }}
       />
     );
-  }
-
-  if (screen === "studio") {
-    return (
+  } else if (screen === "studio") {
+    body = (
       <StudioShell
         projectId={projectId}
         bundle={bundle}
@@ -85,22 +98,28 @@ export default function App() {
         }}
       />
     );
+  } else {
+    body = (
+      <Library
+        projects={projects}
+        config={config}
+        onOpen={(id) => void loadProject(id)}
+        onCreate={() => setScreen("create")}
+        onDeleted={(id) => {
+          setProjects((list) => list.filter((p) => p.id !== id));
+          if (projectId === id) {
+            setProjectId("");
+            setBundle(null);
+          }
+        }}
+        onRefresh={() => void refreshProjects()}
+      />
+    );
   }
 
   return (
-    <Library
-      projects={projects}
-      config={config}
-      onOpen={(id) => void loadProject(id)}
-      onCreate={() => setScreen("create")}
-      onDeleted={(id) => {
-        setProjects((list) => list.filter((p) => p.id !== id));
-        if (projectId === id) {
-          setProjectId("");
-          setBundle(null);
-        }
-      }}
-      onRefresh={() => void refreshProjects()}
-    />
+    <PlatformShell active={nav} onNavigate={onNavigate}>
+      {body}
+    </PlatformShell>
   );
 }

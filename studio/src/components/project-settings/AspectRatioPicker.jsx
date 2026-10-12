@@ -19,13 +19,13 @@ export function AspectRatioPicker({ value, onChange, disabled = false, ratios })
             onClick={() => onChange(option.value)}
             className={`flex min-h-20 items-center gap-3 rounded-xl border px-3 text-left transition disabled:cursor-not-allowed disabled:opacity-55 ${
               selected
-                ? "border-[var(--projector)] bg-[var(--projector)]/10 shadow-[0_0_0_2px_rgba(86,199,193,.13)]"
-                : "border-[var(--line)] bg-white hover:border-[#aeb8c6]"
+                ? "border-[#7c6cff]/60 bg-[#7c6cff]/12 shadow-[0_0_0_2px_rgba(124,108,255,.18)]"
+                : "border-[var(--line-strong)] bg-white/[.03] hover:border-white/25"
             }`}
           >
             <span
               className={`shrink-0 rounded-[3px] border-2 ${
-                selected ? "border-[var(--projector)] bg-white" : "border-[#8e99a8] bg-[var(--panel-muted)]"
+                selected ? "border-[#a78bfa] bg-white/10" : "border-white/25 bg-black/30"
               } ${vertical ? "h-11 w-7" : "h-7 w-11"}`}
               aria-hidden="true"
             />

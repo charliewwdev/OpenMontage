@@ -314,7 +314,7 @@ export function StoryboardStep({ projectId, bundle, config, setBusyMsg, onBundle
                   </p>
                 </div>
               </div>
-              <span className="timecode flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--line)] bg-white/70 px-3 py-2 text-xs text-[var(--ink)]">
+              <span className="timecode flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--line)] bg-black/40 px-3 py-2 text-xs text-[var(--ink)]">
                 <Clock3 className="h-3.5 w-3.5 text-[var(--projector)]" />
                 已用时 {splitElapsedTime}
               </span>
@@ -604,7 +604,7 @@ function ShotCard({
                         )
                       }
                       className={`flex items-center gap-2 rounded-lg border px-2 py-1.5 text-xs ${
-                        on ? "border-[var(--projector)] bg-[var(--projector)]/10" : "border-[var(--line)] bg-white"
+                        on ? "border-[var(--projector)] bg-[var(--projector)]/10" : "border-[var(--line)] bg-white/[.03]"
                       }`}
                     >
                       <img src={entity.selectedImage.url} alt="" className="h-7 w-7 rounded object-cover" />
@@ -621,7 +621,7 @@ function ShotCard({
               </div>
             </div>
             {shot.error ? (
-              <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{shot.error}</p>
+              <p className="mt-3 rounded-lg bg-[var(--danger)]/10 px-3 py-2 text-xs text-[var(--danger)]">{shot.error}</p>
             ) : null}
             <div className="mt-5 flex flex-wrap gap-2">
               <button

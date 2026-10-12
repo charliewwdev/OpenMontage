@@ -28,14 +28,7 @@ const DESKS = [
   { id: "edit", label: "剪辑室" },
 ];
 
-const LEDGER_KEYS = [
-  "pending",
-  "running",
-  "succeeded",
-  "rewriting",
-  "failed",
-  "needs_review",
-];
+const LEDGER_KEYS = ["pending", "running", "succeeded", "rewriting", "failed", "needs_review"];
 
 function StageNode({ data }) {
   return (
@@ -58,9 +51,7 @@ function ShotNode({ data }) {
       <Handle type="target" position={Position.Left} className="handle" />
       <div className="eyebrow">
         <span className="kind">{data.intent || "shot"}</span>
-        <span className={`status-pill ${data.status || "pending"}`}>
-          {data.status || "pending"}
-        </span>
+        <span className={`status-pill ${data.status || "pending"}`}>{data.status || "pending"}</span>
       </div>
       <strong>{data.label}</strong>
       <div className="sub">{data.blurb || "—"}</div>
@@ -93,314 +84,72 @@ function FitOnChange({ deps }) {
   return null;
 }
 
-function StepRail({ steps, active, onSelect }) {
+function NewProjectModal({ open, onClose, onCreated }) {
+  const [title, setTitle] = useState("");
+  const [source, setSource] = useState("");
+  const [aspect, setAspect] = useState("9:16");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  if (!open) return null;
+
+  const submit = async () => {
+    setBusy(true);
+    setErr("");
+    try {
+      const res = await api("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title, source_text: source, aspect_ratio: aspect }),
+      });
+      onCreated(res.created.name, res.bundle);
+      onClose();
+      setTitle("");
+      setSource("");
+    } catch (e) {
+      setErr(String(e.message || e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
-    <nav className="step-rail" aria-label="六步工作流">
-      {STEPS.map((step, i) => {
-        const meta = (steps || []).find((s) => s.id === step.id);
-        const state = meta?.state || "empty";
-        return (
-          <button
-            key={step.id}
-            type="button"
-            className={`step-chip ${active === step.id ? "active" : ""} ${state}`}
-            onClick={() => onSelect(step.id)}
-          >
-            <span className="step-num">{i + 1}</span>
-            <span className="step-label">{step.label}</span>
-            <span className={`step-dot ${state}`} />
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <header>
+          <h2>新建短剧项目</h2>
+          <p>粘贴小说/剧本正文，自动拆场次、角色、分镜与镜头账本</p>
+        </header>
+        <label>
+          片名
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="例如：午夜短信" />
+        </label>
+        <label>
+          画幅
+          <select value={aspect} onChange={(e) => setAspect(e.target.value)}>
+            <option value="9:16">竖屏 9:16</option>
+            <option value="16:9">横屏 16:9</option>
+            <option value="1:1">方屏 1:1</option>
+          </select>
+        </label>
+        <label>
+          源文本
+          <textarea
+            rows={12}
+            value={source}
+            onChange={(e) => setSource(e.target.value)}
+            placeholder={"支持对白格式：林夏：别回那通电话。\n\n空行分段即场次。"}
+          />
+        </label>
+        {err ? <p className="form-error">{err}</p> : null}
+        <footer>
+          <button type="button" className="btn ghost" onClick={onClose}>
+            取消
           </button>
-        );
-      })}
-    </nav>
-  );
-}
-
-function AssetCard({ title, subtitle, meta, onClick, active }) {
-  return (
-    <button type="button" className={`asset-card ${active ? "active" : ""}`} onClick={onClick}>
-      <div className="asset-thumb" aria-hidden />
-      <div className="asset-body">
-        <strong>{title}</strong>
-        <p>{subtitle}</p>
-        {meta ? <span className="asset-meta">{meta}</span> : null}
-      </div>
-    </button>
-  );
-}
-
-function DirectorDesk({
-  step,
-  bundle,
-  selectedId,
-  onSelect,
-}) {
-  const arts = bundle?.artifacts || {};
-  const bible = arts.character_bible || {};
-  const breakdown = arts.episode_breakdown || {};
-  const script = arts.script || {};
-  const episode = (breakdown.episodes || [])[0];
-
-  if (step === "script") {
-    const scenes = episode?.scenes || [];
-    const lines = script.scenes || script.beats || script.dialogue || [];
-    return (
-      <div className="desk-panel">
-        <header className="desk-head">
-          <h2>{breakdown.series_title || script.title || "剧本"}</h2>
-          <p>{episode?.logline || script.logline || "分集剧本与场次结构"}</p>
-        </header>
-        <div className="script-layout">
-          <aside className="scene-list">
-            <h3>场次</h3>
-            {scenes.length === 0 ? (
-              <p className="hint">暂无 episode_breakdown</p>
-            ) : (
-              scenes.map((sc) => (
-                <button
-                  key={sc.id}
-                  type="button"
-                  className={`item ${selectedId === sc.id ? "active" : ""}`}
-                  onClick={() => onSelect(sc)}
-                >
-                  <span className="mono">{sc.id}</span>
-                  <strong>{sc.title}</strong>
-                  <span className="muted">{sc.purpose}</span>
-                </button>
-              ))
-            )}
-          </aside>
-          <article className="script-body">
-            <h3>正文 / 结构</h3>
-            {episode ? (
-              <div className="prose">
-                <p>
-                  <b>钩子：</b>
-                  {episode.hook}
-                </p>
-                <p>
-                  <b>悬念：</b>
-                  {episode.cliffhanger}
-                </p>
-                <p>
-                  <b>时长：</b>
-                  {episode.target_duration_seconds}s · {breakdown.aspect_ratio}
-                </p>
-              </div>
-            ) : null}
-            {Array.isArray(lines) && lines.length > 0 ? (
-              <pre className="script-dump">{JSON.stringify(lines, null, 2)}</pre>
-            ) : script.full_text || script.text ? (
-              <pre className="script-dump">{script.full_text || script.text}</pre>
-            ) : (
-              <p className="hint">script.json 已加载时可在此展示对白正文</p>
-            )}
-          </article>
-        </div>
-      </div>
-    );
-  }
-
-  if (step === "characters") {
-    const chars = bible.characters || [];
-    return (
-      <div className="desk-panel">
-        <header className="desk-head">
-          <h2>角色圣经</h2>
-          <p>{bible.visual_style || "外貌 · 服装变体 · 一致性锚点"}</p>
-        </header>
-        <div className="asset-grid">
-          {chars.map((c) => (
-            <AssetCard
-              key={c.id}
-              title={c.display_name || c.id}
-              subtitle={c.appearance || c.role}
-              meta={(c.wardrobe_variants || []).map((w) => w.label).join(" · ")}
-              active={selectedId === c.id}
-              onClick={() => onSelect(c)}
-            />
-          ))}
-          {chars.length === 0 ? <p className="hint">暂无 character_bible</p> : null}
-        </div>
-      </div>
-    );
-  }
-
-  if (step === "locations") {
-    const locs = bible.locations || [];
-    return (
-      <div className="desk-panel">
-        <header className="desk-head">
-          <h2>场景资产</h2>
-          <p>地点描述与分集场次绑定</p>
-        </header>
-        <div className="asset-grid">
-          {locs.map((loc) => (
-            <AssetCard
-              key={loc.id}
-              title={loc.name || loc.id}
-              subtitle={loc.description}
-              meta={loc.id}
-              active={selectedId === loc.id}
-              onClick={() => onSelect(loc)}
-            />
-          ))}
-          {locs.length === 0 ? <p className="hint">圣经中尚无 locations</p> : null}
-        </div>
-      </div>
-    );
-  }
-
-  if (step === "props") {
-    const props = bible.props || bible.prop_assets || [];
-    return (
-      <div className="desk-panel">
-        <header className="desk-head">
-          <h2>道具档案</h2>
-          <p>关键道具三视图与稳定描述（有则展示）</p>
-        </header>
-        <div className="asset-grid">
-          {props.length === 0 ? (
-            <div className="empty-block">
-              <h3>本集暂无独立道具表</h3>
-              <p className="hint">可在 character_bible.props 补充；分镜里的 insert 镜头可暂代关键道具。</p>
-            </div>
-          ) : (
-            props.map((p) => (
-              <AssetCard
-                key={p.id}
-                title={p.name || p.id}
-                subtitle={p.description}
-                active={selectedId === p.id}
-                onClick={() => onSelect(p)}
-              />
-            ))
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  if (step === "storyboard") {
-    const shots = arts.storyboard?.shots || [];
-    const jobs = Object.fromEntries((arts.ledger?.jobs || []).map((j) => [j.shot_id, j]));
-    return (
-      <div className="desk-panel">
-        <header className="desk-head">
-          <h2>分镜导演台</h2>
-          <p>
-            {arts.storyboard?.episode_id || "episode"} · {arts.storyboard?.aspect_ratio || "9:16"} ·{" "}
-            {shots.length} 镜
-          </p>
-        </header>
-        <div className="shot-grid">
-          {shots.map((shot) => {
-            const st = jobs[shot.id]?.status || "pending";
-            return (
-              <button
-                key={shot.id}
-                type="button"
-                className={`shot-tile ${selectedId === shot.id ? "active" : ""}`}
-                onClick={() => onSelect(shot)}
-              >
-                <div className="shot-frame">
-                  <span className="shot-index">#{shot.index ?? "·"}</span>
-                  <span className={`status-pill ${st}`}>{st}</span>
-                </div>
-                <strong>{shot.description || shot.id}</strong>
-                <div className="shot-meta">
-                  <span>{shot.shot_intent}</span>
-                  <span>{shot.duration_sec}s</span>
-                </div>
-                {shot.dialogue ? <p className="dialogue">「{shot.dialogue}」</p> : null}
-              </button>
-            );
-          })}
-          {shots.length === 0 ? <p className="hint">暂无 storyboard</p> : null}
-        </div>
-      </div>
-    );
-  }
-
-  // edit step summary in director desk
-  const shots = arts.storyboard?.shots || [];
-  const stats = arts.ledger?.stats || {};
-  return (
-    <div className="desk-panel">
-      <header className="desk-head">
-        <h2>成片准备</h2>
-        <p>镜头账本与剪辑室共用同一时间线数据</p>
-      </header>
-      <div className="ledger-grid big">
-        {LEDGER_KEYS.filter((k) => stats[k] != null).map((k) => (
-          <div className="ledger-chip" key={k}>
-            <span className="k">{k}</span>
-            <span className="v">{stats[k]}</span>
-          </div>
-        ))}
-        <div className="ledger-chip">
-          <span className="k">shots</span>
-          <span className="v">{shots.length}</span>
-        </div>
-      </div>
-      <p className="hint">切换到「剪辑室」编排时间线；切换到「画布」查看镜头 DAG / 子图。</p>
-    </div>
-  );
-}
-
-function EditDesk({ storyboard, ledger, selectedShot, onSelect }) {
-  const shots = storyboard?.shots || [];
-  const jobs = Object.fromEntries((ledger?.jobs || []).map((j) => [j.shot_id, j]));
-  const total = shots.reduce((n, s) => n + (Number(s.duration_sec) || 0), 0);
-
-  return (
-    <div className="desk-panel edit-desk">
-      <header className="desk-head">
-        <h2>剪辑室</h2>
-        <p>
-          预览轨 · 总时长约 {total.toFixed(1)}s · {storyboard?.aspect_ratio || "9:16"}
-        </p>
-      </header>
-      <div className="preview-stage">
-        <div className={`phone-frame ratio-${(storyboard?.aspect_ratio || "9:16").replace(":", "x")}`}>
-          {selectedShot ? (
-            <div className="preview-copy">
-              <span className="eyebrow-text">{selectedShot.id}</span>
-              <h3>{selectedShot.description}</h3>
-              {selectedShot.dialogue ? <p className="dialogue">「{selectedShot.dialogue}」</p> : null}
-              <p className="muted">
-                {selectedShot.shot_intent} · {selectedShot.duration_sec}s ·{" "}
-                {jobs[selectedShot.id]?.status || "pending"}
-              </p>
-            </div>
-          ) : (
-            <div className="preview-copy">
-              <h3>选择时间线上的镜头</h3>
-              <p className="muted">竖屏预览位 · 绑定 storyboard 与 ledger</p>
-            </div>
-          )}
-        </div>
-      </div>
-      <div className="timeline">
-        <div className="timeline-track">
-          {shots.map((shot) => {
-            const st = jobs[shot.id]?.status || "pending";
-            const flex = Math.max(Number(shot.duration_sec) || 1, 1);
-            return (
-              <button
-                key={shot.id}
-                type="button"
-                className={`tl-clip ${st} ${selectedShot?.id === shot.id ? "active" : ""}`}
-                style={{ flex }}
-                onClick={() => onSelect(shot)}
-                title={shot.description}
-              >
-                <span>{shot.id.replace(/^ep\d+_/, "")}</span>
-              </button>
-            );
-          })}
-        </div>
-        {shots.length === 0 ? <p className="hint">无镜头可编排</p> : null}
+          <button type="button" className="btn" disabled={busy || !title || source.length < 20} onClick={submit}>
+            {busy ? "创建中…" : "创建并拆解"}
+          </button>
+        </footer>
       </div>
     </div>
   );
@@ -419,23 +168,37 @@ function StudioApp() {
   const [selected, setSelected] = useState(null);
   const [chat, setChat] = useState("");
   const [statusMsg, setStatusMsg] = useState("");
-  const [canvasSource, setCanvasSource] = useState("shots"); // shots | pipeline | subgraph
+  const [canvasSource, setCanvasSource] = useState("shots");
+  const [showNew, setShowNew] = useState(false);
+  const [caps, setCaps] = useState(null);
+  const [editDraft, setEditDraft] = useState("");
+  const [timeline, setTimeline] = useState(null);
 
   const storyboard = bundle?.artifacts?.storyboard || null;
   const ledger = bundle?.artifacts?.ledger || null;
+  const bible = bundle?.artifacts?.character_bible || null;
+  const script = bundle?.artifacts?.script || null;
+  const breakdown = bundle?.artifacts?.episode_breakdown || null;
+
+  const refreshProjects = useCallback(async () => {
+    const d = await api("/api/projects");
+    setProjects(d.projects || []);
+    return d.projects || [];
+  }, []);
 
   const loadProject = useCallback(async (name) => {
     setProject(name);
     setSelected(null);
+    setTimeline(null);
     setStatusMsg("");
     try {
       const b = await api(`/api/project/bundle?name=${encodeURIComponent(name)}`);
       setBundle(b);
-      const firstDone = (b.steps || []).find((s) => s.state !== "empty");
-      if (firstDone) setStep(firstDone.id);
+      const first = (b.steps || []).find((s) => s.state !== "empty");
+      if (first) setStep(first.id);
     } catch (e) {
       setBundle(null);
-      setStatusMsg(String(e));
+      setStatusMsg(String(e.message || e));
     }
   }, []);
 
@@ -444,14 +207,15 @@ function StudioApp() {
     api("/api/subgraphs")
       .then((d) => setSubgraphs(d.subgraphs || []))
       .catch(() => {});
-    api("/api/projects")
-      .then((d) => {
-        const list = d.projects || [];
-        setProjects(list);
+    api("/api/config")
+      .then((c) => setCaps(c.capabilities))
+      .catch(() => {});
+    refreshProjects()
+      .then((list) => {
         if (list.length) loadProject(list[0]);
       })
       .catch(() => {});
-  }, [loadProject]);
+  }, [loadProject, refreshProjects]);
 
   useEffect(() => {
     if (!selectedSubgraph) {
@@ -460,14 +224,22 @@ function StudioApp() {
     }
     api(`/api/subgraphs/${selectedSubgraph}/graph`)
       .then((d) => setSubgraphDoc(d.document))
-      .catch((e) => setStatusMsg(String(e)));
+      .catch((e) => setStatusMsg(String(e.message || e)));
   }, [selectedSubgraph]);
 
-  const refreshLedger = useCallback(async () => {
-    if (!project) return;
-    const b = await api(`/api/project/bundle?name=${encodeURIComponent(project)}`);
-    setBundle(b);
-  }, [project]);
+  useEffect(() => {
+    if (!selected) {
+      setEditDraft("");
+      return;
+    }
+    setEditDraft(
+      selected.description ||
+        selected.appearance ||
+        selected.text ||
+        selected.dialogue ||
+        JSON.stringify(selected, null, 2)
+    );
+  }, [selected]);
 
   const labNodesEdges = useMemo(() => {
     if (canvasSource === "subgraph" && subgraphDoc) {
@@ -483,7 +255,6 @@ function StudioApp() {
         target: e.to,
         label: e.port || "default",
         style: { stroke: "#0d8a7c", strokeWidth: 1.6 },
-        labelStyle: { fill: "#3d4f5f", fontSize: 10, fontWeight: 600 },
         markerEnd: { type: MarkerType.ArrowClosed, color: "#0d8a7c" },
       }));
       return { nodes, edges };
@@ -508,7 +279,6 @@ function StudioApp() {
       }));
       return { nodes, edges };
     }
-    // shots DAG
     if (!storyboard) return { nodes: [], edges: [] };
     const jobByShot = {};
     for (const job of ledger?.jobs || []) jobByShot[job.shot_id] = job;
@@ -534,55 +304,91 @@ function StudioApp() {
     return { nodes, edges };
   }, [canvasSource, subgraphDoc, pipeline, storyboard, ledger]);
 
-  const onNodeClick = useCallback((_e, node) => {
-    if (node.type === "shot" && node.data.shot) {
-      setSelected(node.data.shot);
-      setStep("storyboard");
-    }
-  }, []);
+  const selectedShot =
+    selected && storyboard?.shots?.some((s) => s.id === selected.id) ? selected : null;
+
+  const saveShotPatch = async (patch) => {
+    if (!project || !selectedShot) return;
+    const res = await api("/api/project/storyboard/patch", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ project, shot_id: selectedShot.id, patch }),
+    });
+    setBundle((b) => ({
+      ...b,
+      artifacts: { ...(b?.artifacts || {}), storyboard: res.storyboard },
+    }));
+    const updated = res.storyboard.shots.find((s) => s.id === selectedShot.id);
+    if (updated) setSelected(updated);
+    await api("/api/project/ledger/invalidate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ project, shot_id: selectedShot.id }),
+    });
+    const b = await api(`/api/project/bundle?name=${encodeURIComponent(project)}`);
+    setBundle(b);
+    setStatusMsg(`已保存 ${selectedShot.id}`);
+  };
+
+  const syncLedger = async () => {
+    if (!project) return;
+    await api("/api/project/ledger/sync", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ project }),
+    });
+    await loadProject(project);
+    setStatusMsg("镜头账本已从分镜重建");
+  };
+
+  const exportTimeline = async () => {
+    if (!project) return;
+    const res = await api(`/api/project/export/timeline?name=${encodeURIComponent(project)}`);
+    setTimeline(res.timeline);
+    setStatusMsg(`时间线导出：${res.timeline.total_duration_sec}s / ${res.timeline.clips.length} 镜`);
+  };
+
+  const markShot = async (status) => {
+    if (!project || !selectedShot) return;
+    await api("/api/project/ledger/mark", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ project, shot_id: selectedShot.id, status }),
+    });
+    await loadProject(project);
+    setStatusMsg(`${selectedShot.id} → ${status}`);
+  };
 
   const sendChat = async () => {
     const text = chat.trim();
     if (!text) return;
-    if (project && selected?.id && storyboard) {
+    if (project && selectedShot) {
       const patch = {};
       const dur = text.match(/(\d+(?:\.\d+)?)\s*秒|duration\s*[:=]?\s*(\d+(?:\.\d+)?)/i);
       if (dur) patch.duration_sec = Number(dur[1] || dur[2]);
       if (/仰拍|low\s*angle/i.test(text)) {
-        patch.shot_language = {
-          ...(selected.shot_language || {}),
-          camera_movement: "tilt_up",
-        };
-        patch.description = `${selected.description || ""} (仰拍)`.trim();
+        patch.shot_language = { ...(selectedShot.shot_language || {}), camera_movement: "tilt_up" };
+        patch.description = `${selectedShot.description || ""} (仰拍)`.trim();
+      }
+      if (/特写|close.?up/i.test(text)) {
+        patch.shot_language = { ...(selectedShot.shot_language || {}), shot_size: "close_up" };
       }
       if (Object.keys(patch).length) {
         try {
-          await api("/api/project/storyboard/patch", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ project, shot_id: selected.id, patch }),
-          });
-          await api("/api/project/ledger/invalidate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ project, shot_id: selected.id }),
-          });
-          await refreshLedger();
-          setStatusMsg(`已更新 ${selected.id} 并作废账本任务`);
+          await saveShotPatch(patch);
         } catch (e) {
-          setStatusMsg(String(e));
+          setStatusMsg(String(e.message || e));
         }
       } else {
-        setStatusMsg("选中镜头后可用：「改成仰拍」「时长 4 秒」");
+        setStatusMsg("可用指令：仰拍 / 特写 / 时长 4 秒");
       }
     } else {
-      setStatusMsg("先选项目与镜头，再下达手术式指令");
+      setStatusMsg("先选项目与镜头");
     }
     setChat("");
   };
 
-  const selectedShot =
-    selected && storyboard?.shots?.some((s) => s.id === selected.id) ? selected : null;
+  const episode = (breakdown?.episodes || [])[0];
 
   return (
     <div className="app">
@@ -591,15 +397,12 @@ function StudioApp() {
           <div className="brand-mark">
             OpenMontage <span>Drama</span>
           </div>
-          <div className="brand-sub">六步 · 三台 · 可部署制片台</div>
+          <div className="brand-sub">真实可用短剧制片台</div>
         </div>
 
         <label className="project-select">
           <span>项目</span>
-          <select
-            value={project}
-            onChange={(e) => (e.target.value ? loadProject(e.target.value) : null)}
-          >
+          <select value={project} onChange={(e) => e.target.value && loadProject(e.target.value)}>
             <option value="">选择项目…</option>
             {projects.map((p) => (
               <option key={p} value={p}>
@@ -608,6 +411,9 @@ function StudioApp() {
             ))}
           </select>
         </label>
+        <button type="button" className="btn compact" onClick={() => setShowNew(true)}>
+          新建
+        </button>
 
         <div className="desk-toggle">
           {DESKS.map((d) => (
@@ -618,7 +424,6 @@ function StudioApp() {
               onClick={() => {
                 setDesk(d.id);
                 if (d.id === "edit") setStep("edit");
-                if (d.id === "director" && step === "edit") setStep("storyboard");
               }}
             >
               {d.label}
@@ -627,37 +432,45 @@ function StudioApp() {
         </div>
 
         <div className="spacer" />
+        {caps ? (
+          <div className="cap-chip" title={caps.keys.map((k) => `${k.label}:${k.configured ? "✓" : "–"}`).join("\n")}>
+            {caps.mode === "online" ? "在线能力" : "离线拆解"} {caps.configured}/{caps.total}
+          </div>
+        ) : null}
         {statusMsg ? <div className="status-toast">{statusMsg}</div> : null}
       </header>
 
-      <StepRail
-        steps={bundle?.steps}
-        active={step}
-        onSelect={(id) => {
-          setStep(id);
-          if (id === "edit") setDesk("edit");
-          else if (desk === "edit") setDesk("director");
-          else setDesk(desk === "canvas" ? "canvas" : "director");
-        }}
-      />
+      <nav className="step-rail" aria-label="六步工作流">
+        {STEPS.map((s, i) => {
+          const meta = (bundle?.steps || []).find((x) => x.id === s.id);
+          const state = meta?.state || "empty";
+          return (
+            <button
+              key={s.id}
+              type="button"
+              className={`step-chip ${step === s.id ? "active" : ""} ${state}`}
+              onClick={() => {
+                setStep(s.id);
+                setDesk(s.id === "edit" ? "edit" : desk === "canvas" ? "canvas" : "director");
+              }}
+            >
+              <span className="step-num">{i + 1}</span>
+              <span className="step-label">{s.label}</span>
+              <span className={`step-dot ${state}`} />
+            </button>
+          );
+        })}
+      </nav>
 
       <div className="main">
         <aside className="rail">
           {desk === "canvas" ? (
             <>
               <h3>画布源</h3>
-              <button
-                type="button"
-                className={`item ${canvasSource === "shots" ? "active" : ""}`}
-                onClick={() => setCanvasSource("shots")}
-              >
+              <button type="button" className={`item ${canvasSource === "shots" ? "active" : ""}`} onClick={() => setCanvasSource("shots")}>
                 镜头 DAG
               </button>
-              <button
-                type="button"
-                className={`item ${canvasSource === "pipeline" ? "active" : ""}`}
-                onClick={() => setCanvasSource("pipeline")}
-              >
+              <button type="button" className={`item ${canvasSource === "pipeline" ? "active" : ""}`} onClick={() => setCanvasSource("pipeline")}>
                 short-drama 主链
               </button>
               <h3>子图 IR</h3>
@@ -678,20 +491,14 @@ function StudioApp() {
           ) : (
             <>
               <h3>项目</h3>
-              {projects.length === 0 ? (
-                <p className="hint">projects/ 为空。挂载数据卷或放入短剧项目。</p>
-              ) : (
-                projects.map((p) => (
-                  <button
-                    key={p}
-                    type="button"
-                    className={`item ${project === p ? "active" : ""}`}
-                    onClick={() => loadProject(p)}
-                  >
-                    {p}
-                  </button>
-                ))
-              )}
+              <button type="button" className="item accent" onClick={() => setShowNew(true)}>
+                + 新建项目
+              </button>
+              {projects.map((p) => (
+                <button key={p} type="button" className={`item ${project === p ? "active" : ""}`} onClick={() => loadProject(p)}>
+                  {p}
+                </button>
+              ))}
               {ledger?.stats ? (
                 <>
                   <h3>任务队列</h3>
@@ -703,6 +510,9 @@ function StudioApp() {
                       </div>
                     ))}
                   </div>
+                  <button type="button" className="btn block" onClick={syncLedger}>
+                    从分镜同步账本
+                  </button>
                 </>
               ) : null}
             </>
@@ -710,121 +520,261 @@ function StudioApp() {
         </aside>
 
         <div className="workspace">
-          {desk === "director" ? (
-            project ? (
-              <DirectorDesk
-                step={step}
-                bundle={bundle}
-                selectedId={selected?.id}
-                onSelect={setSelected}
-              />
-            ) : (
-              <div className="empty-canvas">
-                <div>
-                  <h2>打开一个短剧项目</h2>
-                  <p className="hint">编导台：剧本 · 角色 · 场景 · 道具 · 分镜</p>
-                </div>
-              </div>
-            )
+          {desk === "director" && project ? (
+            <div className="desk-panel">
+              {step === "script" ? (
+                <>
+                  <header className="desk-head">
+                    <h2>{script?.title || breakdown?.series_title || "剧本"}</h2>
+                    <p>{episode?.logline || "分集结构与对白"}</p>
+                  </header>
+                  <div className="script-layout">
+                    <aside className="scene-list">
+                      <h3>场次</h3>
+                      {(episode?.scenes || []).map((sc) => (
+                        <button key={sc.id} type="button" className={`item ${selected?.id === sc.id ? "active" : ""}`} onClick={() => setSelected(sc)}>
+                          <span className="mono">{sc.id}</span>
+                          <strong>{sc.title}</strong>
+                        </button>
+                      ))}
+                    </aside>
+                    <article className="script-body">
+                      <h3>对白节拍</h3>
+                      <div className="dialogue-list">
+                        {(script?.dialogue_beats || []).map((d) => (
+                          <button
+                            key={d.id}
+                            type="button"
+                            className={`dialogue-row ${selected?.id === d.id ? "active" : ""}`}
+                            onClick={() => setSelected(d)}
+                          >
+                            <span className="spk">{d.speaker_id}</span>
+                            <span>{d.text}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </article>
+                  </div>
+                </>
+              ) : null}
+
+              {step === "characters" || step === "locations" || step === "props" ? (
+                <>
+                  <header className="desk-head">
+                    <h2>{step === "characters" ? "角色" : step === "locations" ? "场景" : "道具"}</h2>
+                    <p>{bible?.visual_style || "资产一致性"}</p>
+                  </header>
+                  <div className="asset-grid">
+                    {(step === "characters"
+                      ? bible?.characters || []
+                      : step === "locations"
+                        ? bible?.locations || []
+                        : bible?.props || []
+                    ).map((item) => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        className={`asset-card ${selected?.id === item.id ? "active" : ""}`}
+                        onClick={() => setSelected(item)}
+                      >
+                        <div className="asset-thumb" />
+                        <div className="asset-body">
+                          <strong>{item.display_name || item.name || item.id}</strong>
+                          <p>{item.appearance || item.description || item.role || "—"}</p>
+                        </div>
+                      </button>
+                    ))}
+                    {step === "props" && !(bible?.props || []).length ? (
+                      <div className="empty-block">
+                        <h3>暂无道具</h3>
+                        <p className="hint">可在右侧检视区用 JSON 追加到 character_bible.props</p>
+                      </div>
+                    ) : null}
+                  </div>
+                </>
+              ) : null}
+
+              {step === "storyboard" ? (
+                <>
+                  <header className="desk-head row">
+                    <div>
+                      <h2>分镜导演台</h2>
+                      <p>
+                        {storyboard?.episode_id} · {storyboard?.aspect_ratio} · {storyboard?.shots?.length || 0} 镜
+                      </p>
+                    </div>
+                    <button type="button" className="btn" onClick={syncLedger}>
+                      同步账本
+                    </button>
+                  </header>
+                  <div className="shot-grid">
+                    {(storyboard?.shots || []).map((shot) => {
+                      const st = (ledger?.jobs || []).find((j) => j.shot_id === shot.id)?.status || "pending";
+                      return (
+                        <button
+                          key={shot.id}
+                          type="button"
+                          className={`shot-tile ${selected?.id === shot.id ? "active" : ""}`}
+                          onClick={() => setSelected(shot)}
+                        >
+                          <div className="shot-frame">
+                            <span className="shot-index">#{shot.index}</span>
+                            <span className={`status-pill ${st}`}>{st}</span>
+                          </div>
+                          <strong>{shot.description}</strong>
+                          <div className="shot-meta">
+                            <span>{shot.shot_intent}</span>
+                            <span>{shot.duration_sec}s</span>
+                          </div>
+                          {shot.dialogue ? <p className="dialogue">「{shot.dialogue}」</p> : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : null}
+
+              {step === "edit" ? (
+                <p className="hint">请切换到「剪辑室」工作台。</p>
+              ) : null}
+            </div>
           ) : null}
 
-          {desk === "edit" ? (
-            project ? (
-              <EditDesk
-                storyboard={storyboard}
-                ledger={ledger}
-                selectedShot={selectedShot}
-                onSelect={setSelected}
-              />
-            ) : (
-              <div className="empty-canvas">
+          {desk === "edit" && project ? (
+            <div className="desk-panel edit-desk">
+              <header className="desk-head row">
                 <div>
-                  <h2>剪辑室待项目</h2>
-                  <p className="hint">时间线来自 storyboard + shot_jobs</p>
+                  <h2>剪辑室</h2>
+                  <p>时间线编排 · 导出 concat</p>
+                </div>
+                <button type="button" className="btn" onClick={exportTimeline}>
+                  导出时间线
+                </button>
+              </header>
+              <div className="preview-stage">
+                <div className="phone-frame">
+                  {selectedShot ? (
+                    <div className="preview-copy">
+                      <span className="eyebrow-text">{selectedShot.id}</span>
+                      <h3>{selectedShot.description}</h3>
+                      {selectedShot.dialogue ? <p className="dialogue">「{selectedShot.dialogue}」</p> : null}
+                    </div>
+                  ) : (
+                    <div className="preview-copy">
+                      <h3>选择时间线片段</h3>
+                    </div>
+                  )}
                 </div>
               </div>
-            )
+              <div className="timeline">
+                <div className="timeline-track">
+                  {(storyboard?.shots || []).map((shot) => {
+                    const st = (ledger?.jobs || []).find((j) => j.shot_id === shot.id)?.status || "pending";
+                    return (
+                      <button
+                        key={shot.id}
+                        type="button"
+                        className={`tl-clip ${st} ${selectedShot?.id === shot.id ? "active" : ""}`}
+                        style={{ flex: Math.max(Number(shot.duration_sec) || 1, 1) }}
+                        onClick={() => setSelected(shot)}
+                      >
+                        <span>{shot.id.replace(/^ep\d+_/, "")}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              {timeline ? (
+                <pre className="script-dump">
+                  {JSON.stringify(
+                    { total: timeline.total_duration_sec, clips: timeline.clips.length, ffmpeg: timeline.ffmpeg_concat },
+                    null,
+                    2
+                  )}
+                </pre>
+              ) : null}
+            </div>
           ) : null}
 
           {desk === "canvas" ? (
             <div className="canvas-wrap">
-              {!project && canvasSource === "shots" ? (
-                <div className="empty-canvas">
-                  <div>
-                    <h2>画布待命</h2>
-                    <p className="hint">选项目看镜头 DAG，或切换主链 / 子图</p>
-                  </div>
-                </div>
-              ) : null}
               <ReactFlow
                 key={`${canvasSource}-${selectedSubgraph || "x"}-${project || "none"}`}
                 nodes={labNodesEdges.nodes}
                 edges={labNodesEdges.edges}
                 nodeTypes={nodeTypes}
                 fitView
-                fitViewOptions={{ padding: 0.16 }}
-                minZoom={0.2}
-                maxZoom={1.6}
-                onNodeClick={onNodeClick}
+                onNodeClick={(_e, node) => {
+                  if (node.type === "shot" && node.data.shot) {
+                    setSelected(node.data.shot);
+                    setStep("storyboard");
+                  }
+                }}
                 proOptions={{ hideAttribution: true }}
                 defaultEdgeOptions={{ type: "smoothstep" }}
               >
-                <FitOnChange
-                  deps={[
-                    canvasSource,
-                    selectedSubgraph,
-                    project,
-                    labNodesEdges.nodes.length,
-                    ledger?.jobs?.length,
-                  ]}
-                />
+                <FitOnChange deps={[canvasSource, selectedSubgraph, project, labNodesEdges.nodes.length]} />
                 <Background gap={18} size={1} color="rgba(21,32,43,0.08)" />
                 <Controls />
-                <MiniMap
-                  pannable
-                  zoomable
-                  nodeColor={() => "#0d8a7c"}
-                  maskColor="rgba(238,241,244,0.72)"
-                />
+                <MiniMap pannable zoomable nodeColor={() => "#0d8a7c"} maskColor="rgba(238,241,244,0.72)" />
               </ReactFlow>
+            </div>
+          ) : null}
+
+          {!project ? (
+            <div className="empty-canvas">
+              <div>
+                <h2>从小说到成片</h2>
+                <p className="hint">新建项目粘贴正文，或打开已有 projects/</p>
+                <button type="button" className="btn" onClick={() => setShowNew(true)}>
+                  新建短剧项目
+                </button>
+              </div>
             </div>
           ) : null}
         </div>
 
         <aside className="inspector">
-          <h3>检视</h3>
+          <h3>检视 / 编辑</h3>
           {selectedShot ? (
             <>
               <p className="title">{selectedShot.id}</p>
-              <p className="hint">{selectedShot.description}</p>
+              <label className="field">
+                描述
+                <textarea
+                  rows={3}
+                  value={editDraft}
+                  onChange={(e) => setEditDraft(e.target.value)}
+                />
+              </label>
               <div className="meta-row">
                 <span className="meta-pill">{selectedShot.shot_intent}</span>
                 <span className="meta-pill">{selectedShot.duration_sec}s</span>
-                {(selectedShot.character_ids || []).map((id) => (
-                  <span className="meta-pill" key={id}>
-                    {id}
-                  </span>
-                ))}
               </div>
-              {selectedShot.keyframe_prompt ? (
-                <p className="prompt-block">{selectedShot.keyframe_prompt}</p>
-              ) : null}
               <button
                 type="button"
                 className="btn"
+                onClick={() => saveShotPatch({ description: editDraft })}
+              >
+                保存镜头
+              </button>
+              <button type="button" className="btn ghost" onClick={() => markShot("succeeded")}>
+                标记成功
+              </button>
+              <button type="button" className="btn ghost" onClick={() => markShot("failed")}>
+                标记失败
+              </button>
+              <button
+                type="button"
+                className="btn ghost"
                 onClick={async () => {
-                  if (!project) return;
-                  try {
-                    await api("/api/project/ledger/invalidate", {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ project, shot_id: selectedShot.id }),
-                    });
-                    await refreshLedger();
-                    setStatusMsg(`已作废 ${selectedShot.id}`);
-                  } catch (e) {
-                    setStatusMsg(String(e));
-                  }
+                  await api("/api/project/ledger/invalidate", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ project, shot_id: selectedShot.id }),
+                  });
+                  await loadProject(project);
+                  setStatusMsg(`已作废 ${selectedShot.id}`);
                 }}
               >
                 重跑镜头
@@ -833,22 +783,11 @@ function StudioApp() {
           ) : selected ? (
             <>
               <p className="title">{selected.display_name || selected.name || selected.title || selected.id}</p>
-              <p className="hint">
-                {selected.appearance || selected.description || selected.purpose || selected.logline || "—"}
-              </p>
               <pre className="inspect-json">{JSON.stringify(selected, null, 2)}</pre>
             </>
           ) : (
-            <p className="hint">在编导台选资产，或在分镜 / 画布点选镜头。</p>
+            <p className="hint">选择资产或镜头以编辑。</p>
           )}
-
-          {desk === "canvas" && canvasSource === "subgraph" && subgraphDoc ? (
-            <>
-              <h3>子图</h3>
-              <p className="title">{subgraphDoc.title || subgraphDoc.id}</p>
-              <p className="hint">{subgraphDoc.description}</p>
-            </>
-          ) : null}
         </aside>
       </div>
 
@@ -857,13 +796,25 @@ function StudioApp() {
         <input
           value={chat}
           onChange={(e) => setChat(e.target.value)}
-          placeholder="手术式修改：例如「改成仰拍，时长 4 秒」"
+          placeholder="手术式修改：仰拍 / 特写 / 时长 4 秒"
           onKeyDown={(e) => e.key === "Enter" && sendChat()}
         />
         <button type="button" onClick={sendChat}>
           发送
         </button>
       </div>
+
+      <NewProjectModal
+        open={showNew}
+        onClose={() => setShowNew(false)}
+        onCreated={async (name) => {
+          await refreshProjects();
+          await loadProject(name);
+          setDesk("director");
+          setStep("script");
+          setStatusMsg(`已创建 ${name}`);
+        }}
+      />
     </div>
   );
 }

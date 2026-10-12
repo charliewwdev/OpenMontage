@@ -1,0 +1,88 @@
+{
+  "id": "keyframe-i2v-qa",
+  "version": "1.0",
+  "title": "Keyframe to I2V with QA",
+  "description": "Generate keyframe, route provider, image-to-video, then drama QA with limited rework.",
+  "entry": "keyframe",
+  "max_reworks": 2,
+  "nodes": [
+    {
+      "id": "keyframe",
+      "type": "tool",
+      "label": "Generate keyframe",
+      "tool": {
+        "name": "image_selector",
+        "params": {
+          "prompt": "{{shot.keyframe_prompt}}",
+          "reference_images": "{{bible_refs}}",
+          "aspect_ratio": "{{storyboard.aspect_ratio}}"
+        }
+      }
+    },
+    {
+      "id": "route",
+      "type": "tool",
+      "label": "Validate router subgraph present",
+      "tool": {
+        "name": "subgraph_validate",
+        "params": {
+          "path": "workflow_defs/subgraphs/video-router.workflow.json"
+        }
+      }
+    },
+    {
+      "id": "i2v",
+      "type": "tool",
+      "label": "Image to video",
+      "tool": {
+        "name": "video_selector",
+        "params": {
+          "operation": "image_to_video",
+          "prompt": "{{shot.video_prompt}}",
+          "reference_image": "{{keyframe.path}}",
+          "preferred_provider": "{{chosen_provider}}",
+          "duration": "{{shot.duration_sec}}"
+        }
+      }
+    },
+    {
+      "id": "qa",
+      "type": "tool",
+      "label": "Shot visual QA",
+      "tool": {
+        "name": "drama_visual_qa",
+        "params": {
+          "scope": "shot",
+          "shot_id": "{{shot.id}}",
+          "video_path": "{{clip.path}}",
+          "character_ids": "{{shot.character_ids}}"
+        }
+      }
+    },
+    {
+      "id": "human",
+      "type": "human_gate",
+      "label": "Review critical QA",
+      "human_gate": {
+        "prompt": "Critical drama QA findings — approve regenerate, waive, or stop."
+      }
+    }
+  ],
+  "edges": [
+    { "from": "keyframe", "to": "route", "port": "success" },
+    { "from": "route", "to": "i2v", "port": "success" },
+    { "from": "i2v", "to": "qa", "port": "success" },
+    {
+      "from": "qa",
+      "to": "keyframe",
+      "port": "rework",
+      "when": "{{drama_qa_report.critical_count}} > 0"
+    },
+    {
+      "from": "qa",
+      "to": "human",
+      "port": "default",
+      "when": "{{drama_qa_report.verdict}} == 'needs_review'"
+    }
+  ]
+}

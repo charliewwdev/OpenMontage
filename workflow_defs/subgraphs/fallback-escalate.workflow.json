@@ -1,0 +1,45 @@
+{
+  "id": "fallback-escalate",
+  "version": "1.0",
+  "title": "Provider fallback escalate",
+  "description": "On failure, step through provider_fallback_chain.",
+  "entry": "pick_next",
+  "max_reworks": 3,
+  "nodes": [
+    {
+      "id": "pick_next",
+      "type": "code",
+      "label": "Pick next provider",
+      "code": {
+        "assign": {
+          "chosen_provider": "{{fallback.next_provider}}",
+          "attempt": "{{fallback.attempt}}"
+        }
+      }
+    },
+    {
+      "id": "retry_i2v",
+      "type": "tool",
+      "label": "Retry I2V",
+      "tool": {
+        "name": "video_selector",
+        "params": {
+          "operation": "image_to_video",
+          "prompt": "{{shot.video_prompt}}",
+          "reference_image": "{{keyframe.path}}",
+          "preferred_provider": "{{chosen_provider}}",
+          "duration": "{{shot.duration_sec}}"
+        }
+      }
+    }
+  ],
+  "edges": [
+    { "from": "pick_next", "to": "retry_i2v", "port": "default" },
+    {
+      "from": "retry_i2v",
+      "to": "pick_next",
+      "port": "rework",
+      "when": "{{job.status}} == 'failed'"
+    }
+  ]
+}

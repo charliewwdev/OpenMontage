@@ -96,12 +96,15 @@ Each tool's `agent_skills[]` field bridges Layer 1 → Layer 3. See `skills/INDE
 | `clip-factory` | `pipeline_defs/clip-factory.yaml` | Short-form batch extraction |
 | `podcast-repurpose` | `pipeline_defs/podcast-repurpose.yaml` | Podcast repurposing |
 | `cinematic` | `pipeline_defs/cinematic.yaml` | Cinematic edit |
+| `short-drama` | `pipeline_defs/short-drama.yaml` | AI short-drama (Scheme F: YAML main chain + subgraph IR + shot ledger) |
 | `animation` | `pipeline_defs/animation.yaml` | Animation-first |
 | `character-animation` | `pipeline_defs/character-animation.yaml` | Local rigged character animation |
 | `hybrid` | `pipeline_defs/hybrid.yaml` | Source-plus-support hybrid |
 | `avatar-spokesperson` | `pipeline_defs/avatar-spokesperson.yaml` | Avatar presenter |
 | `localization-dub` | `pipeline_defs/localization-dub.yaml` | Localization and dubbing |
 | `framework-smoke` | `pipeline_defs/framework-smoke.yaml` | Test harness |
+
+Short-drama programmable layers: [`docs/workflow-ir.md`](docs/workflow-ir.md). Studio UI: [`docs/drama-studio-ui.md`](docs/drama-studio-ui.md), app in `studio/`.
 
 ## When Building New Pipelines
 

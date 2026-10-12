@@ -127,9 +127,11 @@ Based on the user's tier, present **3 ready-to-use prompts** they can copy right
 >
 > I'll generate actual motion video clips, compose a soundtrack, and deliver a finished cinematic trailer. *(Cinematic pipeline)*
 
-> **Also try:** "Make a 60-second avatar spokesperson video announcing a company rebrand" *(Avatar Spokesperson pipeline)*
+> **Also try:** "把这段设定做成 1 集竖屏短剧：女主收到未来的自己发来的警告短信，卡点结尾留悬念"
+>
+> Uses the `short-drama` pipeline (bible + storyboard + shot ledger). Needs image/video generation keys for best results; inspect progress in `studio/` when running locally.
 
-> **Or:** "I recorded a founder update on my webcam — make it feel polished, confident, and premium without looking fake" *(Talking Head pipeline)*
+> **Or:** "Make a 60-second avatar spokesperson video announcing a company rebrand" *(Avatar Spokesperson pipeline)*
 
 **Reference-based prompts (all tiers):**
 

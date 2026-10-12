@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openmontage/artifacts/storyboard",
+  "title": "Storyboard",
+  "description": "Shot-level storyboard for short-drama with keyframe and generation intents.",
+  "type": "object",
+  "required": ["version", "episode_id", "shots"],
+  "properties": {
+    "version": { "type": "string", "const": "1.0" },
+    "episode_id": { "type": "string" },
+    "aspect_ratio": {
+      "type": "string",
+      "enum": ["9:16", "16:9", "1:1", "4:5"],
+      "default": "9:16"
+    },
+    "shots": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["id", "scene_id", "index", "description", "duration_sec", "shot_intent"],
+        "properties": {
+          "id": { "type": "string" },
+          "scene_id": { "type": "string" },
+          "index": { "type": "integer", "minimum": 1 },
+          "description": { "type": "string" },
+          "duration_sec": { "type": "number", "minimum": 0.5, "maximum": 30 },
+          "dialogue": { "type": "string" },
+          "speaker_ids": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "character_ids": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "location_id": { "type": "string" },
+          "wardrobe_variant_ids": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          },
+          "shot_intent": {
+            "type": "string",
+            "enum": ["dialogue", "action", "camera_move", "effect", "establishing", "reaction", "insert", "montage"]
+          },
+          "shot_language": {
+            "type": "object",
+            "properties": {
+              "shot_size": { "type": "string" },
+              "camera_movement": { "type": "string" },
+              "lens_mm": { "type": "integer" },
+              "lighting_key": { "type": "string" },
+              "depth_of_field": { "type": "string" },
+              "color_temperature": { "type": "string" }
+            },
+            "additionalProperties": false
+          },
+          "keyframe_prompt": { "type": "string" },
+          "video_prompt": { "type": "string" },
+          "keyframe_path": { "type": "string" },
+          "clip_path": { "type": "string" },
+          "preferred_provider": { "type": "string" },
+          "subgraph_id": {
+            "type": "string",
+            "description": "Override shot-generation subgraph id for this shot"
+          },
+          "needs_lip_sync": { "type": "boolean", "default": false },
+          "needs_native_audio": { "type": "boolean", "default": false }
+        },
+        "additionalProperties": false
+      }
+    },
+    "subgraph_refs": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "Default subgraph paths keyed by role (shot_generation, model_routing, ...)"
+    },
+    "metadata": { "type": "object" }
+  },
+  "additionalProperties": false
+}

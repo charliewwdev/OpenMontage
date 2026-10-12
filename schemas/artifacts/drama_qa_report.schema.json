@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "openmontage/artifacts/drama_qa_report",
+  "title": "Drama QA Report",
+  "description": "Structured short-drama visual/audio quality findings.",
+  "type": "object",
+  "required": ["version", "scope", "findings", "verdict"],
+  "properties": {
+    "version": { "type": "string", "const": "1.0" },
+    "scope": {
+      "type": "string",
+      "enum": ["shot", "scene", "episode", "compose"]
+    },
+    "episode_id": { "type": "string" },
+    "shot_id": { "type": "string" },
+    "scene_id": { "type": "string" },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "category", "severity", "message"],
+        "properties": {
+          "id": { "type": "string" },
+          "category": {
+            "type": "string",
+            "enum": [
+              "identity_drift",
+              "anatomy",
+              "wardrobe_continuity",
+              "location_continuity",
+              "cut_continuity",
+              "lip_sync",
+              "subtitle_align",
+              "artifact",
+              "other"
+            ]
+          },
+          "severity": {
+            "type": "string",
+            "enum": ["info", "warning", "critical"]
+          },
+          "message": { "type": "string" },
+          "frame_path": { "type": "string" },
+          "suggested_action": {
+            "type": "string",
+            "enum": ["accept", "regenerate", "partial_redraw", "human_review"]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "verdict": {
+      "type": "string",
+      "enum": ["pass", "needs_review", "fail"]
+    },
+    "critical_count": { "type": "integer", "minimum": 0 },
+    "warning_count": { "type": "integer", "minimum": 0 },
+    "sampled_frames": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "metadata": { "type": "object" }
+  },
+  "additionalProperties": false
+}

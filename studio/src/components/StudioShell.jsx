@@ -1,231 +1,109 @@
-import {
-  ArrowLeft,
-  Box,
-  Clapperboard,
-  Image as ImageIcon,
-  LayoutGrid,
-  Loader2,
-  RefreshCw,
-  Scissors,
-  ScrollText,
-  Users,
-  Workflow,
-} from "lucide-react";
-import { DESKS, STEPS, deriveProjectView } from "../lib/projectModel";
+import { STEPS } from "../config/options";
 import { ScriptStep } from "./steps/ScriptStep";
 import { EntityStep } from "./steps/EntityStep";
 import { StoryboardStep } from "./steps/StoryboardStep";
 import { EditStep } from "./steps/EditStep";
-import { CanvasDesk } from "./CanvasDesk";
 
-const STEP_ICONS = {
-  script: ScrollText,
-  characters: Users,
-  locations: ImageIcon,
-  props: Box,
-  storyboard: Clapperboard,
-  edit: Scissors,
-};
-
-const DESK_ICONS = {
-  director: Workflow,
-  canvas: LayoutGrid,
-  edit: Scissors,
-};
+function stepCounts(bundle) {
+  const eps = bundle?.episodes || [];
+  const ents = (bundle?.entities || []).filter((e) => !e.deletedAt);
+  const shots = (bundle?.shots || []).filter((s) => !s.deletedAt);
+  return {
+    script: eps.length,
+    character: ents.filter((e) => e.kind === "character").length,
+    scene: ents.filter((e) => e.kind === "scene").length,
+    prop: ents.filter((e) => e.kind === "prop").length,
+    storyboard: shots.length,
+    edit: (bundle?.edits || []).length,
+  };
+}
 
 export function StudioShell({
-  project,
+  projectId,
   bundle,
   loading,
-  desk,
-  setDesk,
   step,
   setStep,
+  config,
+  busyMsg,
+  setBusyMsg,
   onBack,
   onRefresh,
   onBundle,
-  pipeline,
-  subgraphs,
-  selectedSubgraph,
-  setSelectedSubgraph,
-  subgraphDoc,
-  canvasSource,
-  setCanvasSource,
-  genState,
-  onGenerate,
-  caps,
 }) {
-  const view = deriveProjectView(bundle);
+  const project = bundle?.project || {};
+  const counts = stepCounts(bundle);
+  const caps = config?.capabilities || {};
 
-  if (loading && !bundle) {
-    return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-[var(--muted)]">
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> 正在开机片场…
-      </div>
-    );
-  }
-
-  if (!bundle || !view) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4">
-        <p>项目不存在或无法读取。</p>
-        <button type="button" className="btn-secondary" onClick={onBack}>
-          返回片库
-        </button>
-      </div>
-    );
-  }
-
-  const activeStepMeta = STEPS.find((s) => s.id === step) || STEPS[0];
-  const stepIndex = STEPS.findIndex((s) => s.id === step);
+  const common = {
+    projectId,
+    bundle,
+    config,
+    setBusyMsg,
+    onBundle,
+    onRefresh,
+  };
 
   return (
-    <main className="min-h-screen bg-[var(--stage)] lg:h-screen lg:overflow-hidden">
-      <div className="grid min-h-screen lg:h-screen lg:grid-cols-[270px_1fr]">
-        <aside className="relative overflow-hidden bg-[var(--navy)] text-white lg:h-screen">
-          <div className="absolute bottom-0 left-0 top-0 w-6 film-perforation opacity-60" />
-          <div className="ml-6 flex h-full flex-col">
-            <div className="border-b border-white/10 px-5 py-5">
-              <div className="timecode mb-3 text-[10px] font-semibold tracking-[.16em] text-[var(--timecode)]">
-                OpenMontage Drama
-              </div>
+    <div className="flex min-h-full">
+      <aside className="flex w-[220px] shrink-0 flex-col border-r border-[var(--line)] bg-[var(--navy)] text-white">
+        <div className="border-b border-white/10 px-4 py-4">
+          <button type="button" className="text-xs text-white/60 hover:text-white" onClick={onBack}>
+            ← 片库
+          </button>
+          <h1 className="display-type mt-2 line-clamp-2 text-lg leading-snug">{project.title || projectId}</h1>
+          <p className="mt-1 text-[11px] text-white/50">
+            {project.genre} · {project.ratio}
+          </p>
+        </div>
+        <nav className="flex-1 space-y-1 p-2">
+          {STEPS.map((s, i) => {
+            const active = step === s.key;
+            return (
               <button
+                key={s.key}
                 type="button"
-                onClick={onBack}
-                className="inline-flex items-center gap-2 text-xs font-semibold text-white/55 hover:text-white"
+                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                  active ? "bg-white/12 text-white" : "text-white/65 hover:bg-white/6 hover:text-white"
+                }`}
+                onClick={() => setStep(s.key)}
               >
-                <ArrowLeft className="h-3.5 w-3.5" /> 返回片库
+                <span className="timecode text-[11px] text-[var(--projector)]">{String(i + 1).padStart(2, "0")}</span>
+                <span className="flex-1">
+                  <span className="block text-sm font-medium">{s.label}</span>
+                  <span className="block text-[11px] opacity-60">{s.note}</span>
+                </span>
+                <span className="timecode rounded-md bg-white/10 px-1.5 py-0.5 text-[10px]">{counts[s.key] || 0}</span>
               </button>
-              <h1 className="display-type mt-4 line-clamp-2 text-2xl font-semibold leading-tight">{view.title}</h1>
-              <div className="timecode mt-2 text-[10px] text-[var(--timecode)]">
-                LOCAL / {view.ratio} / {view.genre}
-              </div>
-            </div>
+            );
+          })}
+        </nav>
+        <div className="border-t border-white/10 p-3 text-[11px] text-white/45">
+          <div>DeepSeek {caps.deepseek ? "✓" : "—"}</div>
+          <div>Seedream {caps.seedream ? "✓" : "—"}</div>
+          <div>Seedance {caps.seedance ? "✓" : "—"}</div>
+          <button type="button" className="mt-2 text-[var(--projector)] hover:underline" onClick={onRefresh}>
+            刷新状态
+          </button>
+        </div>
+      </aside>
 
-            <nav className="flex gap-1 overflow-x-auto p-3 lg:block lg:flex-1 lg:space-y-1 lg:overflow-y-auto" aria-label="制作步骤">
-              {STEPS.map((s, index) => {
-                const Icon = STEP_ICONS[s.id];
-                const active = s.id === step && desk === "director";
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => {
-                      setStep(s.id);
-                      setDesk(s.id === "edit" ? "edit" : "director");
-                    }}
-                    className={`group flex min-w-40 items-center gap-3 rounded-xl border px-3 py-3 text-left transition lg:w-full ${
-                      active ? "border-[var(--projector)]/40 bg-[var(--projector)]/10" : "border-transparent hover:bg-white/5"
-                    }`}
-                  >
-                    <span
-                      className={`timecode flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs ${
-                        active ? "bg-[var(--projector)] text-[var(--navy)]" : "bg-white/8 text-white/45"
-                      }`}
-                    >
-                      {String(index + 1).padStart(2, "0")}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className={`flex items-center gap-1.5 text-sm font-semibold ${active ? "text-white" : "text-white/75"}`}>
-                        <Icon className="h-3.5 w-3.5" />
-                        {s.label}
-                      </span>
-                      <span className="mt-0.5 block truncate text-[10px] text-white/38">
-                        {s.note} · {view.counts[s.id]}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </nav>
-
-            <div className="border-t border-white/10 p-4">
-              <div className="flex items-center justify-between text-[10px] text-white/35">
-                <span>{caps?.mode === "online" ? "在线能力已接入" : "离线拆解模式"}</span>
-                <span className="h-1.5 w-1.5 rounded-full bg-[var(--projector)]" />
-              </div>
-              <div className="mt-1 text-[10px] text-white/35">
-                {caps ? `${caps.configured}/${caps.total} keys` : "—"}
-                {caps?.ffmpeg ? " · FFmpeg" : ""} · openmontage.dtok.io
-              </div>
-            </div>
+      <main className="relative flex min-w-0 flex-1 flex-col">
+        {(loading || busyMsg) && (
+          <div className="absolute inset-x-0 top-0 z-20 flex items-center justify-center gap-2 bg-[var(--navy)]/90 px-4 py-2 text-sm text-white">
+            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[var(--projector)]" />
+            {busyMsg || "加载中…"}
           </div>
-        </aside>
-
-        <section className="min-w-0 lg:h-screen lg:overflow-hidden">
-          <header className="flex h-16 items-center justify-between gap-3 border-b border-[var(--line)] bg-white/85 px-4 backdrop-blur md:px-7">
-            <div className="min-w-0">
-              <div className="label !mb-0">
-                {desk === "director" ? `Stage ${String(stepIndex + 1).padStart(2, "0")}` : desk === "canvas" ? "Canvas" : "Edit room"}
-              </div>
-              <h2 className="display-type truncate text-xl font-semibold">
-                {desk === "director" ? activeStepMeta.label : DESKS.find((d) => d.id === desk)?.label}
-              </h2>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="hidden items-center rounded-xl border border-[var(--line)] bg-white p-1 sm:flex">
-                {DESKS.map((d) => {
-                  const Icon = DESK_ICONS[d.id];
-                  return (
-                    <button
-                      key={d.id}
-                      type="button"
-                      className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-                        desk === d.id ? "bg-[var(--navy)] text-white" : "text-[var(--muted)] hover:bg-[var(--panel-muted)]"
-                      }`}
-                      onClick={() => {
-                        setDesk(d.id);
-                        if (d.id === "edit") setStep("edit");
-                        if (d.id === "director" && step === "edit") setStep("storyboard");
-                      }}
-                    >
-                      <Icon className="h-3.5 w-3.5" />
-                      {d.label}
-                    </button>
-                  );
-                })}
-              </div>
-              <button type="button" className="btn-secondary !min-h-9" onClick={onRefresh} disabled={loading}>
-                <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> 刷新
-              </button>
-            </div>
-          </header>
-
-          <div className="scrollbar-thin min-h-[calc(100vh-4rem)] overflow-y-auto p-4 md:p-7 lg:h-[calc(100vh-4rem)]">
-            {desk === "canvas" ? (
-              <CanvasDesk
-                canvasSource={canvasSource}
-                setCanvasSource={setCanvasSource}
-                pipeline={pipeline}
-                subgraphs={subgraphs}
-                selectedSubgraph={selectedSubgraph}
-                setSelectedSubgraph={setSelectedSubgraph}
-                subgraphDoc={subgraphDoc}
-                view={view}
-                onSelectShot={() => {
-                  setDesk("director");
-                  setStep("storyboard");
-                }}
-              />
-            ) : desk === "edit" || step === "edit" ? (
-              <EditStep project={project} view={view} onBundle={onBundle} />
-            ) : step === "script" ? (
-              <ScriptStep project={project} view={view} onBundle={onBundle} />
-            ) : step === "characters" || step === "locations" || step === "props" ? (
-              <EntityStep kind={step} project={project} view={view} onBundle={onBundle} />
-            ) : (
-              <StoryboardStep
-                project={project}
-                view={view}
-                onBundle={onBundle}
-                onGenerate={onGenerate}
-                genState={genState}
-              />
-            )}
-          </div>
-        </section>
-      </div>
-    </main>
+        )}
+        <div className="flex-1 overflow-auto p-4 md:p-6">
+          {step === "script" && <ScriptStep {...common} />}
+          {step === "character" && <EntityStep {...common} kind="character" />}
+          {step === "scene" && <EntityStep {...common} kind="scene" />}
+          {step === "prop" && <EntityStep {...common} kind="prop" />}
+          {step === "storyboard" && <StoryboardStep {...common} />}
+          {step === "edit" && <EditStep {...common} />}
+        </div>
+      </main>
+    </div>
   );
 }

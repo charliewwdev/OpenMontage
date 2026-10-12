@@ -131,6 +131,11 @@ PROJECTS_ROOT=/data/projects
 STUDIO_DIST=/app/studio/dist
 API_BASE_URL=https://api-app.dtok.io/api/v1
 STUDIO_PUBLIC_URL=${PUBLIC_URL}
+DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+DEEPSEEK_BASE_URL=${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+DEEPSEEK_MODEL=${DEEPSEEK_MODEL:-deepseek-chat}
+VOLCENGINE_API_KEY=${VOLCENGINE_API_KEY:-${ARK_API_KEY:-}}
+ARK_API_KEY=${ARK_API_KEY:-${VOLCENGINE_API_KEY:-}}
 EOF
 
   # instant_deploy already requested; try to discover latest deployment

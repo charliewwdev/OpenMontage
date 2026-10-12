@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "episode_id": "ep01",
+  "aspect_ratio": "9:16",
+  "subgraph_refs": {
+    "shot_generation": "workflow_defs/subgraphs/keyframe-i2v-qa.workflow.json",
+    "model_routing": "workflow_defs/subgraphs/video-router.workflow.json"
+  },
+  "shots": [
+    {
+      "id": "ep01_sc01_sh00",
+      "scene_id": "ep01_sc01",
+      "index": 1,
+      "description": "建立镜头：林夏：别回那通电话。",
+      "duration_sec": 3,
+      "shot_intent": "establishing",
+      "character_ids": [
+        "char_周屿"
+      ],
+      "location_id": "loc_sc01",
+      "keyframe_prompt": "当代都市夜戏，冷青与琥珀对比, establishing shot, 林夏：别回那通电话。, 9:16",
+      "video_prompt": "slow push in establishing"
+    },
+    {
+      "id": "ep01_sc01_sh01",
+      "scene_id": "ep01_sc01",
+      "index": 2,
+      "description": "太晚了。信号已经发出去了。",
+      "duration_sec": 4,
+      "shot_intent": "dialogue",
+      "dialogue": "太晚了。信号已经发出去了。",
+      "speaker_ids": [
+        "spk_周屿"
+      ],
+      "character_ids": [
+        "char_周屿"
+      ],
+      "location_id": "loc_sc01",
+      "keyframe_prompt": "当代都市夜戏，冷青与琥珀对比, dialogue, 太晚了。信号已经发出去了。, 9:16",
+      "video_prompt": "subtle performance, cinematic",
+      "needs_lip_sync": true
+    },
+    {
+      "id": "ep01_sc02_sh00",
+      "scene_id": "ep01_sc02",
+      "index": 3,
+      "description": "建立镜头：空荡的便利店灯管闪了一下。林夏把手机扣在柜台上。",
+      "duration_sec": 3,
+      "shot_intent": "establishing",
+      "character_ids": [
+        "char_林夏",
+        "char_周屿"
+      ],
+      "location_id": "loc_sc02",
+      "keyframe_prompt": "当代都市夜戏，冷青与琥珀对比, establishing shot, 空荡的便利店灯管闪了一下。林夏把手机扣在柜台上。, 9:16",
+      "video_prompt": "slow push in establishing"
+    },
+    {
+      "id": "ep01_sc02_sh01",
+      "scene_id": "ep01_sc02",
+      "index": 4,
+      "description": "我们还有最后三分钟。",
+      "duration_sec": 4,
+      "shot_intent": "dialogue",
+      "dialogue": "我们还有最后三分钟。",
+      "speaker_ids": [
+        "spk_林夏"
+      ],
+      "character_ids": [
+        "char_林夏"
+      ],
+      "location_id": "loc_sc02",
+      "keyframe_prompt": "当代都市夜戏，冷青与琥珀对比, dialogue, 我们还有最后三分钟。, 9:16",
+      "video_prompt": "subtle performance, cinematic",
+      "needs_lip_sync": true
+    },
+    {
+      "id": "ep01_sc02_sh02",
+      "scene_id": "ep01_sc02",
+      "index": 5,
+      "description": "够改写结局吗？",
+      "duration_sec": 4,
+      "shot_intent": "dialogue",
+      "dialogue": "够改写结局吗？",
+      "speaker_ids": [
+        "spk_周屿"
+      ],
+      "character_ids": [
+        "char_周屿"
+      ],
+      "location_id": "loc_sc02",
+      "keyframe_prompt": "当代都市夜戏，冷青与琥珀对比, dialogue, 够改写结局吗？, 9:16",
+      "video_prompt": "subtle performance, cinematic",
+      "needs_lip_sync": true
+    }
+  ]
+}

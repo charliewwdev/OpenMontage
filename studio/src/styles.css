@@ -1184,6 +1184,46 @@ body::before {
   margin-top: 0.45rem;
 }
 
+.btn.accent,
+.btn.block.accent {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.btn-row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.hint.tiny {
+  font-size: 0.75rem;
+  margin: 0.35rem 0 0;
+}
+
+.preview-media,
+.inspect-thumb {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 12px;
+}
+
+.inspect-thumb {
+  height: auto;
+  max-height: 220px;
+  margin-bottom: 0.65rem;
+  border: 1px solid var(--line);
+}
+
+.meta-pill.needs_review {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
 @media (max-width: 720px) {
   .topbar {
     flex-wrap: wrap;

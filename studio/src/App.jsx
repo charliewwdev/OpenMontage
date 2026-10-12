@@ -173,6 +173,7 @@ function StudioApp() {
   const [caps, setCaps] = useState(null);
   const [editDraft, setEditDraft] = useState("");
   const [timeline, setTimeline] = useState(null);
+  const [genState, setGenState] = useState(null);
 
   const storyboard = bundle?.artifacts?.storyboard || null;
   const ledger = bundle?.artifacts?.ledger || null;
@@ -359,6 +360,72 @@ function StudioApp() {
     setStatusMsg(`${selectedShot.id} → ${status}`);
   };
 
+  const runGenerate = async () => {
+    if (!project) return;
+    try {
+      await api("/api/project/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ project, limit: 4 }),
+      });
+      setStatusMsg("镜头生成已启动（离线分镜板）");
+      const poll = async () => {
+        const s = await api("/api/project/generate/status");
+        setGenState(s.state);
+        if (s.state?.running) {
+          setTimeout(poll, 600);
+        } else {
+          await loadProject(project);
+          setStatusMsg(
+            s.state?.last_error
+              ? `生成失败：${s.state.last_error}`
+              : `生成完成：${s.state?.processed || 0} 镜`
+          );
+        }
+      };
+      poll();
+    } catch (e) {
+      setStatusMsg(String(e.message || e));
+    }
+  };
+
+  const selectedJob = selectedShot
+    ? (ledger?.jobs || []).find((j) => j.shot_id === selectedShot.id)
+    : null;
+  const keyframeUrl =
+    selectedJob?.keyframe_path && project
+      ? `/api/media/${encodeURIComponent(project)}/${selectedJob.keyframe_path}`
+      : null;
+
+  const saveBibleItem = async () => {
+    if (!project || !selected || selectedShot) return;
+    const entity =
+      step === "characters" ? "character" : step === "locations" ? "location" : step === "props" ? "prop" : null;
+    if (!entity) return;
+    try {
+      const item = { ...selected };
+      if (editDraft && !editDraft.trim().startsWith("{")) {
+        if (entity === "character") item.appearance = editDraft;
+        else item.description = editDraft;
+      } else if (editDraft.trim().startsWith("{")) {
+        Object.assign(item, JSON.parse(editDraft));
+      }
+      const res = await api("/api/project/bible/upsert", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ project, entity, item }),
+      });
+      setBundle((b) => ({
+        ...b,
+        artifacts: { ...(b?.artifacts || {}), character_bible: res.bible },
+      }));
+      setSelected(item);
+      setStatusMsg(`已保存 ${entity} ${item.id}`);
+    } catch (e) {
+      setStatusMsg(String(e.message || e));
+    }
+  };
+
   const sendChat = async () => {
     const text = chat.trim();
     if (!text) return;
@@ -513,6 +580,20 @@ function StudioApp() {
                   <button type="button" className="btn block" onClick={syncLedger}>
                     从分镜同步账本
                   </button>
+                  <button
+                    type="button"
+                    className="btn block accent"
+                    onClick={runGenerate}
+                    disabled={!!genState?.running}
+                  >
+                    {genState?.running ? "生成中…" : "生成镜头（离线板）"}
+                  </button>
+                  {genState ? (
+                    <p className="hint tiny">
+                      {genState.running ? "running" : "idle"} · done {genState.processed || 0}
+                      {genState.failed ? ` · fail ${genState.failed}` : ""}
+                    </p>
+                  ) : null}
                 </>
               ) : null}
             </>
@@ -603,9 +684,14 @@ function StudioApp() {
                         {storyboard?.episode_id} · {storyboard?.aspect_ratio} · {storyboard?.shots?.length || 0} 镜
                       </p>
                     </div>
-                    <button type="button" className="btn" onClick={syncLedger}>
-                      同步账本
-                    </button>
+                    <div className="btn-row">
+                      <button type="button" className="btn ghost" onClick={syncLedger}>
+                        同步账本
+                      </button>
+                      <button type="button" className="btn" onClick={runGenerate} disabled={!!genState?.running}>
+                        {genState?.running ? "生成中…" : "批量生成"}
+                      </button>
+                    </div>
                   </header>
                   <div className="shot-grid">
                     {(storyboard?.shots || []).map((shot) => {
@@ -653,11 +739,14 @@ function StudioApp() {
               </header>
               <div className="preview-stage">
                 <div className="phone-frame">
-                  {selectedShot ? (
+                  {keyframeUrl ? (
+                    <img className="preview-media" src={keyframeUrl} alt={selectedShot?.id || "keyframe"} />
+                  ) : selectedShot ? (
                     <div className="preview-copy">
                       <span className="eyebrow-text">{selectedShot.id}</span>
                       <h3>{selectedShot.description}</h3>
                       {selectedShot.dialogue ? <p className="dialogue">「{selectedShot.dialogue}」</p> : null}
+                      <p className="hint">尚未生成关键帧 · 点「批量生成」</p>
                     </div>
                   ) : (
                     <div className="preview-copy">
@@ -739,6 +828,7 @@ function StudioApp() {
           {selectedShot ? (
             <>
               <p className="title">{selectedShot.id}</p>
+              {keyframeUrl ? <img className="inspect-thumb" src={keyframeUrl} alt="" /> : null}
               <label className="field">
                 描述
                 <textarea
@@ -750,6 +840,7 @@ function StudioApp() {
               <div className="meta-row">
                 <span className="meta-pill">{selectedShot.shot_intent}</span>
                 <span className="meta-pill">{selectedShot.duration_sec}s</span>
+                {selectedJob ? <span className={`meta-pill ${selectedJob.status}`}>{selectedJob.status}</span> : null}
               </div>
               <button
                 type="button"
@@ -758,8 +849,14 @@ function StudioApp() {
               >
                 保存镜头
               </button>
+              <button type="button" className="btn" onClick={runGenerate} disabled={!!genState?.running}>
+                生成队列
+              </button>
               <button type="button" className="btn ghost" onClick={() => markShot("succeeded")}>
                 标记成功
+              </button>
+              <button type="button" className="btn ghost" onClick={() => markShot("needs_review")}>
+                待审
               </button>
               <button type="button" className="btn ghost" onClick={() => markShot("failed")}>
                 标记失败
@@ -783,6 +880,13 @@ function StudioApp() {
           ) : selected ? (
             <>
               <p className="title">{selected.display_name || selected.name || selected.title || selected.id}</p>
+              <label className="field">
+                外观 / 描述
+                <textarea rows={5} value={editDraft} onChange={(e) => setEditDraft(e.target.value)} />
+              </label>
+              <button type="button" className="btn" onClick={saveBibleItem}>
+                保存资产
+              </button>
               <pre className="inspect-json">{JSON.stringify(selected, null, 2)}</pre>
             </>
           ) : (

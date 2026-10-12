@@ -1,0 +1,43 @@
+{
+  "version": "1.0",
+  "series_title": "欢迎来到 Drama Studio",
+  "aspect_ratio": "9:16",
+  "target_episode_duration_seconds": 28,
+  "active_episode_id": "ep01",
+  "episodes": [
+    {
+      "id": "ep01",
+      "index": 1,
+      "title": "欢迎来到 Drama Studio",
+      "logline": "周屿：太晚了。信号已经发出去了。",
+      "hook": "太晚了。信号已经发出去了。",
+      "cliffhanger": "够改写结局吗？",
+      "target_duration_seconds": 28,
+      "scenes": [
+        {
+          "id": "ep01_sc01",
+          "index": 1,
+          "title": "林夏：别回那通电话。",
+          "location_id": "loc_sc01",
+          "purpose": "林夏：别回那通电话。",
+          "characters": [
+            "char_周屿"
+          ],
+          "estimated_duration_seconds": 12
+        },
+        {
+          "id": "ep01_sc02",
+          "index": 2,
+          "title": "空荡的便利店灯管闪了一下。林夏把手机扣在柜台上。",
+          "location_id": "loc_sc02",
+          "purpose": "空荡的便利店灯管闪了一下。林夏把手机扣在柜台上。",
+          "characters": [
+            "char_林夏",
+            "char_周屿"
+          ],
+          "estimated_duration_seconds": 16
+        }
+      ]
+    }
+  ]
+}

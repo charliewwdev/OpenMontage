@@ -1,0 +1,52 @@
+name: Deploy Drama Studio (Coolify)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "studio/**"
+      - "docker-compose.studio.yml"
+      - "scripts/deploy_coolify_drama_studio.sh"
+      - "lib/**"
+      - "tools/pipeline/**"
+      - "pipeline_defs/short-drama.yaml"
+      - "workflow_defs/**"
+      - "projects/midnight-sms-ep01/**"
+      - ".github/workflows/deploy-drama-studio.yml"
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    if: ${{ secrets.COOLIFY_TOKEN != '' && secrets.COOLIFY_DRAMA_STUDIO_UUID != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Coolify deploy
+        env:
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+          COOLIFY_URL: ${{ secrets.COOLIFY_URL || 'https://cicd.dtok.io' }}
+          COOLIFY_APP_UUID: ${{ secrets.COOLIFY_DRAMA_STUDIO_UUID }}
+        run: |
+          set -euo pipefail
+          UA="Mozilla/5.0 OpenMontage-github-actions"
+          RESP=$(curl -fsS -X POST \
+            "${COOLIFY_URL}/api/v1/deploy?uuid=${COOLIFY_APP_UUID}&force=false" \
+            -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
+            -H "User-Agent: ${UA}" \
+            -H "Accept: application/json")
+          echo "$RESP"
+          DEP_UUID=$(python3 -c "import json,sys; print(json.loads(sys.argv[1])['deployments'][0]['deployment_uuid'])" "$RESP")
+          for i in $(seq 1 80); do
+            STATUS=$(curl -fsS \
+              "${COOLIFY_URL}/api/v1/deployments/${DEP_UUID}" \
+              -H "Authorization: Bearer ${COOLIFY_TOKEN}" \
+              -H "User-Agent: ${UA}" \
+              -H "Accept: application/json" \
+              | python3 -c "import json,sys; print(json.load(sys.stdin).get('status',''))")
+            echo "[$i] $STATUS"
+            case "$STATUS" in
+              finished) echo "Deployed"; exit 0 ;;
+              failed|error-ing|cancelled) echo "Failed: $STATUS"; exit 1 ;;
+            esac
+            sleep 15
+          done
+          echo "Timeout"; exit 1

@@ -230,8 +230,8 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh })
                     onClick={() => setSelectedClipId(clip.id)}
                     className={`grid cursor-pointer gap-3 rounded-xl border p-3 transition md:grid-cols-[34px_110px_1fr_auto] md:items-center ${
                       active
-                        ? "border-[var(--projector)] bg-[var(--projector)]/5"
-                        : "border-[var(--line)] bg-white hover:border-[#b8c1cc]"
+                        ? "border-[var(--projector)] bg-[var(--projector)]/10"
+                        : "border-[var(--line)] bg-white/[.03] hover:border-white/25"
                     }`}
                   >
                     <label className="flex items-center justify-center">

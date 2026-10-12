@@ -403,7 +403,7 @@ export function ScriptStep({ projectId, bundle, config, setBusyMsg, onBundle, on
               </label>
               <button
                 type="button"
-                className="flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[var(--projector)] px-4 font-bold text-[var(--navy)] disabled:opacity-45"
+                className="btn-primary flex min-h-12 w-full !rounded-xl font-bold disabled:opacity-45"
                 disabled={operationBusy}
                 onClick={() => void runGenerate()}
               >
@@ -472,7 +472,7 @@ export function ScriptStep({ projectId, bundle, config, setBusyMsg, onBundle, on
                 className={`flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left ${
                   selectedId === episode.id
                     ? "border-[var(--projector)] bg-[var(--projector)]/10"
-                    : "border-transparent hover:bg-black/[.035]"
+                    : "border-transparent hover:bg-white/[.04]"
                 }`}
               >
                 <span className="timecode text-xs text-[var(--muted)]">
@@ -484,7 +484,7 @@ export function ScriptStep({ projectId, bundle, config, setBusyMsg, onBundle, on
                   </span>
                   <span
                     className={`mt-1 block text-[10px] ${
-                      episode.status === "confirmed" ? "text-emerald-600" : "text-[var(--muted)]"
+                      episode.status === "confirmed" ? "text-[var(--ok)]" : "text-[var(--muted)]"
                     }`}
                   >
                     {episode.status === "confirmed" ? "已定稿" : "草稿"}
@@ -709,7 +709,7 @@ function EpisodeEditor({ projectId, episode, onRefresh, onBundle }) {
       <div className="flex flex-wrap items-center gap-3 border-b border-[var(--line)] bg-[var(--panel-muted)] px-5 py-3">
         <span className="timecode text-xs text-[var(--muted)]">EP {String(episode.episodeNumber).padStart(2, "0")}</span>
         <input
-          className="field !min-w-48 flex-1 !bg-white !py-2 font-semibold read-only:cursor-not-allowed read-only:opacity-70"
+          className="field !min-w-48 flex-1 !bg-transparent !py-2 font-semibold read-only:cursor-not-allowed read-only:opacity-70"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           readOnly={locked}
@@ -736,7 +736,7 @@ function EpisodeEditor({ projectId, episode, onRefresh, onBundle }) {
         </div>
       ) : null}
       <textarea
-        className="min-h-[500px] flex-1 resize-y border-0 bg-white p-5 font-mono text-sm leading-7 outline-none read-only:cursor-not-allowed read-only:bg-slate-50 lg:resize-none"
+        className="min-h-[500px] flex-1 resize-y border-0 bg-transparent p-5 font-mono text-sm leading-7 text-[var(--ink)] outline-none read-only:cursor-not-allowed read-only:bg-black/20 lg:resize-none"
         value={content}
         onChange={(e) => setContent(e.target.value)}
         placeholder="写下本集场景、动作与对白…"

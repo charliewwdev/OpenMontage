@@ -106,8 +106,9 @@ export function CreateProjectPage({ config, onBack, onCreated }) {
   };
 
   return (
-    <main className="mx-auto min-h-screen max-w-[1500px] px-4 py-5 md:px-8 md:py-8">
-      <header className="overflow-hidden rounded-[26px] bg-[var(--navy)] text-white shadow-float">
+    <main className="min-h-screen p-3 md:p-5 lg:p-6">
+      <div className="yc-frame mx-auto max-w-[1480px] p-4 md:p-7">
+      <header className="overflow-hidden rounded-[22px] border border-white/10 bg-[linear-gradient(135deg,#15182a_0%,#1a1240_45%,#0d1b3a_100%)] text-white shadow-float">
         <div className="grid lg:grid-cols-[1fr_360px]">
           <div className="p-6 md:p-9">
             <button
@@ -115,25 +116,25 @@ export function CreateProjectPage({ config, onBack, onCreated }) {
               onClick={onBack}
               className="inline-flex items-center gap-2 text-xs font-semibold text-white/55 transition hover:text-white"
             >
-              <ArrowLeft className="h-4 w-4" /> 返回本地项目
+              <ArrowLeft className="h-4 w-4" /> 返回影视工坊
             </button>
             <div className="mt-10 flex items-center gap-3 text-xs font-bold uppercase tracking-[.2em] text-white/45">
-              <Clapperboard className="h-4 w-4 text-[var(--timecode)]" /> New production
+              <Clapperboard className="h-4 w-4 text-[#b7acff]" /> New production
             </div>
-            <h1 className="display-type mt-3 text-4xl font-semibold md:text-5xl">建立一座新片场</h1>
+            <h1 className="mt-3 text-4xl font-semibold md:text-5xl">建立新项目</h1>
             <p className="mt-4 max-w-3xl text-sm leading-7 text-white/60 md:text-base">
               先确定故事方向与统一画面语言。建立后从专业剧本开始，继续整理角色、场景和道具，再进入分镜与成片。
             </p>
           </div>
-          <div className="relative border-t border-white/10 bg-[var(--navy-soft)] p-6 lg:border-l lg:border-t-0 md:p-8">
-            <div className="timecode text-[10px] text-[var(--timecode)]">PROJECT SETUP / 01</div>
+          <div className="relative border-t border-white/10 bg-black/20 p-6 lg:border-l lg:border-t-0 md:p-8">
+            <div className="timecode text-[10px] text-[#b7acff]">PROJECT SETUP / 01</div>
             <p className="mt-4 text-sm leading-7 text-white/65">
               这里保存的是创作底稿，不必一开始就写得完美。一句话也能交给 AI 补全，所有结果仍可继续编辑。
             </p>
             <ol className="mt-6 space-y-2 text-sm text-white/70">
               {CREATION_STEPS.map((step, i) => (
                 <li key={step} className="flex gap-3 border-b border-white/10 py-2">
-                  <span className="timecode text-[10px] text-[var(--timecode)]">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="timecode text-[10px] text-[#b7acff]">{String(i + 1).padStart(2, "0")}</span>
                   {step}
                 </li>
               ))}
@@ -266,6 +267,7 @@ export function CreateProjectPage({ config, onBack, onCreated }) {
             </button>
           </section>
         </aside>
+      </div>
       </div>
     </main>
   );

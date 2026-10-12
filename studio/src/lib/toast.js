@@ -17,11 +17,11 @@ export function toast(message, kind = "info") {
   const el = document.createElement("div");
   const colors =
     kind === "error"
-      ? "border-[var(--danger)] bg-[#fff5f6] text-[#a13344]"
+      ? "border-[var(--danger)]/40 bg-[#2a1216] text-[#fca5a5]"
       : kind === "success"
-        ? "border-[var(--ok)] bg-[#f0faf5] text-[#1f7a4d]"
-        : "border-[var(--line)] bg-white text-[var(--ink)]";
-  el.className = `panel rounded-xl border px-4 py-3 text-sm shadow-float ${colors}`;
+        ? "border-[var(--ok)]/40 bg-[#0f241c] text-[#6ee7b7]"
+        : "border-[var(--line-strong)] bg-[var(--panel)] text-[var(--ink)]";
+  el.className = `rounded-xl border px-4 py-3 text-sm shadow-float ${colors}`;
   el.textContent = message;
   root.appendChild(el);
   setTimeout(() => {

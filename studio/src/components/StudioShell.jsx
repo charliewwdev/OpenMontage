@@ -1,6 +1,7 @@
 import {
   ArrowLeft,
   Box,
+  Check,
   Clapperboard,
   Image as ImageIcon,
   Loader2,
@@ -30,14 +31,28 @@ function stepCounts(bundle) {
   const ents = (bundle.entities || []).filter((e) => !e.deletedAt);
   const shots = (bundle.shots || []).filter((s) => !s.deletedAt);
   const successful = shots.filter((s) => s.status === "success").length;
+  const episodes = bundle.episodes || [];
+  const confirmed = episodes.filter((e) => e.status === "confirmed").length;
   return {
-    script: `${(bundle.episodes || []).length} 集`,
+    script: `${confirmed}/${episodes.length} 集定稿`,
     character: String(ents.filter((e) => e.kind === "character").length),
     scene: String(ents.filter((e) => e.kind === "scene").length),
     prop: String(ents.filter((e) => e.kind === "prop").length),
     storyboard: `${successful}/${shots.length} 镜`,
     edit: (bundle.edits || []).some((e) => e.outputPath) ? "已成片" : "未成片",
   };
+}
+
+function stepDone(bundle, key) {
+  if (!bundle) return false;
+  const counts = stepCounts(bundle);
+  if (key === "script") return (bundle.episodes || []).some((e) => e.status === "confirmed");
+  if (key === "character") return Number(counts.character) > 0;
+  if (key === "scene") return Number(counts.scene) > 0;
+  if (key === "prop") return Number(counts.prop) > 0;
+  if (key === "storyboard") return (bundle.shots || []).some((s) => !s.deletedAt);
+  if (key === "edit") return (bundle.edits || []).some((e) => e.outputPath);
+  return false;
 }
 
 export function StudioShell({
@@ -76,95 +91,90 @@ export function StudioShell({
   }
 
   return (
-    <main className="min-h-screen bg-[var(--stage)] lg:h-screen lg:overflow-hidden">
-      <div className="grid min-h-screen lg:h-screen lg:grid-cols-[270px_1fr]">
-        <aside className="relative overflow-hidden bg-[var(--navy)] text-white lg:h-screen">
-          <div className="absolute bottom-0 left-0 top-0 w-6 film-perforation opacity-60" />
-          <div className="ml-6 flex h-full flex-col">
-            <div className="border-b border-white/10 px-5 py-5">
-              <div className="timecode mb-3 text-[10px] font-semibold tracking-[.16em] text-[var(--timecode)]">
-                影视工坊 · OpenMontage
-              </div>
-              <button
-                type="button"
-                onClick={onBack}
-                className="inline-flex items-center gap-2 text-xs font-semibold text-white/55 hover:text-white"
-              >
-                <ArrowLeft className="h-3.5 w-3.5" /> 返回片库
-              </button>
-              <h1 className="display-type mt-4 line-clamp-2 text-2xl font-semibold leading-tight">
-                {project.title || projectId}
-              </h1>
-              <div className="timecode mt-2 text-[10px] text-[var(--timecode)]">
-                LOCAL / {project.ratio || "9:16"} / {project.genre || "—"}
-              </div>
-            </div>
-            <nav className="flex gap-1 overflow-x-auto p-3 lg:block lg:flex-1 lg:space-y-1 lg:overflow-y-auto" aria-label="制作步骤">
-              {STEPS.map((item, index) => {
-                const Icon = item.icon;
-                const active = item.key === step;
-                return (
-                  <button
-                    key={item.key}
-                    type="button"
-                    onClick={() => setStep(item.key)}
-                    className={`group flex min-w-40 items-center gap-3 rounded-xl border px-3 py-3 text-left transition lg:w-full ${
+    <main className="min-h-screen lg:h-screen lg:overflow-hidden">
+      <div className="grid min-h-screen lg:h-screen lg:grid-cols-[92px_1fr]">
+        <aside className="border-r border-[var(--line)] bg-[#0a0b10] lg:h-screen">
+          <div className="flex gap-1 overflow-x-auto p-2 lg:h-full lg:flex-col lg:overflow-y-auto lg:py-4">
+            {STEPS.map((item, index) => {
+              const Icon = item.icon;
+              const active = item.key === step;
+              const done = stepDone(bundle, item.key);
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => setStep(item.key)}
+                  className={`flex min-w-[72px] flex-col items-center gap-2 rounded-2xl px-2 py-3 text-center transition lg:min-w-0 ${
+                    active ? "bg-white/[.06]" : "hover:bg-white/[.03]"
+                  }`}
+                >
+                  <span
+                    className={`relative flex h-10 w-10 items-center justify-center rounded-full border text-sm ${
                       active
-                        ? "border-[var(--projector)]/40 bg-[var(--projector)]/10"
-                        : "border-transparent hover:bg-white/5"
+                        ? "border-transparent bg-[var(--gradient)] text-white shadow-[0_0_20px_rgba(124,108,255,.45)]"
+                        : done
+                          ? "border-[var(--ok)]/40 bg-[var(--ok)]/15 text-[var(--ok)]"
+                          : "border-white/10 bg-white/[.03] text-white/45"
                     }`}
                   >
-                    <span
-                      className={`timecode flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs ${
-                        active ? "bg-[var(--projector)] text-[var(--navy)]" : "bg-white/8 text-white/45"
-                      }`}
-                    >
-                      {String(index + 1).padStart(2, "0")}
+                    {done && !active ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
+                    <span className="timecode absolute -right-1 -top-1 rounded-full bg-black/70 px-1 text-[8px] text-white/50">
+                      {index + 1}
                     </span>
-                    <span className="min-w-0 flex-1">
-                      <span className={`flex items-center gap-1.5 text-sm font-semibold ${active ? "text-white" : "text-white/75"}`}>
-                        <Icon className="h-3.5 w-3.5" />
-                        {item.label}
-                      </span>
-                      <span className="mt-0.5 block truncate text-[10px] text-white/38">
-                        {item.note} · {counts[item.key]}
-                      </span>
+                  </span>
+                  <span className="min-w-0">
+                    <span className={`block text-xs font-semibold ${active ? "text-white" : "text-white/70"}`}>
+                      {item.label}
                     </span>
-                  </button>
-                );
-              })}
-            </nav>
-            <div className="border-t border-white/10 p-4">
-              <div className="flex items-center justify-between text-[10px] text-white/35">
-                <span>DeepSeek {caps.deepseek ? "就绪" : "未配置"}</span>
-                <span className={`h-1.5 w-1.5 rounded-full ${caps.deepseek ? "bg-[var(--projector)]" : "bg-white/25"}`} />
-              </div>
-              <div className="mt-1 text-[10px] text-white/35">
-                Seedream {caps.seedream ? "✓" : "—"} · Seedance {caps.seedance ? "✓" : "—"} · 无登录积分
-              </div>
-            </div>
+                    <span className="mt-0.5 block truncate text-[9px] text-white/35">{counts[item.key]}</span>
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </aside>
 
         <section className="relative min-w-0 lg:h-screen lg:overflow-hidden">
           {(busyMsg || loading) && (
-            <div className="absolute inset-x-0 top-16 z-20 flex items-center justify-center gap-2 bg-[var(--navy)]/90 px-4 py-2 text-sm text-white">
+            <div className="absolute inset-x-0 top-16 z-20 flex items-center justify-center gap-2 bg-[#7c6cff]/90 px-4 py-2 text-sm text-white">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
               {busyMsg || "加载中…"}
             </div>
           )}
-          <header className="flex h-16 items-center justify-between border-b border-[var(--line)] bg-white/85 px-4 backdrop-blur md:px-7">
-            <div>
-              <div className="label !mb-0">
-                Stage {String(STEPS.findIndex((s) => s.key === step) + 1).padStart(2, "0")}
+          <header className="flex h-16 items-center justify-between border-b border-[var(--line)] bg-[#0c0e14]/90 px-4 backdrop-blur md:px-6">
+            <div className="min-w-0">
+              <button
+                type="button"
+                onClick={onBack}
+                className="inline-flex items-center gap-1.5 text-xs text-white/45 hover:text-white"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" /> 返回工坊
+              </button>
+              <div className="mt-0.5 flex flex-wrap items-center gap-2">
+                <h1 className="truncate text-lg font-semibold">{project.title || projectId}</h1>
+                <span className="rounded-full border border-white/10 bg-white/[.04] px-2 py-0.5 text-[10px] text-white/55">
+                  {project.genre || "题材未设"}
+                </span>
+                <span className="rounded-full border border-white/10 bg-white/[.04] px-2 py-0.5 text-[10px] text-white/55">
+                  {project.ratio || "9:16"}
+                </span>
               </div>
-              <h2 className="display-type text-xl font-semibold">{activeMeta.label}</h2>
             </div>
-            <button type="button" className="btn-secondary !min-h-9" onClick={onRefresh} disabled={loading}>
-              <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> 刷新
-            </button>
+            <div className="flex items-center gap-2">
+              <div className="hidden text-[10px] text-white/35 sm:block">
+                DeepSeek {caps.deepseek ? "就绪" : "未配置"} · Seedream {caps.seedream ? "✓" : "—"} · Seedance{" "}
+                {caps.seedance ? "✓" : "—"}
+              </div>
+              <button type="button" className="btn-secondary !min-h-9" onClick={onRefresh} disabled={loading}>
+                <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> 刷新
+              </button>
+            </div>
           </header>
-          <div className="scrollbar-thin min-h-[calc(100vh-4rem)] overflow-y-auto p-4 md:p-7 lg:h-[calc(100vh-4rem)]">
+          <div className="border-b border-[var(--line)] bg-black/20 px-4 py-2 md:px-6">
+            <div className="label !mb-0">Stage {String(STEPS.findIndex((s) => s.key === step) + 1).padStart(2, "0")}</div>
+            <h2 className="text-base font-semibold">{activeMeta.label}</h2>
+          </div>
+          <div className="scrollbar-thin min-h-[calc(100vh-7.5rem)] overflow-y-auto p-4 md:p-6 lg:h-[calc(100vh-7.5rem)]">
             {step === "script" && <ScriptStep {...common} />}
             {step === "character" && <EntityStep {...common} kind="character" />}
             {step === "scene" && <EntityStep {...common} kind="scene" />}

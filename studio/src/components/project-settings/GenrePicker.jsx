@@ -19,8 +19,8 @@ export function GenrePicker({ value, onChange, disabled = false, genres }) {
             onClick={() => onChange(option)}
             className={`rounded-full border px-3 py-1.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-55 ${
               value === option
-                ? "border-[var(--navy)] bg-[var(--navy)] text-white shadow-sm"
-                : "border-[var(--line)] bg-white text-[var(--muted)] hover:border-[#aeb8c6] hover:text-[var(--ink)]"
+                ? "border-transparent bg-[var(--gradient)] text-white shadow-sm"
+                : "border-[var(--line-strong)] bg-white/[.03] text-[var(--muted)] hover:border-white/25 hover:text-[var(--ink)]"
             }`}
           >
             {option}
@@ -36,8 +36,8 @@ export function GenrePicker({ value, onChange, disabled = false, genres }) {
           }}
           className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-55 ${
             !isPreset
-              ? "border-[var(--projector)] bg-[var(--projector)]/10 text-[var(--ink)]"
-              : "border-dashed border-[var(--line)] bg-white text-[var(--muted)] hover:border-[var(--projector)] hover:text-[var(--ink)]"
+              ? "border-[#7c6cff]/50 bg-[#7c6cff]/15 text-[var(--ink)]"
+              : "border-dashed border-[var(--line-strong)] bg-white/[.03] text-[var(--muted)] hover:border-[#7c6cff]/50 hover:text-[var(--ink)]"
           }`}
         >
           <PenLine className="h-3.5 w-3.5" />

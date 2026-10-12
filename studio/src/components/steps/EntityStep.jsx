@@ -322,7 +322,7 @@ function EntityCard({ entity, accent, working, onGenerate, onUpload, onSelect, o
   return (
     <>
       <article className="panel overflow-hidden">
-        <div className="relative aspect-[4/3] bg-[#e8ebef]">
+        <div className="relative aspect-[4/3] bg-black/40">
           {entity.selectedImage ? (
             <button
               type="button"

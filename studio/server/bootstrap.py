@@ -64,21 +64,33 @@ def _char_id(name: str) -> str:
     return "char_" + re.sub(r"[^\w\u4e00-\u9fff]", "", name)[:24] or "char_unknown"
 
 
-def bootstrap_project(
-    projects_root: Path,
+def _extract_props(text: str) -> list[dict[str, str]]:
+    keywords = ["手机", "钥匙", "照片", "信件", "戒指", "刀", "枪", "手表", "项链", "合同", "U盘", "信封"]
+    found = []
+    for kw in keywords:
+        if kw in text and len(found) < 8:
+            found.append(
+                {
+                    "id": f"prop_{len(found)+1:02d}",
+                    "name": kw,
+                    "description": f"剧情关键道具：{kw}，保持造型一致",
+                }
+            )
+    return found
+
+
+def materialize_project(
+    project: Path,
     *,
-    name: str,
     title: str,
     source_text: str,
     aspect_ratio: str = "9:16",
     visual_style: str = "当代都市夜戏，电影感冷暖对比",
+    genre: str = "都市逆袭",
 ) -> dict[str, Any]:
-    slug = slugify(name or title)
-    project = projects_root / slug
-    if project.exists():
-        raise FileExistsError(f"project already exists: {slug}")
-    project.mkdir(parents=True)
-    (project / "source").mkdir()
+    """Write novel + all six-step artifacts into an existing project directory."""
+    project.mkdir(parents=True, exist_ok=True)
+    (project / "source").mkdir(exist_ok=True)
     (project / "source" / "NOVEL.md").write_text(source_text.strip() + "\n", encoding="utf-8")
     (project / "README.md").write_text(f"# {title}\n\nBootstrapped by Drama Studio.\n", encoding="utf-8")
 
@@ -177,12 +189,18 @@ def bootstrap_project(
             }
         ],
         "locations": locations,
-        "props": [],
+        "props": _extract_props(source_text),
     }
 
+    logline = (scenes_raw[0]["body"] if scenes_raw else title)[:120]
     script = {
         "version": "1.0",
         "title": title,
+        "synopsis": logline,
+        "brief": source_text.strip()[:4000],
+        "genre": genre,
+        "visual_style": visual_style,
+        "aspect_ratio": aspect_ratio,
         "total_duration_seconds": sum(sc["estimated_duration_seconds"] for sc in scene_docs) or 90,
         "speakers": [
             {
@@ -201,6 +219,18 @@ def bootstrap_project(
                 "end_seconds": sc["estimated_duration_seconds"],
             }
             for i, sc in enumerate(scene_docs, 1)
+        ],
+        "episodes": [
+            {
+                "id": "ep01",
+                "episodeNumber": 1,
+                "title": title,
+                "status": "draft",
+                "content": "\n\n".join(
+                    f"【{sc['title']}】\n{sc.get('body') or ''}" for sc in scene_docs
+                ),
+                "summary": logline,
+            }
         ],
         "dialogue_beats": [
             {k: v for k, v in d.items() if k != "scene_id"} for d in dialogue_all
@@ -284,11 +314,12 @@ def bootstrap_project(
 
     research = {
         "version": "1.0",
-        "genre": "短剧",
+        "genre": genre,
         "platform_format": "竖屏短剧" if aspect_ratio == "9:16" else "横屏",
         "aspect_ratio": aspect_ratio,
+        "visual_style": visual_style,
         "references": [],
-        "notes": "Studio bootstrap from source text",
+        "notes": "Studio bootstrap from novel / source text",
     }
 
     proposal = {
@@ -358,10 +389,71 @@ def bootstrap_project(
         )
 
     return {
-        "name": slug,
+        "name": project.name,
         "path": str(project),
         "title": title,
         "scenes": len(scene_docs),
         "shots": len(shots),
         "characters": len(bible["characters"]),
+        "props": len(bible.get("props") or []),
     }
+
+
+def bootstrap_project(
+    projects_root: Path,
+    *,
+    name: str,
+    title: str,
+    source_text: str,
+    aspect_ratio: str = "9:16",
+    visual_style: str = "当代都市夜戏，电影感冷暖对比",
+    genre: str = "都市逆袭",
+) -> dict[str, Any]:
+    slug = slugify(name or title)
+    project = projects_root / slug
+    if project.exists():
+        raise FileExistsError(f"project already exists: {slug}")
+    return materialize_project(
+        project,
+        title=title,
+        source_text=source_text,
+        aspect_ratio=aspect_ratio,
+        visual_style=visual_style,
+        genre=genre,
+    )
+
+
+def rebuild_project(
+    project: Path,
+    *,
+    title: str | None = None,
+    source_text: str,
+    aspect_ratio: str | None = None,
+    visual_style: str | None = None,
+    genre: str | None = None,
+) -> dict[str, Any]:
+    """Re-split an existing project from novel text (keeps project folder name)."""
+    script = {}
+    script_path = project / "script.json"
+    if script_path.exists():
+        try:
+            script = json.loads(script_path.read_text(encoding="utf-8"))
+        except Exception:
+            script = {}
+    # Clear previous renders/exports so UI doesn't show stale media
+    for rel in ("renders", "exports"):
+        target = project / rel
+        if target.is_dir():
+            import shutil
+
+            shutil.rmtree(target, ignore_errors=True)
+    return materialize_project(
+        project,
+        title=title or script.get("title") or project.name,
+        source_text=source_text,
+        aspect_ratio=aspect_ratio or script.get("aspect_ratio") or "9:16",
+        visual_style=visual_style
+        or script.get("visual_style")
+        or "当代都市夜戏，电影感冷暖对比",
+        genre=genre or script.get("genre") or "都市逆袭",
+    )

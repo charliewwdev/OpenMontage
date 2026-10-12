@@ -28,12 +28,30 @@ export function deriveProjectView(bundle) {
   const storyboard = arts.storyboard || {};
   const ledger = arts.ledger || {};
 
-  const characters = bible.characters || bible.cast || [];
-  const locations = bible.locations || bible.scenes || bible.sets || [];
-  const props = bible.props || bible.prop_assets || [];
+  const characters = (bible.characters || bible.cast || []).map((c) => ({
+    ...c,
+    name: c.name || c.display_name || c.id,
+  }));
+  const locations = (bible.locations || bible.scenes || bible.sets || []).map((c) => ({
+    ...c,
+    name: c.name || c.title || c.id,
+  }));
+  const props = (bible.props || bible.prop_assets || []).map((c) => ({
+    ...c,
+    name: c.name || c.title || c.id,
+  }));
   const episodes =
     script.episodes ||
-    breakdown.episodes ||
+    (breakdown.episodes || []).map((ep) => ({
+      ...ep,
+      episodeNumber: ep.episodeNumber || ep.index || 1,
+      content:
+        ep.content ||
+        (ep.scenes || [])
+          .map((s) => `【${s.title || s.id}】\n${s.purpose || ""}`)
+          .join("\n\n"),
+      status: ep.status || "draft",
+    })) ||
     (script.scenes
       ? [
           {
@@ -49,14 +67,15 @@ export function deriveProjectView(bundle) {
   const shots = storyboard.shots || [];
   const jobs = ledger.jobs || [];
   const jobByShot = Object.fromEntries(jobs.map((j) => [j.shot_id, j]));
-  const succeeded = jobs.filter((j) => j.status === "succeeded").length;
+  const ready = jobs.filter((j) => ["needs_review", "succeeded", "approved"].includes(j.status)).length;
+  const hasExport = Boolean((arts.metrics || {}).last_export?.path);
 
   return {
     name: bundle.name,
     title: script.title || titleFromName(bundle.name),
-    ratio: script.aspect_ratio || script.ratio || "9:16",
-    genre: script.genre || script.tone || "短剧",
-    style: script.visual_style || script.style || "",
+    ratio: script.aspect_ratio || breakdown.aspect_ratio || script.ratio || "9:16",
+    genre: script.genre || arts.research?.genre || script.tone || "短剧",
+    style: script.visual_style || bible.visual_style || script.style || "",
     synopsis: script.synopsis || script.logline || script.summary || bundle.source_excerpt || "",
     brief: script.brief || script.creative_brief || "",
     sourceExcerpt: bundle.source_excerpt || "",
@@ -71,6 +90,7 @@ export function deriveProjectView(bundle) {
     storyboard,
     script,
     bible,
+    breakdown,
     steps: bundle.steps || [],
     status: bundle.status || {},
     counts: {
@@ -78,8 +98,8 @@ export function deriveProjectView(bundle) {
       characters: String(characters.length),
       locations: String(locations.length),
       props: String(props.length),
-      storyboard: `${succeeded}/${shots.length} 镜`,
-      edit: shots.length ? (succeeded ? "可剪辑" : "待生成") : "未开始",
+      storyboard: `${ready}/${shots.length} 镜`,
+      edit: hasExport ? "已成片" : shots.length ? (ready ? "可导出" : "待生成") : "未开始",
     },
     progress: STEPS.map((step) => {
       const meta = (bundle.steps || []).find((s) => s.id === step.id);
@@ -97,6 +117,8 @@ export function libraryCardFromListItem(name, bundleHint) {
     ratio: view?.ratio || "9:16",
     synopsis: view?.synopsis || "打开后加载剧本与素材档案",
     progress: view?.progress || STEPS.map(() => false),
-    shotsReady: view ? `${view.jobs.filter((j) => j.status === "succeeded").length}/${view.shots.length}` : "—",
+    shotsReady: view
+      ? `${view.jobs.filter((j) => ["needs_review", "succeeded", "approved"].includes(j.status)).length}/${view.shots.length}`
+      : "—",
   };
 }

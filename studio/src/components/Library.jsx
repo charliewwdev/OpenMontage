@@ -49,7 +49,7 @@ export function Library({ projects, bundles, onOpen, onCreate, onDeleted, caps }
                 把一个想法或故事，变成一部完整短剧。
               </h1>
               <p className="mt-5 max-w-2xl text-sm leading-7 text-white/65 md:text-base">
-                编导台整理剧本与资产，无限画布编排镜头链路，剪辑室导出成片——覆盖从构思到成片的完整制作流程。
+                上传小说 → 拆解剧本与资产 → 分镜生成 → 剪辑导出 MP4。六步制片台覆盖从故事到成片的完整流程。
               </p>
             </div>
             {caps ? (

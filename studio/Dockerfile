@@ -20,9 +20,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Minimal OS deps for healthcheck + optional json tools
+# Healthcheck + FFmpeg (成片导出) + CJK fonts for board drawtext
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends curl \
+  && apt-get install -y --no-install-recommends curl ffmpeg fonts-noto-cjk \
   && rm -rf /var/lib/apt/lists/*
 
 # Studio API needs schema validation + YAML pipeline manifests

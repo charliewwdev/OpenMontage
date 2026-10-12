@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "./api";
 import { Library } from "./components/Library";
-import { NewProjectModal } from "./components/NewProjectModal";
+import { CreateProjectPage } from "./components/CreateProjectPage";
 import { StudioShell } from "./components/StudioShell";
 
 export default function App() {
@@ -13,7 +13,6 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [desk, setDesk] = useState("director");
   const [step, setStep] = useState("script");
-  const [showNew, setShowNew] = useState(false);
   const [pipeline, setPipeline] = useState(null);
   const [subgraphs, setSubgraphs] = useState([]);
   const [selectedSubgraph, setSelectedSubgraph] = useState(null);
@@ -32,7 +31,7 @@ export default function App() {
         try {
           previews[name] = await api(`/api/project/bundle?name=${encodeURIComponent(name)}`);
         } catch {
-          /* ignore preview failures */
+          /* ignore */
         }
       }),
     );
@@ -47,8 +46,8 @@ export default function App() {
       const b = await api(`/api/project/bundle?name=${encodeURIComponent(name)}`);
       setBundle(b);
       setPreviewBundles((prev) => ({ ...prev, [name]: b }));
-      const first = (b.steps || []).find((s) => s.state !== "empty");
-      if (first && !quiet) setStep(first.id);
+      if (!quiet) setStep("script");
+      setDesk("director");
       setScreen("studio");
     } catch (e) {
       setBundle(null);
@@ -102,70 +101,18 @@ export default function App() {
       const res = await api("/api/project/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ project }),
+        body: JSON.stringify({ project, limit: 8 }),
       });
-      setGenState(res.status || { running: true });
+      setGenState(res.state || { running: true });
     } catch (e) {
       window.alert(String(e.message || e));
     }
   };
 
-  return (
-    <>
-      {screen === "library" ? (
-        <Library
-          projects={projects}
-          bundles={previewBundles}
-          caps={caps}
-          onOpen={(name) => void loadProject(name)}
-          onCreate={() => setShowNew(true)}
-          onDeleted={(id) => {
-            setProjects((list) => list.filter((p) => p !== id));
-            setPreviewBundles((prev) => {
-              const next = { ...prev };
-              delete next[id];
-              return next;
-            });
-            if (project === id) {
-              setProject("");
-              setBundle(null);
-            }
-          }}
-        />
-      ) : (
-        <StudioShell
-          project={project}
-          bundle={bundle}
-          loading={loading}
-          desk={desk}
-          setDesk={setDesk}
-          step={step}
-          setStep={setStep}
-          onBack={() => {
-            setScreen("library");
-            void refreshProjects();
-          }}
-          onRefresh={() => void loadProject(project, true)}
-          onBundle={(b) => {
-            if (b?.artifacts) setBundle(b);
-            else if (b) setBundle(b);
-          }}
-          pipeline={pipeline}
-          subgraphs={subgraphs}
-          selectedSubgraph={selectedSubgraph}
-          setSelectedSubgraph={setSelectedSubgraph}
-          subgraphDoc={subgraphDoc}
-          canvasSource={canvasSource}
-          setCanvasSource={setCanvasSource}
-          genState={genState}
-          onGenerate={runGenerate}
-          caps={caps}
-        />
-      )}
-
-      <NewProjectModal
-        open={showNew}
-        onClose={() => setShowNew(false)}
+  if (screen === "create") {
+    return (
+      <CreateProjectPage
+        onBack={() => setScreen("library")}
         onCreated={(name, createdBundle) => {
           setProjects((list) => (list.includes(name) ? list : [name, ...list]));
           if (createdBundle) {
@@ -179,6 +126,61 @@ export default function App() {
           void refreshProjects();
         }}
       />
-    </>
+    );
+  }
+
+  if (screen === "studio") {
+    return (
+      <StudioShell
+        project={project}
+        bundle={bundle}
+        loading={loading}
+        desk={desk}
+        setDesk={setDesk}
+        step={step}
+        setStep={setStep}
+        onBack={() => {
+          setScreen("library");
+          void refreshProjects();
+        }}
+        onRefresh={() => void loadProject(project, true)}
+        onBundle={(b) => {
+          if (b?.artifacts) setBundle(b);
+          else if (b) setBundle(b);
+        }}
+        pipeline={pipeline}
+        subgraphs={subgraphs}
+        selectedSubgraph={selectedSubgraph}
+        setSelectedSubgraph={setSelectedSubgraph}
+        subgraphDoc={subgraphDoc}
+        canvasSource={canvasSource}
+        setCanvasSource={setCanvasSource}
+        genState={genState}
+        onGenerate={runGenerate}
+        caps={caps}
+      />
+    );
+  }
+
+  return (
+    <Library
+      projects={projects}
+      bundles={previewBundles}
+      caps={caps}
+      onOpen={(name) => void loadProject(name)}
+      onCreate={() => setScreen("create")}
+      onDeleted={(id) => {
+        setProjects((list) => list.filter((p) => p !== id));
+        setPreviewBundles((prev) => {
+          const next = { ...prev };
+          delete next[id];
+          return next;
+        });
+        if (project === id) {
+          setProject("");
+          setBundle(null);
+        }
+      }}
+    />
   );
 }

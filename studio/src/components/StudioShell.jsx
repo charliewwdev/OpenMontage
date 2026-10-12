@@ -145,7 +145,8 @@ export function StudioShell({
                 <span className="h-1.5 w-1.5 rounded-full bg-[var(--projector)]" />
               </div>
               <div className="mt-1 text-[10px] text-white/35">
-                {caps ? `${caps.configured}/${caps.total} keys` : "—"} · openmontage.dtok.io
+                {caps ? `${caps.configured}/${caps.total} keys` : "—"}
+                {caps?.ffmpeg ? " · FFmpeg" : ""} · openmontage.dtok.io
               </div>
             </div>
           </div>

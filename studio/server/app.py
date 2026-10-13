@@ -4,9 +4,12 @@
 from __future__ import annotations
 
 import base64
+import json
 import mimetypes
 import os
 import sys
+import time
+import uuid
 from pathlib import Path
 from typing import Any
 from urllib.parse import unquote
@@ -206,19 +209,55 @@ async def test_keys() -> dict[str, Any]:
     return {"results": results, "keys": public_status()}
 
 
-@app.get("/api/platform/assets")
-def platform_assets() -> dict[str, Any]:
+_LIBRARY_ID = "_library"
+_UPLOAD_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".mp4", ".webm", ".svg", ".wav", ".mp3"}
+
+
+def _ensure_library_root() -> Path:
+    root = PROJECTS_ROOT / _LIBRARY_ID
+    (root / "media" / "uploads").mkdir(parents=True, exist_ok=True)
+    state = root / "studio_state.json"
+    if not state.is_file():
+        state.write_text(
+            json.dumps(
+                {
+                    "id": _LIBRARY_ID,
+                    "title": "个人素材库",
+                    "updatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+    return root
+
+
+def _asset_kind(suffix: str) -> str:
+    s = suffix.lower()
+    if s in {".mp4", ".webm"}:
+        return "video"
+    if s in {".wav", ".mp3"}:
+        return "audio"
+    return "image"
+
+
+def _collect_platform_assets() -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
-    for project in STORE.list_items():
-        pid = project["id"]
-        root = STORE._dir(pid)
+    _ensure_library_root()
+    listed = {p["id"]: p for p in STORE.list_items()}
+    listed[_LIBRARY_ID] = {"id": _LIBRARY_ID, "title": "个人素材库"}
+    for pid, project in listed.items():
+        root = STORE._dir(pid) if pid != _LIBRARY_ID else (PROJECTS_ROOT / _LIBRARY_ID)
+        if not root or not root.is_dir():
+            continue
         media = root / "media"
         if not media.is_dir():
             continue
         for path in sorted(media.rglob("*")):
             if not path.is_file():
                 continue
-            if path.suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp", ".mp4", ".svg", ".wav", ".mp3"}:
+            if path.suffix.lower() not in _UPLOAD_EXTS:
                 continue
             rel = path.relative_to(root).as_posix()
             items.append(
@@ -227,13 +266,89 @@ def platform_assets() -> dict[str, Any]:
                     "projectTitle": project.get("title") or pid,
                     "path": rel,
                     "url": f"/api/media/{pid}/{rel}",
-                    "kind": "video" if path.suffix.lower() == ".mp4" else "audio" if path.suffix.lower() in {".wav", ".mp3"} else "image",
+                    "kind": _asset_kind(path.suffix),
                     "size": path.stat().st_size,
                     "updatedAt": path.stat().st_mtime,
+                    "uploaded": pid == _LIBRARY_ID or rel.startswith("media/uploads/"),
                 }
             )
     items.sort(key=lambda x: x["updatedAt"], reverse=True)
-    return {"assets": items[:500], "total": len(items)}
+    return items
+
+
+@app.get("/api/platform/assets")
+def platform_assets(
+    offset: int = Query(0, ge=0),
+    limit: int = Query(60, ge=1, le=200),
+) -> dict[str, Any]:
+    items = _collect_platform_assets()
+    total = len(items)
+    page = items[offset : offset + limit]
+    next_offset = offset + limit if offset + limit < total else None
+    return {
+        "assets": page,
+        "total": total,
+        "offset": offset,
+        "limit": limit,
+        "nextOffset": next_offset,
+        "hasMore": next_offset is not None,
+    }
+
+
+@app.post("/api/platform/assets/upload")
+async def platform_assets_upload(request: Request) -> dict[str, Any]:
+    """Upload personal reference media into the shared library (有彩-style 个人素材)."""
+    body = await request.json()
+    data_url = str(body.get("dataUrl") or "")
+    filename = str(body.get("filename") or "upload.bin")
+    if "," not in data_url:
+        raise _http_error(400, "dataUrl required")
+    header, b64 = data_url.split(",", 1)
+    try:
+        raw = base64.b64decode(b64)
+    except Exception as exc:  # noqa: BLE001
+        raise _http_error(400, f"invalid dataUrl: {exc}") from exc
+    if not raw:
+        raise _http_error(400, "empty file")
+    if len(raw) > 40 * 1024 * 1024:
+        raise _http_error(400, "file too large (max 40MB)")
+    ext = Path(filename).suffix.lower()
+    if ext not in _UPLOAD_EXTS:
+        # Guess from data URL mime
+        mime = ""
+        if ";base64" in header and ":" in header:
+            mime = header.split(":", 1)[1].split(";", 1)[0].strip().lower()
+        ext = {
+            "image/png": ".png",
+            "image/jpeg": ".jpg",
+            "image/webp": ".webp",
+            "image/gif": ".gif",
+            "image/svg+xml": ".svg",
+            "video/mp4": ".mp4",
+            "video/webm": ".webm",
+            "audio/wav": ".wav",
+            "audio/mpeg": ".mp3",
+        }.get(mime, "")
+    if ext not in _UPLOAD_EXTS:
+        raise _http_error(400, "unsupported file type")
+    root = _ensure_library_root()
+    name = f"{int(time.time())}-{uuid.uuid4().hex[:8]}{ext}"
+    dest = root / "media" / "uploads" / name
+    dest.write_bytes(raw)
+    rel = dest.relative_to(root).as_posix()
+    return {
+        "ok": True,
+        "asset": {
+            "projectId": _LIBRARY_ID,
+            "projectTitle": "个人素材库",
+            "path": rel,
+            "url": f"/api/media/{_LIBRARY_ID}/{rel}",
+            "kind": _asset_kind(ext),
+            "size": dest.stat().st_size,
+            "updatedAt": dest.stat().st_mtime,
+            "uploaded": True,
+        },
+    }
 
 
 @app.get("/api/platform/skills")
@@ -449,10 +564,11 @@ def auth_refresh(request: Request) -> JSONResponse:
 @app.get("/api/inspire/pins")
 def inspire_pins(
     limit: int = Query(48, ge=1, le=120),
+    offset: int = Query(0, ge=0),
     refresh: bool = Query(False),
     category: str = Query("all"),
 ) -> dict[str, Any]:
-    return fetch_pins(limit=limit, force=refresh, category=category)
+    return fetch_pins(limit=limit, force=refresh, category=category, offset=offset)
 
 
 @app.get("/api/projects")

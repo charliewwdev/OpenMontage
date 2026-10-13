@@ -47,7 +47,19 @@ pinterest:
     - disney
     - hbomax
     - interviewmag
-  boards: []
+    - filmgrab
+    - criterion
+    - letterboxd
+    - shortoftheweek
+    - cinematography
+    - artofthetitle
+  boards:
+    - user: filmgrab
+      board: movies
+      label: Film Grab
+    - user: pinterest
+      board: photography
+      label: Photography
   categories:
     - id: all
       label: 全部

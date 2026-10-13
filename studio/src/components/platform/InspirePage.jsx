@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Copy, ExternalLink, Lightbulb, RefreshCw } from "lucide-react";
+import { Copy, ExternalLink, Lightbulb, Loader2, RefreshCw } from "lucide-react";
 import { api } from "../../api";
 import { useLocale } from "../../lib/i18n";
 import { toast } from "../../lib/toast";
@@ -14,6 +14,8 @@ const DEFAULT_CATS = [
   { id: "storyboard", label: "分镜" },
 ];
 
+const PAGE_SIZE = 48;
+
 export function InspirePage({ config, onUsePrompt }) {
   const { t } = useLocale();
   const prompts = config?.inspirePrompts || [];
@@ -24,7 +26,10 @@ export function InspirePage({ config, onUsePrompt }) {
   const [categories, setCategories] = useState(DEFAULT_CATS);
   const [pinSource, setPinSource] = useState("");
   const [pinTotal, setPinTotal] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [nextOffset, setNextOffset] = useState(null);
   const [pinLoading, setPinLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const promptTags = useMemo(() => {
     const all = t("inspire.all");
@@ -37,18 +42,23 @@ export function InspirePage({ config, onUsePrompt }) {
       ? prompts
       : prompts.filter((p) => p.tag === promptFilter);
 
-  const loadPins = async (refresh = false, nextCategory = category) => {
-    setPinLoading(true);
+  const loadPins = async ({ refresh = false, nextCategory = category, append = false, offset = 0 } = {}) => {
+    if (append) setLoadingMore(true);
+    else setPinLoading(true);
     try {
       const q = new URLSearchParams({
-        limit: "72",
+        limit: String(PAGE_SIZE),
+        offset: String(offset),
         category: nextCategory || "all",
       });
       if (refresh) q.set("refresh", "true");
       const data = await api(`/api/inspire/pins?${q.toString()}`);
-      setPins(data.items || []);
+      const batch = data.items || [];
+      setPins((prev) => (append ? [...prev, ...batch] : batch));
       setPinSource(data.source || "");
-      setPinTotal(data.total || (data.items || []).length);
+      setPinTotal(data.total || batch.length);
+      setHasMore(Boolean(data.hasMore));
+      setNextOffset(data.nextOffset ?? null);
       if (Array.isArray(data.categories) && data.categories.length) {
         setCategories(data.categories);
       } else if (config?.pinterest?.categories?.length) {
@@ -58,11 +68,12 @@ export function InspirePage({ config, onUsePrompt }) {
       toast.error(String(err.message || err));
     } finally {
       setPinLoading(false);
+      setLoadingMore(false);
     }
   };
 
   useEffect(() => {
-    void loadPins(false, "all");
+    void loadPins({ refresh: false, nextCategory: "all", offset: 0 });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -70,7 +81,7 @@ export function InspirePage({ config, onUsePrompt }) {
     <PageShell
       eyebrow={page.eyebrow || "Inspiration"}
       title={page.title || "灵感广场"}
-      description={page.description || "从 Pinterest 抓取的影视灵感素材，可按角色 / 场景 / 道具浏览。"}
+      description={page.description || "从 Pinterest 抓取的影视灵感素材，可按角色 / 场景 / 道具浏览，支持分页加载。"}
     >
       <div className="mb-8">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
@@ -79,14 +90,14 @@ export function InspirePage({ config, onUsePrompt }) {
             <div className="text-xs text-white/40">
               {t("inspire.fromPinterest")}
               {pinSource ? ` · ${pinSource}` : ""}
-              {pinTotal ? ` · ${pinTotal}` : ""}
+              {pinTotal ? ` · 已显示 ${pins.length}/${pinTotal}` : ""}
             </div>
           </div>
           <button
             type="button"
             className="btn-secondary !min-h-9 !px-3"
             disabled={pinLoading}
-            onClick={() => void loadPins(true, category)}
+            onClick={() => void loadPins({ refresh: true, nextCategory: category, offset: 0 })}
           >
             <RefreshCw className={`h-3.5 w-3.5 ${pinLoading ? "animate-spin" : ""}`} />
             {t("common.retry")}
@@ -105,7 +116,7 @@ export function InspirePage({ config, onUsePrompt }) {
                 className={selected ? "btn-primary !min-h-9 !px-3" : "btn-secondary !min-h-9 !px-3"}
                 onClick={() => {
                   setCategory(id);
-                  void loadPins(false, id);
+                  void loadPins({ refresh: false, nextCategory: id, offset: 0 });
                 }}
               >
                 {label}
@@ -117,7 +128,7 @@ export function InspirePage({ config, onUsePrompt }) {
         <div className="columns-2 gap-3 sm:columns-3 xl:columns-4 2xl:columns-5">
           {pins.map((pin) => (
             <a
-              key={pin.id}
+              key={`${pin.id}-${pin.imageUrl}`}
               href={pin.link || "https://www.pinterest.com/"}
               target="_blank"
               rel="noreferrer"
@@ -152,6 +163,27 @@ export function InspirePage({ config, onUsePrompt }) {
         ) : null}
         {!pinLoading && !pins.length ? (
           <p className="text-sm text-white/40">{t("common.error")}</p>
+        ) : null}
+
+        {hasMore ? (
+          <div className="mt-6 flex justify-center">
+            <button
+              type="button"
+              className="btn-secondary"
+              disabled={loadingMore}
+              onClick={() =>
+                void loadPins({
+                  refresh: false,
+                  nextCategory: category,
+                  append: true,
+                  offset: nextOffset ?? pins.length,
+                })
+              }
+            >
+              {loadingMore ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+              加载更多
+            </button>
+          </div>
         ) : null}
       </div>
 

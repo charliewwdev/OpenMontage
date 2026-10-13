@@ -403,8 +403,12 @@ def auth_refresh(request: Request) -> JSONResponse:
 
 
 @app.get("/api/inspire/pins")
-def inspire_pins(limit: int = Query(24, ge=1, le=60), refresh: bool = Query(False)) -> dict[str, Any]:
-    return fetch_pins(limit=limit, force=refresh)
+def inspire_pins(
+    limit: int = Query(48, ge=1, le=120),
+    refresh: bool = Query(False),
+    category: str = Query("all"),
+) -> dict[str, Any]:
+    return fetch_pins(limit=limit, force=refresh, category=category)
 
 
 @app.get("/api/projects")

@@ -1,5 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "./api";
+import { AuthPage } from "./components/AuthPage";
+import { clearSession, getStoredUser, getToken, setSession } from "./lib/auth";
+import { LocaleProvider } from "./lib/i18n";
 import { toast } from "./lib/toast";
 import { Library } from "./components/Library";
 import { CreateProjectPage } from "./components/CreateProjectPage";
@@ -30,6 +33,13 @@ export default function App() {
   const [busyMsg, setBusyMsg] = useState("");
   const [nav, setNav] = useState("workshop");
   const [agentSeed, setAgentSeed] = useState("");
+  const [user, setUser] = useState(() => getStoredUser());
+  const [authReady, setAuthReady] = useState(false);
+  const [authed, setAuthed] = useState(false);
+
+  const messages = useMemo(() => config?.i18n?.messages || { zh: {}, en: {} }, [config]);
+  const defaultLocale = config?.i18n?.defaultLocale || "zh";
+  const authRequired = config?.auth?.required !== false;
 
   const refreshConfig = useCallback(async () => {
     try {
@@ -45,6 +55,41 @@ export default function App() {
     const d = await api("/api/projects");
     setProjects(d.projects || []);
     return d.projects || [];
+  }, []);
+
+  const verifySession = useCallback(async (cfg) => {
+    const required = cfg?.auth?.required !== false;
+    const token = getToken();
+    if (!required) {
+      setAuthed(true);
+      setAuthReady(true);
+      return true;
+    }
+    if (!token) {
+      setAuthed(false);
+      setAuthReady(true);
+      return false;
+    }
+    try {
+      const res = await api("/api/auth/me");
+      const profile = res?.data || res;
+      const nextUser = {
+        userId: profile?.id || profile?.userId,
+        username: profile?.username || profile?.nickname || getStoredUser()?.username || "user",
+        avatar: profile?.avatar || "",
+      };
+      setUser(nextUser);
+      setSession({ token, user: nextUser });
+      setAuthed(true);
+      setAuthReady(true);
+      return true;
+    } catch {
+      clearSession();
+      setUser(null);
+      setAuthed(false);
+      setAuthReady(true);
+      return false;
+    }
   }, []);
 
   const loadProject = useCallback(async (id, quiet = false, openStep = "script") => {
@@ -72,9 +117,14 @@ export default function App() {
   }, [projectId]);
 
   useEffect(() => {
-    void refreshConfig();
-    refreshProjects().catch(() => {});
-  }, [refreshConfig, refreshProjects]);
+    (async () => {
+      const cfg = await refreshConfig();
+      const ok = await verifySession(cfg);
+      if (ok) {
+        refreshProjects().catch(() => {});
+      }
+    })();
+  }, [refreshConfig, refreshProjects, verifySession]);
 
   const goKeys = () => {
     setNav("keys");
@@ -95,6 +145,31 @@ export default function App() {
       setConfig((current) => ({ ...(current || {}), capabilities: data.capabilities }));
     }
     await refreshConfig();
+  };
+
+  const onLogout = async () => {
+    try {
+      await api("/api/auth/logout", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+    } catch {
+      /* ignore upstream logout errors */
+    }
+    clearSession();
+    setUser(null);
+    setAuthed(false);
+    setProjects([]);
+    setBundle(null);
+    setProjectId("");
+    setScreen("library");
+  };
+
+  const onAuthed = async (data) => {
+    setUser({
+      userId: data?.userId,
+      username: data?.username,
+      avatar: data?.avatar || "",
+    });
+    setAuthed(true);
+    await refreshProjects().catch(() => {});
   };
 
   let body;
@@ -248,8 +323,18 @@ export default function App() {
   }
 
   return (
-    <PlatformShell active={nav} config={config} onNavigate={onNavigate}>
-      {body}
-    </PlatformShell>
+    <LocaleProvider messages={messages} defaultLocale={defaultLocale}>
+      {!authReady ? (
+        <div className="flex min-h-screen items-center justify-center bg-[var(--stage)] text-sm text-white/50">
+          Loading…
+        </div>
+      ) : authRequired && !authed ? (
+        <AuthPage brand={config?.brand} tagline={config?.tagline} onAuthed={onAuthed} />
+      ) : (
+        <PlatformShell active={nav} config={config} user={user} onNavigate={onNavigate} onLogout={onLogout}>
+          {body}
+        </PlatformShell>
+      )}
+    </LocaleProvider>
   );
 }

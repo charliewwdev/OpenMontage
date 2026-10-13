@@ -12,6 +12,7 @@ import {
   X,
 } from "lucide-react";
 import { api } from "../../api";
+import { requireCapability, toastMaybeKeys } from "../../lib/keys";
 import { toast } from "../../lib/toast";
 import { useTimer } from "../../lib/useTimer";
 import { ConfirmDialog } from "../ConfirmDialog";
@@ -26,8 +27,9 @@ function parseCount(value, max = MAX_PER_REQUEST) {
   return Number.isInteger(count) && count >= 1 && count <= max ? count : null;
 }
 
-export function ScriptStep({ projectId, bundle, config, setBusyMsg, onBundle, onRefresh }) {
+export function ScriptStep({ projectId, bundle, config, setBusyMsg, onBundle, onRefresh, onNeedKeys }) {
   const project = bundle?.project || {};
+  const caps = config?.capabilities || {};
   const episodes = useMemo(
     () => [...(bundle?.episodes || [])].sort((a, b) => a.episodeNumber - b.episodeNumber),
     [bundle?.episodes],
@@ -140,6 +142,7 @@ export function ScriptStep({ projectId, bundle, config, setBusyMsg, onBundle, on
   };
 
   const runGenerate = async () => {
+    if (!requireCapability(caps, "deepseek", onNeedKeys, "DeepSeek Key")) return;
     if (!form.brief.trim()) return toast.error("先填写创作需求或粘贴原始故事");
     if (!form.genre.trim()) return toast.error("请选择题材或填写自定义题材");
     const episodeCount = parseCount(generationEpisodeCount);
@@ -167,7 +170,7 @@ export function ScriptStep({ projectId, bundle, config, setBusyMsg, onBundle, on
       setSelectedId(nextEps[0]?.id || null);
       toast.success(`DeepSeek 已完成第 1–${nextEps.length} 集剧本与素材档案`);
     } catch (e) {
-      toast.error(String(e.message || e));
+      toastMaybeKeys(e, onNeedKeys);
     } finally {
       setGenerating(false);
       setBusyMsg("");
@@ -175,6 +178,7 @@ export function ScriptStep({ projectId, bundle, config, setBusyMsg, onBundle, on
   };
 
   const runContinue = async () => {
+    if (!requireCapability(caps, "deepseek", onNeedKeys, "DeepSeek Key")) return;
     const episodeCount = parseCount(continueEpisodeCount);
     if (episodeCount === null) return toast.error(`本次续写集数必须是 1–${MAX_PER_REQUEST} 的整数`);
     setContinuing(true);
@@ -196,7 +200,7 @@ export function ScriptStep({ projectId, bundle, config, setBusyMsg, onBundle, on
       apply(b);
       toast.success("续写完成");
     } catch (e) {
-      toast.error(String(e.message || e));
+      toastMaybeKeys(e, onNeedKeys);
     } finally {
       setContinuing(false);
       setBusyMsg("");
@@ -204,6 +208,7 @@ export function ScriptStep({ projectId, bundle, config, setBusyMsg, onBundle, on
   };
 
   const runRewrite = async () => {
+    if (!requireCapability(caps, "deepseek", onNeedKeys, "DeepSeek Key")) return;
     const episodeCount = parseCount(rewriteEpisodeCount, maxRewriteCount);
     if (episodeCount === null) return toast.error("重写集数无效");
     if (!rewriteInstruction.trim()) return toast.error("请填写重写要求");
@@ -224,7 +229,7 @@ export function ScriptStep({ projectId, bundle, config, setBusyMsg, onBundle, on
       apply(b);
       toast.success(`已重写第 ${rewriteStartEpisode}–${rewriteStartEpisode + episodeCount - 1} 集`);
     } catch (e) {
-      toast.error(String(e.message || e));
+      toastMaybeKeys(e, onNeedKeys);
     } finally {
       setRewriting(false);
       setBusyMsg("");

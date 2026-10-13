@@ -49,14 +49,17 @@ from drama_service import (  # noqa: E402
 from export_mp4 import ffmpeg_available  # noqa: E402
 from providers import provider_status  # noqa: E402
 from providers.seedance import SEEDANCE_MODELS  # noqa: E402
+from settings_store import load_and_apply, public_status, save_secrets  # noqa: E402
 from store import ProjectStore  # noqa: E402
 
 PROJECTS_ROOT = Path(os.environ.get("PROJECTS_ROOT", str(ROOT / "projects"))).resolve()
 DIST_DIR = Path(os.environ.get("STUDIO_DIST", str(Path(__file__).resolve().parents[1] / "dist"))).resolve()
 HOST = os.environ.get("HOST", os.environ.get("STUDIO_HOST", "0.0.0.0"))
 PORT = int(os.environ.get("PORT", os.environ.get("STUDIO_API_PORT", "8787")))
+SKILLS_ROOT = Path(__file__).resolve().parents[1] / "skills"
 
 STORE = ProjectStore(PROJECTS_ROOT)
+load_and_apply(PROJECTS_ROOT)
 
 GENRES = [
     "都市情感",
@@ -132,7 +135,164 @@ def health() -> dict[str, Any]:
         "dist": DIST_DIR.is_dir(),
         "ffmpeg": ffmpeg_available(),
         "providers": provider_status(),
+        "keys": public_status(),
     }
+
+
+@app.get("/api/settings/keys")
+def get_keys() -> dict[str, Any]:
+    return {"keys": public_status(), "capabilities": _providers_payload()}
+
+
+@app.post("/api/settings/keys")
+async def post_keys(request: Request) -> dict[str, Any]:
+    body = await request.json()
+    status = save_secrets(PROJECTS_ROOT, body if isinstance(body, dict) else {})
+    return {"ok": True, "keys": status, "capabilities": _providers_payload()}
+
+
+@app.post("/api/settings/keys/test")
+async def test_keys() -> dict[str, Any]:
+    results: dict[str, Any] = {"deepseek": None, "volcengine": None}
+    if provider_status().get("deepseek"):
+        try:
+            from providers.deepseek import chat_json
+
+            data = chat_json(
+                system="只输出 JSON。",
+                user='返回 {"ok": true}',
+                temperature=0,
+                max_tokens=32,
+            )
+            results["deepseek"] = {"ok": True, "sample": data}
+        except Exception as exc:
+            results["deepseek"] = {"ok": False, "error": str(exc)}
+    else:
+        results["deepseek"] = {"ok": False, "error": "未配置 DEEPSEEK_API_KEY"}
+    results["volcengine"] = {
+        "ok": bool(provider_status().get("volcengine")),
+        "error": None if provider_status().get("volcengine") else "未配置 VOLCENGINE_API_KEY / ARK_API_KEY",
+        "note": "火山 Key 已写入进程；图片/视频任务会在实际出图出片时校验。",
+    }
+    return {"results": results, "keys": public_status()}
+
+
+@app.get("/api/platform/assets")
+def platform_assets() -> dict[str, Any]:
+    items: list[dict[str, Any]] = []
+    for project in STORE.list_items():
+        pid = project["id"]
+        root = STORE._dir(pid)
+        media = root / "media"
+        if not media.is_dir():
+            continue
+        for path in sorted(media.rglob("*")):
+            if not path.is_file():
+                continue
+            if path.suffix.lower() not in {".png", ".jpg", ".jpeg", ".webp", ".mp4", ".svg", ".wav", ".mp3"}:
+                continue
+            rel = path.relative_to(root).as_posix()
+            items.append(
+                {
+                    "projectId": pid,
+                    "projectTitle": project.get("title") or pid,
+                    "path": rel,
+                    "url": f"/api/media/{pid}/{rel}",
+                    "kind": "video" if path.suffix.lower() == ".mp4" else "audio" if path.suffix.lower() in {".wav", ".mp3"} else "image",
+                    "size": path.stat().st_size,
+                    "updatedAt": path.stat().st_mtime,
+                }
+            )
+    items.sort(key=lambda x: x["updatedAt"], reverse=True)
+    return {"assets": items[:500], "total": len(items)}
+
+
+@app.get("/api/platform/skills")
+def platform_skills() -> dict[str, Any]:
+    skills = []
+    if SKILLS_ROOT.is_dir():
+        for skill_dir in sorted(SKILLS_ROOT.iterdir()):
+            md = skill_dir / "SKILL.md"
+            if not md.is_file():
+                continue
+            text = md.read_text(encoding="utf-8")
+            title = skill_dir.name
+            summary = ""
+            for line in text.splitlines():
+                if line.startswith("# "):
+                    title = line[2:].strip() or title
+                elif line.strip() and not line.startswith("---") and not line.startswith("#"):
+                    summary = line.strip()
+                    break
+            skills.append(
+                {
+                    "id": skill_dir.name,
+                    "title": title,
+                    "summary": summary[:180],
+                    "path": str(md.relative_to(SKILLS_ROOT.parent)),
+                    "content": text,
+                }
+            )
+    return {"skills": skills}
+
+
+@app.get("/api/platform/exports")
+def platform_exports() -> dict[str, Any]:
+    exports = []
+    for project in STORE.list_items():
+        pid = project["id"]
+        bundle = STORE.bundle(pid) or {}
+        root = STORE._dir(pid)
+        for edit in bundle.get("edits") or []:
+            output_path = edit.get("outputPath") or ""
+            output_url = edit.get("outputUrl") or ""
+            if not output_url and not output_path:
+                continue
+            filename = Path(output_path).name if output_path else (output_url.rsplit("/", 1)[-1] or "export.mp4")
+            if not output_url and output_path:
+                # Prefer media API path when relative under project root
+                try:
+                    rel = Path(output_path)
+                    if not rel.is_absolute():
+                        output_url = f"/api/media/{pid}/{rel.as_posix()}"
+                    elif Path(output_path).is_relative_to(root):
+                        output_url = f"/api/media/{pid}/{Path(output_path).relative_to(root).as_posix()}"
+                except Exception:
+                    output_url = output_path
+            exports.append(
+                {
+                    "projectId": pid,
+                    "projectTitle": (bundle.get("project") or {}).get("title") or pid,
+                    "episodeId": edit.get("episodeId"),
+                    "filename": filename,
+                    "url": output_url,
+                    "outputUrl": output_url,
+                    "outputPath": output_path,
+                    "updatedAt": edit.get("updatedAt"),
+                }
+            )
+        # Also scan media/exports folder for orphaned mp4s
+        media = root / "media"
+        if media.is_dir():
+            for path in sorted(media.rglob("*.mp4")):
+                rel = path.relative_to(root).as_posix()
+                url = f"/api/media/{pid}/{rel}"
+                if any(e.get("url") == url for e in exports):
+                    continue
+                exports.append(
+                    {
+                        "projectId": pid,
+                        "projectTitle": project.get("title") or pid,
+                        "episodeId": None,
+                        "filename": path.name,
+                        "url": url,
+                        "outputUrl": url,
+                        "outputPath": rel,
+                        "updatedAt": path.stat().st_mtime,
+                    }
+                )
+    exports.sort(key=lambda x: x.get("updatedAt") or "", reverse=True)
+    return {"exports": exports, "items": exports}
 
 
 @app.get("/api/config")

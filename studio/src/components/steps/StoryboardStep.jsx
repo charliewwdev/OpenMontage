@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Clapperboard, Clock3, Loader2, Plus, Save, Sparkles, Trash2, Video } from "lucide-react";
 import { api } from "../../api";
 import { SEEDANCE_MODELS_FALLBACK } from "../../config/options";
+import { requireCapability, toastMaybeKeys } from "../../lib/keys";
 import { toast } from "../../lib/toast";
 import { useTimer } from "../../lib/useTimer";
 import { ConfirmDialog } from "../ConfirmDialog";
@@ -14,7 +15,8 @@ const SPLIT_STAGES = [
   { startsAt: 220, title: "正在检查完整性并组装结果", detail: "核对剧情覆盖、片段时长、素材引用和输出结构。" },
 ];
 
-export function StoryboardStep({ projectId, bundle, config, setBusyMsg, onBundle, onRefresh }) {
+export function StoryboardStep({ projectId, bundle, config, setBusyMsg, onBundle, onRefresh, onNeedKeys }) {
+  const caps = config?.capabilities || {};
   const confirmedEpisodes = useMemo(
     () =>
       [...(bundle?.episodes || [])]
@@ -134,6 +136,7 @@ export function StoryboardStep({ projectId, bundle, config, setBusyMsg, onBundle
       setConfirmSplit(true);
       return;
     }
+    if (!requireCapability(caps, "deepseek", onNeedKeys, "DeepSeek Key")) return;
     setConfirmSplit(false);
     setSplitting(true);
     setBusyMsg?.("AI 拆镜中…");
@@ -146,7 +149,7 @@ export function StoryboardStep({ projectId, bundle, config, setBusyMsg, onBundle
       apply(res);
       toast.success(`DeepSeek 已拆分 ${res.shots?.length || 0} 个镜头`);
     } catch (error) {
-      toast.error(String(error.message || error));
+      toastMaybeKeys(error, onNeedKeys);
     } finally {
       setSplitting(false);
       setBusyMsg?.("");
@@ -168,6 +171,7 @@ export function StoryboardStep({ projectId, bundle, config, setBusyMsg, onBundle
   };
 
   const generateVideo = async (shotId, silent = false) => {
+    if (!requireCapability(caps, "seedance", onNeedKeys, "火山 Seedance Key")) return;
     try {
       const res = await api(`/api/projects/${encodeURIComponent(projectId)}/storyboard`, {
         method: "POST",
@@ -179,7 +183,7 @@ export function StoryboardStep({ projectId, bundle, config, setBusyMsg, onBundle
         toast.success("Seedance 任务已提交");
       }
     } catch (error) {
-      if (!silent) toast.error(String(error.message || error));
+      if (!silent) toastMaybeKeys(error, onNeedKeys);
       throw error;
     }
   };

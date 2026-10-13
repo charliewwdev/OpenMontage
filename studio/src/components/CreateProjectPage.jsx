@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { ArrowLeft, Clapperboard, Loader2, Plus, RotateCcw, Sparkles } from "lucide-react";
+import { ArrowLeft, Clapperboard, KeyRound, Loader2, Plus, RotateCcw, Sparkles } from "lucide-react";
 import { api } from "../api";
 import { PROJECT_GENRES } from "../config/options";
 import { VIDEO_STYLES, getDefaultVideoStyle } from "../config/videoStyles";
+import { requireCapability, toastMaybeKeys } from "../lib/keys";
 import { toast } from "../lib/toast";
 import { AspectRatioPicker } from "./project-settings/AspectRatioPicker";
 import { GenrePicker } from "./project-settings/GenrePicker";
@@ -30,7 +31,7 @@ const BRIEF_PLACEHOLDER = `描述你想要的短剧内容，简单想法也可�
 • 感情线、反派、金手指、时代、职业或世界观
 • 无虐主 / 快节奏 / 反转多 / 指定结局 / 必须保留的情节`;
 
-export function CreateProjectPage({ config, onBack, onCreated }) {
+export function CreateProjectPage({ config, onBack, onCreated, onNeedKeys }) {
   const genres = config?.genres?.length ? config.genres : PROJECT_GENRES;
   const styles = config?.styles?.length ? config.styles : VIDEO_STYLES;
   const ratios = config?.ratios;
@@ -49,6 +50,7 @@ export function CreateProjectPage({ config, onBack, onCreated }) {
   const formLocked = optimizingBrief || creating;
 
   const optimizeBrief = async () => {
+    if (!requireCapability(config?.capabilities, "deepseek", onNeedKeys, "DeepSeek Key")) return;
     if (!form.brief.trim()) return toast.error("先写下一句话故事想法，再让 AI 帮你扩写");
     if (!form.genre.trim()) return toast.error("请选择题材或填写自定义题材");
     if (!form.visualStyle.trim()) return toast.error("请选择视觉风格");
@@ -70,7 +72,7 @@ export function CreateProjectPage({ config, onBack, onCreated }) {
         toast.info("当前创作需求已经足够完整");
       }
     } catch (error) {
-      toast.error(String(error.message || error));
+      toastMaybeKeys(error, onNeedKeys);
     } finally {
       setOptimizingBrief(false);
     }
@@ -142,6 +144,18 @@ export function CreateProjectPage({ config, onBack, onCreated }) {
           </div>
         </div>
       </header>
+
+      {!config?.capabilities?.deepseek ? (
+        <section className="mt-4 flex flex-col gap-3 rounded-2xl border border-[#f59e0b]/40 bg-[linear-gradient(90deg,rgba(245,158,11,.16),rgba(239,68,68,.1))] px-4 py-4 md:flex-row md:items-center md:justify-between md:px-5">
+          <div className="text-sm text-white/85">
+            <strong className="block">AI 优化需求需要 DeepSeek Key</strong>
+            <span className="mt-1 block text-white/60">可先建项目，生成剧本前请一键配置密钥。</span>
+          </div>
+          <button type="button" className="btn-primary shrink-0" onClick={() => onNeedKeys?.()}>
+            <KeyRound className="h-4 w-4" /> 一键配置密钥
+          </button>
+        </section>
+      ) : null}
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-6">

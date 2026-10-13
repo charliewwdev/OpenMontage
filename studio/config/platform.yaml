@@ -174,7 +174,7 @@ entryCards:
 nav:
   - id: assets
     label: 个人资产
-    icon: FolderKanban
+    icon: Images
   - id: skills
     label: Skill 专家
     icon: BookOpen
@@ -201,7 +201,7 @@ nav:
     icon: Trophy
   - id: nav
     label: 资源导航
-    icon: Library
+    icon: Globe
   - id: keys
     label: 密钥配置
     icon: KeyRound

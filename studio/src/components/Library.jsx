@@ -205,7 +205,21 @@ export function Library({ projects, config, onOpen, onCreate, onDeleted, onRefre
                     key={project.id}
                     className="panel group overflow-hidden transition hover:-translate-y-0.5 hover:border-white/20"
                   >
-                    <button type="button" className="w-full p-5 text-left" onClick={() => onOpen(project.id)}>
+                    <button type="button" className="w-full text-left" onClick={() => onOpen(project.id)}>
+                      <div className="aspect-[16/9] overflow-hidden bg-black/40">
+                        {project.coverUrl || project.coverPath ? (
+                          <img
+                            src={project.coverUrl || `/api/media/${project.id}/${project.coverPath}`}
+                            alt=""
+                            className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-white/25">
+                            <Clapperboard className="h-8 w-8" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-5">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="rounded-full border border-white/10 bg-white/[.04] px-2 py-0.5 text-[10px] text-white/60">
                           {project.genre || "未分类"}
@@ -243,6 +257,7 @@ export function Library({ projects, config, onOpen, onCreate, onDeleted, onRefre
                           更新{" "}
                           {project.updatedAt ? new Date(project.updatedAt).toLocaleDateString("zh-CN") : "—"}
                         </span>
+                      </div>
                       </div>
                     </button>
                     <div className="flex items-center justify-between border-t border-[var(--line)] bg-black/20 px-5 py-3">

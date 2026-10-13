@@ -1,4 +1,4 @@
-import { Clapperboard, LogOut, Moon } from "lucide-react";
+import { LogOut, Moon } from "lucide-react";
 import { resolveIcon } from "../lib/icons";
 import { useLocale } from "../lib/i18n";
 
@@ -25,8 +25,8 @@ export function PlatformShell({
       <aside className="hidden w-[220px] shrink-0 flex-col border-r border-[var(--line)] bg-[#0a0b10] md:flex">
         <div className="px-4 py-5">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[var(--gradient)] text-white shadow-[0_0_24px_rgba(124,108,255,.35)]">
-              <Clapperboard className="h-4 w-4" />
+            <span className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-xl bg-[var(--gradient)] text-white shadow-[0_0_24px_rgba(124,108,255,.35)]">
+              <img src="/favicon.svg" alt="" className="h-8 w-8" width={32} height={32} />
             </span>
             <div>
               <div className="text-sm font-semibold tracking-wide">{displayBrand}</div>

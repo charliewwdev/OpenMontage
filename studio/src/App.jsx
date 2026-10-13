@@ -57,7 +57,7 @@ export default function App() {
   const onNavigate = (id, item) => {
     setNav(id);
     if (!item?.available) {
-      toast.info(`${item?.label || id} 对齐有彩在线版入口，能力建设中`);
+      toast.info(`${item?.label || id} 即将上线`);
       return;
     }
     if (id === "workshop") {

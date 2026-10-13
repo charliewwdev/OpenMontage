@@ -22,10 +22,10 @@ const NAV = [
   { id: "tools", label: "创作中心", icon: Wand2, available: false },
   { id: "agent", label: "创作 Agent", icon: Sparkles, available: false },
   { id: "workshop", label: "影视工坊", icon: Film, available: true },
-  { id: "canvas", label: "有彩画布", icon: Workflow, available: false },
+  { id: "canvas", label: "无限画布", icon: Workflow, available: false },
   { id: "inspire", label: "灵感广场", icon: Compass, available: false },
-  { id: "tv", label: "有彩TV", icon: Tv, available: false },
-  { id: "cup", label: "视界杯", icon: Trophy, available: false },
+  { id: "tv", label: "作品频道", icon: Tv, available: false },
+  { id: "cup", label: "创作挑战", icon: Trophy, available: false },
   { id: "nav", label: "资源导航", icon: Library, available: false },
   { id: "help", label: "帮助中心", icon: HelpCircle, available: false },
   { id: "credits", label: "积分充值", icon: CreditCard, available: false },
@@ -43,7 +43,7 @@ export function PlatformShell({ active = "workshop", brand = "OpenMontage", onNa
             </span>
             <div>
               <div className="text-sm font-semibold tracking-wide">{brand}</div>
-              <div className="text-[10px] text-[var(--muted)]">对齐有彩视界在线版</div>
+              <div className="text-[10px] text-[var(--muted)]">影视工坊 · 本地生产</div>
             </div>
           </div>
         </div>
@@ -87,7 +87,7 @@ export function PlatformShell({ active = "workshop", brand = "OpenMontage", onNa
             <Moon className="h-3.5 w-3.5 text-white/35" />
           </div>
           <p className="px-1 text-[10px] leading-5 text-white/30">
-            影视工坊已接通六步生产线；其余入口按有彩在线版信息架构预留。
+            影视工坊已接通六步生产线；其余入口陆续开放。
           </p>
         </div>
       </aside>

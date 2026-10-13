@@ -82,7 +82,7 @@ Source of truth for Coolify: **`git.dtok.io/dtok-app/OpenMontage`** (GitLab), sa
 
 ### How dtok-app-style auto-deploy works
 
-1. Push code to `git.dtok.io` (`main`)
+1. Push/sync code to `git.dtok.io` (`deploy` branch; Coolify tracks `deploy`)
 2. GitLab project webhook → `http://66.29.128.32:8000/webhooks/source/gitlab/events/manual`
 3. Coolify clones the private repo (deploy token in Git Source URL) and rebuilds
 
@@ -92,7 +92,7 @@ Full-history HTTPS push can hit **HTTP 413** (Cloudflare/nginx body limit; pack 
 
 ```bash
 export DTOK_GIT_TOKEN='...'   # GitLab PAT with api + write_repository (unprotect/reprotect main)
-./scripts/sync_dtok_git.sh
+./scripts/sync_dtok_git.sh   # defaults to branch `deploy` (main is force-push protected)
 ```
 
 Coolify Git Source should be the private clone URL with a **project deploy token** (`read_repository`), not a bare public GitHub URL.

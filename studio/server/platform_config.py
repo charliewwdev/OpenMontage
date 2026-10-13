@@ -145,9 +145,13 @@ def auth_payload() -> dict[str, Any]:
 
 def pinterest_payload() -> dict[str, Any]:
     cfg = load_platform_config().get("pinterest") or {}
+    seed = Path(__file__).resolve().parents[1] / "config" / "pinterest_seed.json"
     return {
+        "users": cfg.get("users") or [],
         "boards": cfg.get("boards") or [],
-        "enabled": bool(cfg.get("boards") or cfg.get("fallbackPins")),
+        "categories": cfg.get("categories") or [],
+        "seedAvailable": seed.is_file(),
+        "enabled": True,
     }
 
 

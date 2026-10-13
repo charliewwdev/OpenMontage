@@ -23,54 +23,29 @@ i18n:
     - en
 
 pinterest:
-  boards:
-    - user: pinterest
-      board: official
-      label: Official
-    - user: design
-      board: product-photography
-      label: Product photography
-    - user: visually
-      board: product-styling
-      label: Product styling
-  # Used when live Pinterest fetch is blocked from the server network.
-  fallbackPins:
-    - id: pin-product-1
-      title: Soft light perfume still
-      description: Clean commercial product photography reference
-      image: https://images.unsplash.com/photo-1541643600914-78b084683601?auto=format&fit=crop&w=800&q=80
-      link: https://www.pinterest.com/search/pins/?q=product%20photography
-      board: fallback
-    - id: pin-product-2
-      title: Editorial packaging mood
-      description: Packaging and prop styling for drama set dressing
-      image: https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80
-      link: https://www.pinterest.com/search/pins/?q=product%20styling
-      board: fallback
-    - id: pin-product-3
-      title: Lifestyle hero object
-      description: Lifestyle object hero shot for prop references
-      image: https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80
-      link: https://www.pinterest.com/search/pins/?q=product%20hero
-      board: fallback
-    - id: pin-product-4
-      title: Ceramic tabletop set
-      description: Tabletop props and color palette reference
-      image: https://images.unsplash.com/photo-1514228742587-6b1558fcc036?auto=format&fit=crop&w=800&q=80
-      link: https://www.pinterest.com/search/pins/?q=prop%20styling
-      board: fallback
-    - id: pin-product-5
-      title: Minimal tech device
-      description: Minimal gadget surface and material reference
-      image: https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=800&q=80
-      link: https://www.pinterest.com/search/pins/?q=tech%20product
-      board: fallback
-    - id: pin-product-6
-      title: Fashion accessory close-up
-      description: Accessory macro for character prop continuity
-      image: https://images.unsplash.com/photo-1492707892479-7bc8d5a4ee93?auto=format&fit=crop&w=800&q=80
-      link: https://www.pinterest.com/search/pins/?q=fashion%20product
-      board: fallback
+  # Live pidget users (public pins). Seed catalog fills the wall when TLS is blocked.
+  users:
+    - pinterest
+    - netflix
+    - voguemagazine
+    - disney
+    - hbomax
+    - interviewmag
+  boards: []
+  categories:
+    - id: all
+      label: 全部
+    - id: character
+      label: 角色
+    - id: scene
+      label: 场景
+    - id: prop
+      label: 道具
+    - id: style
+      label: 风格
+    - id: storyboard
+      label: 分镜
+  # Dense offline wall: studio/config/pinterest_seed.json (real i.pinimg.com URLs)
 
 defaults:
   genre: 都市情感
@@ -404,7 +379,7 @@ pages:
   inspire:
     eyebrow: Inspiration
     title: 灵感广场
-    description: 精选短剧开篇点子，一键复制或带入创作 Agent / 新建项目。
+    description: Pinterest 影视灵感素材墙，按角色 / 场景 / 道具浏览；下方开篇点子可一键带入创作。
   challenge:
     eyebrow: Challenge
     title: 创作挑战

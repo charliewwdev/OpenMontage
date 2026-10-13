@@ -142,6 +142,7 @@ export default function App() {
     else if (nav === "tools") {
       body = (
         <ToolsPage
+          config={config}
           onOpenTool={(tool) => {
             if (tool.nav === "workshop") {
               setNav("workshop");
@@ -169,6 +170,7 @@ export default function App() {
     } else if (nav === "canvas") {
       body = (
         <CanvasPage
+          config={config}
           projects={projects}
           onOpenProject={(id) => void loadProject(id)}
         />
@@ -176,6 +178,7 @@ export default function App() {
     } else if (nav === "inspire") {
       body = (
         <InspirePage
+          config={config}
           onUsePrompt={(text) => {
             setAgentSeed(text);
             onNavigate("agent");
@@ -187,6 +190,7 @@ export default function App() {
     } else if (nav === "cup") {
       body = (
         <ChallengePage
+          config={config}
           onStart={(challenge) => {
             setAgentSeed(challenge.brief);
             toast.info(`已载入挑战：${challenge.title}`);
@@ -195,15 +199,15 @@ export default function App() {
         />
       );
     } else if (nav === "nav") {
-      body = <ResourcesPage onNavigate={onNavigate} />;
+      body = <ResourcesPage config={config} onNavigate={onNavigate} />;
     } else if (nav === "keys") {
-      body = <KeysSettings onUpdated={(data) => void onKeysUpdated(data)} />;
+      body = <KeysSettings config={config} onUpdated={(data) => void onKeysUpdated(data)} />;
     } else if (nav === "help") {
-      body = <HelpPage onNeedKeys={goKeys} />;
+      body = <HelpPage config={config} onNeedKeys={goKeys} />;
     } else if (nav === "credits") {
       body = <CreditsPage config={config} />;
     } else if (nav === "refer") {
-      body = <ReferPage />;
+      body = <ReferPage config={config} />;
     } else {
       body = (
         <Library

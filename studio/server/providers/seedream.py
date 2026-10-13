@@ -36,7 +36,14 @@ def generate_image(
     key = volc_key()
     if not key:
         raise SeedreamError("未配置 VOLCENGINE_API_KEY 或 ARK_API_KEY")
-    model = os.environ.get("SEEDREAM_MODEL") or "doubao-seedream-5-0-260128"
+    try:
+        from platform_config import seedream_model
+
+        model = seedream_model() or os.environ.get("SEEDREAM_MODEL") or ""
+    except Exception:
+        model = os.environ.get("SEEDREAM_MODEL") or ""
+    if not model:
+        raise SeedreamError("未配置 SEEDREAM_MODEL（见 studio/config/platform.yaml defaults.seedreamModel）")
     body: dict = {
         "model": model,
         "prompt": prompt,

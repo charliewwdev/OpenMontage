@@ -7,15 +7,21 @@ import { PageShell } from "./PageShell";
 export function AgentPage({ config, seedPrompt = "", onCreated, onNeedKeys }) {
   const [prompt, setPrompt] = useState(seedPrompt || "");
   const [title, setTitle] = useState("");
-  const [genre, setGenre] = useState(config?.genres?.[0] || "都市情感");
-  const [ratio, setRatio] = useState("9:16");
-  const [episodeCount, setEpisodeCount] = useState(3);
+  const defaults = config?.defaults || {};
+  const [genre, setGenre] = useState(defaults.genre || config?.genres?.[0] || "");
+  const [ratio, setRatio] = useState(defaults.ratio || config?.ratios?.[0]?.value || "");
+  const [episodeCount, setEpisodeCount] = useState(defaults.episodeCount || 3);
   const [busy, setBusy] = useState(false);
   const caps = config?.capabilities || {};
 
   useEffect(() => {
     if (seedPrompt) setPrompt(seedPrompt);
   }, [seedPrompt]);
+
+  useEffect(() => {
+    if (!genre && config?.defaults?.genre) setGenre(config.defaults.genre);
+    if (!ratio && config?.defaults?.ratio) setRatio(config.defaults.ratio);
+  }, [config, genre, ratio]);
 
   const run = async () => {
     if (!prompt.trim()) return toast.error("先描述你想拍的故事");
@@ -91,7 +97,7 @@ export function AgentPage({ config, seedPrompt = "", onCreated, onNeedKeys }) {
             <label>
               <span className="label">题材</span>
               <select className="field" value={genre} disabled={busy} onChange={(e) => setGenre(e.target.value)}>
-                {(config?.genres || ["都市情感"]).map((item) => (
+                {(config?.genres || []).map((item) => (
                   <option key={item} value={item}>
                     {item}
                   </option>
@@ -101,9 +107,11 @@ export function AgentPage({ config, seedPrompt = "", onCreated, onNeedKeys }) {
             <label>
               <span className="label">画幅</span>
               <select className="field" value={ratio} disabled={busy} onChange={(e) => setRatio(e.target.value)}>
-                <option value="9:16">9:16 竖屏</option>
-                <option value="16:9">16:9 横屏</option>
-                <option value="1:1">1:1 方屏</option>
+                {(config?.ratios || []).map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.value} {item.label}
+                  </option>
+                ))}
               </select>
             </label>
           </div>

@@ -1,9 +1,8 @@
 import { useMemo } from "react";
 import { PenLine } from "lucide-react";
-import { PROJECT_GENRES } from "../../config/options";
 
 export function GenrePicker({ value, onChange, disabled = false, genres }) {
-  const options = genres?.length ? genres : PROJECT_GENRES;
+  const options = genres || [];
   const isPreset = useMemo(() => options.some((option) => option === value), [options, value]);
 
   return (

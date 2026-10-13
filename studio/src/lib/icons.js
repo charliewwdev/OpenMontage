@@ -1,0 +1,53 @@
+import {
+  BookOpen,
+  Clapperboard,
+  Compass,
+  CreditCard,
+  ExternalLink,
+  FileText,
+  Film,
+  FolderKanban,
+  Gift,
+  HelpCircle,
+  Image as ImageIcon,
+  KeyRound,
+  Library,
+  Mic2,
+  Scissors,
+  ScrollText,
+  Sparkles,
+  Trophy,
+  Tv,
+  Users,
+  Wand2,
+  Workflow,
+} from "lucide-react";
+
+const ICONS = {
+  BookOpen,
+  Clapperboard,
+  Compass,
+  CreditCard,
+  ExternalLink,
+  FileText,
+  Film,
+  FolderKanban,
+  Gift,
+  HelpCircle,
+  ImageIcon,
+  KeyRound,
+  Library,
+  Mic2,
+  Scissors,
+  ScrollText,
+  Sparkles,
+  Trophy,
+  Tv,
+  Users,
+  Wand2,
+  Workflow,
+};
+
+export function resolveIcon(name, fallback = Film) {
+  return ICONS[name] || fallback;
+}

@@ -1,17 +1,7 @@
-export const STEPS = [
-  { id: "script", label: "剧本", note: "故事与分集" },
-  { id: "characters", label: "角色", note: "人物与造型" },
-  { id: "locations", label: "场景", note: "空间与光线" },
-  { id: "props", label: "道具", note: "关键物件" },
-  { id: "storyboard", label: "分镜", note: "镜头与视频" },
-  { id: "edit", label: "剪辑", note: "排序与成片" },
-];
-
-export const DESKS = [
-  { id: "director", label: "编导台", note: "六步制片" },
-  { id: "canvas", label: "画布", note: "节点编排" },
-  { id: "edit", label: "剪辑室", note: "时间线" },
-];
+/** @deprecated Use config.six_steps / platform.yaml via /api/config */
+export const STEPS = [];
+/** @deprecated Desk labels belong in platform config when re-enabled */
+export const DESKS = [];
 
 export function titleFromName(name) {
   return String(name || "")

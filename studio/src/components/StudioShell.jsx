@@ -16,14 +16,14 @@ import { EntityStep } from "./steps/EntityStep";
 import { StoryboardStep } from "./steps/StoryboardStep";
 import { EditStep } from "./steps/EditStep";
 
-const STEPS = [
-  { key: "script", label: "剧本", note: "故事与分集", icon: ScrollText },
-  { key: "character", label: "角色", note: "人物与造型", icon: Users },
-  { key: "scene", label: "场景", note: "空间与光线", icon: ImageIcon },
-  { key: "prop", label: "道具", note: "关键物件", icon: Box },
-  { key: "storyboard", label: "分镜", note: "镜头与视频", icon: Clapperboard },
-  { key: "edit", label: "剪辑", note: "排序与成片", icon: Scissors },
-];
+const STEP_ICONS = {
+  script: ScrollText,
+  character: Users,
+  scene: ImageIcon,
+  prop: Box,
+  storyboard: Clapperboard,
+  edit: Scissors,
+};
 
 function stepCounts(bundle) {
   if (!bundle) {
@@ -73,7 +73,13 @@ export function StudioShell({
   const project = bundle?.project || {};
   const counts = stepCounts(bundle);
   const caps = config?.capabilities || {};
-  const activeMeta = STEPS.find((s) => s.key === step) || STEPS[0];
+  const steps = (config?.six_steps || []).map((s) => ({
+    key: s.id,
+    label: s.label,
+    note: s.note || "",
+    icon: STEP_ICONS[s.id] || Clapperboard,
+  }));
+  const activeMeta = steps.find((s) => s.key === step) || steps[0] || { key: step, label: step, note: "", icon: Clapperboard };
   const keysMissing = !(caps.deepseek && caps.seedream && caps.seedance);
 
   const common = {
@@ -99,7 +105,7 @@ export function StudioShell({
       <div className="grid min-h-screen lg:h-screen lg:grid-cols-[92px_1fr]">
         <aside className="border-r border-[var(--line)] bg-[#0a0b10] lg:h-screen">
           <div className="flex gap-1 overflow-x-auto p-2 lg:h-full lg:flex-col lg:overflow-y-auto lg:py-4">
-            {STEPS.map((item, index) => {
+            {steps.map((item, index) => {
               const Icon = item.icon;
               const active = item.key === step;
               const done = stepDone(bundle, item.key);
@@ -188,7 +194,7 @@ export function StudioShell({
             </div>
           ) : null}
           <div className="border-b border-[var(--line)] bg-black/20 px-4 py-2 md:px-6">
-            <div className="label !mb-0">Stage {String(STEPS.findIndex((s) => s.key === step) + 1).padStart(2, "0")}</div>
+            <div className="label !mb-0">Stage {String(Math.max(0, steps.findIndex((s) => s.key === step)) + 1).padStart(2, "0")}</div>
             <h2 className="text-base font-semibold">{activeMeta.label}</h2>
           </div>
           <div className="scrollbar-thin min-h-[calc(100vh-7.5rem)] overflow-y-auto p-4 md:p-6 lg:h-[calc(100vh-7.5rem)]">

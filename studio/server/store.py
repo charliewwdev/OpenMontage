@@ -98,11 +98,21 @@ class ProjectStore:
         *,
         title: str,
         brief: str = "",
-        genre: str = "都市情感",
-        visual_style: str = "电影级光影, 高对比度, 浅景深, 自然光影",
-        ratio: str = "9:16",
+        genre: str | None = None,
+        visual_style: str | None = None,
+        ratio: str | None = None,
         name: str | None = None,
     ) -> dict[str, Any]:
+        try:
+            from platform_config import default_genre, default_ratio, default_visual_style
+
+            genre = genre or default_genre()
+            ratio = ratio or default_ratio()
+            visual_style = visual_style or default_visual_style()
+        except Exception:
+            genre = genre or "都市情感"
+            ratio = ratio or "9:16"
+            visual_style = visual_style or ""
         base = slugify(name or title)
         project_id = base
         i = 2

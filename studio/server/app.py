@@ -47,8 +47,8 @@ from drama_service import (  # noqa: E402
     upsert_entity,
 )
 from export_mp4 import ffmpeg_available  # noqa: E402
+from platform_config import default_genre, public_platform_payload, seedance_models  # noqa: E402
 from providers import provider_status  # noqa: E402
-from providers.seedance import SEEDANCE_MODELS  # noqa: E402
 from settings_store import load_and_apply, public_status, save_secrets  # noqa: E402
 from store import ProjectStore  # noqa: E402
 
@@ -60,21 +60,7 @@ SKILLS_ROOT = Path(__file__).resolve().parents[1] / "skills"
 
 STORE = ProjectStore(PROJECTS_ROOT)
 load_and_apply(PROJECTS_ROOT)
-
-GENRES = [
-    "都市情感",
-    "豪门霸总",
-    "婚姻家庭",
-    "赘婿逆袭",
-    "重生复仇",
-    "穿越逆袭",
-    "战神归来",
-    "神医高手",
-    "商战职场",
-    "古装权谋",
-    "悬疑犯罪",
-    "奇幻冒险",
-]
+SEEDANCE_MODELS = seedance_models()
 
 app = FastAPI(title="OpenMontage Drama Studio", version="0.2.0")
 app.add_middleware(
@@ -297,27 +283,10 @@ def platform_exports() -> dict[str, Any]:
 
 @app.get("/api/config")
 def config() -> dict[str, Any]:
-    return {
-        "product": "OpenMontage Drama Studio",
-        "public_url": os.environ.get("STUDIO_PUBLIC_URL", ""),
-        "genres": GENRES,
-        "styles": load_styles(),
-        "seedanceModels": SEEDANCE_MODELS,
-        "ratios": [
-            {"value": "9:16", "label": "竖屏", "description": "短剧与移动端"},
-            {"value": "16:9", "label": "横屏", "description": "电影与桌面端"},
-            {"value": "1:1", "label": "方屏", "description": "社媒"},
-        ],
-        "capabilities": _providers_payload(),
-        "six_steps": [
-            {"id": "script", "label": "剧本"},
-            {"id": "character", "label": "角色"},
-            {"id": "scene", "label": "场景"},
-            {"id": "prop", "label": "道具"},
-            {"id": "storyboard", "label": "分镜"},
-            {"id": "edit", "label": "剪辑"},
-        ],
-    }
+    payload = public_platform_payload()
+    payload["styles"] = load_styles()
+    payload["capabilities"] = _providers_payload()
+    return payload
 
 
 @app.get("/api/projects")
@@ -334,9 +303,9 @@ async def create_project(request: Request) -> dict[str, Any]:
     state = STORE.create_project(
         title=title,
         brief=body.get("brief") or body.get("source_text") or "",
-        genre=body.get("genre") or GENRES[0],
+        genre=body.get("genre") or default_genre(),
         visual_style=body.get("visualStyle") or body.get("visual_style") or "",
-        ratio=body.get("ratio") or body.get("aspect_ratio") or "9:16",
+        ratio=body.get("ratio") or body.get("aspect_ratio") or None,
         name=body.get("name"),
     )
     return STORE.bundle(state["project"]["id"])
@@ -509,7 +478,7 @@ async def storyboard_actions(project_id: str, request: Request) -> dict[str, Any
             STORE,
             pid,
             body["shotId"],
-            model=body.get("model") or SEEDANCE_MODELS[0]["id"],
+            model=body.get("model") or (SEEDANCE_MODELS[0]["id"] if SEEDANCE_MODELS else ""),
             resolution=body.get("resolution") or "720p",
         )
         return {"shot": shot, "bundle": STORE.bundle(pid)}
@@ -523,7 +492,7 @@ async def storyboard_actions(project_id: str, request: Request) -> dict[str, Any
                         STORE,
                         pid,
                         sid,
-                        model=body.get("model") or SEEDANCE_MODELS[0]["id"],
+                        model=body.get("model") or (SEEDANCE_MODELS[0]["id"] if SEEDANCE_MODELS else ""),
                         resolution=body.get("resolution") or "720p",
                     )
                 )

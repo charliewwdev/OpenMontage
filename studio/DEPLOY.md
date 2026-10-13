@@ -13,6 +13,13 @@ Product UI learns from short-drama workspaces (六步工作流 + 编导台 / 画
 | Port | `8787` |
 | Domain | `https://openmontage.dtok.io` (aaPanel → `:8787`) |
 
+## Product config (no hardcode)
+
+Lists, copy, nav, defaults, and Seedance model catalog live in [`studio/config/platform.yaml`](config/platform.yaml).  
+Visual styles: [`studio/server/video_styles.json`](server/video_styles.json).  
+Secrets / path overrides: env + `PROJECTS_ROOT/.studio_secrets.json`.  
+See `.cursor/rules/studio-no-hardcode.mdc`.
+
 ## Environment variables
 
 Copy from [`studio/.env.example`](.env.example). Minimum:

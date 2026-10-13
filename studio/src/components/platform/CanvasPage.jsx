@@ -14,16 +14,7 @@ import { api } from "../../api";
 import { toast } from "../../lib/toast";
 import { PageShell } from "./PageShell";
 
-const STEP_META = [
-  { id: "script", label: "剧本", x: 80, y: 120 },
-  { id: "character", label: "角色", x: 320, y: 40 },
-  { id: "scene", label: "场景", x: 320, y: 200 },
-  { id: "prop", label: "道具", x: 320, y: 360 },
-  { id: "storyboard", label: "分镜", x: 560, y: 200 },
-  { id: "edit", label: "剪辑", x: 800, y: 200 },
-];
-
-function buildGraph(project) {
+function buildGraph(project, stepMeta = []) {
   const p = project?.progress || {};
   const counts = {
     script: p.episodes?.total || 0,
@@ -33,10 +24,11 @@ function buildGraph(project) {
     storyboard: p.shots?.total || 0,
     edit: p.shots?.completed || 0,
   };
-  const nodes = STEP_META.map((step) => ({
+  const meta = stepMeta;
+  const nodes = meta.map((step) => ({
     id: step.id,
     position: { x: step.x, y: step.y },
-    data: { label: `${step.label}\n${counts[step.id]}` },
+    data: { label: `${step.label}\n${counts[step.id] ?? 0}` },
     style: {
       background: "#151822",
       color: "#f4f6fb",
@@ -66,11 +58,12 @@ function buildGraph(project) {
   return { nodes, edges };
 }
 
-export function CanvasPage({ projects, onOpenProject }) {
+export function CanvasPage({ projects, config, onOpenProject }) {
+  const stepMeta = config?.canvasSteps || [];
   const [projectId, setProjectId] = useState(projects?.[0]?.id || "");
   const [loading, setLoading] = useState(false);
   const [bundle, setBundle] = useState(null);
-  const initial = useMemo(() => buildGraph(projects?.[0]), [projects]);
+  const initial = useMemo(() => buildGraph(projects?.[0], stepMeta), [projects, stepMeta]);
   const [nodes, setNodes, onNodesChange] = useNodesState(initial.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initial.edges);
   const onConnect = useCallback((connection) => setEdges((eds) => addEdge({ ...connection, animated: true }, eds)), [setEdges]);
@@ -81,8 +74,6 @@ export function CanvasPage({ projects, onOpenProject }) {
     try {
       const data = await api(`/api/projects/${encodeURIComponent(id)}`);
       setBundle(data);
-      const graph = buildGraph(data.project);
-      // enrich with real entity counts from bundle if present
       const ents = (data.entities || []).filter((e) => !e.deletedAt);
       const shots = (data.shots || []).filter((s) => !s.deletedAt);
       const project = {
@@ -95,7 +86,7 @@ export function CanvasPage({ projects, onOpenProject }) {
           shots: { total: shots.length, completed: shots.filter((s) => s.status === "success").length },
         },
       };
-      const next = buildGraph(project);
+      const next = buildGraph(project, stepMeta);
       setNodes(next.nodes);
       setEdges(next.edges);
     } catch (error) {

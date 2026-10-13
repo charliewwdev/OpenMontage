@@ -4,15 +4,16 @@ import { api } from "../../api";
 import { toast } from "../../lib/toast";
 import { PageShell } from "./PageShell";
 
-export function KeysSettings({ onUpdated }) {
+export function KeysSettings({ config, onUpdated }) {
+  const defaults = config?.defaults || {};
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [status, setStatus] = useState(null);
   const [form, setForm] = useState({
     DEEPSEEK_API_KEY: "",
-    DEEPSEEK_BASE_URL: "https://api.deepseek.com",
-    DEEPSEEK_MODEL: "deepseek-chat",
+    DEEPSEEK_BASE_URL: defaults.deepseekBaseUrl || "",
+    DEEPSEEK_MODEL: defaults.deepseekModel || "",
     VOLCENGINE_API_KEY: "",
   });
 

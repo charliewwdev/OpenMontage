@@ -18,8 +18,14 @@ def _cfg() -> tuple[str, str, str]:
     key = os.environ.get("DEEPSEEK_API_KEY")
     if not key:
         raise DeepSeekError("未配置 DEEPSEEK_API_KEY")
-    base = (os.environ.get("DEEPSEEK_BASE_URL") or "https://api.deepseek.com").rstrip("/")
-    model = os.environ.get("DEEPSEEK_MODEL") or "deepseek-chat"
+    try:
+        from platform_config import deepseek_base_url, deepseek_model
+
+        base = deepseek_base_url().rstrip("/")
+        model = deepseek_model()
+    except Exception:
+        base = (os.environ.get("DEEPSEEK_BASE_URL") or "https://api.deepseek.com").rstrip("/")
+        model = os.environ.get("DEEPSEEK_MODEL") or "deepseek-chat"
     return key, base, model
 
 

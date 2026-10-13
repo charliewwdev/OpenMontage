@@ -14,47 +14,9 @@ import { api } from "../api";
 import { toast } from "../lib/toast";
 import { ConfirmDialog } from "./ConfirmDialog";
 
-const STEP_LABELS = ["剧本", "角色", "场景", "道具", "分镜", "剪辑"];
-const PIPELINE = ["剧本创作", "剧本定稿", "智能分析", "素材生成", "分镜编排", "视频成片"];
-
-const ENTRY_CARDS = [
-  {
-    id: "drama",
-    title: "爽剧",
-    badge: "+",
-    desc: "专业爽剧模型 · 竖屏 9:16",
-    tone: "from-[#ef4444] via-[#f97316] to-[#fb7185]",
-    available: true,
-  },
-  {
-    id: "short",
-    title: "短剧",
-    badge: "+",
-    desc: "小说改编 / 横屏 16:9",
-    tone: "from-[#3b82f6] via-[#6366f1] to-[#8b5cf6]",
-    available: true,
-  },
-  {
-    id: "formal",
-    title: "正剧",
-    badge: "",
-    desc: "即将上线",
-    tone: "from-[#475569] to-[#334155]",
-    available: false,
-  },
-  {
-    id: "upload",
-    title: "上传剧本",
-    badge: "+",
-    desc: "TXT / MD / DOCX 转制作",
-    tone: "from-[#eab308] via-[#f59e0b] to-[#f97316]",
-    available: false,
-  },
-];
-
-function progressSteps(project) {
+function progressSteps(project, stepCount = 6) {
   const p = project.progress || {};
-  return [
+  const flags = [
     (p.episodes?.total || 0) > 0,
     (p.characters?.total || 0) > 0,
     (p.scenes?.total || 0) > 0,
@@ -62,6 +24,7 @@ function progressSteps(project) {
     (p.shots?.total || 0) > 0,
     (p.shots?.completed || 0) > 0,
   ];
+  return flags.slice(0, stepCount);
 }
 
 export function Library({ projects, config, onOpen, onCreate, onDeleted, onRefresh, onNeedKeys }) {
@@ -69,6 +32,9 @@ export function Library({ projects, config, onOpen, onCreate, onDeleted, onRefre
   const [query, setQuery] = useState("");
   const caps = config?.capabilities || {};
   const keysReady = (caps.configured ?? 0) >= 1;
+  const stepLabels = (config?.six_steps || []).map((s) => s.label);
+  const pipeline = config?.pipelineLabels || [];
+  const entryCards = config?.entryCards || [];
 
   const visible = useMemo(() => {
     const keyword = query.trim().toLocaleLowerCase("zh-CN");
@@ -107,7 +73,7 @@ export function Library({ projects, config, onOpen, onCreate, onDeleted, onRefre
               剧本创作 → 剧本定稿 → 智能分析 → 素材生成 → 分镜编排 → 视频成片
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
-              {PIPELINE.map((label, index) => (
+              {pipeline.map((label, index) => (
                 <div
                   key={label}
                   className="flex items-center gap-2 rounded-full border border-white/10 bg-black/25 px-3 py-1.5 text-xs text-white/75"
@@ -125,11 +91,11 @@ export function Library({ projects, config, onOpen, onCreate, onDeleted, onRefre
             <Sparkles className="h-4 w-4 text-[#c4b5fd]" />
             <span className="font-semibold">六步生产线</span>
             <span className="text-white/35">|</span>
-            {STEP_LABELS.map((label, i) => (
+            {stepLabels.map((label, i) => (
               <span key={label} className="inline-flex items-center gap-1.5 text-white/70">
                 <span className="timecode text-[10px] text-[#a5b4fc]">{i + 1}</span>
                 {label}
-                {i < STEP_LABELS.length - 1 ? <span className="text-white/25">→</span> : null}
+                {i < stepLabels.length - 1 ? <span className="text-white/25">→</span> : null}
               </span>
             ))}
           </div>
@@ -157,7 +123,7 @@ export function Library({ projects, config, onOpen, onCreate, onDeleted, onRefre
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {ENTRY_CARDS.map((card) => (
+            {entryCards.map((card) => (
               <button
                 key={card.id}
                 type="button"
@@ -232,7 +198,7 @@ export function Library({ projects, config, onOpen, onCreate, onDeleted, onRefre
           ) : (
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {visible.map((project) => {
-                const steps = progressSteps(project);
+                const steps = progressSteps(project, stepLabels.length || 6);
                 const doneCount = steps.filter(Boolean).length;
                 return (
                   <article
@@ -256,15 +222,15 @@ export function Library({ projects, config, onOpen, onCreate, onDeleted, onRefre
                         <div className="mb-2 flex items-center justify-between text-[10px] text-[var(--muted)]">
                           <span>制作进度</span>
                           <span className="timecode text-[#a5b4fc]">
-                            {doneCount}/{STEP_LABELS.length}
+                            {doneCount}/{stepLabels.length || steps.length}
                           </span>
                         </div>
                         <div className="grid grid-cols-6 gap-1">
                           {steps.map((done, index) => (
                             <div
-                              key={STEP_LABELS[index]}
+                              key={stepLabels[index] || index}
                               className={`h-1.5 rounded-full ${done ? "bg-[var(--ok)]" : "bg-white/10"}`}
-                              title={STEP_LABELS[index]}
+                              title={stepLabels[index] || ""}
                             />
                           ))}
                         </div>

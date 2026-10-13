@@ -38,6 +38,7 @@ COPY pipeline_defs ./pipeline_defs
 COPY workflow_defs ./workflow_defs
 COPY studio/server ./studio/server
 COPY studio/skills ./studio/skills
+COPY studio/config ./studio/config
 COPY --from=ui /ui/dist ./studio/dist
 
 # Seed project lives in-repo (projects/ is gitignored for agent corpora)

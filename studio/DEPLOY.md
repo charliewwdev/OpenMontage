@@ -1,6 +1,6 @@
 # Deploy Drama Studio to Coolify (`cicd.dtok.io`)
 
-Product UI learns from short-drama workspaces (六步工作流 + 编导台 / 画布 / 剪辑室) and serves a single container: React SPA + Python API.
+Product UI learns from short-drama workspaces (六步工作流 + 编导台 / 画布 / 剪辑室) and serves a single container: React SPA + **FastAPI** (`uvicorn`) API.
 
 ## Coolify settings
 

@@ -25,8 +25,10 @@ RUN apt-get update \
   && apt-get install -y --no-install-recommends curl ffmpeg fonts-noto-cjk \
   && rm -rf /var/lib/apt/lists/*
 
-# Studio API needs schema validation + YAML pipeline manifests
-RUN pip install --no-cache-dir jsonschema pyyaml
+# Studio API: FastAPI + schema validation + YAML pipeline manifests
+COPY studio/server/requirements.txt /tmp/studio-requirements.txt
+RUN pip install --no-cache-dir jsonschema pyyaml -r /tmp/studio-requirements.txt \
+  && rm -f /tmp/studio-requirements.txt
 
 # Core framework slices needed by the API
 COPY lib ./lib
@@ -48,8 +50,9 @@ RUN mkdir -p /data/projects \
 
 USER studio
 EXPOSE 8787
+ENV PYTHONPATH=/app/studio/server:/app
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD curl -fsS "http://127.0.0.1:${PORT}/api/health" || exit 1
 
-CMD ["python3", "studio/server/app.py"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8787", "--app-dir", "/app/studio/server"]

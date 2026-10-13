@@ -97,7 +97,7 @@ body = {
   "is_force_https_enabled": True,
   "is_git_lfs_enabled": False,
   "is_git_submodules_enabled": False,
-  "watch_paths": "studio/**,docker-compose.studio.yml,lib/**,tools/pipeline/**,pipeline_defs/short-drama.yaml,workflow_defs/**,projects/midnight-sms-ep01/**",
+  "watch_paths": "",  # empty: deploy on any push (comma-separated was treated as ONE invalid pattern)
   "instant_deploy": True,
   "autogenerate_domain": True,
 }

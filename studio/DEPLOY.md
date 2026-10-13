@@ -125,7 +125,7 @@ Or in Coolify UI: New Resource → Public Repository →
 | Port | `8787` |
 | Health | `/api/health` |
 | Auto Deploy | on |
-| Watch paths | `studio/**` (+ related paths in script) |
+| Watch paths | leave empty (deploy on every push to `deploy`) — Coolify splits by newline; comma-joined patterns never match |
 
 ### Keys for Xuefeng-parity generation
 

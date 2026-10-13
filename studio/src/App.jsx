@@ -329,7 +329,7 @@ export default function App() {
           Loading…
         </div>
       ) : authRequired && !authed ? (
-        <AuthPage brand={config?.brand} tagline={config?.tagline} onAuthed={onAuthed} />
+        <AuthPage brand={config?.brand} tagline={config?.tagline} authConfig={config?.auth} onAuthed={onAuthed} />
       ) : (
         <PlatformShell active={nav} config={config} user={user} onNavigate={onNavigate} onLogout={onLogout}>
           {body}

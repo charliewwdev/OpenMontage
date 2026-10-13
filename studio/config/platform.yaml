@@ -15,6 +15,15 @@ auth:
     - password
     - register
     - phone
+  # Public demo: one-click enter without DTok; operates shared/local project data
+  demo:
+    enabled: true
+    userId: demo
+    username: Demo
+    displayName: Demo 体验账号
+    ttlDays: 7
+    seedProjectId: welcome-ep01
+    autoEnter: false
 
 i18n:
   defaultLocale: zh

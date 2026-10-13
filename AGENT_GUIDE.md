@@ -261,6 +261,8 @@ If the folder has tracks, the proposal and asset stages should present them as o
 
 **Short-drama routing:** requests like “做成短剧”, “小说转视频分集”, “竖屏连续剧” → `short-drama`. Read `pipeline_defs/short-drama.yaml`, `skills/meta/subgraph-runner.md`, and `docs/workflow-ir.md`. Batch shot generation must go through `shot_job_manager` (never naked `video_selector` batches). Optional Studio UI: `studio/` (`docs/drama-studio-ui.md`).
 
+**Studio config (no hardcode):** Drama Studio product lists/copy/defaults/models live in `studio/config/platform.yaml` (+ `studio/server/video_styles.json` for styles). Agents must not hardcode genres, nav, inspire text, model IDs, or DeepSeek defaults in `studio/` code — see `.cursor/rules/studio-no-hardcode.mdc`.
+
 > **Beta pipelines** have not been fully audited. They work, but expect rough edges. Mention this when the user selects one.
 
 ## Mandatory Preflight

@@ -3,27 +3,18 @@ import { Copy, Lightbulb } from "lucide-react";
 import { toast } from "../../lib/toast";
 import { PageShell } from "./PageShell";
 
-const PROMPTS = [
-  { tag: "都市爽剧", text: "落魄女婿被丈母娘羞辱三年后，以隐秘身份归来，用商业与人情双重反击。" },
-  { tag: "悬疑", text: "女法医发现每具尸体都带着同一串古语，而破译者正是失踪多年的自己。" },
-  { tag: "甜宠", text: "冷面总裁误把替身当成真正的青梅竹马，直到替身要离开，他才发现心动早已失控。" },
-  { tag: "穿越", text: "游戏策划死后穿越进自己设计的副本，必须用策划知识通关，才能回到现实。" },
-  { tag: "职场", text: "新人设计师被抢创意后反杀：她用一场直播让品牌方看到真正的创作者。" },
-  { tag: "科幻", text: "记忆可交易的城市里，男主卖掉童年换工作机会，却发现买家正是未来的自己。" },
-  { tag: "古风", text: "女刺客伪装成哑巴丫鬟潜入侯府，却发现侯爷早就识破，并故意留下她。" },
-  { tag: "校园", text: "学渣为了追女神报名辩论社，结果被拉进一场关乎学校存亡的全国赛。" },
-];
-
-export function InspirePage({ onUsePrompt }) {
+export function InspirePage({ config, onUsePrompt }) {
+  const prompts = config?.inspirePrompts || [];
+  const page = config?.pages?.inspire || {};
   const [filter, setFilter] = useState("全部");
-  const tags = useMemo(() => ["全部", ...new Set(PROMPTS.map((p) => p.tag))], []);
-  const list = filter === "全部" ? PROMPTS : PROMPTS.filter((p) => p.tag === filter);
+  const tags = useMemo(() => ["全部", ...new Set(prompts.map((p) => p.tag))], [prompts]);
+  const list = filter === "全部" ? prompts : prompts.filter((p) => p.tag === filter);
 
   return (
     <PageShell
-      eyebrow="Inspiration"
-      title="灵感广场"
-      description="精选短剧开篇点子，一键复制或带入创作 Agent / 新建项目。"
+      eyebrow={page.eyebrow || "Inspiration"}
+      title={page.title || "灵感广场"}
+      description={page.description || "精选短剧开篇点子。"}
     >
       <div className="mb-4 flex flex-wrap gap-2">
         {tags.map((tag) => (

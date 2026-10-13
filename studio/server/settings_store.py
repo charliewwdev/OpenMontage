@@ -64,18 +64,30 @@ def mask_secret(value: str | None) -> str:
 def public_status() -> dict[str, Any]:
     deepseek = bool(os.environ.get("DEEPSEEK_API_KEY"))
     volc = bool(os.environ.get("VOLCENGINE_API_KEY") or os.environ.get("ARK_API_KEY"))
+    try:
+        from platform_config import deepseek_base_url, deepseek_model, seedance_model, seedream_model
+
+        base_url = deepseek_base_url()
+        model = deepseek_model()
+        seedream = seedream_model()
+        seedance = seedance_model()
+    except Exception:
+        base_url = os.environ.get("DEEPSEEK_BASE_URL") or ""
+        model = os.environ.get("DEEPSEEK_MODEL") or ""
+        seedream = os.environ.get("SEEDREAM_MODEL") or ""
+        seedance = os.environ.get("SEEDANCE_MODEL") or ""
     return {
         "deepseek": {
             "configured": deepseek,
             "masked": mask_secret(os.environ.get("DEEPSEEK_API_KEY")),
-            "baseUrl": os.environ.get("DEEPSEEK_BASE_URL") or "https://api.deepseek.com",
-            "model": os.environ.get("DEEPSEEK_MODEL") or "deepseek-chat",
+            "baseUrl": base_url,
+            "model": model,
         },
         "volcengine": {
             "configured": volc,
             "masked": mask_secret(os.environ.get("VOLCENGINE_API_KEY") or os.environ.get("ARK_API_KEY")),
-            "seedreamModel": os.environ.get("SEEDREAM_MODEL") or "doubao-seedream-5-0-260128",
-            "seedanceModel": os.environ.get("SEEDANCE_MODEL") or "",
+            "seedreamModel": seedream,
+            "seedanceModel": seedance,
         },
         "ready": deepseek and volc,
     }

@@ -1,18 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, Images, X } from "lucide-react";
-import { VIDEO_STYLES, getStyleByPromptValue } from "../../config/videoStyles";
-
-const CATEGORIES = [
-  { value: "all", label: "全部" },
-  { value: "live-action", label: "真人" },
-  { value: "2d", label: "2D" },
-  { value: "3d", label: "3D" },
-];
-
-export function VideoStylePicker({ value, onChange, disabled = false, styles }) {
-  const library = styles?.length ? styles : VIDEO_STYLES;
-  const selectedStyle = getStyleByPromptValue(value) || library.find((s) => s.promptValue === value);
+export function VideoStylePicker({ value, onChange, disabled = false, styles, categories }) {
+  const library = styles || [];
+  const categoryOptions = categories || [];
+  const selectedStyle = library.find((s) => s.promptValue === value || s.id === value);
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState("all");
   const filteredStyles = useMemo(
@@ -89,7 +81,7 @@ export function VideoStylePicker({ value, onChange, disabled = false, styles }) 
                   </button>
                 </header>
                 <div className="flex gap-2 border-b border-[var(--line)] px-5 py-3">
-                  {CATEGORIES.map((item) => (
+                  {categoryOptions.map((item) => (
                     <button
                       key={item.value}
                       type="button"

@@ -1,0 +1,359 @@
+# OpenMontage Drama Studio — product / platform config (single source of truth).
+# Override secrets and runtime paths via env (.env / Coolify); edit lists here.
+# See .cursor/rules/studio-no-hardcode.mdc
+
+product:
+  name: OpenMontage Drama Studio
+  brand: OpenMontage
+  tagline: 影视工坊 · 本地生产
+  publicUrlEnv: STUDIO_PUBLIC_URL
+
+defaults:
+  genre: 都市情感
+  ratio: "9:16"
+  episodeCount: 3
+  deepseekBaseUrl: https://api.deepseek.com
+  deepseekModel: deepseek-chat
+  seedreamModel: doubao-seedream-5-0-260128
+  seedanceModel: ""
+  visualStyle: 当代都市夜戏，电影感冷暖对比
+  seedanceApiUrl: https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks
+
+genres:
+  - 都市情感
+  - 豪门霸总
+  - 婚姻家庭
+  - 赘婿逆袭
+  - 重生复仇
+  - 穿越逆袭
+  - 战神归来
+  - 神医高手
+  - 商战职场
+  - 古装权谋
+  - 悬疑犯罪
+  - 奇幻冒险
+
+ratios:
+  - value: "9:16"
+    label: 竖屏
+    description: 短剧与移动端
+  - value: "16:9"
+    label: 横屏
+    description: 电影与桌面端
+  - value: "1:1"
+    label: 方屏
+    description: 社媒
+
+sixSteps:
+  - id: script
+    label: 剧本
+    note: 故事与分集
+  - id: character
+    label: 角色
+    note: 人物与造型
+  - id: scene
+    label: 场景
+    note: 空间与光线
+  - id: prop
+    label: 道具
+    note: 关键物件
+  - id: storyboard
+    label: 分镜
+    note: 镜头与视频
+  - id: edit
+    label: 剪辑
+    note: 排序与成片
+
+pipelineLabels:
+  - 剧本创作
+  - 剧本定稿
+  - 智能分析
+  - 素材生成
+  - 分镜编排
+  - 视频成片
+
+creationSteps:
+  - 专业剧本
+  - 角色造型
+  - 空镜场景
+  - 关键道具
+  - 分镜视频
+  - 剪辑成片
+
+styleCategories:
+  - value: all
+    label: 全部
+  - value: live-action
+    label: 真人
+  - value: 2d
+    label: 2D
+  - value: 3d
+    label: 3D
+
+entryCards:
+  - id: drama
+    title: 爽剧
+    badge: "+"
+    desc: 专业爽剧模型 · 竖屏 9:16
+    tone: from-[#ef4444] via-[#f97316] to-[#fb7185]
+    available: true
+  - id: short
+    title: 短剧
+    badge: "+"
+    desc: 小说改编 / 横屏 16:9
+    tone: from-[#3b82f6] via-[#6366f1] to-[#8b5cf6]
+    available: true
+  - id: formal
+    title: 正剧
+    badge: ""
+    desc: 即将上线
+    tone: from-[#475569] to-[#334155]
+    available: false
+  - id: upload
+    title: 上传剧本
+    badge: "+"
+    desc: TXT / MD / DOCX 转制作
+    tone: from-[#eab308] via-[#f59e0b] to-[#f97316]
+    available: false
+
+nav:
+  - id: assets
+    label: 个人资产
+    icon: FolderKanban
+  - id: skills
+    label: Skill 专家
+    icon: BookOpen
+  - id: tools
+    label: 创作中心
+    icon: Wand2
+  - id: agent
+    label: 创作 Agent
+    icon: Sparkles
+  - id: workshop
+    label: 影视工坊
+    icon: Film
+  - id: canvas
+    label: 无限画布
+    icon: Workflow
+  - id: inspire
+    label: 灵感广场
+    icon: Compass
+  - id: tv
+    label: 作品频道
+    icon: Tv
+  - id: cup
+    label: 创作挑战
+    icon: Trophy
+  - id: nav
+    label: 资源导航
+    icon: Library
+  - id: keys
+    label: 密钥配置
+    icon: KeyRound
+  - id: help
+    label: 帮助中心
+    icon: HelpCircle
+  - id: credits
+    label: 积分充值
+    icon: CreditCard
+  - id: refer
+    label: 推荐计划
+    icon: Gift
+
+tools:
+  - id: script
+    title: 剧本工作台
+    desc: 生成 / 续写 / 重写 / 定稿
+    icon: ScrollText
+    nav: workshop
+    step: script
+  - id: character
+    title: 角色造型
+    desc: Seedream 出图与版本管理
+    icon: Users
+    nav: workshop
+    step: character
+  - id: scene
+    title: 空镜场景
+    desc: 空间与光线设定稿
+    icon: ImageIcon
+    nav: workshop
+    step: scene
+  - id: storyboard
+    title: 分镜导演台
+    desc: 拆镜与 Seedance 视频
+    icon: Clapperboard
+    nav: workshop
+    step: storyboard
+  - id: edit
+    title: 剪辑成片
+    desc: 时间线与 FFmpeg 导出
+    icon: Scissors
+    nav: workshop
+    step: edit
+  - id: agent
+    title: 创作 Agent
+    desc: 一句话建立项目并开写
+    icon: Sparkles
+    nav: agent
+  - id: keys
+    title: 密钥配置
+    desc: DeepSeek / 火山一键写入
+    icon: KeyRound
+    nav: keys
+  - id: canvas
+    title: 无限画布
+    desc: 项目流程节点可视化
+    icon: Wand2
+    nav: canvas
+
+inspirePrompts:
+  - tag: 都市爽剧
+    text: 落魄女婿被丈母娘羞辱三年后，以隐秘身份归来，用商业与人情双重反击。
+  - tag: 悬疑
+    text: 女法医发现每具尸体都带着同一串古语，而破译者正是失踪多年的自己。
+  - tag: 甜宠
+    text: 冷面总裁误把替身当成真正的青梅竹马，直到替身要离开，他才发现心动早已失控。
+  - tag: 穿越
+    text: 游戏策划死后穿越进自己设计的副本，必须用策划知识通关，才能回到现实。
+  - tag: 职场
+    text: 新人设计师被抢创意后反杀：她用一场直播让品牌方看到真正的创作者。
+  - tag: 科幻
+    text: 记忆可交易的城市里，男主卖掉童年换工作机会，却发现买家正是未来的自己。
+  - tag: 古风
+    text: 女刺客伪装成哑巴丫鬟潜入侯府，却发现侯爷早就识破，并故意留下她。
+  - tag: 校园
+    text: 学渣为了追女神报名辩论社，结果被拉进一场关乎学校存亡的全国赛。
+
+challenges:
+  - id: hook-15
+    title: 15 秒钩子挑战
+    prize: 创作积分 +50
+    brief: 用一集剧本写出前 15 秒必须抓住观众的冲突钩子，并生成至少 3 个分镜镜头。
+  - id: character-loop
+    title: 角色一致性挑战
+    prize: 创作积分 +80
+    brief: 同一角色出 4 张不同情绪造型，保持脸型与服装主色一致。
+  - id: vertical-ep
+    title: 竖屏单集挑战
+    prize: 创作积分 +120
+    brief: 完成 9:16 单集：剧本 → 角色 → 场景 → 分镜 → 剪辑导出。
+
+resources:
+  - title: OpenMontage AGENT_GUIDE
+    desc: 仓库总路由与制作规范
+    href: help
+    icon: FileText
+    external: false
+  - title: 六步工坊说明
+    desc: 剧本 → 角色 → 场景 → 道具 → 分镜 → 剪辑
+    href: help
+    icon: Film
+    external: false
+  - title: DeepSeek API
+    desc: 剧本模型文档
+    href: https://platform.deepseek.com/api-docs/
+    icon: ExternalLink
+    external: true
+  - title: 火山方舟
+    desc: Seedream / Seedance 控制台
+    href: https://console.volcengine.com/ark
+    icon: ExternalLink
+    external: true
+  - title: FFmpeg 指南
+    desc: 剪辑与导出依赖
+    href: https://ffmpeg.org/documentation.html
+    icon: Mic2
+    external: true
+
+helpSections:
+  - title: 快速开始
+    body: 1. 在「密钥配置」写入 DeepSeek 与火山 ARK Key。2. 新建项目或用创作 Agent。3. 按六步完成剧本到成片。
+  - title: 六步工坊
+    body: 剧本（DeepSeek）→ 角色/场景/道具（Seedream）→ 分镜（Seedance）→ 剪辑（FFmpeg）。每一步都可以单独重跑或换版本。
+  - title: 密钥与能力
+    body: 未配置 Key 时，相关按钮会引导你一键进入密钥页。密钥保存在服务器 PROJECTS_ROOT/.studio_secrets.json，热加载无需重启。
+  - title: 资产与画布
+    body: 资产库汇总角色/场景/道具图片；无限画布展示当前项目节点进度；TV 页回看成片导出。
+
+splitStages:
+  - startsAt: 0
+    title: 正在核对剧本与创作素材
+    detail: 识别本集角色、空镜场景、道具与视觉风格。
+  - startsAt: 25
+    title: 正在拆分剧情节拍与时长
+    detail: 按场景、对白、动作和情绪转折规划连续视频片段。
+  - startsAt: 70
+    title: 正在规划镜头衔接与素材引用
+    detail: 匹配每个镜头出场的角色形象、场景和道具参考图。
+  - startsAt: 130
+    title: 正在编写 Seedance 视频提示词
+    detail: 组织景别、运镜、动作、对白、声音和画面风格。
+  - startsAt: 220
+    title: 正在检查完整性并组装结果
+    detail: 核对剧情覆盖、片段时长、素材引用和输出结构。
+
+seedanceModels:
+  - id: doubao-seedance-2-0-260128
+    name: Seedance 2.0 Pro
+    resolutions: [480p, 720p, 1080p, 4k]
+    minDuration: 4
+    maxDuration: 15
+  - id: doubao-seedance-2-0-fast-260128
+    name: Seedance 2.0 Fast
+    resolutions: [480p, 720p]
+    minDuration: 4
+    maxDuration: 15
+  - id: doubao-seedance-2-0-mini-260615
+    name: Seedance 2.0 Mini
+    resolutions: [480p, 720p]
+    minDuration: 4
+    maxDuration: 15
+
+canvasSteps:
+  - id: script
+    label: 剧本
+    x: 80
+    y: 120
+  - id: character
+    label: 角色
+    x: 320
+    y: 40
+  - id: scene
+    label: 场景
+    x: 320
+    y: 200
+  - id: prop
+    label: 道具
+    x: 320
+    y: 360
+  - id: storyboard
+    label: 分镜
+    x: 560
+    y: 200
+  - id: edit
+    label: 剪辑
+    x: 800
+    y: 200
+
+pages:
+  inspire:
+    eyebrow: Inspiration
+    title: 灵感广场
+    description: 精选短剧开篇点子，一键复制或带入创作 Agent / 新建项目。
+  challenge:
+    eyebrow: Challenge
+    title: 创作挑战
+    description: 限时主题任务，帮你练熟六步工坊节奏。完成进度会计入项目备注。
+  tools:
+    eyebrow: Creation center
+    title: 创作中心
+    description: 多模态影视工具入口。点击即可跳转到对应工作台或配置页。
+  resources:
+    eyebrow: Resources
+    title: 资源中心
+    description: 文档、模型控制台与制作参考入口。
+  help:
+    eyebrow: Help
+    title: 帮助中心
+    description: 影视工坊使用说明与常见问题。

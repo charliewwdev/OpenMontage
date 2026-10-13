@@ -10,31 +10,33 @@ from typing import Any
 
 from . import volc_key
 
-API_URL = "https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks"
 
-SEEDANCE_MODELS = [
-    {
-        "id": "doubao-seedance-2-0-260128",
-        "name": "Seedance 2.0 Pro",
-        "resolutions": ["480p", "720p", "1080p", "4k"],
-        "minDuration": 4,
-        "maxDuration": 15,
-    },
-    {
-        "id": "doubao-seedance-2-0-fast-260128",
-        "name": "Seedance 2.0 Fast",
-        "resolutions": ["480p", "720p"],
-        "minDuration": 4,
-        "maxDuration": 15,
-    },
-    {
-        "id": "doubao-seedance-2-0-mini-260615",
-        "name": "Seedance 2.0 Mini",
-        "resolutions": ["480p", "720p"],
-        "minDuration": 4,
-        "maxDuration": 15,
-    },
-]
+def _models() -> list[dict[str, Any]]:
+    try:
+        from platform_config import seedance_models
+
+        models = seedance_models()
+        if models:
+            return models
+    except Exception:
+        pass
+    return []
+
+
+def _api_url() -> str:
+    try:
+        from platform_config import seedance_api_url
+
+        return seedance_api_url()
+    except Exception:
+        return os.environ.get(
+            "SEEDANCE_API_URL",
+            "https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks",
+        )
+
+
+# Back-compat for imports that expect a module-level list
+SEEDANCE_MODELS = _models()
 
 
 class SeedanceError(RuntimeError):
@@ -42,7 +44,10 @@ class SeedanceError(RuntimeError):
 
 
 def get_model(model_id: str) -> dict:
-    return next((m for m in SEEDANCE_MODELS if m["id"] == model_id), SEEDANCE_MODELS[0])
+    models = _models()
+    if not models:
+        raise SeedanceError("platform.yaml 未配置 seedanceModels")
+    return next((m for m in models if m["id"] == model_id), models[0])
 
 
 def normalize_duration(model_id: str, duration: float | int) -> int:
@@ -61,10 +66,12 @@ def create_task(
     key = volc_key()
     if not key:
         raise SeedanceError("未配置 VOLCENGINE_API_KEY 或 ARK_API_KEY")
+    models = _models()
     m = get_model(model)
     if resolution not in m["resolutions"]:
         raise SeedanceError(f"{m['name']} 不支持 {resolution}")
-    model_id = os.environ.get("SEEDANCE_MODEL") if model == SEEDANCE_MODELS[0]["id"] else model
+    default_id = models[0]["id"] if models else m["id"]
+    model_id = os.environ.get("SEEDANCE_MODEL") if model == default_id else model
     model_id = model_id or m["id"]
     body = {
         "model": model_id,
@@ -77,7 +84,7 @@ def create_task(
         "return_last_frame": True,
     }
     req = urllib.request.Request(
-        API_URL,
+        _api_url(),
         data=json.dumps(body).encode("utf-8"),
         method="POST",
         headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"},
@@ -87,35 +94,26 @@ def create_task(
             raw = json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")[:500]
-        raise SeedanceError(f"Seedance API 错误 ({exc.code}): {detail}") from exc
-    if raw.get("error"):
-        raise SeedanceError((raw["error"] or {}).get("message") or "Seedance 任务创建失败")
-    if not raw.get("id"):
-        raise SeedanceError("Seedance 未返回任务 ID")
-    return raw["id"]
+        raise SeedanceError(f"Seedance 创建失败 HTTP {exc.code}: {detail}") from exc
+    task_id = raw.get("id")
+    if not task_id:
+        raise SeedanceError(f"Seedance 未返回 task id: {raw}")
+    return str(task_id)
 
 
 def query_task(task_id: str) -> dict[str, Any]:
     key = volc_key()
     if not key:
         raise SeedanceError("未配置 VOLCENGINE_API_KEY 或 ARK_API_KEY")
+    url = f"{_api_url().rstrip('/')}/{task_id}"
     req = urllib.request.Request(
-        f"{API_URL}/{task_id}",
-        headers={"Authorization": f"Bearer {key}"},
+        url,
         method="GET",
+        headers={"Authorization": f"Bearer {key}"},
     )
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            return json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")[:500]
-        raise SeedanceError(f"Seedance 查询失败 ({exc.code}): {detail}") from exc
-    content = data.get("content") or {}
-    return {
-        "status": data.get("status"),
-        "videoUrl": content.get("video_url"),
-        "lastFrameUrl": content.get("last_frame_url"),
-        "duration": data.get("duration"),
-        "resolution": data.get("resolution"),
-        "error": (data.get("error") or {}).get("message"),
-    }
+        raise SeedanceError(f"Seedance 查询失败 HTTP {exc.code}: {detail}") from exc

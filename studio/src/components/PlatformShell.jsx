@@ -1,42 +1,12 @@
-import {
-  Clapperboard,
-  Compass,
-  Film,
-  HelpCircle,
-  Library,
-  Sparkles,
-  Tv,
-  Trophy,
-  Wand2,
-  Workflow,
-  FolderKanban,
-  CreditCard,
-  Gift,
-  BookOpen,
-  KeyRound,
-  Moon,
-} from "lucide-react";
+import { Clapperboard, Moon } from "lucide-react";
+import { resolveIcon } from "../lib/icons";
 
-const NAV = [
-  { id: "assets", label: "个人资产", icon: FolderKanban },
-  { id: "skills", label: "Skill 专家", icon: BookOpen },
-  { id: "tools", label: "创作中心", icon: Wand2 },
-  { id: "agent", label: "创作 Agent", icon: Sparkles },
-  { id: "workshop", label: "影视工坊", icon: Film },
-  { id: "canvas", label: "无限画布", icon: Workflow },
-  { id: "inspire", label: "灵感广场", icon: Compass },
-  { id: "tv", label: "作品频道", icon: Tv },
-  { id: "cup", label: "创作挑战", icon: Trophy },
-  { id: "nav", label: "资源导航", icon: Library },
-  { id: "keys", label: "密钥配置", icon: KeyRound },
-  { id: "help", label: "帮助中心", icon: HelpCircle },
-  { id: "credits", label: "积分充值", icon: CreditCard },
-  { id: "refer", label: "推荐计划", icon: Gift },
-];
-
-export function PlatformShell({ active = "workshop", brand = "OpenMontage", config, onNavigate, children }) {
+export function PlatformShell({ active = "workshop", brand, tagline, config, onNavigate, children }) {
   const caps = config?.capabilities || {};
   const ready = caps.configured ?? 0;
+  const nav = config?.nav?.length ? config.nav : [];
+  const displayBrand = brand || config?.brand || "OpenMontage";
+  const displayTagline = tagline || config?.tagline || "影视工坊 · 本地生产";
 
   return (
     <div className="flex min-h-screen bg-[var(--stage)] text-[var(--ink)]">
@@ -47,15 +17,15 @@ export function PlatformShell({ active = "workshop", brand = "OpenMontage", conf
               <Clapperboard className="h-4 w-4" />
             </span>
             <div>
-              <div className="text-sm font-semibold tracking-wide">{brand}</div>
-              <div className="text-[10px] text-[var(--muted)]">影视工坊 · 本地生产</div>
+              <div className="text-sm font-semibold tracking-wide">{displayBrand}</div>
+              <div className="text-[10px] text-[var(--muted)]">{displayTagline}</div>
             </div>
           </div>
         </div>
 
         <nav className="scrollbar-thin flex-1 space-y-0.5 overflow-y-auto px-2 pb-4">
-          {NAV.map((item) => {
-            const Icon = item.icon;
+          {nav.map((item) => {
+            const Icon = resolveIcon(item.icon);
             const selected = active === item.id;
             return (
               <button

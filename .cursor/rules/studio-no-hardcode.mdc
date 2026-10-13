@@ -1,0 +1,41 @@
+---
+description: Drama Studio — no hardcoded product/business config in code
+globs: studio/**/*.{js,jsx,ts,tsx,py,yaml,yml}
+alwaysApply: false
+---
+
+# Studio: 禁止硬编码业务配置
+
+Drama Studio 的产品文案、导航、题材、画幅、模型列表、灵感/挑战/资源、默认值等 **必须可配置**，不得写死在组件或服务逻辑里。
+
+## 单一配置源
+
+| 类型 | 位置 |
+| --- | --- |
+| 平台/产品列表与默认值 | `studio/config/platform.yaml` |
+| 视觉风格库 | `studio/server/video_styles.json`（经 `/api/config` 下发） |
+| 密钥与运行时覆盖 | 环境变量 / `PROJECTS_ROOT/.studio_secrets.json` |
+
+前端通过 `GET /api/config` 取数；后端通过 `platform_config.py` 读取 YAML。
+
+## 禁止
+
+- 在 `.jsx` / `.py` 里写死题材、导航、灵感文案、挑战、工具入口、Seedance 模型 ID、DeepSeek base URL/model、默认画幅/题材等
+- 在 `studio/src/config/options.js` 再堆产品列表（该文件已废弃为占位）
+- 为「方便」复制一份与 YAML 重复的常量列表当 fallback（空数组 / 显式报错即可）
+
+## 允许
+
+- UI 结构、布局 class、动画、无业务含义的展示常量
+- 从 `config` props / `platform_config` / `os.environ` 读取后的本地变量
+- 图标组件映射表（icon 名 → lucide 组件），名称本身来自配置
+
+## 新增字段流程
+
+1. 先改 `studio/config/platform.yaml`（或 styles JSON / env）
+2. 确认 `/api/config`（或 settings）已暴露
+3. 组件只消费 `config.*`，不复制默认列表
+
+## 自检
+
+改 Studio 时问：若运营要改文案/列表/模型，是否只需改 YAML/JSON/env、无需改代码？若否，先配置化再合入。

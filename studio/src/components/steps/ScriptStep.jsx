@@ -321,6 +321,7 @@ export function ScriptStep({ projectId, bundle, config, setBusyMsg, onBundle, on
                   value={form.visualStyle}
                   disabled={operationBusy}
                   styles={config?.styles}
+                  categories={config?.styleCategories}
                   onChange={(visualStyle) => setForm({ ...form, visualStyle })}
                 />
               </div>

@@ -1,15 +1,11 @@
 import { useMemo, useState } from "react";
 import { ArrowLeft, Clapperboard, KeyRound, Loader2, Plus, RotateCcw, Sparkles } from "lucide-react";
 import { api } from "../api";
-import { PROJECT_GENRES } from "../config/options";
-import { VIDEO_STYLES, getDefaultVideoStyle } from "../config/videoStyles";
 import { requireCapability, toastMaybeKeys } from "../lib/keys";
 import { toast } from "../lib/toast";
 import { AspectRatioPicker } from "./project-settings/AspectRatioPicker";
 import { GenrePicker } from "./project-settings/GenrePicker";
 import { VideoStylePicker } from "./project-settings/VideoStylePicker";
-
-const CREATION_STEPS = ["专业剧本", "角色造型", "空镜场景", "关键道具", "分镜视频", "剪辑成片"];
 
 const BRIEF_PLACEHOLDER = `描述你想要的短剧内容，简单想法也可以，点击右上角「AI 优化需求」自动扩写。
 
@@ -32,10 +28,12 @@ const BRIEF_PLACEHOLDER = `描述你想要的短剧内容，简单想法也可�
 • 无虐主 / 快节奏 / 反转多 / 指定结局 / 必须保留的情节`;
 
 export function CreateProjectPage({ config, onBack, onCreated, onNeedKeys }) {
-  const genres = config?.genres?.length ? config.genres : PROJECT_GENRES;
-  const styles = config?.styles?.length ? config.styles : VIDEO_STYLES;
+  const genres = config?.genres || [];
+  const styles = config?.styles || [];
   const ratios = config?.ratios;
-  const defaultStyle = useMemo(() => styles[0] || getDefaultVideoStyle(), [styles]);
+  const creationSteps = config?.creationSteps || [];
+  const defaults = config?.defaults || {};
+  const defaultStyle = useMemo(() => styles[0], [styles]);
 
   const [creating, setCreating] = useState(false);
   const [optimizingBrief, setOptimizingBrief] = useState(false);
@@ -43,9 +41,9 @@ export function CreateProjectPage({ config, onBack, onCreated, onNeedKeys }) {
   const [form, setForm] = useState({
     title: "",
     brief: "",
-    genre: genres[0] || "都市情感",
-    visualStyle: defaultStyle?.promptValue || defaultStyle?.generationPrompt || "",
-    ratio: "9:16",
+    genre: defaults.genre || genres[0] || "",
+    visualStyle: defaultStyle?.promptValue || defaultStyle?.generationPrompt || defaults.visualStyle || "",
+    ratio: defaults.ratio || ratios?.[0]?.value || "",
   });
   const formLocked = optimizingBrief || creating;
 
@@ -134,7 +132,7 @@ export function CreateProjectPage({ config, onBack, onCreated, onNeedKeys }) {
               这里保存的是创作底稿，不必一开始就写得完美。一句话也能交给 AI 补全，所有结果仍可继续编辑。
             </p>
             <ol className="mt-6 space-y-2 text-sm text-white/70">
-              {CREATION_STEPS.map((step, i) => (
+              {creationSteps.map((step, i) => (
                 <li key={step} className="flex gap-3 border-b border-white/10 py-2">
                   <span className="timecode text-[10px] text-[#b7acff]">{String(i + 1).padStart(2, "0")}</span>
                   {step}
@@ -244,6 +242,7 @@ export function CreateProjectPage({ config, onBack, onCreated, onNeedKeys }) {
               onChange={(visualStyle) => setForm({ ...form, visualStyle })}
               disabled={formLocked}
               styles={styles}
+              categories={config?.styleCategories}
             />
           </section>
         </div>

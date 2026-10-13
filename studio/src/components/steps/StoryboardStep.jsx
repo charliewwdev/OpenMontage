@@ -1,22 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Clapperboard, Clock3, Loader2, Plus, Save, Sparkles, Trash2, Video } from "lucide-react";
 import { api } from "../../api";
-import { SEEDANCE_MODELS_FALLBACK } from "../../config/options";
 import { requireCapability, toastMaybeKeys } from "../../lib/keys";
 import { toast } from "../../lib/toast";
 import { useTimer } from "../../lib/useTimer";
 import { ConfirmDialog } from "../ConfirmDialog";
 
-const SPLIT_STAGES = [
-  { startsAt: 0, title: "正在核对剧本与创作素材", detail: "识别本集角色、空镜场景、道具与视觉风格。" },
-  { startsAt: 25, title: "正在拆分剧情节拍与时长", detail: "按场景、对白、动作和情绪转折规划连续视频片段。" },
-  { startsAt: 70, title: "正在规划镜头衔接与素材引用", detail: "匹配每个镜头出场的角色形象、场景和道具参考图。" },
-  { startsAt: 130, title: "正在编写 Seedance 视频提示词", detail: "组织景别、运镜、动作、对白、声音和画面风格。" },
-  { startsAt: 220, title: "正在检查完整性并组装结果", detail: "核对剧情覆盖、片段时长、素材引用和输出结构。" },
-];
-
 export function StoryboardStep({ projectId, bundle, config, setBusyMsg, onBundle, onRefresh, onNeedKeys }) {
   const caps = config?.capabilities || {};
+  const splitStages = config?.splitStages || [];
   const confirmedEpisodes = useMemo(
     () =>
       [...(bundle?.episodes || [])]
@@ -24,7 +16,7 @@ export function StoryboardStep({ projectId, bundle, config, setBusyMsg, onBundle
         .sort((a, b) => a.episodeNumber - b.episodeNumber),
     [bundle?.episodes],
   );
-  const models = config?.seedanceModels?.length ? config.seedanceModels : SEEDANCE_MODELS_FALLBACK;
+  const models = config?.seedanceModels || [];
   const [episodeId, setEpisodeId] = useState(confirmedEpisodes[0]?.id || "");
   const [model, setModel] = useState(models[0]?.id || "");
   const selectedModel = models.find((m) => m.id === model) || models[0];
@@ -72,11 +64,11 @@ export function StoryboardStep({ projectId, bundle, config, setBusyMsg, onBundle
     .filter((s) => s.status === "generating" && !s.deletedAt)
     .map((s) => s.id)
     .join(",");
-  const splitStageIndex = SPLIT_STAGES.reduce(
+  const splitStageIndex = splitStages.reduce(
     (current, stage, index) => (splitElapsed >= stage.startsAt ? index : current),
     0,
   );
-  const splitStage = SPLIT_STAGES[splitStageIndex];
+  const splitStage = splitStages[splitStageIndex] || { title: "处理中", detail: "" };
 
   useEffect(() => {
     const currentIds = new Set(shots.map((s) => s.id));
@@ -310,7 +302,7 @@ export function StoryboardStep({ projectId, bundle, config, setBusyMsg, onBundle
                 </span>
                 <div className="min-w-0">
                   <div className="timecode text-[10px] text-[var(--muted)]">
-                    AI 分镜导演 · 阶段 {splitStageIndex + 1}/{SPLIT_STAGES.length}
+                    AI 分镜导演 · 阶段 {splitStageIndex + 1}/{splitStages.length || 1}
                   </div>
                   <strong className="mt-1 block text-sm">{splitStage.title}</strong>
                   <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
@@ -324,7 +316,7 @@ export function StoryboardStep({ projectId, bundle, config, setBusyMsg, onBundle
               </span>
             </div>
             <div className="mt-4 grid grid-cols-5 gap-1.5" aria-hidden="true">
-              {SPLIT_STAGES.map((stage, index) => (
+              {splitStages.map((stage, index) => (
                 <span
                   key={stage.title}
                   className={`h-1.5 rounded-full ${index <= splitStageIndex ? "bg-[var(--projector)]" : "bg-[var(--line)]"}`}

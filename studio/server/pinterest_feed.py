@@ -261,7 +261,12 @@ def _dedupe(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return uniq
 
 
-def fetch_pins(limit: int = 48, force: bool = False, category: str = "all") -> dict[str, Any]:
+def fetch_pins(
+    limit: int = 48,
+    force: bool = False,
+    category: str = "all",
+    offset: int = 0,
+) -> dict[str, Any]:
     now = time.time()
     cached = False
     if not force and _CACHE["items"] and now - float(_CACHE["ts"]) < _CACHE_TTL:
@@ -272,16 +277,17 @@ def fetch_pins(limit: int = 48, force: bool = False, category: str = "all") -> d
         seed = _load_seed()
         live: list[dict[str, Any]] = []
         errors: list[str] = []
-        for src in _sources()[:6]:
+        # Pull more pins from more sources so the wall stays dense after pagination.
+        for src in _sources()[:12]:
             try:
                 if src.get("kind") == "board":
-                    batch = _from_board_pidgets(src["user"], src.get("board") or "", 30)
+                    batch = _from_board_pidgets(src["user"], src.get("board") or "", 50)
                 else:
-                    batch = _from_user_pidgets(src["user"], 30)
+                    batch = _from_user_pidgets(src["user"], 50)
                 live.extend(batch)
             except Exception as exc:  # noqa: BLE001
                 errors.append(f"{src.get('label') or src.get('user')}: {exc}")
-            if len(live) >= max(limit, 40):
+            if len(live) >= 240:
                 break
 
         if live:
@@ -306,13 +312,22 @@ def fetch_pins(limit: int = 48, force: bool = False, category: str = "all") -> d
     else:
         pool_view = pool
 
-    items = pool_view[: max(1, min(limit, 120))]
+    page_size = max(1, min(int(limit or 48), 120))
+    start = max(0, int(offset or 0))
+    end = start + page_size
+    items = pool_view[start:end]
+    total = len(pool_view)
+    next_offset = end if end < total else None
     return {
         "items": items,
         "source": source,
         "cached": cached,
         "count": len(items),
-        "total": len(pool_view),
+        "total": total,
+        "offset": start,
+        "limit": page_size,
+        "nextOffset": next_offset,
+        "hasMore": next_offset is not None,
         "categories": _categories(),
         "errors": list(_CACHE.get("errors") or [])[:5],
         "boards": [s.get("label") or s.get("user") for s in _sources()],

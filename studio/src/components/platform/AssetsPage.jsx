@@ -1,31 +1,55 @@
-import { useEffect, useMemo, useState } from "react";
-import { Image as ImageIcon, Loader2, RefreshCw, Search, Video } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Image as ImageIcon, Loader2, RefreshCw, Search, Upload, Video } from "lucide-react";
 import { api } from "../../api";
 import { toast } from "../../lib/toast";
 import { PageShell } from "./PageShell";
 import { Lightbox } from "../Lightbox";
 
+const PAGE_SIZE = 60;
+
+function readAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error("read failed"));
+    reader.readAsDataURL(file);
+  });
+}
+
 export function AssetsPage() {
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState("all");
   const [preview, setPreview] = useState(null);
+  const [total, setTotal] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
+  const [nextOffset, setNextOffset] = useState(null);
+  const fileRef = useRef(null);
 
-  const refresh = async () => {
-    setLoading(true);
+  const refresh = async ({ append = false, offset = 0 } = {}) => {
+    if (append) setLoadingMore(true);
+    else setLoading(true);
     try {
-      const data = await api("/api/platform/assets");
-      setAssets(data.assets || []);
+      const q = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(offset) });
+      const data = await api(`/api/platform/assets?${q.toString()}`);
+      const batch = data.assets || [];
+      setAssets((prev) => (append ? [...prev, ...batch] : batch));
+      setTotal(data.total || batch.length);
+      setHasMore(Boolean(data.hasMore));
+      setNextOffset(data.nextOffset ?? null);
     } catch (error) {
       toast.error(String(error.message || error));
     } finally {
       setLoading(false);
+      setLoadingMore(false);
     }
   };
 
   useEffect(() => {
-    void refresh();
+    void refresh({ offset: 0 });
   }, []);
 
   const visible = useMemo(() => {
@@ -37,15 +61,54 @@ export function AssetsPage() {
     });
   }, [assets, query, kind]);
 
+  const onUploadFiles = async (fileList) => {
+    const files = [...(fileList || [])];
+    if (!files.length) return;
+    setUploading(true);
+    let ok = 0;
+    try {
+      for (const file of files) {
+        const dataUrl = await readAsDataUrl(file);
+        await api("/api/platform/assets/upload", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ dataUrl, filename: file.name }),
+        });
+        ok += 1;
+      }
+      toast.success(`已上传 ${ok} 个素材`);
+      await refresh({ offset: 0 });
+    } catch (error) {
+      toast.error(String(error.message || error));
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+
   return (
     <PageShell
       eyebrow="Library"
       title="个人资产"
-      description="汇总全部项目下的本地图片与成片文件，可预览与复用。"
+      description="上传个人参考图/视频，并汇总各项目生成的本地素材，可预览与复用。"
       actions={
-        <button type="button" className="btn-secondary" onClick={() => void refresh()}>
-          <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> 刷新
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button type="button" className="btn-primary" disabled={uploading} onClick={() => fileRef.current?.click()}>
+            {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+            上传素材
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => void refresh({ offset: 0 })}>
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> 刷新
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*,video/mp4,video/webm,audio/wav,audio/mpeg,.svg"
+            multiple
+            className="hidden"
+            onChange={(e) => void onUploadFiles(e.target.files)}
+          />
+        </div>
       }
     >
       <div className="mb-4 flex flex-wrap gap-2">
@@ -65,12 +128,18 @@ export function AssetsPage() {
         ))}
       </div>
 
+      <div className="mb-3 text-xs text-white/40">
+        {total ? `共 ${total} 个 · 当前列表 ${visible.length}` : null}
+      </div>
+
       {loading ? (
         <div className="panel flex items-center justify-center gap-2 py-20 text-sm text-[var(--muted)]">
           <Loader2 className="h-4 w-4 animate-spin" /> 加载资产…
         </div>
       ) : !visible.length ? (
-        <div className="panel py-20 text-center text-sm text-[var(--muted)]">还没有资产。先去影视工坊生成角色图或导出成片。</div>
+        <div className="panel py-20 text-center text-sm text-[var(--muted)]">
+          还没有资产。点击上方「上传素材」，或先去影视工坊生成角色图 / 导出成片。
+        </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {visible.map((item) => (
@@ -95,12 +164,28 @@ export function AssetsPage() {
                 <div className="mt-2 flex items-center gap-2 text-[10px] text-white/40">
                   {item.kind === "video" ? <Video className="h-3 w-3" /> : <ImageIcon className="h-3 w-3" />}
                   {(item.size / 1024).toFixed(0)} KB
+                  {item.uploaded ? " · 上传" : ""}
                 </div>
               </div>
             </button>
           ))}
         </div>
       )}
+
+      {hasMore && !query ? (
+        <div className="mt-6 flex justify-center">
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={loadingMore}
+            onClick={() => void refresh({ append: true, offset: nextOffset ?? assets.length })}
+          >
+            {loadingMore ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+            加载更多
+          </button>
+        </div>
+      ) : null}
+
       <Lightbox
         src={preview?.kind === "image" ? preview.url : null}
         alt={preview?.path}

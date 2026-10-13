@@ -69,4 +69,4 @@ if [[ -n "${DTOK_GIT_TOKEN:-}" ]]; then
 fi
 
 echo "OK synced ${SHA} → ${REMOTE} ${BRANCH}"
-echo "Coolify should auto-deploy via GitLab webhook (main)."
+echo "Coolify should auto-deploy via GitLab webhook (${BRANCH})."

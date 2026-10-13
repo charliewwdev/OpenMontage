@@ -8,6 +8,70 @@ product:
   tagline: 影视工坊 · 本地生产
   publicUrlEnv: STUDIO_PUBLIC_URL
 
+auth:
+  required: true
+  client: WEB
+  methods:
+    - password
+    - register
+    - phone
+
+i18n:
+  defaultLocale: zh
+  locales:
+    - zh
+    - en
+
+pinterest:
+  boards:
+    - user: pinterest
+      board: official
+      label: Official
+    - user: design
+      board: product-photography
+      label: Product photography
+    - user: visually
+      board: product-styling
+      label: Product styling
+  # Used when live Pinterest fetch is blocked from the server network.
+  fallbackPins:
+    - id: pin-product-1
+      title: Soft light perfume still
+      description: Clean commercial product photography reference
+      image: https://images.unsplash.com/photo-1541643600914-78b084683601?auto=format&fit=crop&w=800&q=80
+      link: https://www.pinterest.com/search/pins/?q=product%20photography
+      board: fallback
+    - id: pin-product-2
+      title: Editorial packaging mood
+      description: Packaging and prop styling for drama set dressing
+      image: https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&w=800&q=80
+      link: https://www.pinterest.com/search/pins/?q=product%20styling
+      board: fallback
+    - id: pin-product-3
+      title: Lifestyle hero object
+      description: Lifestyle object hero shot for prop references
+      image: https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&w=800&q=80
+      link: https://www.pinterest.com/search/pins/?q=product%20hero
+      board: fallback
+    - id: pin-product-4
+      title: Ceramic tabletop set
+      description: Tabletop props and color palette reference
+      image: https://images.unsplash.com/photo-1514228742587-6b1558fcc036?auto=format&fit=crop&w=800&q=80
+      link: https://www.pinterest.com/search/pins/?q=prop%20styling
+      board: fallback
+    - id: pin-product-5
+      title: Minimal tech device
+      description: Minimal gadget surface and material reference
+      image: https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=800&q=80
+      link: https://www.pinterest.com/search/pins/?q=tech%20product
+      board: fallback
+    - id: pin-product-6
+      title: Fashion accessory close-up
+      description: Accessory macro for character prop continuity
+      image: https://images.unsplash.com/photo-1492707892479-7bc8d5a4ee93?auto=format&fit=crop&w=800&q=80
+      link: https://www.pinterest.com/search/pins/?q=fashion%20product
+      board: fallback
+
 defaults:
   genre: 都市情感
   ratio: "9:16"

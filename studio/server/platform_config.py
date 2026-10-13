@@ -103,6 +103,54 @@ def six_steps() -> list[dict[str, Any]]:
     return [x for x in items if isinstance(x, dict) and x.get("id")]
 
 
+def _load_locale_pack(locale: str) -> dict[str, str]:
+    root = Path(__file__).resolve().parents[1] / "config" / "locales"
+    path = root / f"{locale}.json"
+    if not path.is_file():
+        return {}
+    import json
+
+    data = json.loads(path.read_text(encoding="utf-8"))
+    return {str(k): str(v) for k, v in (data or {}).items()} if isinstance(data, dict) else {}
+
+
+def i18n_payload() -> dict[str, Any]:
+    cfg = load_platform_config().get("i18n") or {}
+    locales = [str(x) for x in (cfg.get("locales") or ["zh", "en"]) if str(x).strip()]
+    if not locales:
+        locales = ["zh", "en"]
+    default_locale = str(cfg.get("defaultLocale") or locales[0] or "zh")
+    messages = {loc: _load_locale_pack(loc) for loc in locales}
+    return {
+        "defaultLocale": default_locale,
+        "locales": locales,
+        "messages": messages,
+    }
+
+
+def auth_payload() -> dict[str, Any]:
+    cfg = load_platform_config().get("auth") or {}
+    env_required = os.environ.get("STUDIO_AUTH_REQUIRED")
+    if env_required is not None and str(env_required).strip() != "":
+        required = str(env_required).strip().lower() not in ("0", "false", "no", "off")
+    else:
+        required = bool(cfg.get("required", True))
+    return {
+        "required": required,
+        "client": cfg.get("client") or "WEB",
+        "methods": cfg.get("methods") or ["password", "register", "phone"],
+        "apiBaseUrl": (os.environ.get("API_BASE_URL") or "https://api-app.dtok.io/api/v1").rstrip("/"),
+    }
+
+
+def pinterest_payload() -> dict[str, Any]:
+    cfg = load_platform_config().get("pinterest") or {}
+    return {
+        "boards": cfg.get("boards") or [],
+        "enabled": bool(cfg.get("boards") or cfg.get("fallbackPins")),
+    }
+
+
 def public_platform_payload() -> dict[str, Any]:
     cfg = load_platform_config()
     product = cfg.get("product") or {}
@@ -139,4 +187,7 @@ def public_platform_payload() -> dict[str, Any]:
         "canvasSteps": cfg.get("canvasSteps") or [],
         "pages": cfg.get("pages") or {},
         "seedanceModels": seedance_models(),
+        "auth": auth_payload(),
+        "i18n": i18n_payload(),
+        "pinterest": pinterest_payload(),
     }

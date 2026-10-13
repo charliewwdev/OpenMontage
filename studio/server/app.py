@@ -46,8 +46,10 @@ from drama_service import (  # noqa: E402
     upload_entity_image,
     upsert_entity,
 )
+import auth_proxy  # noqa: E402
 from export_mp4 import ffmpeg_available  # noqa: E402
 from platform_config import default_genre, public_platform_payload, seedance_models  # noqa: E402
+from pinterest_feed import fetch_pins  # noqa: E402
 from providers import provider_status  # noqa: E402
 from settings_store import load_and_apply, public_status, save_secrets  # noqa: E402
 from store import ProjectStore  # noqa: E402
@@ -320,6 +322,89 @@ def config() -> dict[str, Any]:
     payload["styles"] = load_styles()
     payload["capabilities"] = _providers_payload()
     return payload
+
+
+def _bearer_token(request: Request) -> str:
+    auth = request.headers.get("authorization") or request.headers.get("Authorization") or ""
+    if auth.lower().startswith("bearer "):
+        return auth[7:].strip()
+    return ""
+
+
+def _auth_json(status: int, body: dict[str, Any]) -> JSONResponse:
+    return JSONResponse(status_code=status, content=body)
+
+
+@app.get("/api/auth/captcha")
+def auth_captcha() -> JSONResponse:
+    status, body = auth_proxy.get_captcha()
+    return _auth_json(status, body)
+
+
+@app.get("/api/auth/social-providers")
+def auth_social_providers() -> JSONResponse:
+    status, body = auth_proxy.social_providers()
+    return _auth_json(status, body)
+
+
+@app.post("/api/auth/login")
+async def auth_login(request: Request) -> JSONResponse:
+    body = await request.json()
+    status, result = auth_proxy.login(body if isinstance(body, dict) else {})
+    return _auth_json(status, result)
+
+
+@app.post("/api/auth/register")
+async def auth_register(request: Request) -> JSONResponse:
+    body = await request.json()
+    status, result = auth_proxy.register(body if isinstance(body, dict) else {})
+    return _auth_json(status, result)
+
+
+@app.post("/api/auth/phone-login")
+async def auth_phone_login(request: Request) -> JSONResponse:
+    body = await request.json()
+    status, result = auth_proxy.phone_login(body if isinstance(body, dict) else {})
+    return _auth_json(status, result)
+
+
+@app.post("/api/auth/send-code")
+async def auth_send_code(request: Request) -> JSONResponse:
+    body = await request.json()
+    status, result = auth_proxy.send_code(body if isinstance(body, dict) else {})
+    return _auth_json(status, result)
+
+
+@app.get("/api/auth/me")
+def auth_me(request: Request) -> JSONResponse:
+    token = _bearer_token(request)
+    if not token:
+        return _auth_json(401, {"ok": False, "error": "missing token"})
+    status, result = auth_proxy.me(token)
+    return _auth_json(status, result)
+
+
+@app.post("/api/auth/logout")
+def auth_logout(request: Request) -> JSONResponse:
+    token = _bearer_token(request)
+    if not token:
+        return _auth_json(200, {"ok": True, "data": None})
+    status, result = auth_proxy.logout(token)
+    return _auth_json(status, result)
+
+
+@app.post("/api/auth/refresh-token")
+def auth_refresh(request: Request) -> JSONResponse:
+    token = _bearer_token(request)
+    if not token:
+        return _auth_json(401, {"ok": False, "error": "missing token"})
+    status, result = auth_proxy.refresh_token(token)
+    return _auth_json(status, result)
+
+
+@app.get("/api/inspire/pins")
+def inspire_pins(limit: int = Query(24, ge=1, le=60), refresh: bool = Query(False)) -> dict[str, Any]:
+    return fetch_pins(limit=limit, force=refresh)
 
 
 @app.get("/api/projects")

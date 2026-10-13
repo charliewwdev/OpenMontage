@@ -1,0 +1,326 @@
+{
+  "project": {
+    "id": "welcome-ep01",
+    "title": "欢迎来到 Drama Studio",
+    "brief": "林夏：别回那通电话。\n周屿：太晚了。信号已经发出去了。\n\n空荡的便利店灯管闪了一下。林夏把手机扣在柜台上。\n林夏：我们还有最后三分钟。\n周屿：够改写结局吗？\n",
+    "synopsis": "三分钟倒计时里，一对旧识决定是否改写结局。",
+    "genre": "短剧",
+    "visualStyle": "当代都市夜戏，冷青与琥珀对比",
+    "ratio": "9:16",
+    "plannedEpisodes": 1,
+    "createdAt": "2026-10-13T05:15:59Z",
+    "updatedAt": "2026-10-13T05:15:59Z",
+    "coverPath": "media/images/char_linxia_style.webp"
+  },
+  "episodes": [
+    {
+      "id": "ep_welcome01",
+      "projectId": "welcome-ep01",
+      "episodeNumber": 1,
+      "title": "欢迎来到 Drama Studio",
+      "content": "林夏：别回那通电话。\n周屿：太晚了。信号已经发出去了。\n\n空荡的便利店灯管闪了一下。林夏把手机扣在柜台上。\n林夏：我们还有最后三分钟。\n周屿：够改写结局吗？\n",
+      "status": "confirmed",
+      "createdAt": "2026-10-13T05:15:59Z",
+      "updatedAt": "2026-10-13T05:15:59Z"
+    }
+  ],
+  "entities": [
+    {
+      "id": "char_周屿",
+      "projectId": "welcome-ep01",
+      "kind": "character",
+      "name": "周屿",
+      "variant": "默认形象",
+      "description": "短剧男主。都市夜戏冷青光下的疲惫与决绝，短发，深色夹克。",
+      "episodes": [
+        "ep_welcome01"
+      ],
+      "category": "protagonist",
+      "metadata": {
+        "role": "protagonist"
+      },
+      "selectedImageId": "img_zhouyu_style",
+      "images": [
+        {
+          "id": "img_zhouyu_style",
+          "path": "media/images/char_zhouyu_style.webp",
+          "label": "都市写实造型",
+          "source": "seed",
+          "createdAt": "2026-10-13T05:15:59Z"
+        },
+        {
+          "id": "img_zhouyu_alt",
+          "path": "media/images/char_zhouyu_alt.webp",
+          "label": "气质参考",
+          "source": "seed",
+          "createdAt": "2026-10-13T05:15:59Z"
+        }
+      ],
+      "createdAt": "2026-10-13T05:15:59Z",
+      "updatedAt": "2026-10-13T05:15:59Z"
+    },
+    {
+      "id": "char_林夏",
+      "projectId": "welcome-ep01",
+      "kind": "character",
+      "name": "林夏",
+      "variant": "默认形象",
+      "description": "短剧女主。便利店冷白灯下的紧张神情，长发，浅色外套。",
+      "episodes": [
+        "ep_welcome01"
+      ],
+      "category": "lead",
+      "metadata": {
+        "role": "supporting"
+      },
+      "selectedImageId": "img_linxia_style",
+      "images": [
+        {
+          "id": "img_linxia_style",
+          "path": "media/images/char_linxia_style.webp",
+          "label": "韩系都市软光",
+          "source": "seed",
+          "createdAt": "2026-10-13T05:15:59Z"
+        },
+        {
+          "id": "img_linxia_alt",
+          "path": "media/images/char_linxia_alt.webp",
+          "label": "柔光造型",
+          "source": "seed",
+          "createdAt": "2026-10-13T05:15:59Z"
+        }
+      ],
+      "createdAt": "2026-10-13T05:15:59Z",
+      "updatedAt": "2026-10-13T05:15:59Z"
+    },
+    {
+      "id": "loc_sc01",
+      "projectId": "welcome-ep01",
+      "kind": "scene",
+      "name": "空荡便利店",
+      "variant": "夜戏",
+      "description": "灯管闪烁的便利店柜台，手机扣在台面上，时间紧迫。",
+      "episodes": [
+        "ep_welcome01"
+      ],
+      "category": "",
+      "metadata": {},
+      "selectedImageId": "img_scene_suspense",
+      "images": [
+        {
+          "id": "img_scene_suspense",
+          "path": "media/images/scene_suspense.webp",
+          "label": "冷悬疑空镜",
+          "source": "seed",
+          "createdAt": "2026-10-13T05:15:59Z"
+        },
+        {
+          "id": "img_scene_city",
+          "path": "media/images/scene_city_night.webp",
+          "label": "都市夜景",
+          "source": "seed",
+          "createdAt": "2026-10-13T05:15:59Z"
+        }
+      ],
+      "createdAt": "2026-10-13T05:15:59Z",
+      "updatedAt": "2026-10-13T05:15:59Z"
+    },
+    {
+      "id": "loc_sc02",
+      "projectId": "welcome-ep01",
+      "kind": "scene",
+      "name": "城市夜巷",
+      "variant": "外景",
+      "description": "信号发出后的城市夜景，冷青与琥珀对比。",
+      "episodes": [
+        "ep_welcome01"
+      ],
+      "category": "",
+      "metadata": {},
+      "selectedImageId": "img_scene_alley",
+      "images": [
+        {
+          "id": "img_scene_alley",
+          "path": "media/images/scene_alley.webp",
+          "label": "夜巷氛围",
+          "source": "seed",
+          "createdAt": "2026-10-13T05:15:59Z"
+        }
+      ],
+      "createdAt": "2026-10-13T05:15:59Z",
+      "updatedAt": "2026-10-13T05:15:59Z"
+    },
+    {
+      "id": "prop_phone",
+      "projectId": "welcome-ep01",
+      "kind": "prop",
+      "name": "林夏的手机",
+      "variant": "关键道具",
+      "description": "倒计时三分钟的通话与短信，推动剧情转折。",
+      "episodes": [
+        "ep_welcome01"
+      ],
+      "category": "item",
+      "metadata": {},
+      "selectedImageId": "img_prop_a",
+      "images": [
+        {
+          "id": "img_prop_a",
+          "path": "media/images/prop_detail_a.webp",
+          "label": "关键道具细节",
+          "source": "seed",
+          "createdAt": "2026-10-13T05:15:59Z"
+        },
+        {
+          "id": "img_prop_b",
+          "path": "media/images/prop_detail_b.webp",
+          "label": "道具备选",
+          "source": "seed",
+          "createdAt": "2026-10-13T05:15:59Z"
+        },
+        {
+          "id": "img_prop_mood",
+          "path": "media/images/style_board.webp",
+          "label": "视觉情绪板",
+          "source": "seed",
+          "createdAt": "2026-10-13T05:15:59Z"
+        }
+      ],
+      "createdAt": "2026-10-13T05:15:59Z",
+      "updatedAt": "2026-10-13T05:15:59Z"
+    },
+    {
+      "id": "board_refs",
+      "projectId": "welcome-ep01",
+      "kind": "prop",
+      "name": "分镜情绪板",
+      "variant": "参考",
+      "description": "开场三镜的构图与光比参考，可在分镜台复用。",
+      "episodes": [
+        "ep_welcome01"
+      ],
+      "category": "reference",
+      "metadata": {},
+      "selectedImageId": "img_shot_01",
+      "images": [
+        {
+          "id": "img_shot_01",
+          "path": "media/images/shot_ref_01.webp",
+          "label": "分镜参考 01",
+          "source": "seed",
+          "createdAt": "2026-10-13T05:15:59Z"
+        },
+        {
+          "id": "img_shot_02",
+          "path": "media/images/shot_ref_02.webp",
+          "label": "分镜参考 02",
+          "source": "seed",
+          "createdAt": "2026-10-13T05:15:59Z"
+        },
+        {
+          "id": "img_shot_03",
+          "path": "media/images/shot_ref_03.webp",
+          "label": "分镜参考 03",
+          "source": "seed",
+          "createdAt": "2026-10-13T05:15:59Z"
+        }
+      ],
+      "createdAt": "2026-10-13T05:15:59Z",
+      "updatedAt": "2026-10-13T05:15:59Z"
+    }
+  ],
+  "shots": [
+    {
+      "id": "ep01_sc01_sh00",
+      "projectId": "welcome-ep01",
+      "episodeId": "ep_welcome01",
+      "shotOrder": 1,
+      "prompt": "slow push in establishing",
+      "duration": 3,
+      "referenceEntityIds": [
+        "char_周屿"
+      ],
+      "status": "pending",
+      "providerTaskId": null,
+      "error": null,
+      "selectedVideoId": null,
+      "videos": [],
+      "createdAt": "2026-10-13T05:15:59Z",
+      "updatedAt": "2026-10-13T05:15:59Z"
+    },
+    {
+      "id": "ep01_sc01_sh01",
+      "projectId": "welcome-ep01",
+      "episodeId": "ep_welcome01",
+      "shotOrder": 2,
+      "prompt": "subtle performance, cinematic",
+      "duration": 4,
+      "referenceEntityIds": [
+        "char_周屿"
+      ],
+      "status": "pending",
+      "providerTaskId": null,
+      "error": null,
+      "selectedVideoId": null,
+      "videos": [],
+      "createdAt": "2026-10-13T05:15:59Z",
+      "updatedAt": "2026-10-13T05:15:59Z"
+    },
+    {
+      "id": "ep01_sc02_sh00",
+      "projectId": "welcome-ep01",
+      "episodeId": "ep_welcome01",
+      "shotOrder": 3,
+      "prompt": "slow push in establishing",
+      "duration": 3,
+      "referenceEntityIds": [
+        "char_林夏",
+        "char_周屿"
+      ],
+      "status": "pending",
+      "providerTaskId": null,
+      "error": null,
+      "selectedVideoId": null,
+      "videos": [],
+      "createdAt": "2026-10-13T05:15:59Z",
+      "updatedAt": "2026-10-13T05:15:59Z"
+    },
+    {
+      "id": "ep01_sc02_sh01",
+      "projectId": "welcome-ep01",
+      "episodeId": "ep_welcome01",
+      "shotOrder": 4,
+      "prompt": "subtle performance, cinematic",
+      "duration": 4,
+      "referenceEntityIds": [
+        "char_林夏"
+      ],
+      "status": "pending",
+      "providerTaskId": null,
+      "error": null,
+      "selectedVideoId": null,
+      "videos": [],
+      "createdAt": "2026-10-13T05:15:59Z",
+      "updatedAt": "2026-10-13T05:15:59Z"
+    },
+    {
+      "id": "ep01_sc02_sh02",
+      "projectId": "welcome-ep01",
+      "episodeId": "ep_welcome01",
+      "shotOrder": 5,
+      "prompt": "subtle performance, cinematic",
+      "duration": 4,
+      "referenceEntityIds": [
+        "char_周屿"
+      ],
+      "status": "pending",
+      "providerTaskId": null,
+      "error": null,
+      "selectedVideoId": null,
+      "videos": [],
+      "createdAt": "2026-10-13T05:15:59Z",
+      "updatedAt": "2026-10-13T05:15:59Z"
+    }
+  ],
+  "edits": []
+}

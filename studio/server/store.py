@@ -32,7 +32,12 @@ def new_id(prefix: str = "") -> str:
 
 
 def ensure_seed_projects(projects_root: Path, seed_root: Path | None = None) -> list[str]:
-    """Copy packaged seed projects into PROJECTS_ROOT when missing (empty volume safe)."""
+    """Copy packaged seed projects into PROJECTS_ROOT when missing (empty volume safe).
+
+    Also upgrades an existing seed project when the packaged seed has media files
+    but the volume copy is still media-empty (common after first boot before media
+    was added to the seed package).
+    """
     root = Path(projects_root)
     root.mkdir(parents=True, exist_ok=True)
     if seed_root is None:
@@ -45,10 +50,29 @@ def ensure_seed_projects(projects_root: Path, seed_root: Path | None = None) -> 
         if not src.is_dir() or src.name.startswith("."):
             continue
         dest = root / src.name
-        if dest.exists():
+        if not dest.exists():
+            shutil.copytree(src, dest)
+            copied.append(src.name)
             continue
-        shutil.copytree(src, dest)
-        copied.append(src.name)
+        src_media = src / "media"
+        if not src_media.is_dir():
+            continue
+        src_files = [p for p in src_media.rglob("*") if p.is_file()]
+        if not src_files:
+            continue
+        dest_media = dest / "media"
+        dest_files = [p for p in dest_media.rglob("*") if p.is_file()] if dest_media.is_dir() else []
+        if len(dest_files) >= 3:
+            continue
+        for f in src_files:
+            rel = f.relative_to(src)
+            target = dest / rel
+            target.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(f, target)
+        seed_state = src / "studio_state.json"
+        if seed_state.is_file():
+            shutil.copy2(seed_state, dest / "studio_state.json")
+        copied.append(f"{src.name}:media")
     return copied
 
 
@@ -192,9 +216,23 @@ class ProjectStore:
             eps = state.get("episodes") or []
             ents = [e for e in (state.get("entities") or []) if not e.get("deletedAt")]
             shots = [s for s in (state.get("shots") or []) if not s.get("deletedAt")]
+            cover_path = p.get("coverPath") or ""
+            cover_url = f"/api/media/{pid}/{cover_path}" if cover_path else None
+            if not cover_url:
+                for ent in ents:
+                    if ent.get("kind") != "character":
+                        continue
+                    sel = ent.get("selectedImageId")
+                    hit = next((i for i in (ent.get("images") or []) if i.get("id") == sel), None)
+                    if not hit and (ent.get("images") or []):
+                        hit = ent["images"][0]
+                    if hit and hit.get("path"):
+                        cover_url = f"/api/media/{pid}/{hit['path']}"
+                        break
             items.append(
                 {
                     **p,
+                    "coverUrl": cover_url,
                     "progress": {
                         "episodes": {
                             "total": len(eps),

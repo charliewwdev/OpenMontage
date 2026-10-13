@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CheckCircle2, KeyRound, Loader2, ShieldCheck } from "lucide-react";
+import { CheckCircle2, Download, ExternalLink, KeyRound, Loader2, ShieldCheck } from "lucide-react";
 import { api } from "../../api";
 import { toast } from "../../lib/toast";
 import { PageShell } from "./PageShell";
@@ -9,6 +9,7 @@ export function KeysSettings({ config, onUpdated }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [status, setStatus] = useState(null);
   const [form, setForm] = useState({
     DEEPSEEK_API_KEY: "",
@@ -66,6 +67,21 @@ export function KeysSettings({ config, onUpdated }) {
     }
   };
 
+  const importEnv = async () => {
+    setImporting(true);
+    try {
+      const data = await api("/api/settings/keys/import-env", { method: "POST" });
+      setStatus(data.keys);
+      onUpdated?.(data);
+      if (data.ok) toast.success(`已从服务器环境导入：${(data.imported || []).join("、")}`);
+      else toast.error(data.error || "环境变量中没有可用密钥");
+    } catch (error) {
+      toast.error(String(error.message || error));
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const test = async () => {
     setTesting(true);
     try {
@@ -91,6 +107,10 @@ export function KeysSettings({ config, onUpdated }) {
       description="一键写入 DeepSeek 与火山方舟密钥。保存后立刻注入服务进程，无需重启容器；密钥落在项目卷的本地加密文件中。"
       actions={
         <>
+          <button type="button" className="btn-secondary" disabled={importing || loading} onClick={() => void importEnv()}>
+            {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            从服务器导入
+          </button>
           <button type="button" className="btn-secondary" disabled={testing || loading} onClick={() => void test()}>
             {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
             检测连通
@@ -184,6 +204,28 @@ export function KeysSettings({ config, onUpdated }) {
                   </li>
                 ))}
               </ul>
+            </section>
+            <section className="panel p-5">
+              <div className="label">申请入口</div>
+              <p className="mt-2 text-xs leading-6 text-[var(--muted)]">
+                厂商不会开放无人值守开户。请在控制台创建 Key 后粘贴到左侧，或写入 Coolify 后再点「从服务器导入」。
+              </p>
+              <div className="mt-3 space-y-2">
+                {(config?.resources || [])
+                  .filter((link) => link.external)
+                  .map((link) => (
+                    <a
+                      key={link.href}
+                      href={link.href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-between rounded-xl border border-[var(--line)] px-3 py-2 text-sm hover:border-[#7c6cff]/45"
+                    >
+                      <span>{link.title}</span>
+                      <ExternalLink className="h-3.5 w-3.5 text-[var(--muted)]" />
+                    </a>
+                  ))}
+              </div>
             </section>
             <section className="panel-muted p-4 text-xs leading-6 text-[var(--muted)]">
               <strong className="block text-[var(--ink)]">说明</strong>

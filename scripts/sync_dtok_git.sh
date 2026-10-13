@@ -16,7 +16,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 REMOTE="${DTOK_GIT_REMOTE:-https://git.dtok.io/dtok-app/OpenMontage.git}"
 WORK="${DTOK_SYNC_WORKDIR:-/tmp/om-dtok-slim-sync}"
-BRANCH="${DTOK_SYNC_BRANCH:-main}"
+# Prefer `deploy` — `main` is often protected against force-push on git.dtok.io.
+BRANCH="${DTOK_SYNC_BRANCH:-deploy}"
 
 cd "$ROOT"
 SHA="$(git rev-parse --short HEAD)"

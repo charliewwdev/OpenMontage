@@ -1,4 +1,8 @@
-name: Deploy Drama Studio (Coolify)
+name: Deploy Drama Studio (git.dtok.io → Coolify)
+
+# Preferred path (dtok-app style):
+#   GitHub main → slim sync → git.dtok.io/deploy → GitLab webhook → Coolify
+# Fallback when DTOK sync secrets are missing: direct Coolify API deploy.
 
 on:
   push:
@@ -7,20 +11,45 @@ on:
       - "studio/**"
       - "docker-compose.studio.yml"
       - "scripts/deploy_coolify_drama_studio.sh"
+      - "scripts/sync_dtok_git.sh"
       - "lib/**"
       - "tools/pipeline/**"
       - "pipeline_defs/short-drama.yaml"
       - "workflow_defs/**"
-      - "projects/midnight-sms-ep01/**"
       - ".github/workflows/deploy-drama-studio.yml"
   workflow_dispatch:
 
 jobs:
-  deploy:
-    if: ${{ secrets.COOLIFY_TOKEN != '' && secrets.COOLIFY_DRAMA_STUDIO_UUID != '' }}
+  sync-dtok:
+    if: ${{ secrets.DTOK_GIT_TOKEN != '' || secrets.DTOK_GIT_PASSWORD != '' }}
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger Coolify deploy
+      - uses: actions/checkout@v4
+      - name: Sync slim tree to git.dtok.io (deploy)
+        env:
+          DTOK_GIT_TOKEN: ${{ secrets.DTOK_GIT_TOKEN }}
+          DTOK_GIT_PASSWORD: ${{ secrets.DTOK_GIT_PASSWORD }}
+          DTOK_GIT_USERNAME: ${{ secrets.DTOK_GIT_USERNAME }}
+          COOLIFY_GITLAB_WEBHOOK_SECRET: ${{ secrets.COOLIFY_GITLAB_WEBHOOK_SECRET }}
+          DTOK_SYNC_BRANCH: deploy
+        run: |
+          set -euo pipefail
+          USERNAME="${DTOK_GIT_USERNAME:-oauth2}"
+          PASSWORD="${DTOK_GIT_TOKEN:-${DTOK_GIT_PASSWORD:-}}"
+          if [[ -z "$PASSWORD" ]]; then
+            echo "Missing DTOK_GIT_TOKEN / DTOK_GIT_PASSWORD"; exit 1
+          fi
+          # Prefer credential helper so the sync script remote stays clean.
+          git config --global credential.helper store
+          printf 'https://%s:%s@git.dtok.io\n' "$USERNAME" "$PASSWORD" > ~/.git-credentials
+          chmod 600 ~/.git-credentials
+          ./scripts/sync_dtok_git.sh
+
+  deploy-api-fallback:
+    if: ${{ secrets.COOLIFY_TOKEN != '' && secrets.COOLIFY_DRAMA_STUDIO_UUID != '' && secrets.DTOK_GIT_TOKEN == '' && secrets.DTOK_GIT_PASSWORD == '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Coolify deploy (API fallback)
         env:
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
           COOLIFY_URL: ${{ secrets.COOLIFY_URL || 'https://cicd.dtok.io' }}

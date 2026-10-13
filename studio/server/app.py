@@ -355,6 +355,13 @@ def auth_social_providers() -> JSONResponse:
     return _auth_json(status, body)
 
 
+@app.post("/api/auth/social/{provider}")
+async def auth_social_login(provider: str, request: Request) -> JSONResponse:
+    body = await request.json()
+    status, result = auth_proxy.social_login(provider, body if isinstance(body, dict) else {})
+    return _auth_json(status, result)
+
+
 @app.post("/api/auth/login")
 async def auth_login(request: Request) -> JSONResponse:
     body = await request.json()

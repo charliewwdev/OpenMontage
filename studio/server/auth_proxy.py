@@ -117,6 +117,17 @@ def social_providers():
     return proxy("GET", "/auth/social-providers")
 
 
+def social_login(provider: str, body: dict[str, Any]):
+    """Exchange a third-party credential (e.g. Google idToken) for a DTok session."""
+    name = (provider or "").strip().lower()
+    if not name:
+        return 400, {"ok": False, "error": "missing provider"}
+    payload = dict(body or {})
+    payload.setdefault("client", "WEB")
+    # DTok accepts POST /auth/social/{provider} with idToken for Google GIS.
+    return proxy("POST", f"/auth/social/{name}", body=payload)
+
+
 def me(token: str):
     return proxy("GET", "/auth/me", token=token)
 

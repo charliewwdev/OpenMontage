@@ -31,6 +31,27 @@ def new_id(prefix: str = "") -> str:
     return f"{prefix}{uuid.uuid4().hex[:12]}" if prefix else uuid.uuid4().hex
 
 
+def ensure_seed_projects(projects_root: Path, seed_root: Path | None = None) -> list[str]:
+    """Copy packaged seed projects into PROJECTS_ROOT when missing (empty volume safe)."""
+    root = Path(projects_root)
+    root.mkdir(parents=True, exist_ok=True)
+    if seed_root is None:
+        seed_root = Path(__file__).resolve().parents[1] / "seed"
+    seed_root = Path(seed_root)
+    if not seed_root.is_dir():
+        return []
+    copied: list[str] = []
+    for src in sorted(seed_root.iterdir()):
+        if not src.is_dir() or src.name.startswith("."):
+            continue
+        dest = root / src.name
+        if dest.exists():
+            continue
+        shutil.copytree(src, dest)
+        copied.append(src.name)
+    return copied
+
+
 class ProjectStore:
     def __init__(self, projects_root: Path):
         self.root = projects_root

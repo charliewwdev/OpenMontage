@@ -47,20 +47,28 @@ from drama_service import (  # noqa: E402
     upsert_entity,
 )
 import auth_proxy  # noqa: E402
+import demo_auth  # noqa: E402
 from export_mp4 import ffmpeg_available  # noqa: E402
-from platform_config import default_genre, public_platform_payload, seedance_models  # noqa: E402
+from platform_config import (  # noqa: E402
+    default_genre,
+    demo_auth_config,
+    public_platform_payload,
+    seedance_models,
+)
 from pinterest_feed import fetch_pins  # noqa: E402
 from providers import provider_status  # noqa: E402
 from settings_store import load_and_apply, public_status, save_secrets  # noqa: E402
-from store import ProjectStore  # noqa: E402
+from store import ProjectStore, ensure_seed_projects  # noqa: E402
 
 PROJECTS_ROOT = Path(os.environ.get("PROJECTS_ROOT", str(ROOT / "projects"))).resolve()
 DIST_DIR = Path(os.environ.get("STUDIO_DIST", str(Path(__file__).resolve().parents[1] / "dist"))).resolve()
 HOST = os.environ.get("HOST", os.environ.get("STUDIO_HOST", "0.0.0.0"))
 PORT = int(os.environ.get("PORT", os.environ.get("STUDIO_API_PORT", "8787")))
 SKILLS_ROOT = Path(__file__).resolve().parents[1] / "skills"
+SEED_ROOT = Path(__file__).resolve().parents[1] / "seed"
 
 STORE = ProjectStore(PROJECTS_ROOT)
+ensure_seed_projects(PROJECTS_ROOT, SEED_ROOT)
 load_and_apply(PROJECTS_ROOT)
 SEEDANCE_MODELS = seedance_models()
 
@@ -354,6 +362,21 @@ async def auth_login(request: Request) -> JSONResponse:
     return _auth_json(status, result)
 
 
+@app.post("/api/auth/demo")
+def auth_demo() -> JSONResponse:
+    demo_cfg = demo_auth_config()
+    if not demo_cfg.get("enabled"):
+        return _auth_json(403, {"ok": False, "error": "demo login disabled"})
+    ensure_seed_projects(PROJECTS_ROOT, SEED_ROOT)
+    ttl = max(1, int(demo_cfg.get("ttlDays") or 7)) * 24 * 3600
+    issued = demo_auth.issue_demo_token(
+        user_id=str(demo_cfg.get("userId") or "demo"),
+        username=str(demo_cfg.get("displayName") or demo_cfg.get("username") or "Demo"),
+        ttl_seconds=ttl,
+    )
+    return _auth_json(200, {"ok": True, "data": issued, "msg": "ok"})
+
+
 @app.post("/api/auth/register")
 async def auth_register(request: Request) -> JSONResponse:
     body = await request.json()
@@ -380,6 +403,9 @@ def auth_me(request: Request) -> JSONResponse:
     token = _bearer_token(request)
     if not token:
         return _auth_json(401, {"ok": False, "error": "missing token"})
+    if demo_auth.is_demo_token(token):
+        status, result = demo_auth.demo_me(token)
+        return _auth_json(status, result)
     status, result = auth_proxy.me(token)
     return _auth_json(status, result)
 
@@ -389,6 +415,9 @@ def auth_logout(request: Request) -> JSONResponse:
     token = _bearer_token(request)
     if not token:
         return _auth_json(200, {"ok": True, "data": None})
+    if demo_auth.is_demo_token(token):
+        status, result = demo_auth.demo_logout(token)
+        return _auth_json(status, result)
     status, result = auth_proxy.logout(token)
     return _auth_json(status, result)
 
@@ -398,6 +427,14 @@ def auth_refresh(request: Request) -> JSONResponse:
     token = _bearer_token(request)
     if not token:
         return _auth_json(401, {"ok": False, "error": "missing token"})
+    if demo_auth.is_demo_token(token):
+        demo_cfg = demo_auth_config()
+        status, result = demo_auth.demo_refresh(
+            token,
+            user_id=str(demo_cfg.get("userId") or "demo"),
+            username=str(demo_cfg.get("displayName") or demo_cfg.get("username") or "Demo"),
+        )
+        return _auth_json(status, result)
     status, result = auth_proxy.refresh_token(token)
     return _auth_json(status, result)
 

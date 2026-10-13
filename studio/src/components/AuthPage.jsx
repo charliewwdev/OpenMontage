@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { Clapperboard, Loader2, RefreshCw } from "lucide-react";
+import { Clapperboard, Loader2, RefreshCw, Sparkles } from "lucide-react";
 import { api } from "../api";
 import { setSession } from "../lib/auth";
 import { useLocale } from "../lib/i18n";
@@ -17,10 +17,12 @@ function Field({ label, children }) {
 const inputClass =
   "w-full rounded-xl border border-[var(--line)] bg-white/[.04] px-3 py-2.5 text-sm text-white outline-none focus:border-[#7c6cff]/60";
 
-export function AuthPage({ brand, tagline, onAuthed }) {
+export function AuthPage({ brand, tagline, authConfig, onAuthed }) {
   const { t, locale, setLocale } = useLocale();
+  const demoEnabled = authConfig?.demo?.enabled !== false;
   const [mode, setMode] = useState("login");
   const [busy, setBusy] = useState(false);
+  const [demoBusy, setDemoBusy] = useState(false);
   const [captcha, setCaptcha] = useState({ uuid: "", imageUrl: "" });
   const [providers, setProviders] = useState([]);
   const [form, setForm] = useState({
@@ -65,10 +67,35 @@ export function AuthPage({ brand, tagline, onAuthed }) {
         username: data.username || form.username || form.email || form.phone,
         avatar: data.avatar || "",
         expiresIn: data.expiresIn,
+        demo: Boolean(data.demo),
       },
     });
     onAuthed?.(data);
   };
+
+  const enterDemo = async () => {
+    setDemoBusy(true);
+    try {
+      const res = await api("/api/auth/demo", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
+      finish(res);
+      toast.success(t("auth.demoOk"));
+    } catch (err) {
+      toast.error(String(err.message || err));
+    } finally {
+      setDemoBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!demoEnabled || !authConfig?.demo?.autoEnter) return;
+    void enterDemo();
+    // intentionally only on mount when autoEnter is configured
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [demoEnabled, authConfig?.demo?.autoEnter]);
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -180,7 +207,27 @@ export function AuthPage({ brand, tagline, onAuthed }) {
         <h1 className="text-xl font-semibold">{t("auth.welcome")}</h1>
         <p className="mt-1 text-sm text-white/55">{t("auth.subtitle")}</p>
 
-        <div className="mt-5 flex gap-1 rounded-xl border border-[var(--line)] bg-white/[.03] p-1">
+        {demoEnabled ? (
+          <div className="mt-5 space-y-2">
+            <button
+              type="button"
+              className="btn-primary flex w-full items-center justify-center gap-2"
+              disabled={demoBusy || busy}
+              onClick={() => void enterDemo()}
+            >
+              {demoBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {demoBusy ? t("auth.demoBusy") : t("auth.demoEnter")}
+            </button>
+            <p className="text-center text-[11px] text-white/40">{t("auth.demoHint")}</p>
+            <div className="flex items-center gap-3 py-1 text-[11px] text-white/30">
+              <span className="h-px flex-1 bg-white/10" />
+              <span>{t("auth.orAccount")}</span>
+              <span className="h-px flex-1 bg-white/10" />
+            </div>
+          </div>
+        ) : null}
+
+        <div className="mt-2 flex gap-1 rounded-xl border border-[var(--line)] bg-white/[.03] p-1">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -246,7 +293,7 @@ export function AuthPage({ brand, tagline, onAuthed }) {
             </Field>
           ) : null}
 
-          <button type="submit" className="btn-primary mt-2 w-full" disabled={busy}>
+          <button type="submit" className="btn-primary mt-2 w-full" disabled={busy || demoBusy}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {mode === "login" ? t("auth.submitLogin") : mode === "register" ? t("auth.submitRegister") : t("auth.submitPhone")}
           </button>

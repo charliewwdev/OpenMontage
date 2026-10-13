@@ -212,7 +212,11 @@ class ProjectStore:
             state = self.load(pid)
             if not state:
                 continue
-            p = state["project"]
+            p = state.get("project")
+            if not isinstance(p, dict):
+                continue
+            if p.get("hidden"):
+                continue
             eps = state.get("episodes") or []
             ents = [e for e in (state.get("entities") or []) if not e.get("deletedAt")]
             shots = [s for s in (state.get("shots") or []) if not s.get("deletedAt")]

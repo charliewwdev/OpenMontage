@@ -217,19 +217,27 @@ def _ensure_library_root() -> Path:
     root = PROJECTS_ROOT / _LIBRARY_ID
     (root / "media" / "uploads").mkdir(parents=True, exist_ok=True)
     state = root / "studio_state.json"
+    # Must match ProjectStore shape (state["project"]) so list_items stays healthy.
+    payload = {
+        "project": {
+            "id": _LIBRARY_ID,
+            "title": "个人素材库",
+            "updatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "hidden": True,
+        },
+        "episodes": [],
+        "entities": [],
+        "shots": [],
+    }
     if not state.is_file():
-        state.write_text(
-            json.dumps(
-                {
-                    "id": _LIBRARY_ID,
-                    "title": "个人素材库",
-                    "updatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                },
-                ensure_ascii=False,
-                indent=2,
-            ),
-            encoding="utf-8",
-        )
+        state.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    else:
+        try:
+            existing = json.loads(state.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001
+            existing = {}
+        if not isinstance(existing.get("project"), dict):
+            state.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
     return root
 
 
@@ -242,36 +250,44 @@ def _asset_kind(suffix: str) -> str:
     return "image"
 
 
+def _scan_media_assets(pid: str, title: str, root: Path) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    media = root / "media"
+    if not media.is_dir():
+        return items
+    for path in sorted(media.rglob("*")):
+        if not path.is_file():
+            continue
+        if path.suffix.lower() not in _UPLOAD_EXTS:
+            continue
+        rel = path.relative_to(root).as_posix()
+        items.append(
+            {
+                "projectId": pid,
+                "projectTitle": title or pid,
+                "path": rel,
+                "url": f"/api/media/{pid}/{rel}",
+                "kind": _asset_kind(path.suffix),
+                "size": path.stat().st_size,
+                "updatedAt": path.stat().st_mtime,
+                "uploaded": pid == _LIBRARY_ID or rel.startswith("media/uploads/"),
+            }
+        )
+    return items
+
+
 def _collect_platform_assets() -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
-    _ensure_library_root()
-    listed = {p["id"]: p for p in STORE.list_items()}
-    listed[_LIBRARY_ID] = {"id": _LIBRARY_ID, "title": "个人素材库"}
-    for pid, project in listed.items():
-        root = STORE._dir(pid) if pid != _LIBRARY_ID else (PROJECTS_ROOT / _LIBRARY_ID)
+    lib_root = _ensure_library_root()
+    items.extend(_scan_media_assets(_LIBRARY_ID, "个人素材库", lib_root))
+    for project in STORE.list_items():
+        pid = str(project.get("id") or "")
+        if not pid or pid == _LIBRARY_ID:
+            continue
+        root = STORE._dir(pid)
         if not root or not root.is_dir():
             continue
-        media = root / "media"
-        if not media.is_dir():
-            continue
-        for path in sorted(media.rglob("*")):
-            if not path.is_file():
-                continue
-            if path.suffix.lower() not in _UPLOAD_EXTS:
-                continue
-            rel = path.relative_to(root).as_posix()
-            items.append(
-                {
-                    "projectId": pid,
-                    "projectTitle": project.get("title") or pid,
-                    "path": rel,
-                    "url": f"/api/media/{pid}/{rel}",
-                    "kind": _asset_kind(path.suffix),
-                    "size": path.stat().st_size,
-                    "updatedAt": path.stat().st_mtime,
-                    "uploaded": pid == _LIBRARY_ID or rel.startswith("media/uploads/"),
-                }
-            )
+        items.extend(_scan_media_assets(pid, str(project.get("title") or pid), root))
     items.sort(key=lambda x: x["updatedAt"], reverse=True)
     return items
 

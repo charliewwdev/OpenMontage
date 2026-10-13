@@ -78,7 +78,9 @@ cd studio && npm run dev       # :5173 proxies /api
 
 ## One-shot create + continuous verify
 
-Code is on `dtok/main` (`https://git.dtok.io/dtok-app/OpenMontage.git`).
+Intended source: `dtok/main` (`https://git.dtok.io/dtok-app/OpenMontage.git`).
+
+> **Note (2026-10):** Coolify currently still clones from GitHub (`https://github.com/charliewwdev/OpenMontage`) because (1) `git push` to `git.dtok.io` returns **HTTP 413** (~76MB pack exceeds reverse-proxy body limit), and (2) Coolify has **no Gitea/Forgejo source** connected—only GitHub/GitLab App—so private `git.dtok.io` clone needs a deploy key or raised `client_max_body_size` on the git host first.
 
 ### 1. Create the Coolify app (needs **write** API token)
 
@@ -96,7 +98,7 @@ Or in Coolify UI: New Resource → Public Repository →
 
 | Field | Value |
 | --- | --- |
-| Repo | `https://git.dtok.io/dtok-app/OpenMontage.git` |
+| Repo | `https://github.com/charliewwdev/OpenMontage` (interim; target `git.dtok.io` once 413/source fixed) |
 | Branch | `main` |
 | Build Pack | Dockerfile |
 | Dockerfile | `/studio/Dockerfile` |

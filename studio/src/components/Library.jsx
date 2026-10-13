@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import {
   Clapperboard,
   FolderOpen,
+  KeyRound,
   Plus,
   RefreshCw,
   Search,
@@ -63,10 +64,11 @@ function progressSteps(project) {
   ];
 }
 
-export function Library({ projects, config, onOpen, onCreate, onDeleted, onRefresh }) {
+export function Library({ projects, config, onOpen, onCreate, onDeleted, onRefresh, onNeedKeys }) {
   const [confirmId, setConfirmId] = useState(null);
   const [query, setQuery] = useState("");
   const caps = config?.capabilities || {};
+  const keysReady = (caps.configured ?? 0) >= 1;
 
   const visible = useMemo(() => {
     const keyword = query.trim().toLocaleLowerCase("zh-CN");
@@ -132,6 +134,20 @@ export function Library({ projects, config, onOpen, onCreate, onDeleted, onRefre
             ))}
           </div>
         </section>
+
+        {!keysReady ? (
+          <section className="mt-4 flex flex-col gap-3 rounded-2xl border border-[#f59e0b]/40 bg-[linear-gradient(90deg,rgba(245,158,11,.16),rgba(239,68,68,.1))] px-4 py-4 md:flex-row md:items-center md:justify-between md:px-5">
+            <div className="text-sm text-white/85">
+              <strong className="block">尚未配置 API Key</strong>
+              <span className="mt-1 block text-white/60">
+                剧本需要 DeepSeek，出图/视频需要火山方舟。可在页面一键写入并立即生效。
+              </span>
+            </div>
+            <button type="button" className="btn-primary shrink-0" onClick={() => onNeedKeys?.()}>
+              <KeyRound className="h-4 w-4" /> 一键配置密钥
+            </button>
+          </section>
+        ) : null}
 
         <section className="mt-7">
           <div className="mb-3 flex items-end justify-between gap-3">

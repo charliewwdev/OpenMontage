@@ -4,6 +4,7 @@ import {
   Check,
   Clapperboard,
   Image as ImageIcon,
+  KeyRound,
   Loader2,
   RefreshCw,
   Scissors,
@@ -67,11 +68,13 @@ export function StudioShell({
   onBack,
   onRefresh,
   onBundle,
+  onNeedKeys,
 }) {
   const project = bundle?.project || {};
   const counts = stepCounts(bundle);
   const caps = config?.capabilities || {};
   const activeMeta = STEPS.find((s) => s.key === step) || STEPS[0];
+  const keysMissing = !(caps.deepseek && caps.seedream && caps.seedance);
 
   const common = {
     projectId,
@@ -80,6 +83,7 @@ export function StudioShell({
     setBusyMsg,
     onBundle,
     onRefresh,
+    onNeedKeys,
   };
 
   if (loading && !bundle) {
@@ -165,11 +169,24 @@ export function StudioShell({
                 DeepSeek {caps.deepseek ? "就绪" : "未配置"} · Seedream {caps.seedream ? "✓" : "—"} · Seedance{" "}
                 {caps.seedance ? "✓" : "—"}
               </div>
+              {keysMissing ? (
+                <button type="button" className="btn-secondary !min-h-9" onClick={() => onNeedKeys?.()}>
+                  <KeyRound className="h-3.5 w-3.5" /> 配置密钥
+                </button>
+              ) : null}
               <button type="button" className="btn-secondary !min-h-9" onClick={onRefresh} disabled={loading}>
                 <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> 刷新
               </button>
             </div>
           </header>
+          {keysMissing ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#f59e0b]/30 bg-[#f59e0b]/10 px-4 py-2.5 text-xs text-[#fde68a] md:px-6">
+              <span>当前步骤可能需要 API Key。未配置时会报错，可一键跳转配置并立即生效。</span>
+              <button type="button" className="btn-primary !min-h-8 !px-3" onClick={() => onNeedKeys?.()}>
+                <KeyRound className="h-3.5 w-3.5" /> 一键配置
+              </button>
+            </div>
+          ) : null}
           <div className="border-b border-[var(--line)] bg-black/20 px-4 py-2 md:px-6">
             <div className="label !mb-0">Stage {String(STEPS.findIndex((s) => s.key === step) + 1).padStart(2, "0")}</div>
             <h2 className="text-base font-semibold">{activeMeta.label}</h2>

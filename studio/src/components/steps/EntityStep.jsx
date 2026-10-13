@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { ImagePlus, Loader2, Maximize2, Plus, RefreshCw, Sparkles, Trash2, Upload, X } from "lucide-react";
 import { api } from "../../api";
+import { requireCapability, toastMaybeKeys } from "../../lib/keys";
 import { toast } from "../../lib/toast";
 import { Lightbox } from "../Lightbox";
 
@@ -26,8 +27,9 @@ const CONFIG = {
   },
 };
 
-export function EntityStep({ projectId, bundle, kind, setBusyMsg, onBundle, onRefresh }) {
+export function EntityStep({ projectId, bundle, kind, setBusyMsg, onBundle, onRefresh, onNeedKeys, config: appConfig }) {
   const config = CONFIG[kind];
+  const caps = appConfig?.capabilities || {};
   const entities = useMemo(
     () => (bundle?.entities || []).filter((e) => e.kind === kind && !e.deletedAt),
     [bundle?.entities, kind],
@@ -102,6 +104,7 @@ export function EntityStep({ projectId, bundle, kind, setBusyMsg, onBundle, onRe
   };
 
   const generate = async (entity, redraw = false, silent = false) => {
+    if (!requireCapability(caps, "seedream", onNeedKeys, "火山 Seedream Key")) return;
     if (workingIds.has(entity.id)) return;
     setWorking(entity.id, true);
     if (!silent) setBusyMsg?.("Seedream 出图…");
@@ -119,7 +122,7 @@ export function EntityStep({ projectId, bundle, kind, setBusyMsg, onBundle, onRe
       apply(res);
       if (!silent) toast.success("Seedream 图片已保存");
     } catch (e) {
-      if (!silent) toast.error(String(e.message || e));
+      if (!silent) toastMaybeKeys(e, onNeedKeys);
       throw e;
     } finally {
       setWorking(entity.id, false);

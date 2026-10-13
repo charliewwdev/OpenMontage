@@ -59,6 +59,8 @@ if [[ -n "${DTOK_GIT_TOKEN:-}" ]]; then
     "${API}/protected_branches/${BRANCH}" >/dev/null 2>&1 || true
 fi
 
+SLIM_SHA="$(git rev-parse HEAD)"
+
 echo "==> Force-pushing slim tree to ${REMOTE} (${BRANCH})"
 git -c http.postBuffer=524288000 push -f dtok "HEAD:${BRANCH}"
 
@@ -68,5 +70,42 @@ if [[ -n "${DTOK_GIT_TOKEN:-}" ]]; then
     "${API}/protected_branches" >/dev/null || true
 fi
 
+# Belt-and-suspenders: GitLab project webhook should fire on push to ${BRANCH}.
+# Also ping Coolify directly when COOLIFY_GITLAB_WEBHOOK_SECRET is set (same secret as Coolify → Webhooks → GitLab).
+if [[ -n "${COOLIFY_GITLAB_WEBHOOK_SECRET:-}" ]]; then
+  WH_URL="${COOLIFY_GITLAB_WEBHOOK_URL:-http://66.29.128.32:8000/webhooks/source/gitlab/events/manual}"
+  echo "==> Triggering Coolify GitLab webhook (${BRANCH})"
+  curl -fsS -X POST "$WH_URL" \
+    -H "Content-Type: application/json" \
+    -H "X-Gitlab-Token: ${COOLIFY_GITLAB_WEBHOOK_SECRET}" \
+    -H "X-Gitlab-Event: Push Hook" \
+    -d "$(python3 - <<PY
+import json
+print(json.dumps({
+  "object_kind": "push",
+  "event_name": "push",
+  "ref": "refs/heads/${BRANCH}",
+  "checkout_sha": "${SLIM_SHA}",
+  "project": {
+    "id": 1,
+    "name": "OpenMontage",
+    "path_with_namespace": "dtok-app/OpenMontage",
+    "git_http_url": "https://git.dtok.io/dtok-app/OpenMontage.git",
+    "http_url": "https://git.dtok.io/dtok-app/OpenMontage.git",
+    "web_url": "https://git.dtok.io/dtok-app/OpenMontage",
+  },
+  "repository": {
+    "name": "OpenMontage",
+    "git_http_url": "https://git.dtok.io/dtok-app/OpenMontage.git",
+    "url": "https://git.dtok.io/dtok-app/OpenMontage.git",
+    "homepage": "https://git.dtok.io/dtok-app/OpenMontage",
+  },
+  "commits": [{"id": "${SLIM_SHA}", "message": "sync: ${SHA}", "url": "https://git.dtok.io/dtok-app/OpenMontage/-/commit/${SLIM_SHA}"}],
+  "total_commits_count": 1,
+}))
+PY
+)" >/dev/null && echo "OK Coolify webhook accepted" || echo "WARN Coolify webhook call failed (GitLab push hook may still deploy)"
+fi
+
 echo "OK synced ${SHA} → ${REMOTE} ${BRANCH}"
-echo "Coolify should auto-deploy via GitLab webhook (${BRANCH})."
+echo "Coolify auto-deploys via GitLab webhook on push to ${BRANCH}."

@@ -82,20 +82,24 @@ Source of truth for Coolify: **`git.dtok.io/dtok-app/OpenMontage`** (GitLab), sa
 
 ### How dtok-app-style auto-deploy works
 
-1. Push/sync code to `git.dtok.io` (`deploy` branch; Coolify tracks `deploy`)
-2. GitLab project webhook → `http://66.29.128.32:8000/webhooks/source/gitlab/events/manual`
-3. Coolify clones the private repo (deploy token in Git Source URL) and rebuilds
+1. Push/sync code to `git.dtok.io` branch **`deploy`** (Coolify Git Source branch = `deploy`)
+2. GitLab project webhook (push events, branch filter `deploy`) → `http://66.29.128.32:8000/webhooks/source/gitlab/events/manual`
+3. Coolify Advanced → Auto deploy = **Deploy on push (webhooks)** → clone + rebuild
+
+> **Gotcha:** If the GitLab webhook branch filter is still `main` while Coolify tracks `deploy`, pushes will never deploy. Keep both on `deploy`.
 
 ### Syncing OpenMontage → git.dtok.io
 
 Full-history HTTPS push can hit **HTTP 413** (Cloudflare/nginx body limit; pack ~76MB because of large demo mp4s). Use the slim sync (Docker-needed paths only):
 
 ```bash
-export DTOK_GIT_TOKEN='...'   # GitLab PAT with api + write_repository (unprotect/reprotect main)
+export DTOK_GIT_TOKEN='...'   # GitLab PAT with api + write_repository (optional unprotect)
+# optional: same secret as Coolify → Webhooks → GitLab (extra trigger after push)
+# export COOLIFY_GITLAB_WEBHOOK_SECRET='...'
 ./scripts/sync_dtok_git.sh   # defaults to branch `deploy` (main is force-push protected)
 ```
 
-Coolify Git Source should be the private clone URL with a **project deploy token** (`read_repository`), not a bare public GitHub URL.
+Coolify Git Source should be the private clone URL with a **project deploy token** (`read_repository`), not a bare public GitHub URL. Branch must be **`deploy`**.
 
 ### 1. Create the Coolify app (needs **write** API token)
 
@@ -114,7 +118,7 @@ Or in Coolify UI: New Resource → Public Repository →
 | Field | Value |
 | --- | --- |
 | Repo | `https://git.dtok.io/dtok-app/OpenMontage.git` (deploy token; sync via `scripts/sync_dtok_git.sh`) |
-| Branch | `main` |
+| Branch | `deploy` |
 | Build Pack | Dockerfile |
 | Dockerfile | `/studio/Dockerfile` |
 | Base directory | `/` |

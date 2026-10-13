@@ -78,7 +78,7 @@ cd studio && npm run dev       # :5173 proxies /api
 
 ## One-shot create + continuous verify
 
-Code is on `origin/main` (`https://github.com/charliewwdev/OpenMontage`).
+Code is on `dtok/main` (`https://git.dtok.io/dtok-app/OpenMontage.git`).
 
 ### 1. Create the Coolify app (needs **write** API token)
 
@@ -96,7 +96,7 @@ Or in Coolify UI: New Resource → Public Repository →
 
 | Field | Value |
 | --- | --- |
-| Repo | `https://github.com/charliewwdev/OpenMontage` |
+| Repo | `https://git.dtok.io/dtok-app/OpenMontage.git` |
 | Branch | `main` |
 | Build Pack | Dockerfile |
 | Dockerfile | `/studio/Dockerfile` |

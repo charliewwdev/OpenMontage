@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Clapperboard, Loader2, RefreshCw, Sparkles } from "lucide-react";
+import { Clapperboard, Loader2 } from "lucide-react";
 import { api } from "../api";
 import { setSession } from "../lib/auth";
 import { renderGoogleButton } from "../lib/googleAuth";
@@ -23,16 +23,19 @@ const inputClass =
 function demoPrefill(authConfig) {
   const demo = authConfig?.demo || {};
   if (demo.prefill === false) {
-    return { username: "", email: "", password: "", phone: "", code: "", captcha: "" };
+    return { username: "", password: "" };
   }
   return {
     username: demo.username || "demo",
-    email: "",
     password: demo.password || "demo",
-    phone: "",
-    code: "",
-    captcha: "",
   };
+}
+
+function isDemoCredentials(form, authConfig) {
+  const demo = authConfig?.demo || {};
+  const user = (demo.username || "demo").trim().toLowerCase();
+  const pass = demo.password || "demo";
+  return form.username.trim().toLowerCase() === user && form.password === pass;
 }
 
 export function AuthPage({ brand, tagline, authConfig, onAuthed }) {
@@ -40,12 +43,8 @@ export function AuthPage({ brand, tagline, authConfig, onAuthed }) {
   const demoEnabled = authConfig?.demo?.enabled !== false;
   const googleCfg = authConfig?.google || {};
   const googleEnabled = Boolean(googleCfg.enabled && googleCfg.clientId);
-  const [mode, setMode] = useState("login");
   const [busy, setBusy] = useState(false);
-  const [demoBusy, setDemoBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
-  const [captcha, setCaptcha] = useState({ uuid: "", imageUrl: "" });
-  const [providers, setProviders] = useState([]);
   const [form, setForm] = useState(() => demoPrefill(authConfig));
   const googleBtnRef = useRef(null);
   const autoStarted = useRef(false);
@@ -53,26 +52,6 @@ export function AuthPage({ brand, tagline, authConfig, onAuthed }) {
   useEffect(() => {
     setForm(demoPrefill(authConfig));
   }, [authConfig]);
-
-  const loadCaptcha = useCallback(async () => {
-    try {
-      const res = await api("/api/auth/captcha");
-      const data = res?.data || res;
-      setCaptcha({
-        uuid: data?.uuid || "",
-        imageUrl: data?.imageUrl || data?.img || "",
-      });
-    } catch {
-      setCaptcha({ uuid: "", imageUrl: "" });
-    }
-  }, []);
-
-  useEffect(() => {
-    void loadCaptcha();
-    api("/api/auth/social-providers")
-      .then((res) => setProviders(res?.data || res?.providers || []))
-      .catch(() => setProviders([]));
-  }, [loadCaptcha]);
 
   const setField = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
@@ -89,7 +68,7 @@ export function AuthPage({ brand, tagline, authConfig, onAuthed }) {
       token,
       user: {
         userId: data.userId,
-        username: data.username || form.username || form.email || form.phone || "user",
+        username: data.username || form.username || "user",
         avatar: data.avatar || "",
         expiresIn: data.expiresIn,
         demo: Boolean(data.demo),
@@ -99,20 +78,13 @@ export function AuthPage({ brand, tagline, authConfig, onAuthed }) {
   };
 
   const enterDemo = useCallback(async () => {
-    setDemoBusy(true);
-    try {
-      const res = await api("/api/auth/demo", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: "{}",
-      });
-      finish(res);
-      toast.success(t("auth.demoOk"));
-    } catch (err) {
-      toast.error(String(err.message || err));
-    } finally {
-      setDemoBusy(false);
-    }
+    const res = await api("/api/auth/demo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: "{}",
+    });
+    finish(res);
+    toast.success(t("auth.demoOk"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t]);
 
@@ -126,7 +98,10 @@ export function AuthPage({ brand, tagline, authConfig, onAuthed }) {
     }
     if (skip) return;
     autoStarted.current = true;
-    void enterDemo();
+    setBusy(true);
+    void enterDemo()
+      .catch((err) => toast.error(String(err.message || err)))
+      .finally(() => setBusy(false));
   }, [demoEnabled, authConfig?.demo?.autoEnter, enterDemo]);
 
   const onGoogleCredential = useCallback(
@@ -164,76 +139,27 @@ export function AuthPage({ brand, tagline, authConfig, onAuthed }) {
     e.preventDefault();
     setBusy(true);
     try {
-      let res;
-      if (mode === "login") {
-        res = await api("/api/auth/login", {
+      if (demoEnabled && isDemoCredentials(form, authConfig)) {
+        await enterDemo();
+      } else {
+        const res = await api("/api/auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             username: form.username.trim(),
             password: form.password,
-            captcha: form.captcha.trim() || undefined,
-            uuid: captcha.uuid || undefined,
             client: "WEB",
           }),
         });
-      } else if (mode === "register") {
-        res = await api("/api/auth/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            username: form.username.trim() || form.email.trim(),
-            email: form.email.trim() || undefined,
-            password: form.password,
-            phone: form.phone.trim() || undefined,
-            captcha: form.captcha.trim() || undefined,
-          }),
-        });
-      } else {
-        res = await api("/api/auth/phone-login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            phone: form.phone.trim(),
-            code: form.code.trim(),
-          }),
-        });
+        finish(res);
+        toast.success(t("auth.submitLogin"));
       }
-      finish(res);
-      toast.success(t("auth.submitLogin"));
     } catch (err) {
       toast.error(String(err.message || err));
-      void loadCaptcha();
     } finally {
       setBusy(false);
     }
   };
-
-  const sendCode = async () => {
-    if (!form.phone.trim()) {
-      toast.error(t("auth.phoneNumber"));
-      return;
-    }
-    try {
-      await api("/api/auth/send-code", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phone: form.phone.trim(),
-          type: mode === "register" ? "register" : "login",
-        }),
-      });
-      toast.success(t("auth.sendCode"));
-    } catch (err) {
-      toast.error(String(err.message || err));
-    }
-  };
-
-  const tabs = [
-    { id: "login", label: t("auth.login") },
-    { id: "register", label: t("auth.register") },
-    { id: "phone", label: t("auth.phone") },
-  ];
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--stage)] px-4 text-[var(--ink)]">
@@ -270,23 +196,37 @@ export function AuthPage({ brand, tagline, authConfig, onAuthed }) {
         <h1 className="text-xl font-semibold">{t("auth.welcome")}</h1>
         <p className="mt-1 text-sm text-white/55">{t("auth.subtitle")}</p>
 
-        {demoEnabled ? (
-          <div className="mt-5 space-y-2">
-            <button
-              type="button"
-              className="btn-primary flex w-full items-center justify-center gap-2"
-              disabled={demoBusy || busy || googleBusy}
-              onClick={() => void enterDemo()}
-            >
-              {demoBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              {demoBusy ? t("auth.demoBusy") : t("auth.demoEnter")}
-            </button>
-            <p className="text-center text-[11px] text-white/40">{t("auth.demoHint")}</p>
-          </div>
-        ) : null}
+        <form className="mt-5 space-y-3" onSubmit={onSubmit}>
+          <Field label={t("auth.username")}>
+            <input
+              className={inputClass}
+              value={form.username}
+              onChange={setField("username")}
+              autoComplete="username"
+              required
+            />
+          </Field>
+          <Field label={t("auth.password")}>
+            <input
+              className={inputClass}
+              type="password"
+              value={form.password}
+              onChange={setField("password")}
+              autoComplete="current-password"
+              required
+            />
+          </Field>
+          {demoEnabled ? (
+            <p className="text-[11px] text-white/40">{t("auth.demoHint")}</p>
+          ) : null}
+          <button type="submit" className="btn-primary mt-2 w-full" disabled={busy || googleBusy}>
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {t("auth.submitLogin")}
+          </button>
+        </form>
 
         {googleEnabled ? (
-          <div className="mt-4 space-y-2">
+          <div className="mt-5 space-y-2">
             <div className="flex items-center gap-3 text-[11px] text-white/30">
               <span className="h-px flex-1 bg-white/10" />
               <span>{t("auth.googleHint")}</span>
@@ -302,91 +242,7 @@ export function AuthPage({ brand, tagline, authConfig, onAuthed }) {
           </div>
         ) : null}
 
-        <div className="mt-4 flex items-center gap-3 text-[11px] text-white/30">
-          <span className="h-px flex-1 bg-white/10" />
-          <span>{t("auth.orAccount")}</span>
-          <span className="h-px flex-1 bg-white/10" />
-        </div>
-
-        <div className="mt-3 flex gap-1 rounded-xl border border-[var(--line)] bg-white/[.03] p-1">
-          {tabs.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              className={`flex-1 rounded-lg px-2 py-2 text-xs transition ${
-                mode === tab.id ? "bg-[var(--gradient)] text-white" : "text-white/55 hover:text-white"
-              }`}
-              onClick={() => setMode(tab.id)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        <form className="mt-5 space-y-3" onSubmit={onSubmit}>
-          {mode !== "phone" ? (
-            <>
-              <Field label={t("auth.username")}>
-                <input className={inputClass} value={form.username} onChange={setField("username")} autoComplete="username" required={mode === "login"} />
-              </Field>
-              {mode === "register" ? (
-                <Field label={t("auth.email")}>
-                  <input className={inputClass} type="email" value={form.email} onChange={setField("email")} autoComplete="email" />
-                </Field>
-              ) : null}
-              <Field label={t("auth.password")}>
-                <input className={inputClass} type="password" value={form.password} onChange={setField("password")} autoComplete={mode === "register" ? "new-password" : "current-password"} required />
-              </Field>
-              {mode === "register" ? (
-                <Field label={t("auth.phoneNumber")}>
-                  <input className={inputClass} value={form.phone} onChange={setField("phone")} autoComplete="tel" />
-                </Field>
-              ) : null}
-            </>
-          ) : (
-            <>
-              <Field label={t("auth.phoneNumber")}>
-                <input className={inputClass} value={form.phone} onChange={setField("phone")} autoComplete="tel" required />
-              </Field>
-              <Field label={t("auth.code")}>
-                <div className="flex gap-2">
-                  <input className={inputClass} value={form.code} onChange={setField("code")} required />
-                  <button type="button" className="btn-secondary shrink-0 !min-h-10" onClick={() => void sendCode()}>
-                    {t("auth.sendCode")}
-                  </button>
-                </div>
-              </Field>
-            </>
-          )}
-
-          {mode !== "phone" ? (
-            <Field label={t("auth.captcha")}>
-              <div className="flex gap-2">
-                <input className={inputClass} value={form.captcha} onChange={setField("captcha")} autoComplete="off" />
-                <button type="button" className="btn-secondary shrink-0 !min-h-10 !px-3" onClick={() => void loadCaptcha()} title={t("auth.refreshCaptcha")}>
-                  {captcha.imageUrl ? (
-                    <img src={captcha.imageUrl} alt="captcha" className="h-8 w-20 rounded object-cover" />
-                  ) : (
-                    <RefreshCw className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-            </Field>
-          ) : null}
-
-          <button type="submit" className="btn-primary mt-2 w-full" disabled={busy || demoBusy || googleBusy}>
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {mode === "login" ? t("auth.submitLogin") : mode === "register" ? t("auth.submitRegister") : t("auth.submitPhone")}
-          </button>
-        </form>
-
-        {providers?.length && !googleEnabled ? (
-          <p className="mt-4 text-center text-[11px] text-white/35">
-            {t("auth.socialHint")} {providers.map((p) => p.displayName || p.provider).join(" · ")}
-          </p>
-        ) : (
-          <p className="mt-4 text-center text-[11px] text-white/35">{t("auth.requiredHint")}</p>
-        )}
+        <p className="mt-4 text-center text-[11px] text-white/35">{t("auth.requiredHint")}</p>
       </div>
     </div>
   );

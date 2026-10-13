@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "./api";
-import { AuthPage } from "./components/AuthPage";
+import { AuthPage, SKIP_AUTO_DEMO_KEY } from "./components/AuthPage";
 import { clearSession, getStoredUser, getToken, setSession } from "./lib/auth";
 import { LocaleProvider } from "./lib/i18n";
 import { toast } from "./lib/toast";
@@ -152,6 +152,11 @@ export default function App() {
       await api("/api/auth/logout", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
     } catch {
       /* ignore upstream logout errors */
+    }
+    try {
+      sessionStorage.setItem(SKIP_AUTO_DEMO_KEY, "1");
+    } catch {
+      /* ignore */
     }
     clearSession();
     setUser(null);

@@ -15,15 +15,24 @@ auth:
     - password
     - register
     - phone
-  # Public demo: one-click enter without DTok; operates shared/local project data
+    - google
+  # Prefill + auto-enter Demo so first visit lands in the studio immediately.
+  # Override Google web client via STUDIO_GOOGLE_CLIENT_ID if needed.
+  google:
+    enabled: true
+    # Google Cloud OAuth client "OpenMontage Studio" (dtok-438fb) — GIS one-tap / button
+    clientId: 165025931859-umal625a9njtveircsijfcr6d1v5s2dk.apps.googleusercontent.com
+  # Public demo: one-click / auto enter without DTok; operates shared project data
   demo:
     enabled: true
     userId: demo
-    username: Demo
+    username: demo
+    password: demo
     displayName: Demo 体验账号
     ttlDays: 7
     seedProjectId: welcome-ep01
-    autoEnter: false
+    autoEnter: true
+    prefill: true
 
 i18n:
   defaultLocale: zh

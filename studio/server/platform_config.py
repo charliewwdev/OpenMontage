@@ -135,15 +135,40 @@ def demo_auth_config() -> dict[str, Any]:
         enabled = str(env_enabled).strip().lower() not in ("0", "false", "no", "off")
     else:
         enabled = bool(cfg.get("enabled", True))
+    env_auto = os.environ.get("STUDIO_DEMO_AUTO_ENTER")
+    if env_auto is not None and str(env_auto).strip() != "":
+        auto_enter = str(env_auto).strip().lower() not in ("0", "false", "no", "off")
+    else:
+        auto_enter = bool(cfg.get("autoEnter", True))
     ttl_days = int(cfg.get("ttlDays") or 7)
     return {
         "enabled": enabled,
         "userId": str(cfg.get("userId") or "demo"),
-        "username": str(cfg.get("username") or "Demo"),
+        "username": str(cfg.get("username") or "demo"),
+        "password": str(cfg.get("password") or "demo"),
         "displayName": str(cfg.get("displayName") or cfg.get("username") or "Demo"),
         "ttlDays": ttl_days,
         "seedProjectId": str(cfg.get("seedProjectId") or "welcome-ep01"),
-        "autoEnter": bool(cfg.get("autoEnter", False)),
+        "autoEnter": auto_enter,
+        "prefill": bool(cfg.get("prefill", True)),
+    }
+
+
+def google_auth_config() -> dict[str, Any]:
+    cfg = (load_platform_config().get("auth") or {}).get("google") or {}
+    env_enabled = os.environ.get("STUDIO_GOOGLE_ENABLED")
+    if env_enabled is not None and str(env_enabled).strip() != "":
+        enabled = str(env_enabled).strip().lower() not in ("0", "false", "no", "off")
+    else:
+        enabled = bool(cfg.get("enabled", True))
+    client_id = (
+        (os.environ.get("STUDIO_GOOGLE_CLIENT_ID") or "").strip()
+        or str(cfg.get("clientId") or "").strip()
+    )
+    return {
+        "enabled": enabled and bool(client_id),
+        "clientId": client_id,
+        "provider": "google",
     }
 
 
@@ -154,12 +179,14 @@ def auth_payload() -> dict[str, Any]:
         required = str(env_required).strip().lower() not in ("0", "false", "no", "off")
     else:
         required = bool(cfg.get("required", True))
+    methods = list(cfg.get("methods") or ["password", "register", "phone", "google"])
     return {
         "required": required,
         "client": cfg.get("client") or "WEB",
-        "methods": cfg.get("methods") or ["password", "register", "phone"],
+        "methods": methods,
         "apiBaseUrl": (os.environ.get("API_BASE_URL") or "https://api-app.dtok.io/api/v1").rstrip("/"),
         "demo": demo_auth_config(),
+        "google": google_auth_config(),
     }
 
 

@@ -1,9 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Clapperboard, Loader2, RefreshCw, Sparkles } from "lucide-react";
 import { api } from "../api";
 import { setSession } from "../lib/auth";
+import { renderGoogleButton } from "../lib/googleAuth";
 import { useLocale } from "../lib/i18n";
 import { toast } from "../lib/toast";
+
+const SKIP_AUTO_DEMO_KEY = "om.studio.skipAutoDemo";
 
 function Field({ label, children }) {
   return (
@@ -17,22 +20,39 @@ function Field({ label, children }) {
 const inputClass =
   "w-full rounded-xl border border-[var(--line)] bg-white/[.04] px-3 py-2.5 text-sm text-white outline-none focus:border-[#7c6cff]/60";
 
-export function AuthPage({ brand, tagline, authConfig, onAuthed }) {
-  const { t, locale, setLocale } = useLocale();
-  const demoEnabled = authConfig?.demo?.enabled !== false;
-  const [mode, setMode] = useState("login");
-  const [busy, setBusy] = useState(false);
-  const [demoBusy, setDemoBusy] = useState(false);
-  const [captcha, setCaptcha] = useState({ uuid: "", imageUrl: "" });
-  const [providers, setProviders] = useState([]);
-  const [form, setForm] = useState({
-    username: "",
+function demoPrefill(authConfig) {
+  const demo = authConfig?.demo || {};
+  if (demo.prefill === false) {
+    return { username: "", email: "", password: "", phone: "", code: "", captcha: "" };
+  }
+  return {
+    username: demo.username || "demo",
     email: "",
-    password: "",
+    password: demo.password || "demo",
     phone: "",
     code: "",
     captcha: "",
-  });
+  };
+}
+
+export function AuthPage({ brand, tagline, authConfig, onAuthed }) {
+  const { t, locale, setLocale } = useLocale();
+  const demoEnabled = authConfig?.demo?.enabled !== false;
+  const googleCfg = authConfig?.google || {};
+  const googleEnabled = Boolean(googleCfg.enabled && googleCfg.clientId);
+  const [mode, setMode] = useState("login");
+  const [busy, setBusy] = useState(false);
+  const [demoBusy, setDemoBusy] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
+  const [captcha, setCaptcha] = useState({ uuid: "", imageUrl: "" });
+  const [providers, setProviders] = useState([]);
+  const [form, setForm] = useState(() => demoPrefill(authConfig));
+  const googleBtnRef = useRef(null);
+  const autoStarted = useRef(false);
+
+  useEffect(() => {
+    setForm(demoPrefill(authConfig));
+  }, [authConfig]);
 
   const loadCaptcha = useCallback(async () => {
     try {
@@ -60,11 +80,16 @@ export function AuthPage({ brand, tagline, authConfig, onAuthed }) {
     const data = payload?.data || payload || {};
     const token = data.token || data.accessToken || "";
     if (!token) throw new Error(payload?.error || "missing token");
+    try {
+      sessionStorage.removeItem(SKIP_AUTO_DEMO_KEY);
+    } catch {
+      /* ignore */
+    }
     setSession({
       token,
       user: {
         userId: data.userId,
-        username: data.username || form.username || form.email || form.phone,
+        username: data.username || form.username || form.email || form.phone || "user",
         avatar: data.avatar || "",
         expiresIn: data.expiresIn,
         demo: Boolean(data.demo),
@@ -73,7 +98,7 @@ export function AuthPage({ brand, tagline, authConfig, onAuthed }) {
     onAuthed?.(data);
   };
 
-  const enterDemo = async () => {
+  const enterDemo = useCallback(async () => {
     setDemoBusy(true);
     try {
       const res = await api("/api/auth/demo", {
@@ -88,14 +113,52 @@ export function AuthPage({ brand, tagline, authConfig, onAuthed }) {
     } finally {
       setDemoBusy(false);
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [t]);
 
   useEffect(() => {
-    if (!demoEnabled || !authConfig?.demo?.autoEnter) return;
+    if (!demoEnabled || !authConfig?.demo?.autoEnter || autoStarted.current) return;
+    let skip = false;
+    try {
+      skip = sessionStorage.getItem(SKIP_AUTO_DEMO_KEY) === "1";
+    } catch {
+      skip = false;
+    }
+    if (skip) return;
+    autoStarted.current = true;
     void enterDemo();
-    // intentionally only on mount when autoEnter is configured
+  }, [demoEnabled, authConfig?.demo?.autoEnter, enterDemo]);
+
+  const onGoogleCredential = useCallback(
+    async (idToken) => {
+      setGoogleBusy(true);
+      try {
+        const res = await api("/api/auth/social/google", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ idToken, client: "WEB" }),
+        });
+        finish(res);
+        toast.success(t("auth.googleOk"));
+      } catch (err) {
+        toast.error(String(err.message || err));
+      } finally {
+        setGoogleBusy(false);
+      }
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [demoEnabled, authConfig?.demo?.autoEnter]);
+    [t],
+  );
+
+  useEffect(() => {
+    if (!googleEnabled || !googleBtnRef.current) return undefined;
+    return renderGoogleButton(googleBtnRef.current, {
+      clientId: googleCfg.clientId,
+      locale,
+      onCredential: (token) => void onGoogleCredential(token),
+      onError: (err) => toast.error(String(err.message || err || t("auth.googleFail"))),
+    });
+  }, [googleEnabled, googleCfg.clientId, locale, onGoogleCredential, t]);
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -212,22 +275,40 @@ export function AuthPage({ brand, tagline, authConfig, onAuthed }) {
             <button
               type="button"
               className="btn-primary flex w-full items-center justify-center gap-2"
-              disabled={demoBusy || busy}
+              disabled={demoBusy || busy || googleBusy}
               onClick={() => void enterDemo()}
             >
               {demoBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
               {demoBusy ? t("auth.demoBusy") : t("auth.demoEnter")}
             </button>
             <p className="text-center text-[11px] text-white/40">{t("auth.demoHint")}</p>
-            <div className="flex items-center gap-3 py-1 text-[11px] text-white/30">
-              <span className="h-px flex-1 bg-white/10" />
-              <span>{t("auth.orAccount")}</span>
-              <span className="h-px flex-1 bg-white/10" />
-            </div>
           </div>
         ) : null}
 
-        <div className="mt-2 flex gap-1 rounded-xl border border-[var(--line)] bg-white/[.03] p-1">
+        {googleEnabled ? (
+          <div className="mt-4 space-y-2">
+            <div className="flex items-center gap-3 text-[11px] text-white/30">
+              <span className="h-px flex-1 bg-white/10" />
+              <span>{t("auth.googleHint")}</span>
+              <span className="h-px flex-1 bg-white/10" />
+            </div>
+            <div className="flex min-h-[44px] items-center justify-center" ref={googleBtnRef} />
+            {googleBusy ? (
+              <p className="flex items-center justify-center gap-2 text-[11px] text-white/45">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                {t("auth.googleBusy")}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
+        <div className="mt-4 flex items-center gap-3 text-[11px] text-white/30">
+          <span className="h-px flex-1 bg-white/10" />
+          <span>{t("auth.orAccount")}</span>
+          <span className="h-px flex-1 bg-white/10" />
+        </div>
+
+        <div className="mt-3 flex gap-1 rounded-xl border border-[var(--line)] bg-white/[.03] p-1">
           {tabs.map((tab) => (
             <button
               key={tab.id}
@@ -293,13 +374,13 @@ export function AuthPage({ brand, tagline, authConfig, onAuthed }) {
             </Field>
           ) : null}
 
-          <button type="submit" className="btn-primary mt-2 w-full" disabled={busy || demoBusy}>
+          <button type="submit" className="btn-primary mt-2 w-full" disabled={busy || demoBusy || googleBusy}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {mode === "login" ? t("auth.submitLogin") : mode === "register" ? t("auth.submitRegister") : t("auth.submitPhone")}
           </button>
         </form>
 
-        {providers?.length ? (
+        {providers?.length && !googleEnabled ? (
           <p className="mt-4 text-center text-[11px] text-white/35">
             {t("auth.socialHint")} {providers.map((p) => p.displayName || p.provider).join(" · ")}
           </p>
@@ -310,3 +391,5 @@ export function AuthPage({ brand, tagline, authConfig, onAuthed }) {
     </div>
   );
 }
+
+export { SKIP_AUTO_DEMO_KEY };

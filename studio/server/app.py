@@ -137,6 +137,39 @@ async def post_keys(request: Request) -> dict[str, Any]:
     return {"ok": True, "keys": status, "capabilities": _providers_payload()}
 
 
+@app.post("/api/settings/keys/import-env")
+def import_keys_from_env() -> dict[str, Any]:
+    """Copy process env (Coolify / Docker) into the secrets file if values exist."""
+    payload: dict[str, str] = {}
+    for key in (
+        "DEEPSEEK_API_KEY",
+        "DEEPSEEK_BASE_URL",
+        "DEEPSEEK_MODEL",
+        "VOLCENGINE_API_KEY",
+        "ARK_API_KEY",
+        "SEEDREAM_MODEL",
+        "SEEDANCE_MODEL",
+    ):
+        val = (os.environ.get(key) or "").strip()
+        if val:
+            payload[key] = val
+    if not payload.get("DEEPSEEK_API_KEY") and not payload.get("VOLCENGINE_API_KEY") and not payload.get("ARK_API_KEY"):
+        return {
+            "ok": False,
+            "imported": [],
+            "keys": public_status(),
+            "capabilities": _providers_payload(),
+            "error": "服务器环境变量里没有可用的 DeepSeek / 火山 Key，无法自动导入。请在本页粘贴，或写入 Coolify 环境变量后重启。",
+        }
+    status = save_secrets(PROJECTS_ROOT, payload)
+    return {
+        "ok": True,
+        "imported": sorted(payload.keys()),
+        "keys": status,
+        "capabilities": _providers_payload(),
+    }
+
+
 @app.post("/api/settings/keys/test")
 async def test_keys() -> dict[str, Any]:
     results: dict[str, Any] = {"deepseek": None, "volcengine": None}

@@ -13,8 +13,6 @@ auth:
   client: WEB
   methods:
     - password
-    - register
-    - phone
     - google
   # Prefill + auto-enter Demo so first visit lands in the studio immediately.
   # Override Google web client via STUDIO_GOOGLE_CLIENT_ID if needed.

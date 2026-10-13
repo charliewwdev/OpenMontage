@@ -150,6 +150,6 @@ def auth_public_config() -> dict[str, Any]:
     return {
         "required": required,
         "apiBaseUrl": api_base_url(),
-        "methods": ["password", "register", "phone"],
+        "methods": ["password", "google"],
         "client": "WEB",
     }

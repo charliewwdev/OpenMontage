@@ -179,7 +179,7 @@ def auth_payload() -> dict[str, Any]:
         required = str(env_required).strip().lower() not in ("0", "false", "no", "off")
     else:
         required = bool(cfg.get("required", True))
-    methods = list(cfg.get("methods") or ["password", "register", "phone", "google"])
+    methods = list(cfg.get("methods") or ["password", "google"])
     return {
         "required": required,
         "client": cfg.get("client") or "WEB",

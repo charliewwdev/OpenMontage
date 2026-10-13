@@ -19,7 +19,8 @@ COOLIFY_PROJECT_UUID="${COOLIFY_PROJECT_UUID:-fkcockcs4s8os4c8s4go48w4}"
 COOLIFY_SERVER_UUID="${COOLIFY_SERVER_UUID:-y0o8w0wwwgco004wsg4k0sg4}"
 COOLIFY_ENV_UUID="${COOLIFY_ENV_UUID:-gwsgws48s0gg8ww804wocc08}"
 DESTINATION_UUID="${DESTINATION_UUID:-h88ggkc80s8g4s040o080c8s}"
-GIT_REPO="${GIT_REPO:-https://github.com/charliewwdev/OpenMontage}"  # target: https://git.dtok.io/dtok-app/OpenMontage.git (blocked by HTTP 413)
+# Prefer git.dtok.io (GitLab). Full push may 413 — use scripts/sync_dtok_git.sh for slim sync.
+GIT_REPO="${GIT_REPO:-https://git.dtok.io/dtok-app/OpenMontage.git}"
 GIT_BRANCH="${GIT_BRANCH:-main}"
 STUDIO_DOMAIN="${STUDIO_DOMAIN:-}"
 UA="${COOLIFY_UA:-Mozilla/5.0 OpenMontage-drama-studio}"

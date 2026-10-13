@@ -78,9 +78,24 @@ cd studio && npm run dev       # :5173 proxies /api
 
 ## One-shot create + continuous verify
 
-Intended source: `dtok/main` (`https://git.dtok.io/dtok-app/OpenMontage.git`).
+Source of truth for Coolify: **`git.dtok.io/dtok-app/OpenMontage`** (GitLab), same auto-deploy pattern as **dtok-app**.
 
-> **Note (2026-10):** Coolify currently still clones from GitHub (`https://github.com/charliewwdev/OpenMontage`) because (1) `git push` to `git.dtok.io` returns **HTTP 413** (~76MB pack exceeds reverse-proxy body limit), and (2) Coolify has **no Gitea/Forgejo source** connected—only GitHub/GitLab App—so private `git.dtok.io` clone needs a deploy key or raised `client_max_body_size` on the git host first.
+### How dtok-app-style auto-deploy works
+
+1. Push code to `git.dtok.io` (`main`)
+2. GitLab project webhook → `http://66.29.128.32:8000/webhooks/source/gitlab/events/manual`
+3. Coolify clones the private repo (deploy token in Git Source URL) and rebuilds
+
+### Syncing OpenMontage → git.dtok.io
+
+Full-history HTTPS push can hit **HTTP 413** (Cloudflare/nginx body limit; pack ~76MB because of large demo mp4s). Use the slim sync (Docker-needed paths only):
+
+```bash
+export DTOK_GIT_TOKEN='...'   # GitLab PAT with api + write_repository (unprotect/reprotect main)
+./scripts/sync_dtok_git.sh
+```
+
+Coolify Git Source should be the private clone URL with a **project deploy token** (`read_repository`), not a bare public GitHub URL.
 
 ### 1. Create the Coolify app (needs **write** API token)
 
@@ -98,7 +113,7 @@ Or in Coolify UI: New Resource → Public Repository →
 
 | Field | Value |
 | --- | --- |
-| Repo | `https://github.com/charliewwdev/OpenMontage` (interim; target `git.dtok.io` once 413/source fixed) |
+| Repo | `https://git.dtok.io/dtok-app/OpenMontage.git` (deploy token; sync via `scripts/sync_dtok_git.sh`) |
 | Branch | `main` |
 | Build Pack | Dockerfile |
 | Dockerfile | `/studio/Dockerfile` |

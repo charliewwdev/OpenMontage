@@ -1,26 +1,27 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/monty-dark.svg">
-    <img src="assets/monty-light.svg" alt="OpenMontage" width="160">
-  </picture>
+  <img src="assets/drama-studio-banner.svg" alt="OpenMontage Drama Studio by Charlie" width="100%"/>
 </p>
 
-<h1 align="center">OpenMontage</h1>
+<p align="center">
+  <img src="assets/drama-studio-mark.svg" alt="Drama Studio mark" width="88"/>
+</p>
+
+<h1 align="center">OpenMontage · Drama Studio</h1>
 
 <p align="center">
-  <strong>Drama Studio · 一站式短剧工坊</strong><br/>
-  <sub>Agentic video production · script → cast → storyboard → shoot → edit</sub>
+  <strong>一站式短剧工坊</strong> · by Charlie / DTok<br/>
+  <sub>script → cast → storyboard → shoot → edit · Postgres + MinIO cloud</sub>
 </p>
 
 <p align="center">
   <a href="https://openmontage.dtok.io/" target="_blank" rel="noopener noreferrer">
-    <img src="https://img.shields.io/badge/Live_Demo-openmontage.dtok.io-EC4899?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo">
+    <img src="https://img.shields.io/badge/🚀_Live-openmontage.dtok.io-E11D48?style=for-the-badge" alt="Live Demo">
   </a>
   <a href="https://github.com/charliewwdev/OpenMontage" target="_blank" rel="noopener noreferrer">
-    <img src="https://img.shields.io/badge/GitHub-charliewwdev%2FOpenMontage-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub">
+    <img src="https://img.shields.io/badge/Repo-charliewwdev-0B1220?style=for-the-badge&logo=github&logoColor=white" alt="GitHub">
   </a>
   <a href="LICENSE">
-    <img src="https://img.shields.io/badge/License-AGPLv3-blue?style=for-the-badge" alt="License">
+    <img src="https://img.shields.io/badge/License-AGPLv3-334155?style=for-the-badge" alt="License">
   </a>
 </p>
 
@@ -36,7 +37,10 @@
 
 ## Why this repo
 
-This is **Charlie’s OpenMontage line** — a production Drama Studio built on agentic video pipelines:
+> Not the upstream mascot repo — this is **Charlie’s Drama Studio product line**  
+> Live product: [openmontage.dtok.io](https://openmontage.dtok.io/)
+
+Production Drama Studio on agentic video pipelines:
 
 - **Browse-first product** — explore Inspire / Skills / Assets without login; auth only when you call models
 - **Short-drama workflow** — script, entities, storyboard, video, audio, edit in one studio

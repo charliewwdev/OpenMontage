@@ -1,193 +1,95 @@
 <p align="center">
-  <img src="assets/drama-studio-banner.svg" alt="OpenMontage Drama Studio by Charlie" width="100%"/>
+  <img src="assets/drama-studio-mark.svg" alt="OpenMontage Drama Studio" width="96"/>
+</p>
+
+<h1 align="center">OpenMontage</h1>
+
+<p align="center">
+  <strong>Drama Studio · 一站式短剧工坊</strong><br/>
+  <sub>script → cast → storyboard → shoot → edit</sub>
 </p>
 
 <p align="center">
-  <img src="assets/drama-studio-mark.svg" alt="Drama Studio mark" width="88"/>
-</p>
-
-<h1 align="center">OpenMontage · Drama Studio</h1>
-
-<p align="center">
-  <strong>一站式短剧工坊</strong> · by Charlie / DTok<br/>
-  <sub>script → cast → storyboard → shoot → edit · Postgres + MinIO cloud</sub>
+  <a href="https://openmontage.dtok.io/"><img src="https://img.shields.io/badge/Live-openmontage.dtok.io-E11D48?style=flat-square" alt="Live"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPLv3-334155?style=flat-square" alt="License"/></a>
+  <img src="https://img.shields.io/badge/Stack-React%20%2B%20FastAPI%20%2B%20Postgres-0F172A?style=flat-square" alt="Stack"/>
 </p>
 
 <p align="center">
-  <a href="https://openmontage.dtok.io/" target="_blank" rel="noopener noreferrer">
-    <img src="https://img.shields.io/badge/🚀_Live-openmontage.dtok.io-E11D48?style=for-the-badge" alt="Live Demo">
-  </a>
-  <a href="https://github.com/charliewwdev/OpenMontage" target="_blank" rel="noopener noreferrer">
-    <img src="https://img.shields.io/badge/Repo-charliewwdev-0B1220?style=for-the-badge&logo=github&logoColor=white" alt="GitHub">
-  </a>
-  <a href="LICENSE">
-    <img src="https://img.shields.io/badge/License-AGPLv3-334155?style=for-the-badge" alt="License">
-  </a>
-</p>
-
-<p align="center">
-  <a href="#-features">Features</a> ·
-  <a href="#-drama-studio">Drama Studio</a> ·
-  <a href="#-architecture">Architecture</a> ·
-  <a href="#-quick-start">Quick Start</a> ·
-  <a href="#-stack">Stack</a>
+  <a href="#features">Features</a> ·
+  <a href="#drama-studio">Drama Studio</a> ·
+  <a href="#architecture">Architecture</a> ·
+  <a href="#quick-start">Quick Start</a> ·
+  <a href="#stack">Stack</a>
 </p>
 
 ---
 
-## Why this repo
+Short-drama production studio: write a script, lock characters, board shots, generate video, then edit and export — with cloud persistence so redeploys don’t wipe projects or media.
 
-> Not the upstream mascot repo — this is **Charlie’s Drama Studio product line**  
-> Live product: [openmontage.dtok.io](https://openmontage.dtok.io/)
+**Live:** [openmontage.dtok.io](https://openmontage.dtok.io/)
 
-Production Drama Studio on agentic video pipelines:
-
-- **Browse-first product** — explore Inspire / Skills / Assets without login; auth only when you call models
-- **Short-drama workflow** — script, entities, storyboard, video, audio, edit in one studio
-- **Cloud-ready** — Postgres for all mutable state, MinIO for media, Coolify / Docker deploy
-- **Bring your own keys** — Seedream / Seedance / LLM providers, soft credits, usage ledger
-
-Live: **[openmontage.dtok.io](https://openmontage.dtok.io/)**
-
----
-
-## ✨ Features
+## Features
 
 | | |
 |:---|:---|
-| **Inspire wall** | Localized inspiration media (Postgres metadata + MinIO blobs) — no broken external pin CDN |
-| **Drama pipeline** | Script → character bible → storyboard → keyframes → Seedance shots → edit / export |
-| **Asset library** | Personal uploads + AI assets, prompts library, community skills |
-| **Soft auth** | DTok login / Google / Demo; mutations & generation gated, browsing open |
-| **Durable state** | Projects, secrets, credits, usage, config → **PostgreSQL**; images/video → **MinIO** |
-| **Agent skills** | Pipeline directors + Layer-3 provider skills for better generation quality |
+| **Inspire** | Inspiration wall with media stored locally (Postgres + MinIO) |
+| **Drama pipeline** | Script → entities → storyboard → keyframes → shots → edit |
+| **Assets & skills** | Personal library, prompts, community skills |
+| **Soft auth** | Browse freely; sign in when calling models |
+| **Durable state** | Projects / secrets / credits / usage in **PostgreSQL**; blobs in **MinIO** |
 
----
-
-## 🎬 Drama Studio
+## Drama Studio
 
 ```text
   Script  →  Entities  →  Storyboard  →  Video  →  Audio  →  Edit
-     │           │            │            │         │         │
-     └───────────┴────────────┴────────────┴─────────┴─────────┘
-                         Drama Studio UI
-                    (React + FastAPI + PG/MinIO)
 ```
 
-**Product defaults** (see `studio/config/platform.yaml`):
+Config lives in `studio/config/platform.yaml` (product name, auth, locales, providers).
 
-- Brand: OpenMontage Drama Studio  
-- Tagline: 自带密钥 · 一站式短剧工坊  
-- Default nav: Inspire · locales: `zh` / `en`
-
----
-
-## 🏗 Architecture
+## Architecture
 
 ```text
-┌──────────────────┐     ┌─────────────────┐     ┌──────────────────┐
-│  Drama Studio UI │────▶│  FastAPI server │────▶│  PostgreSQL      │
-│  (Vite / React)  │     │  studio/server  │     │  projects·kv·meta│
-└──────────────────┘     └────────┬────────┘     └──────────────────┘
-                                  │
-                                  ▼
-                         ┌─────────────────┐
-                         │  MinIO (S3)     │
-                         │  inspire·media  │
-                         └─────────────────┘
+  React UI  ──▶  FastAPI (studio/server)  ──▶  PostgreSQL
+                         │
+                         └──▶  MinIO (inspire / media)
 ```
 
-| Layer | Role |
+| Path | Role |
 |:---|:---|
-| `studio/` | Product UI + API (Drama Studio) |
-| `pipeline_defs/` · `skills/` | Agentic production pipelines & directors |
-| `lib/` · `tools/` | Tool registry for agents |
-| Postgres | Source of truth for projects & `studio_kv` |
-| MinIO | Binary media (`openmontage/` prefix) |
+| `studio/` | Drama Studio UI + API |
+| `pipeline_defs/` · `skills/` | Agentic pipelines & directors |
+| `lib/` · `tools/` | Tool registry |
 
----
-
-## 🚀 Quick Start
-
-### Drama Studio (local)
+## Quick Start
 
 ```bash
-# 1) Env
+# env
 cp studio/.env.example studio/.env
-# fill DATABASE_URL / MinIO (OSS_*) / provider keys
+# set DATABASE_URL, MinIO (OSS_*), provider keys
 
-# 2) API
+# API
 cd studio/server && pip install -r requirements.txt
 uvicorn app:app --host 0.0.0.0 --port 8787
 
-# 3) UI
+# UI
 cd studio && npm install && npm run dev
 ```
 
-### Docker / Coolify
+Docker:
 
 ```bash
 docker compose -f docker-compose.studio.yml up --build
-# or sync slim tree → git.dtok.io deploy branch (see scripts/sync_dtok_git.sh)
 ```
 
-Public health: `GET /api/health` → Postgres + object store status.
+Health: `GET /api/health`
 
-### Agent pipelines (CLI / coding agent)
+Agent / pipeline usage: see [`AGENT_GUIDE.md`](AGENT_GUIDE.md).
 
-OpenMontage remains an **instruction-driven** system: the agent reads pipeline manifests + stage director skills, then drives tools. Start from [`AGENT_GUIDE.md`](AGENT_GUIDE.md).
+## Stack
 
----
-
-## 🛠 Stack
-
-<p align="left">
-  <img src="https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python"/>
-  <img src="https://img.shields.io/badge/FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white" alt="FastAPI"/>
-  <img src="https://img.shields.io/badge/React-61DAFB?style=flat-square&logo=react&logoColor=black" alt="React"/>
-  <img src="https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL"/>
-  <img src="https://img.shields.io/badge/MinIO-C72E49?style=flat-square&logo=minio&logoColor=white" alt="MinIO"/>
-  <img src="https://img.shields.io/badge/Seedream-EC4899?style=flat-square" alt="Seedream"/>
-  <img src="https://img.shields.io/badge/Seedance-7C3AED?style=flat-square" alt="Seedance"/>
-  <img src="https://img.shields.io/badge/Docker-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker"/>
-</p>
-
----
-
-## 📁 Layout
-
-```text
-OpenMontage/
-├── studio/                 # Drama Studio (UI + FastAPI)
-│   ├── src/                # React app
-│   ├── server/             # API, PG, MinIO, providers
-│   └── config/             # platform.yaml, locales
-├── pipeline_defs/          # Production pipelines
-├── skills/                 # Agent / stage director skills
-├── lib/ · tools/           # Tooling
-├── docker-compose.studio.yml
-└── AGENT_GUIDE.md          # Agent contract
-```
-
----
-
-## 🔗 Links
-
-| | |
-|:---|:---|
-| 🎬 Live Studio | [openmontage.dtok.io](https://openmontage.dtok.io/) |
-| 👤 Author | [github.com/charliewwdev](https://github.com/charliewwdev) |
-| 🖥️ OpenCLI | [opencli.ai](https://opencli.ai/) |
-| 📖 Agent Guide | [AGENT_GUIDE.md](AGENT_GUIDE.md) |
-
----
+Python · FastAPI · React · PostgreSQL · MinIO · Seedream / Seedance · Docker
 
 ## License
 
 AGPL-3.0 — see [`LICENSE`](LICENSE).
-
----
-
-<p align="center">
-  <sub>Built by <a href="https://github.com/charliewwdev" target="_blank" rel="noopener noreferrer">Charlie</a> · DTok · <a href="https://openmontage.dtok.io/" target="_blank" rel="noopener noreferrer">Drama Studio</a></sub>
-</p>

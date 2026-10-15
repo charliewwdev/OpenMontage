@@ -80,6 +80,13 @@ class ProjectStore:
     def __init__(self, projects_root: Path):
         self.root = projects_root
         self.root.mkdir(parents=True, exist_ok=True)
+        self._pg = False
+        try:
+            import pg_backend as _pg
+
+            self._pg = bool(_pg.enabled())
+        except Exception:
+            self._pg = False
 
     def _dir(self, project_id: str) -> Path | None:
         if not project_id or "/" in project_id or "\\" in project_id or project_id.startswith("."):
@@ -92,50 +99,214 @@ class ProjectStore:
     def _studio_path(self, project: Path) -> Path:
         return project / "studio_state.json"
 
+    def _pg_upsert(self, state: dict[str, Any]) -> None:
+        if not self._pg:
+            return
+        try:
+            import pg_backend as _pg
+
+            _pg.upsert_project(state)
+        except Exception as exc:
+            # Disk write already succeeded; log but do not fail the request.
+            import logging
+
+            logging.getLogger("studio.store").warning("pg upsert failed: %s", exc)
+
+    def _pg_delete(self, project_id: str) -> None:
+        if not self._pg:
+            return
+        try:
+            import pg_backend as _pg
+
+            _pg.delete_project(project_id)
+        except Exception as exc:
+            import logging
+
+            logging.getLogger("studio.store").warning("pg delete failed: %s", exc)
+
     def list_ids(self) -> list[str]:
-        if not self.root.is_dir():
-            return []
-        return sorted(p.name for p in self.root.iterdir() if p.is_dir() and not p.name.startswith("."))
+        ids: set[str] = set()
+        if self.root.is_dir():
+            ids.update(
+                p.name for p in self.root.iterdir() if p.is_dir() and not p.name.startswith(".")
+            )
+        if self._pg:
+            try:
+                import pg_backend as _pg
+
+                ids.update(_pg.list_project_ids())
+            except Exception:
+                pass
+        return sorted(ids)
+
+    def _ensure_media_dirs(self, project: Path) -> None:
+        project.mkdir(parents=True, exist_ok=True)
+        (project / "media" / "images").mkdir(parents=True, exist_ok=True)
+        (project / "media" / "videos").mkdir(parents=True, exist_ok=True)
+        (project / "media" / "exports").mkdir(parents=True, exist_ok=True)
 
     def load(self, project_id: str) -> dict[str, Any] | None:
         project = self._dir(project_id)
-        if not project or not project.is_dir():
-            return None
-        path = self._studio_path(project)
-        if path.exists():
-            return json.loads(path.read_text(encoding="utf-8"))
-        # migrate from legacy bootstrap artifacts if present
-        return self._migrate_legacy(project)
+        path = self._studio_path(project) if project else None
+
+        # Postgres is source of truth when enabled — never write studio_state.json.
+        if self._pg:
+            try:
+                import pg_backend as _pg
+
+                pg_state = _pg.load_project(project_id)
+            except Exception:
+                pg_state = None
+            else:
+                if pg_state:
+                    if project:
+                        try:
+                            self._ensure_media_dirs(project)
+                        except Exception:
+                            pass
+                    return pg_state
+
+        disk_state: dict[str, Any] | None = None
+        if path and path.exists():
+            try:
+                disk_state = json.loads(path.read_text(encoding="utf-8"))
+            except Exception:
+                disk_state = None
+        if disk_state:
+            # One-shot migrate orphan disk project into PG; do not rewrite disk.
+            if self._pg:
+                self._pg_upsert(disk_state)
+            return disk_state
+
+        if project and project.is_dir():
+            return self._migrate_legacy(project)
+        return None
 
     def save(self, state: dict[str, Any]) -> dict[str, Any]:
         project_id = state["project"]["id"]
         project = self._dir(project_id)
         if not project:
             raise ValueError("invalid project id")
-        project.mkdir(parents=True, exist_ok=True)
-        (project / "media" / "images").mkdir(parents=True, exist_ok=True)
-        (project / "media" / "videos").mkdir(parents=True, exist_ok=True)
-        (project / "media" / "exports").mkdir(parents=True, exist_ok=True)
+        self._ensure_media_dirs(project)
         state["project"]["updatedAt"] = _now()
+        if self._pg:
+            # PG only for project state — no studio_state.json on disk.
+            self._pg_upsert(state)
+            return state
         self._studio_path(project).write_text(
             json.dumps(state, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
         )
-        # keep lightweight mirrors for OpenMontage tooling
         self._mirror_artifacts(project, state)
         return state
 
     def delete(self, project_id: str) -> bool:
         project = self._dir(project_id)
-        if not project or not project.is_dir():
-            return False
-        shutil.rmtree(project)
-        return True
+        deleted = False
+        if project and project.is_dir():
+            shutil.rmtree(project)
+            deleted = True
+        if self._pg:
+            try:
+                import pg_backend as _pg
+
+                if _pg.delete_project(project_id):
+                    deleted = True
+            except Exception:
+                self._pg_delete(project_id)
+        return deleted
 
     def media_dir(self, project_id: str, kind: str = "images") -> Path:
         project = self._dir(project_id)
         assert project
         path = project / "media" / kind
         path.mkdir(parents=True, exist_ok=True)
+        return path
+
+    def write_media(
+        self,
+        project_id: str,
+        rel: str,
+        data: bytes,
+        content_type: str | None = None,
+    ) -> Path:
+        """Write media bytes to disk cache and Postgres (source of truth)."""
+        project = self._dir(project_id)
+        if not project:
+            raise ValueError("invalid project id")
+        rel_norm = rel.replace("\\", "/").lstrip("/")
+        if ".." in Path(rel_norm).parts:
+            raise ValueError("invalid media path")
+        path = project / rel_norm
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(data)
+        self.persist_media(project_id, rel_norm, data=data, content_type=content_type)
+        return path
+
+    def persist_media(
+        self,
+        project_id: str,
+        rel: str,
+        data: bytes | None = None,
+        content_type: str | None = None,
+    ) -> None:
+        """Sync an on-disk (or provided) media file into Postgres."""
+        if not self._pg:
+            return
+        rel_norm = rel.replace("\\", "/").lstrip("/")
+        try:
+            import pg_backend as _pg
+
+            blob = data
+            if blob is None:
+                project = self._dir(project_id)
+                if not project:
+                    return
+                path = project / rel_norm
+                if not path.is_file():
+                    return
+                blob = path.read_bytes()
+            if not blob:
+                return
+            _pg.upsert_media(project_id, rel_norm, blob, content_type=content_type)
+        except Exception as exc:
+            import logging
+
+            logging.getLogger("studio.store").warning(
+                "pg media upsert %s/%s failed: %s", project_id, rel_norm, exc
+            )
+
+    def ensure_media(self, project_id: str, rel: str) -> Path | None:
+        """Ensure media exists on disk; hydrate from Postgres when missing."""
+        project = self._dir(project_id)
+        if not project:
+            return None
+        rel_norm = rel.replace("\\", "/").lstrip("/")
+        if ".." in Path(rel_norm).parts:
+            return None
+        path = project / rel_norm
+        if path.is_file() and path.stat().st_size > 0:
+            return path
+        hit = None
+        if self._pg:
+            try:
+                import pg_backend as _pg
+
+                hit = _pg.load_media(project_id, rel_norm)
+            except Exception:
+                hit = None
+        if not hit:
+            try:
+                import object_store as _oss
+
+                if _oss.enabled():
+                    hit = _oss.get_media(project_id, rel_norm)
+            except Exception:
+                hit = None
+        if not hit:
+            return path if path.is_file() else None
+        blob, _ctype = hit
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(blob)
         return path
 
     def create_project(
@@ -147,6 +318,7 @@ class ProjectStore:
         visual_style: str | None = None,
         ratio: str | None = None,
         name: str | None = None,
+        owner_id: str | None = None,
     ) -> dict[str, Any]:
         try:
             from platform_config import default_genre, default_ratio, default_visual_style
@@ -158,10 +330,21 @@ class ProjectStore:
             genre = genre or "都市情感"
             ratio = ratio or "9:16"
             visual_style = visual_style or ""
+        if not owner_id:
+            try:
+                from auth_context import current_user_id
+
+                owner_id = current_user_id() or None
+            except Exception:
+                owner_id = None
         base = slugify(name or title)
+        # Guard against empty / unsafe folder names (e.g. bare "-1" from bad clients)
+        if not base or base in {".", ".."} or base.startswith("-") or "/" in base or "\\" in base:
+            base = slugify(f"drama-{title}") or f"drama-{new_id()[:8]}"
         project_id = base
         i = 2
-        while (self.root / project_id).exists():
+        existing = set(self.list_ids())
+        while project_id in existing or (self.root / project_id).exists():
             project_id = f"{base}-{i}"
             i += 1
         ts = _now()
@@ -175,6 +358,7 @@ class ProjectStore:
                 "visualStyle": visual_style,
                 "ratio": ratio or "9:16",
                 "plannedEpisodes": None,
+                "ownerId": owner_id or "",
                 "createdAt": ts,
                 "updatedAt": ts,
             },
@@ -182,6 +366,7 @@ class ProjectStore:
             "entities": [],
             "shots": [],
             "edits": [],
+            "audios": [],
         }
         return self.save(state)
 
@@ -204,9 +389,92 @@ class ProjectStore:
             edit["outputUrl"] = (
                 f"/api/media/{project_id}/{edit['outputPath']}" if edit.get("outputPath") else None
             )
+        for audio in state.get("audios") or []:
+            if audio.get("path"):
+                audio["url"] = f"/api/media/{project_id}/{audio['path']}"
         return state
 
-    def list_items(self) -> list[dict[str, Any]]:
+    def _media_exists(self, project_id: str, rel: str | None) -> bool:
+        if not rel:
+            return False
+        try:
+            ensured = self.ensure_media(project_id, rel)
+            if ensured and ensured.is_file():
+                return True
+            if self._pg:
+                import pg_backend as _pg
+
+                return _pg.media_exists(project_id, rel.replace("\\", "/"))
+            return False
+        except Exception:
+            return False
+
+    def _entity_image_rel(self, ent: dict[str, Any]) -> str | None:
+        images = ent.get("images") or []
+        if not images:
+            return None
+        sel = ent.get("selectedImageId")
+        hit = next((i for i in images if i.get("id") == sel), None)
+        if not hit:
+            hit = images[0]
+        rel = (hit or {}).get("path") or ""
+        return rel or None
+
+    def _resolve_cover(
+        self,
+        project_id: str,
+        project: dict[str, Any],
+        ents: list[dict[str, Any]],
+        shots: list[dict[str, Any]],
+        state: dict[str, Any],
+    ) -> tuple[str | None, str | None]:
+        """Return (coverUrl, coverVideoUrl). Prefer stills; fall back to video preview."""
+        cover_path = (project.get("coverPath") or "").strip()
+        if cover_path and self._media_exists(project_id, cover_path):
+            return f"/api/media/{project_id}/{cover_path}", None
+
+        for kind in ("character", "scene", "prop"):
+            for ent in ents:
+                if ent.get("kind") != kind:
+                    continue
+                rel = self._entity_image_rel(ent)
+                if rel and self._media_exists(project_id, rel):
+                    return f"/api/media/{project_id}/{rel}", None
+
+        # Any image path recorded even if kind missing
+        for ent in ents:
+            rel = self._entity_image_rel(ent)
+            if rel and self._media_exists(project_id, rel):
+                return f"/api/media/{project_id}/{rel}", None
+
+        # Finished edit / shot video as motion cover
+        for edit in state.get("edits") or []:
+            out = edit.get("outputPath") or ""
+            if out and self._media_exists(project_id, out):
+                return None, f"/api/media/{project_id}/{out}"
+
+        ordered = sorted(shots, key=lambda s: int(s.get("shotOrder") or 0))
+        for shot in ordered:
+            sel = shot.get("selectedVideoId")
+            videos = shot.get("videos") or []
+            hit = next((v for v in videos if v.get("id") == sel), None)
+            if not hit and videos:
+                hit = next((v for v in videos if v.get("path") or v.get("url")), videos[0])
+            rel = (hit or {}).get("path") or ""
+            if rel and self._media_exists(project_id, rel):
+                return None, f"/api/media/{project_id}/{rel}"
+
+        return None, None
+
+    def list_items(self, owner_id: str | None = None) -> list[dict[str, Any]]:
+        uid = owner_id
+        if uid is None:
+            try:
+                from auth_context import current_user_id
+
+                uid = current_user_id() or None
+            except Exception:
+                uid = None
         items = []
         for pid in self.list_ids():
             state = self.load(pid)
@@ -217,26 +485,23 @@ class ProjectStore:
                 continue
             if p.get("hidden"):
                 continue
+            # Soft multi-tenant: each user sees own projects + seed templates
+            proj_owner = str(p.get("ownerId") or "").strip()
+            if uid and uid != "demo":
+                is_seed = pid.startswith("welcome") or bool(p.get("seed"))
+                if proj_owner and proj_owner != uid:
+                    continue
+                if not proj_owner and not is_seed:
+                    continue
             eps = state.get("episodes") or []
             ents = [e for e in (state.get("entities") or []) if not e.get("deletedAt")]
             shots = [s for s in (state.get("shots") or []) if not s.get("deletedAt")]
-            cover_path = p.get("coverPath") or ""
-            cover_url = f"/api/media/{pid}/{cover_path}" if cover_path else None
-            if not cover_url:
-                for ent in ents:
-                    if ent.get("kind") != "character":
-                        continue
-                    sel = ent.get("selectedImageId")
-                    hit = next((i for i in (ent.get("images") or []) if i.get("id") == sel), None)
-                    if not hit and (ent.get("images") or []):
-                        hit = ent["images"][0]
-                    if hit and hit.get("path"):
-                        cover_url = f"/api/media/{pid}/{hit['path']}"
-                        break
+            cover_url, cover_video_url = self._resolve_cover(pid, p, ents, shots, state)
             items.append(
                 {
                     **p,
                     "coverUrl": cover_url,
+                    "coverVideoUrl": cover_video_url,
                     "progress": {
                         "episodes": {
                             "total": len(eps),
@@ -259,6 +524,9 @@ class ProjectStore:
                             "withImage": sum(
                                 1 for e in ents if e["kind"] == "prop" and e.get("selectedImageId")
                             ),
+                        },
+                        "audios": {
+                            "total": len(state.get("audios") or []),
                         },
                         "shots": {
                             "total": len(shots),

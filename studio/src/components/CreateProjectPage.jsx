@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { ArrowLeft, Clapperboard, KeyRound, Loader2, Plus, RotateCcw, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { ArrowLeft, Clapperboard, KeyRound, Loader2, Plus, RotateCcw, Sparkles, Upload, Wand2 } from "lucide-react";
 import { api } from "../api";
 import { requireCapability, toastMaybeKeys } from "../lib/keys";
 import { toast } from "../lib/toast";
@@ -27,28 +27,67 @@ const BRIEF_PLACEHOLDER = `描述你想要的短剧内容，简单想法也可�
 • 感情线、反派、金手指、时代、职业或世界观
 • 无虐主 / 快节奏 / 反转多 / 指定结局 / 必须保留的情节`;
 
-export function CreateProjectPage({ config, onBack, onCreated, onNeedKeys }) {
+export function CreateProjectPage({ config, entryMode = null, onBack, onCreated, onNeedKeys }) {
   const genres = config?.genres || [];
   const styles = config?.styles || [];
   const ratios = config?.ratios;
   const creationSteps = config?.creationSteps || [];
   const defaults = config?.defaults || {};
   const defaultStyle = useMemo(() => styles[0], [styles]);
+  const isUpload = entryMode?.mode === "upload" || entryMode?.id === "upload";
+  const preset = entryMode?.preset || {};
+  const fileRef = useRef(null);
 
   const [creating, setCreating] = useState(false);
+  const [autoRunning, setAutoRunning] = useState(false);
   const [optimizingBrief, setOptimizingBrief] = useState(false);
+  const [parsing, setParsing] = useState(false);
+  const [uploadName, setUploadName] = useState("");
   const [briefHistory, setBriefHistory] = useState([]);
   const [form, setForm] = useState({
     title: "",
     brief: "",
-    genre: defaults.genre || genres[0] || "",
+    genre: preset.genre || defaults.genre || genres[0] || "",
     visualStyle: defaultStyle?.promptValue || defaultStyle?.generationPrompt || defaults.visualStyle || "",
-    ratio: defaults.ratio || ratios?.[0]?.value || "",
+    ratio: preset.ratio || defaults.ratio || ratios?.[0]?.value || "",
   });
-  const formLocked = optimizingBrief || creating;
+  const formLocked = optimizingBrief || creating || parsing || autoRunning;
+  const caps = config?.capabilities || {};
+
+  useEffect(() => {
+    if (!entryMode) return;
+    setForm((current) => ({
+      ...current,
+      genre: entryMode.preset?.genre || current.genre,
+      ratio: entryMode.preset?.ratio || current.ratio,
+    }));
+  }, [entryMode?.id]);
+
+  const onPickScript = async (file) => {
+    if (!file) return;
+    setParsing(true);
+    try {
+      const body = new FormData();
+      body.append("file", file);
+      const res = await api("/api/projects/parse-script", { method: "POST", body });
+      const text = (res.text || "").trim();
+      if (!text) throw new Error("未能从文件中提取文本");
+      setUploadName(file.name);
+      setForm((current) => ({
+        ...current,
+        title: current.title || String(res.title || file.name.replace(/\.[^.]+$/, "")).slice(0, 40),
+        brief: text.slice(0, 100000),
+      }));
+      toast.success(`已导入 ${file.name}`);
+    } catch (error) {
+      toast.error(String(error.message || error));
+    } finally {
+      setParsing(false);
+    }
+  };
 
   const optimizeBrief = async () => {
-    if (!requireCapability(config?.capabilities, "deepseek", onNeedKeys, "DeepSeek Key")) return;
+    if (!requireCapability(config?.capabilities, "deepseek", onNeedKeys, "文本大模型 Key")) return;
     if (!form.brief.trim()) return toast.error("先写下一句话故事想法，再让 AI 帮你扩写");
     if (!form.genre.trim()) return toast.error("请选择题材或填写自定义题材");
     if (!form.visualStyle.trim()) return toast.error("请选择视觉风格");
@@ -86,7 +125,7 @@ export function CreateProjectPage({ config, onBack, onCreated, onNeedKeys }) {
   };
 
   const create = async () => {
-    if (optimizingBrief) return;
+    if (optimizingBrief || autoRunning) return;
     if (!form.title.trim()) return toast.error("先给项目起个名字");
     if (!form.genre.trim()) return toast.error("请选择题材或填写自定义题材");
     if (!form.visualStyle.trim()) return toast.error("请选择视觉风格");
@@ -102,6 +141,42 @@ export function CreateProjectPage({ config, onBack, onCreated, onNeedKeys }) {
       toast.error(String(error.message || error));
     } finally {
       setCreating(false);
+    }
+  };
+
+  const createAndAutoProduce = async () => {
+    if (optimizingBrief || creating) return;
+    if (!form.title.trim()) return toast.error("先给项目起个名字");
+    if (!form.brief.trim()) return toast.error("先写一句话想法或粘贴剧本");
+    if (!form.genre.trim()) return toast.error("请选择题材或填写自定义题材");
+    if (!form.visualStyle.trim()) return toast.error("请选择视觉风格");
+    if (!requireCapability(caps, "deepseek", onNeedKeys, "文本大模型 Key")) return;
+    if (!caps.seedream || !caps.seedance) {
+      toast.error("全流程需要 Seedream + Seedance Key");
+      onNeedKeys?.();
+      return;
+    }
+    setAutoRunning(true);
+    try {
+      const res = await api("/api/auto-produce", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...form,
+          episodeCount: 1,
+          maxShots: 24,
+          maxCharacters: 6,
+          maxScenes: 4,
+          forceIllustration: false,
+          resolution: "720p",
+        }),
+      });
+      toast.success("已开始一键全流程，后台制作中");
+      onCreated?.(res.projectId);
+    } catch (error) {
+      toastMaybeKeys(error, onNeedKeys);
+    } finally {
+      setAutoRunning(false);
     }
   };
 
@@ -121,9 +196,13 @@ export function CreateProjectPage({ config, onBack, onCreated, onNeedKeys }) {
             <div className="mt-10 flex items-center gap-3 text-xs font-bold uppercase tracking-[.2em] text-white/45">
               <Clapperboard className="h-4 w-4 text-[#b7acff]" /> New production
             </div>
-            <h1 className="mt-3 text-4xl font-semibold md:text-5xl">建立新项目</h1>
+            <h1 className="mt-3 text-4xl font-semibold md:text-5xl">
+              {isUpload ? "上传剧本建项" : entryMode?.id === "formal" ? "正剧项目" : "建立新项目"}
+            </h1>
             <p className="mt-4 max-w-3xl text-sm leading-7 text-white/60 md:text-base">
-              先确定故事方向与统一画面语言。建立后从专业剧本开始，继续整理角色、场景和道具，再进入分镜与成片。
+              {isUpload
+                ? "支持 TXT / MD / DOCX。导入后可再改片名、题材与风格，再进入六步生产线。"
+                : "先确定故事方向与统一画面语言。建立后从专业剧本开始，继续整理角色、场景和道具，再进入分镜与成片。"}
             </p>
           </div>
           <div className="relative border-t border-white/10 bg-black/20 p-6 lg:border-l lg:border-t-0 md:p-8">
@@ -146,7 +225,7 @@ export function CreateProjectPage({ config, onBack, onCreated, onNeedKeys }) {
       {!config?.capabilities?.deepseek ? (
         <section className="mt-4 flex flex-col gap-3 rounded-2xl border border-[#f59e0b]/40 bg-[linear-gradient(90deg,rgba(245,158,11,.16),rgba(239,68,68,.1))] px-4 py-4 md:flex-row md:items-center md:justify-between md:px-5">
           <div className="text-sm text-white/85">
-            <strong className="block">AI 优化需求需要 DeepSeek Key</strong>
+            <strong className="block">AI 优化需求需要文本大模型 Key</strong>
             <span className="mt-1 block text-white/60">可先建项目，生成剧本前请一键配置密钥。</span>
           </div>
           <button type="button" className="btn-primary shrink-0" onClick={() => onNeedKeys?.()}>
@@ -157,6 +236,34 @@ export function CreateProjectPage({ config, onBack, onCreated, onNeedKeys }) {
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-6">
+          {isUpload ? (
+            <section className="panel p-5 md:p-7">
+              <div className="label">Script upload</div>
+              <h2 className="display-type text-2xl font-semibold">上传剧本文件</h2>
+              <p className="mt-1 text-sm leading-6 text-[var(--muted)]">TXT / Markdown / Word（.docx）。内容会填入创作想法，可继续编辑。</p>
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".txt,.md,.markdown,.docx,text/plain,text/markdown,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  e.target.value = "";
+                  void onPickScript(file);
+                }}
+              />
+              <button
+                type="button"
+                className="btn-primary mt-5"
+                disabled={formLocked}
+                onClick={() => fileRef.current?.click()}
+              >
+                {parsing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                {parsing ? "解析中…" : "选择文件"}
+              </button>
+              {uploadName ? <p className="mt-3 text-xs text-[var(--muted)]">已导入：{uploadName}</p> : null}
+            </section>
+          ) : null}
           <section className="panel p-5 md:p-7">
             <div className="label">Basic setup</div>
             <h2 className="display-type text-2xl font-semibold">故事身份</h2>
@@ -270,10 +377,16 @@ export function CreateProjectPage({ config, onBack, onCreated, onNeedKeys }) {
           <section className="panel p-5">
             <div className="label">Ready</div>
             <h2 className="display-type text-xl font-semibold">进入剧本台</h2>
-            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">确认片名、题材、风格与画幅后开始第一集创作。</p>
-            <button type="button" className="btn-primary mt-5 w-full" disabled={formLocked} onClick={() => void create()}>
+            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+              可只建项进六步工坊，或一句话/剧本直接后台跑通到成片。
+            </p>
+            <button type="button" className="btn-primary mt-5 w-full" disabled={formLocked} onClick={() => void createAndAutoProduce()}>
+              {autoRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+              {autoRunning ? "全流程启动中…" : "一键全流程成片"}
+            </button>
+            <button type="button" className="btn-secondary mt-2 w-full" disabled={formLocked} onClick={() => void create()}>
               {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-              {creating ? "创建中…" : "建立片场"}
+              {creating ? "创建中…" : "仅建立片场"}
             </button>
             <button type="button" className="btn-ghost mt-2 w-full" disabled={formLocked} onClick={onBack}>
               取消

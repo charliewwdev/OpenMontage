@@ -10,14 +10,16 @@ import os
 import sys
 import time
 import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import unquote
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
 
 ROOT = Path(os.environ.get("OPENMONTAGE_ROOT", Path(__file__).resolve().parents[2])).resolve()
 sys.path.insert(0, str(ROOT))
@@ -45,6 +47,7 @@ from drama_service import (  # noqa: E402
     set_episode_status,
     soft_delete_entity,
     soft_delete_shot,
+    cancel_shot_video,
     start_shot_video,
     upload_entity_image,
     upsert_entity,
@@ -55,13 +58,31 @@ from export_mp4 import ffmpeg_available  # noqa: E402
 from platform_config import (  # noqa: E402
     default_genre,
     demo_auth_config,
+    load_platform_config,
     public_platform_payload,
     seedance_models,
 )
-from pinterest_feed import fetch_pins  # noqa: E402
+import asset_library as assetlib  # noqa: E402
+from pinterest_feed import fetch_pins, fetch_remote_image  # noqa: E402
+import inspire_store  # noqa: E402
 from providers import provider_status  # noqa: E402
 from settings_store import load_and_apply, public_status, save_secrets  # noqa: E402
 from store import ProjectStore, ensure_seed_projects  # noqa: E402
+from usage_store import init_usage, query_usage, seed_demo_if_empty  # noqa: E402
+from credits_store import (  # noqa: E402
+    complete_challenge,
+    init_credits,
+    load_credits,
+    record_referral,
+)
+from script_parse import dialogue_from_episode, dialogue_lines_for_episode, extract_text, guess_title  # noqa: E402
+from audio_tts import generate_bgm_mp3, synthesize_dialogue_mp3, synthesize_mp3  # noqa: E402
+from auth_context import current_user_id, set_current_user  # noqa: E402
+from auto_produce import (  # noqa: E402
+    ensure_auto_produce_worker,
+    get_job as get_auto_produce_job,
+    start_auto_produce,
+)
 
 PROJECTS_ROOT = Path(os.environ.get("PROJECTS_ROOT", str(ROOT / "projects"))).resolve()
 DIST_DIR = Path(os.environ.get("STUDIO_DIST", str(Path(__file__).resolve().parents[1] / "dist"))).resolve()
@@ -69,19 +90,197 @@ HOST = os.environ.get("HOST", os.environ.get("STUDIO_HOST", "0.0.0.0"))
 PORT = int(os.environ.get("PORT", os.environ.get("STUDIO_API_PORT", "8787")))
 SKILLS_ROOT = Path(__file__).resolve().parents[1] / "skills"
 SEED_ROOT = Path(__file__).resolve().parents[1] / "seed"
+COMMUNITY_SKILLS = PROJECTS_ROOT / ".community_skills.json"
+PUBLIC_URL = (os.environ.get("STUDIO_PUBLIC_URL") or "").rstrip("/")
+CORS_ORIGINS = [
+    o.strip()
+    for o in (os.environ.get("STUDIO_CORS_ORIGINS") or PUBLIC_URL or "*").split(",")
+    if o.strip()
+]
+AUTH_PUBLIC_PREFIXES = (
+    "/api/health",
+    "/api/config",
+    "/api/auth/",
+    "/api/media/",  # <img>/<video>/<audio> cannot send Bearer
+    "/assets/",
+    "/favicon",
+    "/maintenance",
+)
+# Browse without login (mutations on these prefixes still require auth).
+AUTH_PUBLIC_GET_PREFIXES = (
+    "/api/inspire/",
+    "/api/platform/skills",
+    "/api/platform/assets",
+    "/api/platform/prompts",
+    "/api/platform/exports",
+    "/api/projects",
+    "/api/settings/keys",  # public status only; POST still gated for anon writes
+    "/api/settings/usage",  # browse usage charts anonymously
+    "/api/settings/credits",  # browse credit packages; mutations still gated
+)
+AUTH_PUBLIC_EXACT = {
+    "/",
+    "/api/config",
+    "/api/health",
+    "/index.html",
+    "/maintenance.html",
+    "/favicon.svg",
+    "/favicon.ico",
+    # Anonymous referral capture from ?ref= (no login yet).
+    "/api/settings/credits/referral",
+}
+OPS_TOKEN_HEADER = "x-studio-ops-token"
+
+
+def _ops_token_expected() -> str:
+    return (
+        (os.environ.get("STUDIO_OPS_TOKEN") or "").strip()
+        or (os.environ.get("STUDIO_DEMO_SECRET") or "").strip()
+        or "openmontage-demo-local"
+    )
+
+
+def _ops_token_ok(request: Request) -> bool:
+    got = (request.headers.get(OPS_TOKEN_HEADER) or request.headers.get("X-Studio-Ops-Token") or "").strip()
+    expected = _ops_token_expected()
+    return bool(got and expected and got == expected)
+
+# Postgres: schema → merge ALL disk history into PG first → then hydrate caches.
+# Order matters: never switch readers to PG-primary before disk→PG merge finishes.
+try:
+    import pg_backend as _pg_backend
+
+    if _pg_backend.enabled():
+        ok = _pg_backend.init_schema()
+        if ok:
+            # 1) Disk → PG (merge, never drop disk-only history)
+            migrated = _pg_backend.migrate_disk_projects_to_pg(PROJECTS_ROOT)
+            media_up = _pg_backend.migrate_disk_media_to_pg(PROJECTS_ROOT)
+            kv_migrated = _pg_backend.migrate_disk_state_to_pg(PROJECTS_ROOT)
+            # 2) PG → disk cache for ffmpeg / local tooling
+            hydrated = _pg_backend.hydrate_projects_to_disk(PROJECTS_ROOT)
+            media_down = _pg_backend.hydrate_media_to_disk(PROJECTS_ROOT)
+            try:
+                from platform_config import load_platform_config as _lpc
+
+                _lpc.cache_clear()
+            except Exception:
+                pass
+            try:
+                import object_store as _oss
+
+                oss_ping = _oss.ping()
+                print(f"[studio] object store {oss_ping}", flush=True)
+                if oss_ping.get("ok"):
+                    moved = _pg_backend.offload_blobs_to_minio(limit=500)
+                    print(f"[studio] minio offload {moved}", flush=True)
+            except Exception as _oss_exc:
+                print(f"[studio] object store skipped: {_oss_exc}", flush=True)
+            print(
+                f"[studio] postgres ready projects_hydrated={len(hydrated)} "
+                f"projects_migrated={len(migrated)} media_up={media_up} media_down={media_down} "
+                f"kv_migrated={kv_migrated}",
+                flush=True,
+            )
+        else:
+            print("[studio] postgres configured but schema init failed", flush=True)
+except Exception as _pg_exc:
+    print(f"[studio] postgres bootstrap skipped: {_pg_exc}", flush=True)
 
 STORE = ProjectStore(PROJECTS_ROOT)
 ensure_seed_projects(PROJECTS_ROOT, SEED_ROOT)
 load_and_apply(PROJECTS_ROOT)
+init_usage(PROJECTS_ROOT)
+init_credits(PROJECTS_ROOT)
+seed_demo_if_empty(PROJECTS_ROOT)
 SEEDANCE_MODELS = seedance_models()
+
 
 app = FastAPI(title="OpenMontage Drama Studio", version="0.2.0")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS if CORS_ORIGINS != ["*"] else ["*"],
+    allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+
+def _bearer_token(request: Request) -> str:
+    auth = request.headers.get("authorization") or request.headers.get("Authorization") or ""
+    if auth.lower().startswith("bearer "):
+        return auth[7:].strip()
+    return ""
+
+
+def _resolve_user(token: str) -> dict[str, Any] | None:
+    if not token:
+        return None
+    if demo_auth.is_demo_token(token):
+        status, result = demo_auth.demo_me(token)
+        if status == 200 and isinstance(result.get("data"), dict):
+            return result["data"]
+        return None
+    status, result = auth_proxy.me(token)
+    if status == 200 and isinstance(result.get("data"), dict):
+        data = result["data"]
+        return {
+            "id": data.get("id") or data.get("userId"),
+            "userId": data.get("userId") or data.get("id"),
+            "username": data.get("username") or data.get("nickname") or "user",
+            "avatar": data.get("avatar") or "",
+        }
+    return None
+
+
+def _path_is_public(path: str, method: str = "GET") -> bool:
+    if path in AUTH_PUBLIC_EXACT:
+        return True
+    if not path.startswith("/api/"):
+        return True
+    if any(path.startswith(p) for p in AUTH_PUBLIC_PREFIXES):
+        return True
+    m = (method or "GET").upper()
+    if m in {"GET", "HEAD"} and any(path.startswith(p) for p in AUTH_PUBLIC_GET_PREFIXES):
+        return True
+    return False
+
+
+class AuthContextMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        set_current_user(None)
+        path = request.url.path or "/"
+        method = request.method.upper()
+        token = _bearer_token(request)
+        user = _resolve_user(token) if token else None
+        if user:
+            set_current_user(user)
+        auth_required = os.environ.get("STUDIO_AUTH_REQUIRED", "true").strip().lower() not in (
+            "0",
+            "false",
+            "no",
+            "off",
+        )
+        ops_bootstrap = method == "POST" and _ops_token_ok(request) and path in {
+            "/api/settings/keys",
+            "/api/ops/migrate-disk-to-pg",
+        }
+        if (
+            auth_required
+            and path.startswith("/api/")
+            and not _path_is_public(path, method)
+            and method not in {"OPTIONS", "HEAD"}
+            and not user
+            and not ops_bootstrap
+        ):
+            return JSONResponse(status_code=401, content={"error": "login required"})
+        try:
+            return await call_next(request)
+        finally:
+            set_current_user(None)
+
+
+app.add_middleware(AuthContextMiddleware)
 
 
 def _http_error(status: int, message: str) -> HTTPException:
@@ -113,18 +312,35 @@ async def unhandled_handler(_: Request, exc: Exception) -> JSONResponse:
 
 def _providers_payload() -> dict[str, Any]:
     status = provider_status()
-    configured = sum(1 for v in status.values() if v)
+    bools = {k: v for k, v in status.items() if isinstance(v, bool)}
+    configured = sum(1 for v in bools.values() if v)
     return {
         **status,
         "ffmpeg": ffmpeg_available(),
         "configured": configured,
-        "total": 3,
-        "mode": "online" if any(status.values()) else "offline-bootstrap",
+        "total": 4,
+        "mode": "online" if any(bools.values()) else "offline-bootstrap",
     }
+
+
+def _object_store_status() -> dict[str, Any]:
+    try:
+        import object_store as _oss
+
+        return _oss.ping()
+    except Exception as exc:
+        return {"enabled": False, "error": str(exc)[:120]}
 
 
 @app.get("/api/health")
 def health() -> dict[str, Any]:
+    pg_status: dict[str, Any] = {"enabled": False}
+    try:
+        import pg_backend as _pg_backend
+
+        pg_status = _pg_backend.ping()
+    except Exception as exc:
+        pg_status = {"enabled": False, "error": str(exc)[:120]}
     return {
         "ok": True,
         "service": "openmontage-drama-studio",
@@ -135,6 +351,8 @@ def health() -> dict[str, Any]:
         "ffmpeg": ffmpeg_available(),
         "providers": provider_status(),
         "keys": public_status(),
+        "postgres": pg_status,
+        "objectStore": _object_store_status(),
     }
 
 
@@ -146,33 +364,34 @@ def get_keys() -> dict[str, Any]:
 @app.post("/api/settings/keys")
 async def post_keys(request: Request) -> dict[str, Any]:
     body = await request.json()
-    status = save_secrets(PROJECTS_ROOT, body if isinstance(body, dict) else {})
+    payload = body if isinstance(body, dict) else {}
+    # Coolify/ops restore writes shared secrets so all users can fall back before BYOK.
+    if _ops_token_ok(request) and not current_user_id():
+        status = save_secrets(PROJECTS_ROOT, payload, user_id="")
+    else:
+        status = save_secrets(PROJECTS_ROOT, payload)
     return {"ok": True, "keys": status, "capabilities": _providers_payload()}
 
 
 @app.post("/api/settings/keys/import-env")
 def import_keys_from_env() -> dict[str, Any]:
-    """Copy process env (Coolify / Docker) into the secrets file if values exist."""
+    """Optional ops helper: copy process env into secrets store once."""
+    from providers.llm_catalog import all_secret_envs
+
     payload: dict[str, str] = {}
-    for key in (
-        "DEEPSEEK_API_KEY",
-        "DEEPSEEK_BASE_URL",
-        "DEEPSEEK_MODEL",
-        "VOLCENGINE_API_KEY",
-        "ARK_API_KEY",
-        "SEEDREAM_MODEL",
-        "SEEDANCE_MODEL",
-    ):
+    for key in all_secret_envs():
         val = (os.environ.get(key) or "").strip()
         if val:
             payload[key] = val
-    if not payload.get("DEEPSEEK_API_KEY") and not payload.get("VOLCENGINE_API_KEY") and not payload.get("ARK_API_KEY"):
+    has_llm = any(k.endswith("_API_KEY") and k not in {"VOLCENGINE_API_KEY", "ARK_API_KEY"} for k in payload)
+    has_volc = bool(payload.get("VOLCENGINE_API_KEY") or payload.get("ARK_API_KEY"))
+    if not has_llm and not has_volc:
         return {
             "ok": False,
             "imported": [],
             "keys": public_status(),
             "capabilities": _providers_payload(),
-            "error": "服务器环境变量里没有可用的 DeepSeek / 火山 Key，无法自动导入。请在本页粘贴，或写入 Coolify 环境变量后重启。",
+            "error": "进程环境里没有可用的文本大模型 / 火山 Key。请在本页直接粘贴保存即可（运行时动态读取，不必依赖环境变量）。",
         }
     status = save_secrets(PROJECTS_ROOT, payload)
     return {
@@ -183,121 +402,159 @@ def import_keys_from_env() -> dict[str, Any]:
     }
 
 
+@app.post("/api/ops/migrate-disk-to-pg")
+def ops_migrate_disk_to_pg(request: Request) -> dict[str, Any]:
+    """Merge all disk secrets/credits/usage/projects/media into Postgres (ops token)."""
+    if not _ops_token_ok(request):
+        raise HTTPException(status_code=403, detail="ops token required")
+    try:
+        import pg_backend as _pg
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"pg backend unavailable: {exc}") from exc
+    if not _pg.enabled():
+        raise HTTPException(status_code=503, detail="DATABASE_URL not configured")
+    if not _pg.init_schema():
+        raise HTTPException(status_code=503, detail="schema init failed")
+    projects = _pg.migrate_disk_projects_to_pg(PROJECTS_ROOT)
+    media = _pg.migrate_disk_media_to_pg(PROJECTS_ROOT)
+    kv = _pg.migrate_disk_state_to_pg(PROJECTS_ROOT)
+    return {
+        "ok": True,
+        "projects": projects,
+        "media": media,
+        "kv": kv,
+    }
+
+
+
 @app.post("/api/settings/keys/test")
 async def test_keys() -> dict[str, Any]:
-    results: dict[str, Any] = {"deepseek": None, "volcengine": None}
-    if provider_status().get("deepseek"):
+    results: dict[str, Any] = {
+        "llm": None,
+        "deepseek": None,
+        "cursor": None,
+        "volcengine": None,
+        "comfyui": None,
+    }
+    status = provider_status()
+    if status.get("llmReady") or status.get("deepseek"):
         try:
-            from providers.deepseek import chat_json
+            from providers.llm import chat_json
 
             data = chat_json(
                 system="只输出 JSON。",
                 user='返回 {"ok": true}',
                 temperature=0,
                 max_tokens=32,
+                retries=1,
             )
-            results["deepseek"] = {"ok": True, "sample": data}
-        except Exception as exc:
-            results["deepseek"] = {"ok": False, "error": str(exc)}
+            sample = {"ok": True, "sample": data, "backend": status.get("llmBackend")}
+            results["llm"] = sample
+            results["deepseek"] = sample  # legacy UI field
+        except Exception as exc:  # noqa: BLE001
+            err = {"ok": False, "error": str(exc)}
+            results["llm"] = err
+            results["deepseek"] = err
     else:
-        results["deepseek"] = {"ok": False, "error": "未配置 DEEPSEEK_API_KEY"}
+        err = {"ok": False, "error": "未配置任何文本大模型 API Key"}
+        results["llm"] = err
+        results["deepseek"] = err
+    from settings_store import get_secret
+
+    results["cursor"] = {
+        "ok": bool(status.get("cursor")),
+        "error": None if status.get("cursor") else "未配置 CURSOR_API_KEY",
+        "model": get_secret("CURSOR_MODEL", "auto") or "auto",
+    }
+
     results["volcengine"] = {
-        "ok": bool(provider_status().get("volcengine")),
-        "error": None if provider_status().get("volcengine") else "未配置 VOLCENGINE_API_KEY / ARK_API_KEY",
+        "ok": bool(status.get("volcengine")),
+        "error": None if status.get("volcengine") else "未配置 VOLCENGINE_API_KEY / ARK_API_KEY",
         "note": "火山 Key 已写入进程；图片/视频任务会在实际出图出片时校验。",
     }
+
+    if get_secret("COMFYUI_SERVER_URL") or get_secret("COMFYUI_IMAGE_SERVER_URL"):
+        try:
+            from providers.comfyui import list_checkpoints, ping, public_status as comfy_public
+
+            info = ping()
+            ckpts = list_checkpoints()
+            probed = comfy_public(probe=True)
+            results["comfyui"] = {
+                "ok": True,
+                **info,
+                "checkpoints": ckpts[:20],
+                "checkpointCount": len(ckpts),
+                "videoModels": probed.get("videoModels") or [],
+                "videoReady": bool(probed.get("videoReady")),
+                "imageBackend": status.get("imageBackend"),
+                "videoBackend": status.get("videoBackend"),
+            }
+            # Merge live probe into keys payload so UI can show checkpoints / H3 video.
+            keys_payload = public_status()
+            keys_payload["comfyui"] = {
+                **probed,
+                "reachable": True,
+                "checkpoints": ckpts[:20] or probed.get("checkpoints") or [],
+                "checkpoint": get_secret("COMFYUI_CHECKPOINT")
+                or (ckpts[0] if ckpts else "")
+                or probed.get("checkpoint")
+                or "",
+                "deviceName": info.get("deviceName") or probed.get("deviceName") or "",
+                "error": "",
+            }
+            keys_payload["videoBackend"] = status.get("videoBackend")
+            return {"results": results, "keys": keys_payload}
+        except Exception as exc:  # noqa: BLE001
+            results["comfyui"] = {"ok": False, "error": str(exc)}
+    else:
+        results["comfyui"] = {
+            "ok": False,
+            "error": "未配置 COMFYUI_SERVER_URL（智川云租 GPU 后填写）",
+        }
     return {"results": results, "keys": public_status()}
 
 
-_LIBRARY_ID = "_library"
-_UPLOAD_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".gif", ".mp4", ".webm", ".svg", ".wav", ".mp3"}
-
-
-def _ensure_library_root() -> Path:
-    root = PROJECTS_ROOT / _LIBRARY_ID
-    (root / "media" / "uploads").mkdir(parents=True, exist_ok=True)
-    state = root / "studio_state.json"
-    # Must match ProjectStore shape (state["project"]) so list_items stays healthy.
-    payload = {
-        "project": {
-            "id": _LIBRARY_ID,
-            "title": "个人素材库",
-            "updatedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-            "hidden": True,
-        },
-        "episodes": [],
-        "entities": [],
-        "shots": [],
-    }
-    if not state.is_file():
-        state.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    else:
-        try:
-            existing = json.loads(state.read_text(encoding="utf-8"))
-        except Exception:  # noqa: BLE001
-            existing = {}
-        if not isinstance(existing.get("project"), dict):
-            state.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    return root
-
-
-def _asset_kind(suffix: str) -> str:
-    s = suffix.lower()
-    if s in {".mp4", ".webm"}:
-        return "video"
-    if s in {".wav", ".mp3"}:
-        return "audio"
-    return "image"
-
-
-def _scan_media_assets(pid: str, title: str, root: Path) -> list[dict[str, Any]]:
-    items: list[dict[str, Any]] = []
-    media = root / "media"
-    if not media.is_dir():
-        return items
-    for path in sorted(media.rglob("*")):
-        if not path.is_file():
-            continue
-        if path.suffix.lower() not in _UPLOAD_EXTS:
-            continue
-        rel = path.relative_to(root).as_posix()
-        items.append(
-            {
-                "projectId": pid,
-                "projectTitle": title or pid,
-                "path": rel,
-                "url": f"/api/media/{pid}/{rel}",
-                "kind": _asset_kind(path.suffix),
-                "size": path.stat().st_size,
-                "updatedAt": path.stat().st_mtime,
-                "uploaded": pid == _LIBRARY_ID or rel.startswith("media/uploads/"),
-            }
-        )
-    return items
-
-
-def _collect_platform_assets() -> list[dict[str, Any]]:
-    items: list[dict[str, Any]] = []
-    lib_root = _ensure_library_root()
-    items.extend(_scan_media_assets(_LIBRARY_ID, "个人素材库", lib_root))
-    for project in STORE.list_items():
-        pid = str(project.get("id") or "")
-        if not pid or pid == _LIBRARY_ID:
-            continue
-        root = STORE._dir(pid)
-        if not root or not root.is_dir():
-            continue
-        items.extend(_scan_media_assets(pid, str(project.get("title") or pid), root))
-    items.sort(key=lambda x: x["updatedAt"], reverse=True)
-    return items
+@app.get("/api/settings/usage")
+def get_usage(
+    range: str = Query("7d"),
+    provider: str = Query(""),
+    model: str = Query(""),
+    kind: str = Query("all"),
+    status: str = Query("all"),
+    date_from: str = Query(""),
+    date_to: str = Query(""),
+    log_limit: int = Query(100, ge=1, le=500),
+) -> dict[str, Any]:
+    return query_usage(
+        range_key=range,
+        date_from=date_from,
+        date_to=date_to,
+        provider=provider,
+        model=model,
+        kind=kind,
+        status=status,
+        log_limit=log_limit,
+    )
 
 
 @app.get("/api/platform/assets")
 def platform_assets(
+
     offset: int = Query(0, ge=0),
     limit: int = Query(60, ge=1, le=200),
+    kind: str = Query("all"),
+    source: str = Query("all"),
+    category: str = Query("all"),
+    q: str = Query(""),
+    sort: str = Query("latest"),
+    health: str = Query("healthy"),
 ) -> dict[str, Any]:
-    items = _collect_platform_assets()
+    pool = assetlib.collect_assets(STORE, PROJECTS_ROOT)
+    broken_count = sum(1 for x in pool if x.get("broken"))
+    items = assetlib.filter_assets(
+        pool, kind=kind, source=source, category=category, q=q, sort=sort, health=health
+    )
     total = len(items)
     page = items[offset : offset + limit]
     next_offset = offset + limit if offset + limit < total else None
@@ -308,6 +565,8 @@ def platform_assets(
         "limit": limit,
         "nextOffset": next_offset,
         "hasMore": next_offset is not None,
+        "brokenCount": broken_count,
+        "categories": [{"id": i, "label": l} for i, l in assetlib.ASSET_CATEGORIES],
     }
 
 
@@ -317,6 +576,7 @@ async def platform_assets_upload(request: Request) -> dict[str, Any]:
     body = await request.json()
     data_url = str(body.get("dataUrl") or "")
     filename = str(body.get("filename") or "upload.bin")
+    category = str(body.get("category") or "").strip()
     if "," not in data_url:
         raise _http_error(400, "dataUrl required")
     header, b64 = data_url.split(",", 1)
@@ -328,9 +588,9 @@ async def platform_assets_upload(request: Request) -> dict[str, Any]:
         raise _http_error(400, "empty file")
     if len(raw) > 40 * 1024 * 1024:
         raise _http_error(400, "file too large (max 40MB)")
+    allowed = assetlib.upload_exts()
     ext = Path(filename).suffix.lower()
-    if ext not in _UPLOAD_EXTS:
-        # Guess from data URL mime
+    if ext not in allowed:
         mime = ""
         if ";base64" in header and ":" in header:
             mime = header.split(":", 1)[1].split(";", 1)[0].strip().lower()
@@ -344,22 +604,48 @@ async def platform_assets_upload(request: Request) -> dict[str, Any]:
             "video/webm": ".webm",
             "audio/wav": ".wav",
             "audio/mpeg": ".mp3",
+            "application/pdf": ".pdf",
+            "text/plain": ".txt",
+            "text/markdown": ".md",
         }.get(mime, "")
-    if ext not in _UPLOAD_EXTS:
+    if ext not in allowed:
         raise _http_error(400, "unsupported file type")
-    root = _ensure_library_root()
+    root = assetlib.ensure_library_root(PROJECTS_ROOT)
     name = f"{int(time.time())}-{uuid.uuid4().hex[:8]}{ext}"
     dest = root / "media" / "uploads" / name
+    dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_bytes(raw)
+    kind = assetlib.asset_kind(ext)
+    if kind in {"image", "video", "audio"}:
+        from media_qa import MediaQAError, assert_media_ok
+
+        try:
+            assert_media_ok(dest, kind=kind, unlink_on_fail=True)
+        except MediaQAError as exc:
+            raise _http_error(400, f"文件未通过质量检测：{exc}") from exc
     rel = dest.relative_to(root).as_posix()
+    cat = category or assetlib.guess_category(rel, kind)
+    lib = assetlib.library_id()
+    try:
+        STORE.persist_media(lib, rel, data=raw)
+        # Keep library project row alive so hydrate restores _library on redeploy.
+        lib_state = STORE.load(lib)
+        if lib_state:
+            STORE.save(lib_state)
+    except Exception:
+        pass
     return {
         "ok": True,
         "asset": {
-            "projectId": _LIBRARY_ID,
+            "id": f"{lib}:{rel}",
+            "projectId": lib,
             "projectTitle": "个人素材库",
             "path": rel,
-            "url": f"/api/media/{_LIBRARY_ID}/{rel}",
-            "kind": _asset_kind(ext),
+            "name": name,
+            "url": f"/api/media/{lib}/{rel}",
+            "kind": kind,
+            "category": cat,
+            "source": "upload",
             "size": dest.stat().st_size,
             "updatedAt": dest.stat().st_mtime,
             "uploaded": True,
@@ -367,58 +653,282 @@ async def platform_assets_upload(request: Request) -> dict[str, Any]:
     }
 
 
+@app.delete("/api/platform/assets")
+async def platform_assets_delete(request: Request) -> dict[str, Any]:
+    body = await request.json()
+    items = body.get("items") if isinstance(body.get("items"), list) else [body]
+    deleted = 0
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        ok = assetlib.delete_asset(
+            PROJECTS_ROOT,
+            STORE,
+            str(item.get("projectId") or ""),
+            str(item.get("path") or ""),
+        )
+        if ok:
+            deleted += 1
+    return {"ok": True, "deleted": deleted}
+
+
+@app.get("/api/platform/prompts")
+def platform_prompts(
+    category: str = Query("all"),
+    q: str = Query(""),
+    sort: str = Query("latest"),
+) -> dict[str, Any]:
+    items = assetlib.list_prompts(PROJECTS_ROOT, category=category, q=q, sort=sort)
+    return {
+        "prompts": items,
+        "total": len(items),
+        "categories": [{"id": i, "label": l} for i, l in assetlib.PROMPT_CATEGORIES],
+    }
+
+
+@app.post("/api/platform/prompts")
+async def platform_prompts_upsert(request: Request) -> dict[str, Any]:
+    body = await request.json()
+    try:
+        item = assetlib.upsert_prompt(PROJECTS_ROOT, body if isinstance(body, dict) else {})
+    except ValueError as exc:
+        raise _http_error(400, str(exc)) from exc
+    return {"ok": True, "prompt": item}
+
+
+@app.delete("/api/platform/prompts/{prompt_id}")
+def platform_prompts_delete(prompt_id: str) -> dict[str, Any]:
+    ok = assetlib.delete_prompt(PROJECTS_ROOT, unquote(prompt_id))
+    if not ok:
+        raise _http_error(404, "prompt not found")
+    return {"ok": True, "deleted": prompt_id}
+
+
+def _parse_skill_md(text: str, fallback_id: str) -> dict[str, Any]:
+    """Parse SKILL.md with optional YAML frontmatter."""
+    title = fallback_id
+    summary = ""
+    meta: dict[str, Any] = {}
+    body = text
+    if text.startswith("---"):
+        parts = text.split("---", 2)
+        if len(parts) >= 3:
+            fm = parts[1]
+            body = parts[2].lstrip("\n")
+            for raw in fm.splitlines():
+                line = raw.strip()
+                if not line or ":" not in line:
+                    continue
+                key, val = line.split(":", 1)
+                meta[key.strip()] = val.strip().strip("\"'")
+    for line in body.splitlines():
+        if line.startswith("# "):
+            title = line[2:].strip() or title
+            break
+    for line in body.splitlines():
+        s = line.strip()
+        if not s or s.startswith("#") or s.startswith("```") or s.startswith("-"):
+            continue
+        summary = s
+        break
+    if meta.get("description") and not summary:
+        summary = str(meta["description"])
+    if meta.get("name") and title == fallback_id:
+        title = str(meta["name"])
+    return {"title": title, "summary": summary[:220], "content": text, "meta": meta}
+
+
 @app.get("/api/platform/skills")
 def platform_skills() -> dict[str, Any]:
-    skills = []
+    cfg = load_platform_config()
+    catalog = {str(item.get("id") or ""): item for item in (cfg.get("skillCatalog") or []) if isinstance(item, dict)}
+    local: dict[str, dict[str, Any]] = {}
     if SKILLS_ROOT.is_dir():
         for skill_dir in sorted(SKILLS_ROOT.iterdir()):
             md = skill_dir / "SKILL.md"
             if not md.is_file():
                 continue
             text = md.read_text(encoding="utf-8")
-            title = skill_dir.name
-            summary = ""
-            for line in text.splitlines():
-                if line.startswith("# "):
-                    title = line[2:].strip() or title
-                elif line.strip() and not line.startswith("---") and not line.startswith("#"):
-                    summary = line.strip()
-                    break
+            parsed = _parse_skill_md(text, skill_dir.name)
+            local[skill_dir.name] = {
+                "id": skill_dir.name,
+                "title": parsed["title"],
+                "summary": parsed["summary"],
+                "path": str(md.relative_to(SKILLS_ROOT.parent)),
+                "content": parsed["content"],
+                "builtin": True,
+            }
+    skills: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    # Prefer catalog order for official store layout.
+    for sid, meta in catalog.items():
+        if not sid:
+            continue
+        base = local.get(sid) or {
+            "id": sid,
+            "title": sid,
+            "summary": "",
+            "path": "",
+            "content": "",
+            "builtin": False,
+        }
+        prompt = str(meta.get("prompt") or "").strip()
+        content = base.get("content") or (
+            f"# {meta.get('title') or sid}\n\n{meta.get('summary') or ''}\n\n{prompt}".strip()
+        )
+        skills.append(
+            {
+                **base,
+                "title": meta.get("title") or base.get("title") or sid,
+                "summary": meta.get("summary") or base.get("summary") or "",
+                "source": meta.get("source") or "official",
+                "category": meta.get("category") or "other",
+                "tags": list(meta.get("tags") or []),
+                "accent": meta.get("accent") or "#7c6cff",
+                "prompt": prompt,
+                "content": content,
+                "slash": f"/{sid}",
+            }
+        )
+        seen.add(sid)
+    for sid, item in local.items():
+        if sid in seen:
+            continue
+        skills.append(
+            {
+                **item,
+                "source": "official",
+                "category": "film",
+                "tags": ["短剧漫剧"],
+                "accent": "#7c6cff",
+                "prompt": "",
+                "slash": f"/{sid}",
+            }
+        )
+    # Merge community posts (Postgres + disk cache)
+    try:
+        import community_skills as _cskills
+
+        for item in _cskills.load_community_skills(PROJECTS_ROOT):
+            if not isinstance(item, dict) or not item.get("id"):
+                continue
+            if item["id"] in seen:
+                continue
             skills.append(
                 {
-                    "id": skill_dir.name,
-                    "title": title,
-                    "summary": summary[:180],
-                    "path": str(md.relative_to(SKILLS_ROOT.parent)),
-                    "content": text,
+                    "id": item["id"],
+                    "title": item.get("title") or item["id"],
+                    "summary": item.get("summary") or "",
+                    "path": "",
+                    "content": item.get("content") or item.get("prompt") or "",
+                    "builtin": False,
+                    "source": "community",
+                    "category": item.get("category") or "other",
+                    "tags": list(item.get("tags") or ["用户分享"]),
+                    "accent": item.get("accent") or "#fb923c",
+                    "prompt": item.get("prompt") or "",
+                    "slash": f"/{item['id']}",
                 }
             )
-    return {"skills": skills}
+            seen.add(item["id"])
+    except Exception:
+        pass
+    return {
+        "skills": skills,
+        "sources": cfg.get("skillSources") or [],
+        "categories": cfg.get("skillCategories") or [],
+        "tags": cfg.get("skillTags") or [],
+    }
+
+
+@app.post("/api/platform/skills/community")
+async def post_community_skill(request: Request) -> dict[str, Any]:
+    body = await request.json()
+    title = str(body.get("title") or "").strip()
+    summary = str(body.get("summary") or "").strip()
+    prompt = str(body.get("prompt") or body.get("content") or "").strip()
+    if not title or not prompt:
+        raise _http_error(400, "title and prompt required")
+    sid = str(body.get("id") or "").strip() or f"community-{uuid.uuid4().hex[:8]}"
+    item = {
+        "id": sid,
+        "title": title[:80],
+        "summary": summary[:220] or title[:80],
+        "prompt": prompt[:8000],
+        "content": prompt[:8000],
+        "category": str(body.get("category") or "other"),
+        "tags": list(body.get("tags") or ["用户分享"])[:8],
+        "accent": str(body.get("accent") or "#fb923c"),
+        "source": "community",
+        "createdAt": int(time.time()),
+    }
+    import community_skills as _cskills
+
+    existing = [x for x in _cskills.load_community_skills(PROJECTS_ROOT) if x.get("id") != sid]
+    existing.insert(0, item)
+    _cskills.save_community_skills(PROJECTS_ROOT, existing)
+    return {"ok": True, "skill": item}
+
+
+@app.get("/api/settings/credits")
+def get_credits() -> dict[str, Any]:
+    return {"credits": load_credits()}
+
+
+@app.post("/api/settings/credits/challenge")
+async def post_challenge_complete(request: Request) -> dict[str, Any]:
+    body = await request.json()
+    cid = str(body.get("id") or "").strip()
+    if not cid:
+        raise _http_error(400, "id required")
+    prize = body.get("prizePoints")
+    if prize is None:
+        # parse "+50" style
+        raw = str(body.get("prize") or "")
+        digits = "".join(ch for ch in raw if ch.isdigit())
+        prize = int(digits or 0)
+    return complete_challenge(cid, int(prize or 0), title=str(body.get("title") or ""))
+
+
+@app.post("/api/settings/credits/referral")
+async def post_referral(request: Request) -> dict[str, Any]:
+    body = await request.json()
+    return {"ok": True, "credits": record_referral(str(body.get("ref") or ""))}
 
 
 @app.get("/api/platform/exports")
 def platform_exports() -> dict[str, Any]:
+    """List successful final exports only (成片) — not shot clips or failed/missing outputs."""
     exports = []
     for project in STORE.list_items():
         pid = project["id"]
         bundle = STORE.bundle(pid) or {}
         root = STORE._dir(pid)
         for edit in bundle.get("edits") or []:
-            output_path = edit.get("outputPath") or ""
-            output_url = edit.get("outputUrl") or ""
+            output_path = str(edit.get("outputPath") or "").strip()
+            output_url = str(edit.get("outputUrl") or "").strip()
             if not output_url and not output_path:
+                continue
+            # Require a real media file — skip cleared/failed/stale export refs.
+            rel_for_check = output_path
+            if not rel_for_check and output_url.startswith(f"/api/media/{pid}/"):
+                rel_for_check = output_url[len(f"/api/media/{pid}/") :]
+            if rel_for_check and not STORE._media_exists(pid, rel_for_check.replace("\\", "/")):
+                continue
+            if not rel_for_check:
                 continue
             filename = Path(output_path).name if output_path else (output_url.rsplit("/", 1)[-1] or "export.mp4")
             if not output_url and output_path:
-                # Prefer media API path when relative under project root
                 try:
                     rel = Path(output_path)
                     if not rel.is_absolute():
                         output_url = f"/api/media/{pid}/{rel.as_posix()}"
-                    elif Path(output_path).is_relative_to(root):
+                    elif root and Path(output_path).is_relative_to(root):
                         output_url = f"/api/media/{pid}/{Path(output_path).relative_to(root).as_posix()}"
                 except Exception:
                     output_url = output_path
+            if not output_url:
+                continue
             exports.append(
                 {
                     "projectId": pid,
@@ -431,10 +941,12 @@ def platform_exports() -> dict[str, Any]:
                     "updatedAt": edit.get("updatedAt"),
                 }
             )
-        # Also scan media/exports folder for orphaned mp4s
-        media = root / "media"
-        if media.is_dir():
-            for path in sorted(media.rglob("*.mp4")):
+        # Orphaned finals only under media/exports (never shot clips in media/videos).
+        export_dir = root / "media" / "exports" if root else None
+        if export_dir and export_dir.is_dir():
+            for path in sorted(export_dir.glob("*.mp4")):
+                if not path.is_file() or path.stat().st_size <= 0:
+                    continue
                 rel = path.relative_to(root).as_posix()
                 url = f"/api/media/{pid}/{rel}"
                 if any(e.get("url") == url for e in exports):
@@ -451,7 +963,23 @@ def platform_exports() -> dict[str, Any]:
                         "updatedAt": path.stat().st_mtime,
                     }
                 )
-    exports.sort(key=lambda x: x.get("updatedAt") or "", reverse=True)
+    def _export_sort_key(item: dict[str, Any]) -> float:
+        raw = item.get("updatedAt")
+        if raw is None or raw == "":
+            return 0.0
+        if isinstance(raw, (int, float)):
+            return float(raw)
+        text = str(raw).strip()
+        try:
+            return float(text)
+        except ValueError:
+            pass
+        try:
+            return datetime.fromisoformat(text.replace("Z", "+00:00")).timestamp()
+        except ValueError:
+            return 0.0
+
+    exports.sort(key=_export_sort_key, reverse=True)
     return {"exports": exports, "items": exports}
 
 
@@ -461,13 +989,6 @@ def config() -> dict[str, Any]:
     payload["styles"] = load_styles()
     payload["capabilities"] = _providers_payload()
     return payload
-
-
-def _bearer_token(request: Request) -> str:
-    auth = request.headers.get("authorization") or request.headers.get("Authorization") or ""
-    if auth.lower().startswith("bearer "):
-        return auth[7:].strip()
-    return ""
 
 
 def _auth_json(status: int, body: dict[str, Any]) -> JSONResponse:
@@ -583,13 +1104,208 @@ def inspire_pins(
     offset: int = Query(0, ge=0),
     refresh: bool = Query(False),
     category: str = Query("all"),
+    q: str = Query(""),
+    mediaType: str = Query("all"),
 ) -> dict[str, Any]:
-    return fetch_pins(limit=limit, force=refresh, category=category, offset=offset)
+    return fetch_pins(
+        limit=limit,
+        force=refresh,
+        category=category,
+        offset=offset,
+        q=q,
+        media_type=mediaType,
+    )
+
+
+@app.get("/api/inspire/media/{item_id}")
+def inspire_media(item_id: str) -> Response:
+    """Serve inspiration bytes from Postgres / local store (no external CDN)."""
+    iid = (item_id or "").strip()
+    if not iid or "/" in iid or ".." in iid:
+        raise _http_error(400, "invalid id")
+    hit = inspire_store.load_blob(iid)
+    if not hit:
+        raise _http_error(404, "not found")
+    blob, ctype = hit
+    return Response(
+        content=blob,
+        media_type=ctype or "image/jpeg",
+        headers={"Cache-Control": "public, max-age=604800"},
+    )
+
+
+@app.get("/api/inspire/img")
+def inspire_img(u: str = Query("")) -> Response:
+    """Legacy: ingest remote once into local store, then serve local bytes."""
+    url = (u or "").strip()
+    if not url:
+        raise _http_error(400, "u required")
+    if not url.startswith("https://"):
+        raise _http_error(400, "only https remote urls can be ingested")
+    iid = inspire_store.item_id_for_url(url)
+    hit = inspire_store.load_blob(iid)
+    if not hit:
+        try:
+            blob, ctype = fetch_remote_image(url)
+            inspire_store.upsert_local(
+                iid,
+                blob,
+                content_type=ctype or "image/jpeg",
+                origin_hash=iid,
+                meta={"ingestedVia": "legacy-img"},
+            )
+            hit = (blob, ctype or "image/jpeg")
+        except Exception as exc:
+            raise _http_error(502, f"image ingest failed: {exc}") from exc
+    blob, ctype = hit
+    return Response(
+        content=blob,
+        media_type=ctype or "image/jpeg",
+        headers={"Cache-Control": "public, max-age=604800"},
+    )
 
 
 @app.get("/api/projects")
 def list_projects() -> dict[str, Any]:
-    return {"projects": STORE.list_items()}
+    items = STORE.list_items()
+    uid = current_user_id()
+    if uid:
+        return {"projects": items}
+    # Anonymous: seed / explicitly public showcase only.
+    public = []
+    for p in items:
+        pid = str(p.get("id") or "")
+        if p.get("hidden") or pid.startswith("_") or pid.startswith("."):
+            continue
+        if p.get("public") or p.get("seed") or pid.startswith("welcome"):
+            public.append(p)
+    return {"projects": public}
+
+
+@app.post("/api/projects/parse-script")
+async def parse_script_upload(file: UploadFile = File(...)) -> dict[str, Any]:
+    raw = await file.read()
+    if not raw:
+        raise _http_error(400, "empty file")
+    if len(raw) > 8 * 1024 * 1024:
+        raise _http_error(400, "file too large (max 8MB)")
+    try:
+        text = extract_text(file.filename or "script.txt", raw)
+    except RuntimeError as exc:
+        raise _http_error(400, str(exc)) from exc
+    text = (text or "").strip()
+    if not text:
+        raise _http_error(400, "no text extracted")
+    return {
+        "ok": True,
+        "filename": file.filename,
+        "title": guess_title(text, file.filename or ""),
+        "text": text[:100000],
+        "chars": len(text),
+    }
+
+
+@app.post("/api/projects/{project_id}/audio")
+async def project_audio(project_id: str, request: Request) -> dict[str, Any]:
+    pid = unquote(project_id)
+    body = await request.json()
+    action = str(body.get("action") or "generate")
+    state = _assert_project_access(pid, write=action != "list")
+    episode_id = str(body.get("episodeId") or "").strip()
+    if action == "list":
+        return {"audios": state.get("audios") or []}
+    if not episode_id:
+        raise _http_error(400, "episodeId required")
+    episode = next((e for e in (state.get("episodes") or []) if e.get("id") == episode_id), None)
+    if not episode:
+        raise _http_error(404, "episode not found")
+    ep_shots = [
+        s
+        for s in (state.get("shots") or [])
+        if s.get("episodeId") == episode_id and not s.get("deletedAt")
+    ]
+    lines = dialogue_lines_for_episode(
+        episode.get("content") or episode.get("script") or "",
+        ep_shots,
+    )
+    # Optional raw text override still goes through multi-voice if it looks like speaker lines
+    override = str(body.get("text") or "").strip()
+    if override and not lines:
+        lines = dialogue_lines_for_episode(override)
+    if not lines:
+        raise _http_error(400, "episode has no dialogue text（请用「角色：台词」格式）")
+    rel = f"media/audio/{episode_id}.mp3"
+    out = STORE._dir(pid) / rel
+    try:
+        meta = synthesize_dialogue_mp3(lines, out)
+    except RuntimeError as exc:
+        # Fallback single-voice if concat/ffmpeg path fails
+        try:
+            flat = "。".join(x["text"] for x in lines)[:2000]
+            meta = synthesize_mp3(flat, out)
+            meta["mode"] = "narration-fallback"
+        except RuntimeError as exc2:
+            raise _http_error(400, str(exc2)) from exc2
+    STORE.persist_media(pid, rel)
+
+    # Soft drama BGM bed for export mix
+    bgm_rel = f"media/audio/{episode_id}-bgm.mp3"
+    bgm_meta = None
+    try:
+        # Rough length: ~2.2s per line + padding
+        dur = max(24.0, min(180.0, len(lines) * 2.4 + 8))
+        bgm_meta = generate_bgm_mp3(STORE._dir(pid) / bgm_rel, duration_sec=dur, mood="drama")
+        STORE.persist_media(pid, bgm_rel)
+    except Exception:
+        bgm_rel = ""
+
+    preview = " / ".join(f"{x['speaker']}：{x['text'][:40]}" for x in lines[:8])
+    item = {
+        "id": episode_id,
+        "episodeId": episode_id,
+        "kind": "dialogue",
+        "path": rel,
+        "url": f"/api/media/{pid}/{rel}",
+        "text": preview[:2000],
+        "lines": len(lines),
+        "mode": meta.get("mode") or "dialogue",
+        "voices": meta.get("voices") or [],
+        "provider": meta.get("provider"),
+        "bytes": meta.get("bytes"),
+        "updatedAt": int(time.time()),
+    }
+    audios = [a for a in (state.get("audios") or []) if a.get("episodeId") != episode_id]
+    audios.append(item)
+    if bgm_rel and bgm_meta:
+        audios.append(
+            {
+                "id": f"{episode_id}-bgm",
+                "episodeId": episode_id,
+                "kind": "bgm",
+                "path": bgm_rel,
+                "url": f"/api/media/{pid}/{bgm_rel}",
+                "provider": bgm_meta.get("provider"),
+                "bytes": bgm_meta.get("bytes"),
+                "updatedAt": int(time.time()),
+            }
+        )
+    state["audios"] = audios
+    STORE.save(state)
+    return {"ok": True, "audio": item, "bgm": bgm_rel or None, "bundle": STORE.bundle(pid)}
+
+
+def _assert_project_access(project_id: str, *, write: bool = False) -> dict[str, Any]:
+    state = STORE.load(project_id)
+    if not state:
+        raise _http_error(404, "project not found")
+    uid = current_user_id()
+    owner = str((state.get("project") or {}).get("ownerId") or "").strip()
+    is_seed = project_id.startswith("welcome") or bool((state.get("project") or {}).get("seed"))
+    if uid and uid != "demo" and owner and owner != uid:
+        raise _http_error(403, "forbidden")
+    if write and uid and uid != "demo" and is_seed and not owner:
+        raise _http_error(403, "seed project is read-only; create your own project")
+    return state
 
 
 @app.post("/api/projects", status_code=201)
@@ -605,13 +1321,16 @@ async def create_project(request: Request) -> dict[str, Any]:
         visual_style=body.get("visualStyle") or body.get("visual_style") or "",
         ratio=body.get("ratio") or body.get("aspect_ratio") or None,
         name=body.get("name"),
+        owner_id=current_user_id() or None,
     )
     return STORE.bundle(state["project"]["id"])
 
 
 @app.get("/api/projects/{project_id}")
 def get_project(project_id: str) -> dict[str, Any]:
-    bundle = STORE.bundle(unquote(project_id))
+    pid = unquote(project_id)
+    _assert_project_access(pid)
+    bundle = STORE.bundle(pid)
     if not bundle:
         raise _http_error(404, "project not found")
     return bundle
@@ -620,8 +1339,7 @@ def get_project(project_id: str) -> dict[str, Any]:
 @app.patch("/api/projects/{project_id}")
 async def update_project(project_id: str, request: Request) -> dict[str, Any]:
     pid = unquote(project_id)
-    if not STORE.load(pid):
-        raise _http_error(404, "project not found")
+    _assert_project_access(pid, write=True)
     body = await request.json()
     patch_project(STORE, pid, body)
     return STORE.bundle(pid)
@@ -630,6 +1348,7 @@ async def update_project(project_id: str, request: Request) -> dict[str, Any]:
 @app.delete("/api/projects/{project_id}")
 def delete_project(project_id: str) -> dict[str, Any]:
     pid = unquote(project_id)
+    _assert_project_access(pid, write=True)
     if not STORE.delete(pid):
         raise _http_error(404, "project not found")
     return {"ok": True, "deleted": pid}
@@ -643,6 +1362,8 @@ async def script_brief_global(request: Request) -> dict[str, Any]:
 
 @app.post("/api/projects/{project_id}/script-brief")
 async def script_brief_project(project_id: str, request: Request) -> dict[str, Any]:
+    pid = unquote(project_id)
+    _assert_project_access(pid, write=True)
     body = await request.json()
     return optimize_brief(STORE, body)
 
@@ -650,6 +1371,7 @@ async def script_brief_project(project_id: str, request: Request) -> dict[str, A
 @app.post("/api/projects/{project_id}/script")
 async def script_actions(project_id: str, request: Request) -> dict[str, Any]:
     pid = unquote(project_id)
+    _assert_project_access(pid, write=True)
     body = await request.json()
     op = body.get("action") or "generate"
     if op == "generate":
@@ -684,6 +1406,7 @@ async def script_actions(project_id: str, request: Request) -> dict[str, Any]:
 @app.patch("/api/projects/{project_id}/episodes")
 async def episode_actions(project_id: str, request: Request) -> dict[str, Any]:
     pid = unquote(project_id)
+    _assert_project_access(pid, write=True)
     body = await request.json()
     if body.get("episodeId"):
         return patch_episode(STORE, pid, body["episodeId"], body)
@@ -696,6 +1419,7 @@ async def episode_actions(project_id: str, request: Request) -> dict[str, Any]:
 @app.post("/api/projects/{project_id}/entities")
 async def entities_post(project_id: str, request: Request) -> dict[str, Any]:
     pid = unquote(project_id)
+    _assert_project_access(pid, write=True)
     body = await request.json()
     action = body.get("action")
     if action == "generate":
@@ -740,6 +1464,7 @@ async def entities_post(project_id: str, request: Request) -> dict[str, Any]:
 @app.patch("/api/projects/{project_id}/entities")
 async def entities_patch(project_id: str, request: Request) -> dict[str, Any]:
     pid = unquote(project_id)
+    _assert_project_access(pid, write=True)
     body = await request.json()
     ent = upsert_entity(STORE, pid, {**body, "id": body.get("entityId") or body.get("id")})
     return {"entity": ent, "bundle": STORE.bundle(pid)}
@@ -748,6 +1473,7 @@ async def entities_patch(project_id: str, request: Request) -> dict[str, Any]:
 @app.delete("/api/projects/{project_id}/entities")
 def entities_delete(project_id: str, entityId: str | None = Query(default=None)) -> dict[str, Any]:
     pid = unquote(project_id)
+    _assert_project_access(pid, write=True)
     if not entityId:
         raise _http_error(400, "entityId required")
     state = soft_delete_entity(STORE, pid, entityId)
@@ -757,6 +1483,7 @@ def entities_delete(project_id: str, entityId: str | None = Query(default=None))
 @app.post("/api/projects/{project_id}/storyboard")
 async def storyboard_actions(project_id: str, request: Request) -> dict[str, Any]:
     pid = unquote(project_id)
+    _assert_project_access(pid, write=True)
     body = await request.json()
     op = body.get("action") or "generate"
     if op == "generate":
@@ -771,6 +1498,9 @@ async def storyboard_actions(project_id: str, request: Request) -> dict[str, Any
     if op == "patch":
         shot = patch_shot(STORE, pid, body["shotId"], body.get("patch") or body)
         return {"shot": shot, "bundle": STORE.bundle(pid)}
+    if op == "cancel-video":
+        shot = cancel_shot_video(STORE, pid, body["shotId"])
+        return {"shot": shot, "bundle": STORE.bundle(pid)}
     if op == "video":
         shot = start_shot_video(
             STORE,
@@ -778,6 +1508,7 @@ async def storyboard_actions(project_id: str, request: Request) -> dict[str, Any
             body["shotId"],
             model=body.get("model") or (SEEDANCE_MODELS[0]["id"] if SEEDANCE_MODELS else ""),
             resolution=body.get("resolution") or "720p",
+            skip_refs=bool(body.get("skipRefs") or body.get("textOnly")),
         )
         return {"shot": shot, "bundle": STORE.bundle(pid)}
     if op == "batch-video":
@@ -792,6 +1523,7 @@ async def storyboard_actions(project_id: str, request: Request) -> dict[str, Any
                         sid,
                         model=body.get("model") or (SEEDANCE_MODELS[0]["id"] if SEEDANCE_MODELS else ""),
                         resolution=body.get("resolution") or "720p",
+                        skip_refs=bool(body.get("skipRefs") or body.get("textOnly")),
                     )
                 )
             except Exception as exc:
@@ -803,12 +1535,18 @@ async def storyboard_actions(project_id: str, request: Request) -> dict[str, Any
     if op == "patch-take":
         ver = patch_take(STORE, pid, body["shotId"], body["videoId"], body)
         return {"video": ver, "bundle": STORE.bundle(pid)}
+    if op == "sync-video":
+        from drama_service import sync_shot_video
+
+        shot = sync_shot_video(STORE, pid, body["shotId"])
+        return {"shot": shot, "bundle": STORE.bundle(pid)}
     raise _http_error(400, "unknown storyboard action")
 
 
 @app.post("/api/projects/{project_id}/edits")
 async def edit_actions(project_id: str, request: Request) -> dict[str, Any]:
     pid = unquote(project_id)
+    _assert_project_access(pid, write=True)
     body = await request.json()
     op = body.get("action") or "ensure"
     episode_id = body.get("episodeId")
@@ -828,30 +1566,102 @@ async def edit_actions(project_id: str, request: Request) -> dict[str, Any]:
 
 @app.get("/api/projects/{project_id}/shots/{shot_id}")
 def get_shot(project_id: str, shot_id: str) -> dict[str, Any]:
-    return poll_shot(STORE, unquote(project_id), unquote(shot_id))
+    pid = unquote(project_id)
+    _assert_project_access(pid)
+    return poll_shot(STORE, pid, unquote(shot_id))
 
 
 @app.get("/api/media/{project_id}/{media_path:path}")
 def media_file(project_id: str, media_path: str) -> FileResponse:
     name = unquote(project_id)
     rel = unquote(media_path)
-    project = STORE._dir(name)
-    if not project or not project.is_dir():
-        raise _http_error(404, "project not found")
     if ".." in Path(rel).parts:
         raise _http_error(400, "invalid path")
-    file_path = (project / rel).resolve()
-    if not str(file_path).startswith(str(project.resolve())) or not file_path.is_file():
+    # Hydrate from Postgres when the volume was wiped after redeploy.
+    file_path = STORE.ensure_media(name, rel)
+    project = STORE._dir(name)
+    if not project:
+        raise _http_error(404, "project not found")
+    if not file_path or not file_path.is_file():
         raise _http_error(404, "file not found")
-    ctype = mimetypes.guess_type(str(file_path))[0] or "application/octet-stream"
-    if file_path.suffix.lower() == ".svg":
+    resolved = file_path.resolve()
+    if not str(resolved).startswith(str(project.resolve())):
+        raise _http_error(400, "invalid path")
+    ctype = mimetypes.guess_type(str(resolved))[0] or "application/octet-stream"
+    if resolved.suffix.lower() == ".svg":
         ctype = "image/svg+xml"
-    return FileResponse(file_path, media_type=ctype, headers={"Cache-Control": "public, max-age=60"})
+    return FileResponse(resolved, media_type=ctype, headers={"Cache-Control": "public, max-age=60"})
 
 
 @app.post("/api/projects/{project_id}/generate")
 async def legacy_generate(project_id: str) -> None:
     raise _http_error(400, "use /api/projects/:id/storyboard with action=batch-video")
+
+
+@app.post("/api/auto-produce", status_code=201)
+async def auto_produce_create(request: Request) -> dict[str, Any]:
+    """Create a project from one sentence / pasted script and start the full pipeline."""
+    body = await request.json()
+    brief = str(body.get("brief") or body.get("prompt") or body.get("script") or "").strip()
+    if not brief:
+        raise _http_error(400, "请输入一句话想法或粘贴剧本")
+    title = str(body.get("title") or "").strip() or brief[:24] or "一键短剧"
+    state = STORE.create_project(
+        title=title,
+        brief=brief,
+        genre=body.get("genre") or default_genre(),
+        visual_style=body.get("visualStyle") or body.get("visual_style") or "",
+        ratio=body.get("ratio") or body.get("aspect_ratio") or None,
+        name=body.get("name"),
+        owner_id=current_user_id() or None,
+    )
+    pid = state["project"]["id"]
+    try:
+        job = start_auto_produce(STORE, pid, body)
+    except RuntimeError as exc:
+        raise _http_error(400, str(exc)) from exc
+    return {"projectId": pid, "job": job, "bundle": STORE.bundle(pid)}
+
+
+@app.post("/api/projects/{project_id}/auto-produce")
+async def auto_produce_start(project_id: str, request: Request) -> dict[str, Any]:
+    pid = unquote(project_id)
+    _assert_project_access(pid, write=True)
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    if not isinstance(body, dict):
+        body = {}
+    # Allow updating brief/title before run
+    patch: dict[str, Any] = {}
+    if body.get("brief") or body.get("prompt") or body.get("script"):
+        patch["brief"] = str(body.get("brief") or body.get("prompt") or body.get("script") or "").strip()
+    if body.get("title"):
+        patch["title"] = str(body.get("title")).strip()
+    if body.get("genre"):
+        patch["genre"] = body.get("genre")
+    if body.get("visualStyle") or body.get("visual_style"):
+        patch["visualStyle"] = body.get("visualStyle") or body.get("visual_style")
+    if body.get("ratio") or body.get("aspect_ratio"):
+        patch["ratio"] = body.get("ratio") or body.get("aspect_ratio")
+    if patch:
+        patch_project(STORE, pid, patch)
+    try:
+        job = start_auto_produce(STORE, pid, body)
+    except RuntimeError as exc:
+        raise _http_error(400, str(exc)) from exc
+    return {"projectId": pid, "job": job, "bundle": STORE.bundle(pid)}
+
+
+@app.get("/api/projects/{project_id}/auto-produce")
+def auto_produce_status(project_id: str) -> dict[str, Any]:
+    pid = unquote(project_id)
+    _assert_project_access(pid)
+    job = ensure_auto_produce_worker(STORE, pid) or get_auto_produce_job(STORE, pid)
+    if not job:
+        return {"projectId": pid, "job": None}
+    return {"projectId": pid, "job": job, "bundle": STORE.bundle(pid)}
 
 
 def _mount_ui() -> None:

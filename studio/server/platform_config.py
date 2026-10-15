@@ -27,10 +27,26 @@ def _resolve_path() -> Path:
 
 @lru_cache(maxsize=1)
 def load_platform_config() -> dict[str, Any]:
+    """Load product config from shipped YAML (image is source of truth).
+
+    Postgres only mirrors a snapshot for ops/backup — never override a newer
+    deploy's platform.yaml with a stale PG row.
+    """
     path = _resolve_path()
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     if not isinstance(data, dict):
         raise ValueError(f"invalid platform config at {path}")
+    try:
+        import pg_backend as _pg
+        import time
+
+        if _pg.enabled():
+            _pg.upsert_kv(
+                "config:platform",
+                {"source": str(path), "updatedAt": int(time.time()), "data": data},
+            )
+    except Exception:
+        pass
     return data
 
 
@@ -55,24 +71,33 @@ def default_visual_style() -> str:
     return str(os.environ.get("STUDIO_DEFAULT_VISUAL_STYLE") or defaults().get("visualStyle") or "")
 
 
+def _secret(name: str, default: str = "") -> str:
+    try:
+        from settings_store import get_secret
+
+        return get_secret(name, default)
+    except Exception:
+        return (os.environ.get(name) or default or "").strip()
+
+
 def deepseek_base_url() -> str:
     return str(
-        os.environ.get("DEEPSEEK_BASE_URL")
+        _secret("DEEPSEEK_BASE_URL")
         or defaults().get("deepseekBaseUrl")
         or "https://api.deepseek.com"
     )
 
 
 def deepseek_model() -> str:
-    return str(os.environ.get("DEEPSEEK_MODEL") or defaults().get("deepseekModel") or "deepseek-chat")
+    return str(_secret("DEEPSEEK_MODEL") or defaults().get("deepseekModel") or "deepseek-chat")
 
 
 def seedream_model() -> str:
-    return str(os.environ.get("SEEDREAM_MODEL") or defaults().get("seedreamModel") or "")
+    return str(_secret("SEEDREAM_MODEL") or defaults().get("seedreamModel") or "")
 
 
 def seedance_model() -> str:
-    return str(os.environ.get("SEEDANCE_MODEL") or defaults().get("seedanceModel") or "")
+    return str(_secret("SEEDANCE_MODEL") or defaults().get("seedanceModel") or "")
 
 
 def seedance_api_url() -> str:
@@ -103,6 +128,21 @@ def six_steps() -> list[dict[str, Any]]:
     return [x for x in items if isinstance(x, dict) and x.get("id")]
 
 
+def _flatten_locale(data: Any, prefix: str = "", out: dict[str, str] | None = None) -> dict[str, str]:
+    """Flatten nested locale trees into module_feature_element keys."""
+    result = out if out is not None else {}
+    if not isinstance(data, dict):
+        return result
+    for raw_key, value in data.items():
+        part = str(raw_key).replace(".", "_")
+        key = f"{prefix}_{part}" if prefix else part
+        if isinstance(value, dict):
+            _flatten_locale(value, key, result)
+        elif value is not None:
+            result[key] = str(value)
+    return result
+
+
 def _load_locale_pack(locale: str) -> dict[str, str]:
     root = Path(__file__).resolve().parents[1] / "config" / "locales"
     path = root / f"{locale}.json"
@@ -111,7 +151,12 @@ def _load_locale_pack(locale: str) -> dict[str, str]:
     import json
 
     data = json.loads(path.read_text(encoding="utf-8"))
-    return {str(k): str(v) for k, v in (data or {}).items()} if isinstance(data, dict) else {}
+    if not isinstance(data, dict):
+        return {}
+    # Flat underscore keys, or nested module trees → module_feature_element.
+    if any(isinstance(v, dict) for v in data.values()):
+        return _flatten_locale(data)
+    return {str(k).replace(".", "_"): str(v) for k, v in data.items() if v is not None}
 
 
 def i18n_payload() -> dict[str, Any]:
@@ -180,8 +225,12 @@ def auth_payload() -> dict[str, Any]:
     else:
         required = bool(cfg.get("required", True))
     methods = list(cfg.get("methods") or ["password", "google"])
+    gate_app = bool(cfg.get("gateApp", False))
+    default_nav = str(cfg.get("defaultNav") or "inspire").strip() or "inspire"
     return {
         "required": required,
+        "gateApp": gate_app,
+        "defaultNav": default_nav,
         "client": cfg.get("client") or "WEB",
         "methods": methods,
         "apiBaseUrl": (os.environ.get("API_BASE_URL") or "https://api-app.dtok.io/api/v1").rstrip("/"),
@@ -200,6 +249,30 @@ def pinterest_payload() -> dict[str, Any]:
         "seedAvailable": seed.is_file(),
         "enabled": True,
     }
+
+
+def _llm_providers_public() -> list[dict[str, Any]]:
+    try:
+        from providers.llm_catalog import LLM_PROVIDERS
+
+        return [
+            {
+                "id": item["id"],
+                "label": item["label"],
+                "kind": item["kind"],
+                "docs": item.get("docs") or "",
+                "placeholder": item.get("placeholder") or "",
+                "keyEnv": item.get("keyEnv") or "",
+                "baseEnv": item.get("baseEnv") or "",
+                "modelEnv": item.get("modelEnv") or "",
+                "baseUrl": item.get("defaultBase") or "",
+                "model": item.get("defaultModel") or "",
+                "configured": False,
+            }
+            for item in LLM_PROVIDERS
+        ]
+    except Exception:
+        return []
 
 
 def public_platform_payload() -> dict[str, Any]:
@@ -221,6 +294,8 @@ def public_platform_payload() -> dict[str, Any]:
             "seedreamModel": seedream_model(),
             "seedanceModel": seedance_model(),
         },
+        "llmProviders": _llm_providers_public(),
+
         "genres": genres(),
         "ratios": ratios(),
         "six_steps": six_steps(),
@@ -237,6 +312,11 @@ def public_platform_payload() -> dict[str, Any]:
         "splitStages": cfg.get("splitStages") or [],
         "canvasSteps": cfg.get("canvasSteps") or [],
         "pages": cfg.get("pages") or {},
+        "skillSources": cfg.get("skillSources") or [],
+        "skillCategories": cfg.get("skillCategories") or [],
+        "skillTags": cfg.get("skillTags") or [],
+        "skillCatalog": cfg.get("skillCatalog") or [],
+        "toolHub": cfg.get("toolHub") or {},
         "seedanceModels": seedance_models(),
         "auth": auth_payload(),
         "i18n": i18n_payload(),

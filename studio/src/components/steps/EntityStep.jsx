@@ -27,13 +27,43 @@ const CONFIG = {
   },
 };
 
-export function EntityStep({ projectId, bundle, kind, setBusyMsg, onBundle, onRefresh, onNeedKeys, config: appConfig }) {
+export function EntityStep({
+  projectId,
+  bundle,
+  kind,
+  setBusyMsg,
+  onBundle,
+  onRefresh,
+  onNeedKeys,
+  config: appConfig,
+  focusEpisodeId,
+}) {
   const config = CONFIG[kind];
   const caps = appConfig?.capabilities || {};
-  const entities = useMemo(
+  const focusEpisode = useMemo(
+    () => (bundle?.episodes || []).find((e) => e.id === focusEpisodeId) || null,
+    [bundle?.episodes, focusEpisodeId],
+  );
+  const allOfKind = useMemo(
     () => (bundle?.entities || []).filter((e) => e.kind === kind && !e.deletedAt),
     [bundle?.entities, kind],
   );
+  const entities = useMemo(() => {
+    if (!focusEpisode) return allOfKind;
+    const n = Number(focusEpisode.episodeNumber);
+    const scoped = allOfKind.filter((e) => {
+      const nums = e.episodes;
+      if (!Array.isArray(nums) || nums.length === 0) return true;
+      return nums.some((x) => Number(x) === n);
+    });
+    // Fall back to series list when this episode has no tagged assets yet.
+    return scoped.length ? scoped : allOfKind;
+  }, [allOfKind, focusEpisode]);
+  const focusNote = focusEpisode
+    ? entities.length < allOfKind.length
+      ? `当前聚焦第${focusEpisode.episodeNumber}集 · 本集相关 ${entities.length}/${allOfKind.length}`
+      : `当前聚焦第${focusEpisode.episodeNumber}集 · 显示全部 ${allOfKind.length} 项（本集尚未单独挂档）`
+    : "";
   const [showAdd, setShowAdd] = useState(false);
   const [threeView, setThreeView] = useState(kind !== "scene");
   const [workingIds, setWorkingIds] = useState(() => new Set());
@@ -182,6 +212,8 @@ export function EntityStep({ projectId, bundle, kind, setBusyMsg, onBundle, onRe
     }
   };
 
+  const missingImages = entities.filter((e) => !e.selectedImage);
+
   return (
     <div className="mx-auto max-w-[1500px] space-y-5">
       <section className="panel flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between md:p-6">
@@ -189,8 +221,14 @@ export function EntityStep({ projectId, bundle, kind, setBusyMsg, onBundle, onRe
           <div className="label">{config.eyebrow}</div>
           <h3 className="display-type text-2xl font-semibold">{config.title}</h3>
           <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-            Seedream 出图写入本地媒体目录；所有版本可回看和切换。
+            Seedream 出图写入本地媒体目录；所有版本可回看和切换。空白「尚无定稿图」表示尚未出图，不是切页丢失。
           </p>
+          {focusNote ? <p className="mt-2 text-xs text-[var(--projector)]">{focusNote}</p> : null}
+          {missingImages.length ? (
+            <p className="mt-2 text-xs text-[#fbbf24]">
+              还有 {missingImages.length} 个{config.title}没有图片，分镜参考会不完整。请点右侧「批量补齐图片」。
+            </p>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {kind !== "scene" ? (

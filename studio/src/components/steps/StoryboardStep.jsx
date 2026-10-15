@@ -6,7 +6,17 @@ import { toast } from "../../lib/toast";
 import { useTimer } from "../../lib/useTimer";
 import { ConfirmDialog } from "../ConfirmDialog";
 
-export function StoryboardStep({ projectId, bundle, config, setBusyMsg, onBundle, onRefresh, onNeedKeys }) {
+export function StoryboardStep({
+  projectId,
+  bundle,
+  config,
+  setBusyMsg,
+  onBundle,
+  onRefresh,
+  onNeedKeys,
+  focusEpisodeId,
+  onFocusEpisode,
+}) {
   const caps = config?.capabilities || {};
   const splitStages = config?.splitStages || [];
   const confirmedEpisodes = useMemo(
@@ -17,7 +27,7 @@ export function StoryboardStep({ projectId, bundle, config, setBusyMsg, onBundle
     [bundle?.episodes],
   );
   const models = config?.seedanceModels || [];
-  const [episodeId, setEpisodeId] = useState(confirmedEpisodes[0]?.id || "");
+  const [episodeId, setEpisodeId] = useState(focusEpisodeId || confirmedEpisodes[0]?.id || "");
   const [model, setModel] = useState(models[0]?.id || "");
   const selectedModel = models.find((m) => m.id === model) || models[0];
   const [resolution, setResolution] = useState(selectedModel?.resolutions?.[1] || selectedModel?.resolutions?.[0] || "720p");
@@ -28,6 +38,13 @@ export function StoryboardStep({ projectId, bundle, config, setBusyMsg, onBundle
   const [confirmSplit, setConfirmSplit] = useState(false);
   const [confirmBatch, setConfirmBatch] = useState(false);
   const { elapsed: splitElapsed, formatted: splitElapsedTime } = useTimer(splitting);
+
+  useEffect(() => {
+    if (focusEpisodeId && confirmedEpisodes.some((e) => e.id === focusEpisodeId) && focusEpisodeId !== episodeId) {
+      setEpisodeId(focusEpisodeId);
+      setSelectedShotIds(new Set());
+    }
+  }, [focusEpisodeId, confirmedEpisodes, episodeId]);
 
   useEffect(() => {
     if (!confirmedEpisodes.some((e) => e.id === episodeId)) {
@@ -53,7 +70,6 @@ export function StoryboardStep({ projectId, bundle, config, setBusyMsg, onBundle
       (bundle?.entities || []).filter(
         (entity) =>
           !entity.deletedAt &&
-          entity.selectedImage &&
           (!episode || !entity.episodes?.length || entity.episodes.includes(episode.episodeNumber)),
       ),
     [bundle?.entities, episode],
@@ -128,7 +144,7 @@ export function StoryboardStep({ projectId, bundle, config, setBusyMsg, onBundle
       setConfirmSplit(true);
       return;
     }
-    if (!requireCapability(caps, "deepseek", onNeedKeys, "DeepSeek Key")) return;
+    if (!requireCapability(caps, "deepseek", onNeedKeys, "文本大模型 Key")) return;
     setConfirmSplit(false);
     setSplitting(true);
     setBusyMsg?.("AI 拆镜中…");
@@ -163,7 +179,7 @@ export function StoryboardStep({ projectId, bundle, config, setBusyMsg, onBundle
   };
 
   const generateVideo = async (shotId, silent = false) => {
-    if (!requireCapability(caps, "seedance", onNeedKeys, "火山 Seedance Key")) return;
+    if (!requireCapability(caps, "seedance", onNeedKeys, "出片后端（ComfyUI / Seedance）")) return;
     try {
       const res = await api(`/api/projects/${encodeURIComponent(projectId)}/storyboard`, {
         method: "POST",
@@ -236,8 +252,10 @@ export function StoryboardStep({ projectId, bundle, config, setBusyMsg, onBundle
                 value={episodeId}
                 disabled={workflowBusy}
                 onChange={(e) => {
-                  setEpisodeId(e.target.value);
+                  const next = e.target.value;
+                  setEpisodeId(next);
                   setSelectedShotIds(new Set());
+                  onFocusEpisode?.(next);
                 }}
               >
                 {!confirmedEpisodes.length && <option value="">无定稿分集</option>}
@@ -436,6 +454,19 @@ function ShotCard({
     duration !== (shot.duration || 5) ||
     JSON.stringify(referenceIds) !== JSON.stringify(shot.referenceEntityIds || []);
   const editLocked = locked || shot.status === "generating";
+  const isStale = shot.status === "stale";
+  const caption =
+    String(shot.dialogue || "").trim() ||
+    (prompt.match(/[「""]([^」""]{2,80})[」""]/)?.[1] || "");
+
+  // Keep local editors in sync when bundle refresh returns new shot data (skip while editing)
+  useEffect(() => {
+    if (dirty) return;
+    setPrompt(shot.prompt || "");
+    setDuration(shot.duration || 5);
+    setReferenceIds(shot.referenceEntityIds || []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only rehydrate from server fields
+  }, [shot.id, shot.prompt, shot.duration, shot.selectedVideoId, shot.status, JSON.stringify(shot.referenceEntityIds || [])]);
 
   useEffect(() => {
     onDirtyChange(shot.id, dirty);
@@ -477,6 +508,20 @@ function ShotCard({
       await onRefresh?.();
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const cancelGenerate = async () => {
+    try {
+      const res = await api(`/api/projects/${encodeURIComponent(projectId)}/storyboard`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "cancel-video", shotId: shot.id }),
+      });
+      apply(res);
+      toast.success("已取消生成，可重新提交");
+    } catch (error) {
+      toast.error(String(error.message || error));
     }
   };
 
@@ -527,11 +572,13 @@ function ShotCard({
   const statusStyle =
     shot.status === "success"
       ? "bg-emerald-100 text-emerald-700"
-      : shot.status === "generating"
-        ? "bg-blue-100 text-blue-700"
-        : shot.status === "failed"
-          ? "bg-red-100 text-red-700"
-          : "bg-slate-100 text-slate-600";
+      : shot.status === "stale"
+        ? "bg-amber-100 text-amber-800"
+        : shot.status === "generating"
+          ? "bg-blue-100 text-blue-700"
+          : shot.status === "failed"
+            ? "bg-red-100 text-red-700"
+            : "bg-slate-100 text-slate-600";
   const completeVideos = (shot.videos || []).filter((v) => v.path || v.url);
   const activeVideo = shot.selectedVideo?.url ? shot.selectedVideo : completeVideos[0] || null;
 
@@ -550,11 +597,13 @@ function ShotCard({
               <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${statusStyle}`}>
                 {shot.status === "success"
                   ? "已完成"
-                  : shot.status === "generating"
-                    ? "生成中"
-                    : shot.status === "failed"
-                      ? "失败"
-                      : "待生成"}
+                  : shot.status === "stale"
+                    ? "已过期"
+                    : shot.status === "generating"
+                      ? "生成中"
+                      : shot.status === "failed"
+                        ? "失败"
+                        : "待生成"}
               </span>
               <label className="ml-auto flex items-center gap-2 text-xs text-[var(--muted)]">
                 时长
@@ -585,6 +634,7 @@ function ShotCard({
               <div className="flex flex-wrap gap-2">
                 {entities.map((entity) => {
                   const on = referenceIds.includes(entity.id);
+                  const thumb = entity.selectedImage?.url;
                   return (
                     <button
                       key={entity.id}
@@ -603,7 +653,13 @@ function ShotCard({
                         on ? "border-[var(--projector)] bg-[var(--projector)]/10" : "border-[var(--line)] bg-white/[.03]"
                       }`}
                     >
-                      <img src={entity.selectedImage.url} alt="" className="h-7 w-7 rounded object-cover" />
+                      {thumb ? (
+                        <img src={thumb} alt="" className="h-7 w-7 rounded object-cover" />
+                      ) : (
+                        <span className="flex h-7 w-7 items-center justify-center rounded bg-black/40 text-[9px] text-white/40">
+                          无图
+                        </span>
+                      )}
                       <span>
                         {entity.name}
                         {entity.variant ? ` / ${entity.variant}` : ""}
@@ -616,6 +672,11 @@ function ShotCard({
                 ) : null}
               </div>
             </div>
+            {isStale || shot.staleReason ? (
+              <p className="mt-3 rounded-lg bg-amber-500/15 px-3 py-2 text-xs text-amber-200">
+                {shot.staleReason || "上游已变更，当前视频可能过期。请保存后重新生成分镜视频。"}
+              </p>
+            ) : null}
             {shot.error ? (
               <p className="mt-3 rounded-lg bg-[var(--danger)]/10 px-3 py-2 text-xs text-[var(--danger)]">{shot.error}</p>
             ) : null}
@@ -641,6 +702,16 @@ function ShotCard({
                 )}
                 {shot.selectedVideo ? "再生成一个版本" : "生成分镜视频"}
               </button>
+              {shot.status === "generating" ? (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={locked}
+                  onClick={() => void cancelGenerate()}
+                >
+                  取消卡住任务
+                </button>
+              ) : null}
               <button
                 type="button"
                 className="btn-danger ml-auto"
@@ -657,25 +728,35 @@ function ShotCard({
               <span>{completeVideos.length} VERSIONS</span>
             </div>
             <div
-              className={`flex items-center justify-center overflow-hidden rounded-xl bg-black/45 ${
+              className={`relative flex items-center justify-center overflow-hidden rounded-xl bg-black/45 ${
                 ratio === "9:16" ? "mx-auto aspect-[9/16] w-full max-w-[20rem]" : "aspect-video w-full"
               }`}
             >
               {activeVideo?.url ? (
-                <video
-                  key={activeVideo.url}
-                  src={activeVideo.url}
-                  controls
-                  preload="metadata"
-                  className="h-full w-full object-contain"
-                />
+                <>
+                  <video
+                    key={activeVideo.url}
+                    src={activeVideo.url}
+                    controls
+                    preload="metadata"
+                    className="h-full w-full object-contain"
+                  />
+                  {caption ? (
+                    <div className="pointer-events-none absolute inset-x-3 bottom-10 rounded-md bg-black/70 px-3 py-2 text-center text-xs leading-5 text-white shadow-lg">
+                      {caption}
+                    </div>
+                  ) : null}
+                </>
               ) : shot.status === "generating" ? (
                 <div className="text-center text-xs text-white/60">
                   <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin text-[var(--projector)]" />
                   Seedance 正在制作
                 </div>
               ) : (
-                <Video className="h-10 w-10 text-white/15" />
+                <div className="px-4 text-center text-xs leading-5 text-white/45">
+                  <Video className="mx-auto mb-2 h-10 w-10 text-white/15" />
+                  本镜尚未生成视频（0 VERSIONS）。点左侧「生成分镜视频」才会出片；切页不会抹掉已生成的 TAKE。
+                </div>
               )}
             </div>
             {completeVideos.length > 0 ? (

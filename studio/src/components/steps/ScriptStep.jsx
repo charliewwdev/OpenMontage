@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Check,
+  ChevronDown,
+  ChevronUp,
   Clock3,
   Copy,
   FilePenLine,
@@ -16,6 +18,7 @@ import { requireCapability, toastMaybeKeys } from "../../lib/keys";
 import { toast } from "../../lib/toast";
 import { useTimer } from "../../lib/useTimer";
 import { ConfirmDialog } from "../ConfirmDialog";
+import { ModalOverlay } from "../ModalPortal";
 import { AspectRatioPicker } from "../project-settings/AspectRatioPicker";
 import { GenrePicker } from "../project-settings/GenrePicker";
 import { VideoStylePicker } from "../project-settings/VideoStylePicker";
@@ -27,7 +30,17 @@ function parseCount(value, max = MAX_PER_REQUEST) {
   return Number.isInteger(count) && count >= 1 && count <= max ? count : null;
 }
 
-export function ScriptStep({ projectId, bundle, config, setBusyMsg, onBundle, onRefresh, onNeedKeys }) {
+export function ScriptStep({
+  projectId,
+  bundle,
+  config,
+  setBusyMsg,
+  onBundle,
+  onRefresh,
+  onNeedKeys,
+  focusEpisodeId,
+  onFocusEpisode,
+}) {
   const project = bundle?.project || {};
   const caps = config?.capabilities || {};
   const episodes = useMemo(
@@ -43,14 +56,29 @@ export function ScriptStep({ projectId, bundle, config, setBusyMsg, onBundle, on
     visualStyle: project.visualStyle || "",
     ratio: project.ratio || "9:16",
   });
-  const [generationEpisodeCount, setGenerationEpisodeCount] = useState(5);
+  const [generationEpisodeCount, setGenerationEpisodeCount] = useState(() => {
+    const planned = Number(project.plannedEpisodes);
+    if (Number.isInteger(planned) && planned >= 1) return Math.min(planned, MAX_PER_REQUEST);
+    return 1;
+  });
   const [plannedEpisodes, setPlannedEpisodes] = useState(project.plannedEpisodes ?? "");
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [continuing, setContinuing] = useState(false);
   const [rewriting, setRewriting] = useState(false);
   const [batchConfirming, setBatchConfirming] = useState(false);
-  const [selectedId, setSelectedId] = useState(episodes[0]?.id || null);
+  const [briefCollapsed, setBriefCollapsed] = useState(() => {
+    try {
+      const raw = sessionStorage.getItem(`om-script-brief-collapsed:${projectId}`);
+      if (raw === "1") return true;
+      if (raw === "0") return false;
+    } catch {
+      /* ignore */
+    }
+    // Already have episodes → collapse public brief so the editor gets space.
+    return (bundle?.episodes || []).length > 0;
+  });
+  const [selectedId, setSelectedId] = useState(focusEpisodeId || episodes[0]?.id || null);
   const [confirmRegen, setConfirmRegen] = useState(false);
   const [confirmBatch, setConfirmBatch] = useState(false);
   const [showContinue, setShowContinue] = useState(false);
@@ -84,15 +112,45 @@ export function ScriptStep({ projectId, bundle, config, setBusyMsg, onBundle, on
       ratio: project.ratio || "9:16",
     });
     setPlannedEpisodes(project.plannedEpisodes ?? "");
+    const planned = Number(project.plannedEpisodes);
+    if (Number.isInteger(planned) && planned >= 1) {
+      setGenerationEpisodeCount((current) => {
+        const n = Number(current);
+        if (!Number.isInteger(n) || n < 1) return Math.min(planned, MAX_PER_REQUEST);
+        return Math.min(n, planned, MAX_PER_REQUEST);
+      });
+    }
   }, [project.title, project.brief, project.synopsis, project.genre, project.visualStyle, project.ratio, project.plannedEpisodes]);
 
   useEffect(() => {
+    if (focusEpisodeId && focusEpisodeId !== selectedId) {
+      setSelectedId(focusEpisodeId);
+    }
+  }, [focusEpisodeId]); // eslint-disable-line react-hooks/exhaustive-deps -- sync from shell focus only
+
+  useEffect(() => {
     if (selectedId && !episodes.some((e) => e.id === selectedId)) {
-      setSelectedId(episodes[0]?.id || null);
+      const next = episodes[0]?.id || null;
+      setSelectedId(next);
+      if (next) onFocusEpisode?.(next);
     } else if (!selectedId && episodes[0]) {
       setSelectedId(episodes[0].id);
+      onFocusEpisode?.(episodes[0].id);
     }
-  }, [episodes, selectedId]);
+  }, [episodes, selectedId, onFocusEpisode]);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(`om-script-brief-collapsed:${projectId}`, briefCollapsed ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  }, [briefCollapsed, projectId]);
+
+  const selectEpisode = (id) => {
+    setSelectedId(id);
+    onFocusEpisode?.(id);
+  };
 
   const selected = useMemo(() => episodes.find((e) => e.id === selectedId) || null, [episodes, selectedId]);
   const maxEpisodeNumber = useMemo(() => Math.max(0, ...episodes.map((e) => e.episodeNumber)), [episodes]);
@@ -141,12 +199,21 @@ export function ScriptStep({ projectId, bundle, config, setBusyMsg, onBundle, on
     }
   };
 
+  const plannedCount = useMemo(() => {
+    if (plannedEpisodes === "" || plannedEpisodes === null) return null;
+    const n = Number(plannedEpisodes);
+    return Number.isInteger(n) && n >= 1 ? n : null;
+  }, [plannedEpisodes]);
+
   const runGenerate = async () => {
-    if (!requireCapability(caps, "deepseek", onNeedKeys, "DeepSeek Key")) return;
+    if (!requireCapability(caps, "deepseek", onNeedKeys, "文本大模型 Key")) return;
     if (!form.brief.trim()) return toast.error("先填写创作需求或粘贴原始故事");
     if (!form.genre.trim()) return toast.error("请选择题材或填写自定义题材");
     const episodeCount = parseCount(generationEpisodeCount);
     if (episodeCount === null) return toast.error(`本次生成集数必须是 1–${MAX_PER_REQUEST} 的整数`);
+    if (plannedCount !== null && episodeCount > plannedCount) {
+      return toast.error(`本次生成集数不能超过计划总集数（${plannedCount}）`);
+    }
     if (episodes.length > 0 && !confirmRegen) {
       setConfirmRegen(true);
       return;
@@ -162,13 +229,16 @@ export function ScriptStep({ projectId, bundle, config, setBusyMsg, onBundle, on
         body: JSON.stringify({
           action: "generate",
           episodeCount,
-          plannedEpisodes: plannedEpisodes === "" ? null : Number(plannedEpisodes),
+          plannedEpisodes: plannedCount,
         }),
       });
       apply(b);
       const nextEps = b.episodes || [];
-      setSelectedId(nextEps[0]?.id || null);
-      toast.success(`DeepSeek 已完成第 1–${nextEps.length} 集剧本与素材档案`);
+      const firstId = nextEps[0]?.id || null;
+      setSelectedId(firstId);
+      if (firstId) onFocusEpisode?.(firstId);
+      const backend = caps.llmBackend || "LLM";
+      toast.success(`${backend} 已完成第 1–${nextEps.length} 集剧本与素材档案`);
     } catch (e) {
       toastMaybeKeys(e, onNeedKeys);
     } finally {
@@ -178,7 +248,7 @@ export function ScriptStep({ projectId, bundle, config, setBusyMsg, onBundle, on
   };
 
   const runContinue = async () => {
-    if (!requireCapability(caps, "deepseek", onNeedKeys, "DeepSeek Key")) return;
+    if (!requireCapability(caps, "deepseek", onNeedKeys, "文本大模型 Key")) return;
     const episodeCount = parseCount(continueEpisodeCount);
     if (episodeCount === null) return toast.error(`本次续写集数必须是 1–${MAX_PER_REQUEST} 的整数`);
     setContinuing(true);
@@ -208,7 +278,7 @@ export function ScriptStep({ projectId, bundle, config, setBusyMsg, onBundle, on
   };
 
   const runRewrite = async () => {
-    if (!requireCapability(caps, "deepseek", onNeedKeys, "DeepSeek Key")) return;
+    if (!requireCapability(caps, "deepseek", onNeedKeys, "文本大模型 Key")) return;
     const episodeCount = parseCount(rewriteEpisodeCount, maxRewriteCount);
     if (episodeCount === null) return toast.error("重写集数无效");
     if (!rewriteInstruction.trim()) return toast.error("请填写重写要求");
@@ -272,157 +342,203 @@ export function ScriptStep({ projectId, bundle, config, setBusyMsg, onBundle, on
   return (
     <div className="mx-auto max-w-[1500px] space-y-5">
       <section className="panel overflow-hidden">
-        <div className="grid lg:grid-cols-[minmax(0,1fr)_360px]">
-          <div className="p-5 md:p-6">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <div className="label">Story brief</div>
-                <h3 className="display-type text-2xl font-semibold">创作底稿</h3>
-                <p className="mt-1 text-sm text-[var(--muted)]">
-                  DeepSeek 按本次集数分批创作，剧本可继续续写或按指定范围重写。
-                </p>
-              </div>
-              <button type="button" className="btn-secondary" disabled={operationBusy} onClick={() => void saveProject()}>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--line)] px-4 py-3 md:px-5">
+          <div className="min-w-0">
+            <div className="label !mb-0">Story brief</div>
+            <div className="flex flex-wrap items-baseline gap-2">
+              <h3 className="display-type text-lg font-semibold md:text-xl">创作底稿</h3>
+              {briefCollapsed ? (
+                <span className="truncate text-xs text-[var(--muted)]">
+                  {form.title || "未命名"} · {form.ratio || "9:16"} · {form.genre || "未选题材"} · 已生成 {episodes.length} 集
+                </span>
+              ) : null}
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {!briefCollapsed ? (
+              <button type="button" className="btn-secondary !min-h-9" disabled={operationBusy} onClick={() => void saveProject()}>
                 <Save className="h-4 w-4" />
                 {saving ? "保存中…" : "保存设定"}
               </button>
-            </div>
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <label>
-                <span className="label">片名</span>
-                <input
-                  className="field"
-                  value={form.title}
-                  disabled={operationBusy}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                />
-              </label>
-              <div>
-                <span className="label">画面比例</span>
-                <AspectRatioPicker
-                  value={form.ratio}
-                  disabled={operationBusy}
-                  ratios={config?.ratios}
-                  onChange={(ratio) => setForm({ ...form, ratio })}
-                />
-              </div>
-              <div className="md:col-span-2">
-                <span className="label">题材</span>
-                <GenrePicker
-                  value={form.genre}
-                  disabled={operationBusy}
-                  genres={config?.genres}
-                  onChange={(genre) => setForm({ ...form, genre })}
-                />
-              </div>
-              <div className="md:col-span-2">
-                <span className="label">视觉风格</span>
-                <VideoStylePicker
-                  value={form.visualStyle}
-                  disabled={operationBusy}
-                  styles={config?.styles}
-                  categories={config?.styleCategories}
-                  onChange={(visualStyle) => setForm({ ...form, visualStyle })}
-                />
-              </div>
-              <label className="md:col-span-2">
-                <span className="label">故事梗概</span>
-                <textarea
-                  className="field min-h-20 resize-y"
-                  value={form.synopsis}
-                  disabled={operationBusy}
-                  onChange={(e) => setForm({ ...form, synopsis: e.target.value })}
-                  placeholder="生成后会自动写入，也可以先给出已有梗概。"
-                />
-              </label>
-              <label className="md:col-span-2">
-                <span className="label">创作需求 / 原始素材</span>
-                <textarea
-                  className="field min-h-52 resize-y leading-7"
-                  value={form.brief}
-                  disabled={operationBusy}
-                  onChange={(e) => setForm({ ...form, brief: e.target.value })}
-                  placeholder="粘贴故事、小说片段或写下人物、核心冲突与结局要求…"
-                />
-              </label>
-            </div>
-          </div>
-
-          <div className="flex flex-col justify-between border-t border-[var(--line)] bg-[var(--navy)] p-6 text-white lg:border-l lg:border-t-0">
-            <div>
-              <div className="timecode text-[10px] text-[var(--timecode)]">TEXT MODEL</div>
-              <div className="mt-2 text-lg font-semibold">DeepSeek · drama-script</div>
-              <p className="mt-2 text-xs leading-6 text-white/55">
-                本次生成集数决定当前调用输出多少集；计划总集数用于安排全剧情绪曲线，可以留空。
-              </p>
-              {episodes.length > 0 ? (
-                <div className="mt-5 rounded-xl border border-white/10 bg-white/5 p-4">
-                  <div className="timecode text-[10px] text-white/40">CURRENT PROGRESS</div>
-                  <div className="mt-2 text-xl font-semibold">已生成 {episodes.length} 集</div>
-                  <div className="mt-1 text-xs text-white/50">
-                    计划 {plannedEpisodes === "" ? "未设定" : `${plannedEpisodes} 集`}
-                  </div>
-                </div>
-              ) : null}
-              {creativeBusy ? (
-                <div className="mt-5 rounded-xl border border-[var(--projector)]/35 bg-[var(--projector)]/10 p-4" role="status">
-                  <div className="flex items-center gap-2 text-sm font-semibold">
-                    <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[var(--projector)]" />
-                    <span>{creativeStatus}</span>
-                  </div>
-                  <div className="timecode mt-2 flex items-center gap-1.5 pl-6 text-[var(--timecode)]">
-                    <Clock3 className="h-3.5 w-3.5" />
-                    {elapsedTime}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-            <div className="mt-8 space-y-4">
-              <label>
-                <span className="mb-2 flex items-center gap-2 text-xs text-white/60">
-                  本次生成集数 <b className="text-[var(--timecode)]">必填</b>
-                </span>
-                <input
-                  type="number"
-                  min={1}
-                  max={MAX_PER_REQUEST}
-                  className="field !border-white/20 !bg-[#17243a] !text-white [color-scheme:dark] focus:!border-[var(--projector)]"
-                  value={generationEpisodeCount}
-                  disabled={operationBusy}
-                  onChange={(e) => setGenerationEpisodeCount(e.target.value === "" ? "" : Number(e.target.value))}
-                />
-              </label>
-              <label>
-                <span className="mb-2 flex items-center gap-2 text-xs text-white/60">
-                  计划总集数 <b className="font-normal text-white/35">可选</b>
-                </span>
-                <input
-                  type="number"
-                  min={1}
-                  max={200}
-                  className="field !border-white/20 !bg-[#17243a] !text-white [color-scheme:dark] focus:!border-[var(--projector)]"
-                  value={plannedEpisodes}
-                  disabled={operationBusy}
-                  onChange={(e) => setPlannedEpisodes(e.target.value === "" ? "" : Number(e.target.value))}
-                  placeholder="留空表示开放式长剧"
-                />
-              </label>
-              <button
-                type="button"
-                className="btn-primary flex min-h-12 w-full !rounded-xl font-bold disabled:opacity-45"
-                disabled={operationBusy}
-                onClick={() => void runGenerate()}
-              >
-                {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                {generating ? `正在创作… ${elapsedTime}` : episodes.length ? "按本次集数重新生成" : "生成剧本与素材档案"}
-              </button>
-            </div>
+            ) : null}
+            <button
+              type="button"
+              className="btn-secondary !min-h-9"
+              onClick={() => setBriefCollapsed((v) => !v)}
+              aria-expanded={!briefCollapsed}
+            >
+              {briefCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+              {briefCollapsed ? "展开公共设定" : "折叠公共设定"}
+            </button>
           </div>
         </div>
+        {!briefCollapsed ? (
+          <div className="grid lg:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="p-5 md:p-6">
+              <p className="text-sm text-[var(--muted)]">
+                DeepSeek 按本次集数分批创作，剧本可继续续写或按指定范围重写。
+              </p>
+              <div className="mt-5 grid gap-4 md:grid-cols-2">
+                <label className="md:col-span-2">
+                  <span className="label">片名</span>
+                  <input
+                    className="field"
+                    value={form.title}
+                    disabled={operationBusy}
+                    onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  />
+                </label>
+                <div className="min-w-0 md:col-span-2">
+                  <span className="label">画面比例</span>
+                  <AspectRatioPicker
+                    value={form.ratio}
+                    disabled={operationBusy}
+                    ratios={config?.ratios}
+                    onChange={(ratio) => setForm({ ...form, ratio })}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <span className="label">题材</span>
+                  <GenrePicker
+                    value={form.genre}
+                    disabled={operationBusy}
+                    genres={config?.genres}
+                    onChange={(genre) => setForm({ ...form, genre })}
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <span className="label">视觉风格</span>
+                  <VideoStylePicker
+                    value={form.visualStyle}
+                    disabled={operationBusy}
+                    styles={config?.styles}
+                    categories={config?.styleCategories}
+                    onChange={(visualStyle) => setForm({ ...form, visualStyle })}
+                  />
+                </div>
+                <label className="md:col-span-2">
+                  <span className="label">故事梗概</span>
+                  <textarea
+                    className="field min-h-20 resize-y"
+                    value={form.synopsis}
+                    disabled={operationBusy}
+                    onChange={(e) => setForm({ ...form, synopsis: e.target.value })}
+                    placeholder="生成后会自动写入，也可以先给出已有梗概。"
+                  />
+                </label>
+                <label className="md:col-span-2">
+                  <span className="label">创作需求 / 原始素材</span>
+                  <textarea
+                    className="field min-h-52 resize-y leading-7"
+                    value={form.brief}
+                    disabled={operationBusy}
+                    onChange={(e) => setForm({ ...form, brief: e.target.value })}
+                    placeholder="粘贴故事、小说片段或写下人物、核心冲突与结局要求…"
+                  />
+                </label>
+              </div>
+            </div>
+
+            <div className="flex flex-col justify-between border-t border-[var(--line)] bg-[var(--navy)] p-6 text-white lg:border-l lg:border-t-0">
+              <div>
+                <div className="timecode text-[10px] text-[var(--timecode)]">TEXT MODEL</div>
+                <div className="mt-2 text-lg font-semibold">{caps.llmBackend || "LLM"} · drama-script</div>
+                <p className="mt-2 text-xs leading-6 text-white/55">
+                  本次生成集数决定当前调用输出多少集；计划总集数用于安排全剧情绪曲线，可以留空。建议先生成 1 集核对大纲，再扩写。
+                </p>
+                {episodes.length > 0 ? (
+                  <div className="mt-5 rounded-xl border border-white/10 bg-white/5 p-4">
+                    <div className="timecode text-[10px] text-white/40">CURRENT PROGRESS</div>
+                    <div className="mt-2 text-xl font-semibold">已生成 {episodes.length} 集</div>
+                    <div className="mt-1 text-xs text-white/50">
+                      计划 {plannedEpisodes === "" ? "未设定" : `${plannedEpisodes} 集`}
+                    </div>
+                  </div>
+                ) : null}
+                {creativeBusy ? (
+                  <div className="mt-5 rounded-xl border border-[var(--projector)]/35 bg-[var(--projector)]/10 p-4" role="status">
+                    <div className="flex items-center gap-2 text-sm font-semibold">
+                      <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[var(--projector)]" />
+                      <span>{creativeStatus}</span>
+                    </div>
+                    <div className="timecode mt-2 flex items-center gap-1.5 pl-6 text-[var(--timecode)]">
+                      <Clock3 className="h-3.5 w-3.5" />
+                      {elapsedTime}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+              <div className="mt-8 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <label className="min-w-0">
+                    <span className="mb-2 flex items-center gap-2 text-xs text-white/60">
+                      本次生成 <b className="text-[var(--timecode)]">必填</b>
+                    </span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={plannedCount ?? MAX_PER_REQUEST}
+                      className="field !border-white/20 !bg-[#17243a] !text-white [color-scheme:dark] focus:!border-[var(--projector)]"
+                      value={generationEpisodeCount}
+                      disabled={operationBusy}
+                      onChange={(e) => {
+                        const raw = e.target.value === "" ? "" : Number(e.target.value);
+                        if (raw === "") {
+                          setGenerationEpisodeCount("");
+                          return;
+                        }
+                        const capped =
+                          plannedCount !== null ? Math.min(Number(raw), plannedCount, MAX_PER_REQUEST) : Math.min(Number(raw), MAX_PER_REQUEST);
+                        setGenerationEpisodeCount(capped);
+                      }}
+                    />
+                  </label>
+                  <label className="min-w-0">
+                    <span className="mb-2 flex items-center gap-2 text-xs text-white/60">
+                      计划总集数 <b className="font-normal text-white/35">可选</b>
+                    </span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={200}
+                      className="field !border-white/20 !bg-[#17243a] !text-white [color-scheme:dark] focus:!border-[var(--projector)]"
+                      value={plannedEpisodes}
+                      disabled={operationBusy}
+                      onChange={(e) => {
+                        const next = e.target.value === "" ? "" : Number(e.target.value);
+                        setPlannedEpisodes(next);
+                        if (next !== "" && Number.isInteger(Number(next)) && Number(next) >= 1) {
+                          setGenerationEpisodeCount((current) => {
+                            const n = Number(current);
+                            if (!Number.isInteger(n) || n < 1) return Math.min(Number(next), MAX_PER_REQUEST);
+                            return Math.min(n, Number(next), MAX_PER_REQUEST);
+                          });
+                        }
+                      }}
+                      placeholder="开放式可留空"
+                    />
+                  </label>
+                </div>
+                {plannedCount !== null && Number(generationEpisodeCount) > plannedCount ? (
+                  <p className="text-xs text-amber-300/90">本次生成不能超过计划总集数 {plannedCount}。</p>
+                ) : null}
+                <button
+                  type="button"
+                  className="btn-primary flex min-h-12 w-full !rounded-xl font-bold disabled:opacity-45"
+                  disabled={operationBusy}
+                  onClick={() => void runGenerate()}
+                >
+                  {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                  {generating ? `正在创作… ${elapsedTime}` : episodes.length ? "按本次集数重新生成" : "生成剧本与素材档案"}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : null}
       </section>
 
-      <section className="grid min-h-[560px] gap-4 lg:grid-cols-[280px_1fr]">
-        <div className="panel flex flex-col p-3">
+      <section className="grid min-h-[560px] gap-4 lg:grid-cols-[minmax(240px,300px)_1fr]">
+        <div className="panel flex min-w-0 flex-col p-3">
           <div className="border-b border-[var(--line)] px-2 pb-3 pt-2">
             <div className="flex items-center justify-between gap-2">
               <div>
@@ -434,37 +550,42 @@ export function ScriptStep({ projectId, bundle, config, setBusyMsg, onBundle, on
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <button
                   type="button"
-                  className="btn-secondary !min-h-9 !px-2 text-xs"
+                  className="btn-secondary !min-h-9 !justify-center !gap-1 !px-1.5 text-[11px] leading-tight"
                   disabled={operationBusy || !draftEpisodes.length}
                   onClick={() => setConfirmBatch(true)}
                 >
-                  {batchConfirming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
-                  批量定稿{draftEpisodes.length ? ` (${draftEpisodes.length})` : ""}
-                </button>
-                <button type="button" className="btn-secondary !min-h-9 !px-2 text-xs" disabled={operationBusy} onClick={() => void copyAll()}>
-                  <Copy className="h-3.5 w-3.5" />
-                  复制全本
+                  {batchConfirming ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <Check className="h-3.5 w-3.5 shrink-0" />}
+                  <span className="truncate">定稿{draftEpisodes.length ? ` ${draftEpisodes.length}` : ""}</span>
                 </button>
                 <button
                   type="button"
-                  className="btn-secondary !min-h-9 !px-2 text-xs"
+                  className="btn-secondary !min-h-9 !justify-center !gap-1 !px-1.5 text-[11px] leading-tight"
+                  disabled={operationBusy}
+                  onClick={() => void copyAll()}
+                >
+                  <Copy className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate">复制</span>
+                </button>
+                <button
+                  type="button"
+                  className="btn-secondary !min-h-9 !justify-center !gap-1 !px-1.5 text-[11px] leading-tight"
                   disabled={operationBusy}
                   onClick={() => setShowContinue(true)}
                 >
-                  {continuing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Forward className="h-3.5 w-3.5" />}
-                  {continuing ? `续写中 ${elapsedTime}` : "续写"}
+                  {continuing ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <Forward className="h-3.5 w-3.5 shrink-0" />}
+                  <span className="truncate">{continuing ? elapsedTime : "续写"}</span>
                 </button>
                 <button
                   type="button"
-                  className="btn-secondary !min-h-9 !px-2 text-xs"
+                  className="btn-secondary !min-h-9 !justify-center !gap-1 !px-1.5 text-[11px] leading-tight"
                   disabled={operationBusy}
                   onClick={() => {
                     setRewriteStartEpisode(episodes[0]?.episodeNumber || 1);
                     setShowRewrite(true);
                   }}
                 >
-                  {rewriting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FilePenLine className="h-3.5 w-3.5" />}
-                  {rewriting ? `重写中 ${elapsedTime}` : "重写"}
+                  {rewriting ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <FilePenLine className="h-3.5 w-3.5 shrink-0" />}
+                  <span className="truncate">{rewriting ? elapsedTime : "重写"}</span>
                 </button>
               </div>
             ) : null}
@@ -474,7 +595,7 @@ export function ScriptStep({ projectId, bundle, config, setBusyMsg, onBundle, on
               <button
                 key={episode.id}
                 type="button"
-                onClick={() => setSelectedId(episode.id)}
+                onClick={() => selectEpisode(episode.id)}
                 className={`flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left ${
                   selectedId === episode.id
                     ? "border-[var(--projector)] bg-[var(--projector)]/10"
@@ -652,14 +773,11 @@ export function ScriptStep({ projectId, bundle, config, setBusyMsg, onBundle, on
 
 function Modal({ title, label, onClose, children }) {
   return (
-    <div
-      className="fixed inset-0 z-[90] flex items-center justify-center bg-[#09101d]/80 p-4 backdrop-blur-sm"
-      onMouseDown={onClose}
-    >
+    <ModalOverlay onClose={onClose} className="bg-[#09101d]/80 backdrop-blur-sm">
       <section
         role="dialog"
         aria-modal="true"
-        className="scrollbar-thin max-h-[min(760px,calc(100vh-2rem))] w-full max-w-3xl overflow-y-auto rounded-3xl bg-[var(--panel)] p-6 shadow-float"
+        className="scrollbar-thin my-auto max-h-[min(760px,calc(100vh-2rem))] w-full max-w-3xl overflow-y-auto rounded-3xl bg-[var(--panel)] p-6 shadow-float"
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between gap-4">
@@ -673,7 +791,7 @@ function Modal({ title, label, onClose, children }) {
         </div>
         <div className="mt-4">{children}</div>
       </section>
-    </div>
+    </ModalOverlay>
   );
 }
 
@@ -712,32 +830,38 @@ function EpisodeEditor({ projectId, episode, onRefresh, onBundle }) {
 
   return (
     <div className="panel flex min-h-0 flex-col overflow-hidden">
-      <div className="flex flex-wrap items-center gap-3 border-b border-[var(--line)] bg-[var(--panel-muted)] px-5 py-3">
-        <span className="timecode text-xs text-[var(--muted)]">EP {String(episode.episodeNumber).padStart(2, "0")}</span>
-        <input
-          className="field !min-w-48 flex-1 !bg-transparent !py-2 font-semibold read-only:cursor-not-allowed read-only:opacity-70"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          readOnly={locked}
-        />
-        <button type="button" className="btn-secondary" disabled={saving || locked} onClick={() => void save()}>
-          <Save className="h-3.5 w-3.5" /> 保存
-        </button>
-        <button
-          type="button"
-          className={episode.status === "confirmed" ? "btn-secondary" : "btn-primary"}
-          disabled={saving}
-          onClick={() => void save(episode.status === "confirmed" ? "draft" : "confirmed")}
-        >
-          <Check className="h-3.5 w-3.5" />
-          {episode.status === "confirmed" ? "取消定稿" : "定稿"}
-        </button>
-        <button type="button" className="btn-danger !px-2.5" onClick={() => void remove()}>
-          <Trash2 className="h-4 w-4" />
-        </button>
+      <div className="space-y-3 border-b border-[var(--line)] bg-[var(--panel-muted)] px-4 py-3 sm:px-5">
+        <div className="flex min-w-0 items-center gap-3">
+          <span className="timecode shrink-0 text-xs text-[var(--muted)]">
+            EP {String(episode.episodeNumber).padStart(2, "0")}
+          </span>
+          <input
+            className="field min-w-0 flex-1 !bg-transparent !py-2 font-semibold read-only:cursor-not-allowed read-only:opacity-70"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            readOnly={locked}
+          />
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" className="btn-secondary !min-h-9" disabled={saving || locked} onClick={() => void save()}>
+            <Save className="h-3.5 w-3.5" /> 保存
+          </button>
+          <button
+            type="button"
+            className={episode.status === "confirmed" ? "btn-secondary !min-h-9" : "btn-primary !min-h-9"}
+            disabled={saving}
+            onClick={() => void save(episode.status === "confirmed" ? "draft" : "confirmed")}
+          >
+            <Check className="h-3.5 w-3.5" />
+            {episode.status === "confirmed" ? "取消定稿" : "定稿"}
+          </button>
+          <button type="button" className="btn-danger !min-h-9 !px-2.5" onClick={() => void remove()}>
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
       </div>
       {locked ? (
-        <div className="border-b border-[var(--line)] bg-emerald-50 px-5 py-2 text-xs text-emerald-700">
+        <div className="border-b border-[var(--line)] bg-[var(--ok)]/10 px-5 py-2 text-xs text-[var(--ok)]">
           本集已定稿。需要修改时请先取消定稿。
         </div>
       ) : null}

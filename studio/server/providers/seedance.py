@@ -71,8 +71,16 @@ def create_task(
     if resolution not in m["resolutions"]:
         raise SeedanceError(f"{m['name']} 不支持 {resolution}")
     default_id = models[0]["id"] if models else m["id"]
-    model_id = os.environ.get("SEEDANCE_MODEL") if model == default_id else model
-    model_id = model_id or m["id"]
+    if model == default_id:
+        try:
+            from settings_store import get_secret
+
+            model_id = get_secret("SEEDANCE_MODEL") or m["id"]
+        except Exception:
+            model_id = os.environ.get("SEEDANCE_MODEL") or m["id"]
+    else:
+        model_id = model or m["id"]
+
     body = {
         "model": model_id,
         "content": content,
@@ -83,6 +91,9 @@ def create_task(
         "watermark": False,
         "return_last_frame": True,
     }
+    import time
+
+    t0 = time.time()
     req = urllib.request.Request(
         _api_url(),
         data=json.dumps(body).encode("utf-8"),
@@ -94,8 +105,36 @@ def create_task(
             raw = json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")[:500]
+        try:
+            from usage_store import record_usage
+
+            record_usage(
+                provider="volcengine",
+                model=str(model_id),
+                kind="video",
+                ok=False,
+                status=int(exc.code),
+                latency_ms=int((time.time() - t0) * 1000),
+                error=detail,
+            )
+        except Exception:
+            pass
         raise SeedanceError(f"Seedance 创建失败 HTTP {exc.code}: {detail}") from exc
     task_id = raw.get("id")
+    try:
+        from usage_store import record_usage
+
+        record_usage(
+            provider="volcengine",
+            model=str(model_id),
+            kind="video",
+            ok=bool(task_id),
+            status=200 if task_id else 500,
+            latency_ms=int((time.time() - t0) * 1000),
+            error="" if task_id else "missing task id",
+        )
+    except Exception:
+        pass
     if not task_id:
         raise SeedanceError(f"Seedance 未返回 task id: {raw}")
     return str(task_id)
@@ -113,7 +152,26 @@ def query_task(task_id: str) -> dict[str, Any]:
     )
     try:
         with urllib.request.urlopen(req, timeout=60) as resp:
-            return json.loads(resp.read().decode("utf-8"))
+            raw = json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         detail = exc.read().decode("utf-8", errors="replace")[:500]
         raise SeedanceError(f"Seedance 查询失败 HTTP {exc.code}: {detail}") from exc
+
+    content = raw.get("content") if isinstance(raw.get("content"), dict) else {}
+    video_url = (
+        (content or {}).get("video_url")
+        or raw.get("video_url")
+        or raw.get("videoUrl")
+        or raw.get("url")
+    )
+    error = raw.get("error")
+    if isinstance(error, dict):
+        error = error.get("message") or str(error)
+    return {
+        "status": raw.get("status"),
+        "videoUrl": video_url,
+        "duration": raw.get("duration"),
+        "resolution": raw.get("resolution"),
+        "error": error,
+        "raw": raw,
+    }

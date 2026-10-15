@@ -1,15 +1,22 @@
 #!/usr/bin/env bash
-# Sync a Coolify-ready slim tree to git.dtok.io (GitLab).
+# Sync a Coolify-ready slim tree to git.dtok.io (GitLab), and mirror the full
+# local repo HEAD to GitHub main.
 #
-# Why slim: full-history HTTPS push hits HTTP 413 (~76MB pack / reverse-proxy
-# body limit). Drama Studio Docker build only needs studio + lib/tools/schemas/
-# pipeline_defs/workflow_defs — large demo mp4/bvh are omitted.
+# Why slim (dtok only): full-history HTTPS push hits HTTP 413 (~76MB pack /
+# reverse-proxy body limit). Drama Studio Docker build only needs studio +
+# lib/tools/schemas/pipeline_defs/workflow_defs — large demo mp4/bvh are omitted.
+#
+# GitHub mirror pushes the *full* local commit (not the slim Coolify tree), so
+# charliewwdev/OpenMontage keeps normal monorepo history on main.
 #
 # Usage (from repo root):
 #   ./scripts/sync_dtok_git.sh
 #   DTOK_GIT_REMOTE=https://git.dtok.io/dtok-app/OpenMontage.git ./scripts/sync_dtok_git.sh
+#   GITHUB_MIRROR_SKIP=1 ./scripts/sync_dtok_git.sh          # Coolify only
+#   GITHUB_MIRROR_FORCE=1 ./scripts/sync_dtok_git.sh         # force-push main
+#   GITHUB_MIRROR_REQUIRED=1 ./scripts/sync_dtok_git.sh      # fail if GitHub push fails
 #
-# After push, GitLab webhook → Coolify auto-deploys (same pattern as dtok-app).
+# After dtok push, GitLab webhook → Coolify auto-deploys (same pattern as dtok-app).
 
 set -euo pipefail
 
@@ -18,6 +25,12 @@ REMOTE="${DTOK_GIT_REMOTE:-https://git.dtok.io/dtok-app/OpenMontage.git}"
 WORK="${DTOK_SYNC_WORKDIR:-/tmp/om-dtok-slim-sync}"
 # Prefer `deploy` — `main` is often protected against force-push on git.dtok.io.
 BRANCH="${DTOK_SYNC_BRANCH:-deploy}"
+GITHUB_MIRROR_REMOTE="${GITHUB_MIRROR_REMOTE:-}"
+GITHUB_MIRROR_BRANCH="${GITHUB_MIRROR_BRANCH:-main}"
+GITHUB_MIRROR_SKIP="${GITHUB_MIRROR_SKIP:-0}"
+GITHUB_MIRROR_FORCE="${GITHUB_MIRROR_FORCE:-0}"
+GITHUB_MIRROR_REQUIRED="${GITHUB_MIRROR_REQUIRED:-0}"
+GITHUB_MIRROR_DEFAULT="git@github.com:charliewwdev/OpenMontage.git"
 
 cd "$ROOT"
 SHA="$(git rev-parse --short HEAD)"
@@ -33,6 +46,24 @@ git archive HEAD \
   scripts/coolify_set_drama_keys.sh scripts/sync_dtok_git.sh \
   .gitignore \
   | tar -x -C "$WORK"
+
+# Include uncommitted studio/scripts/config fixes so local WIP can ship without a commit.
+rsync -a --delete \
+  --exclude node_modules --exclude dist --exclude __pycache__ \
+  --exclude '*.mp4' --exclude '*.bvh' --exclude '*.mov' --exclude '*.webm' \
+  --exclude npm-debug.log --exclude .DS_Store \
+  --exclude '.env' --exclude '.env.*' --exclude '*.env' \
+  --exclude '.studio_secrets.json' --exclude '**/.studio_secrets.json' \
+  "$ROOT/studio/" "$WORK/studio/"
+for rel in scripts/sync_dtok_git.sh scripts/deploy_coolify_drama_studio.sh scripts/coolify_set_drama_keys.sh scripts/baota_set_maintenance.sh docker-compose.studio.yml; do
+  [[ -f "$ROOT/$rel" ]] && cp "$ROOT/$rel" "$WORK/$rel"
+done
+# Ensure edge nginx + maintenance assets ship even if path filters change.
+mkdir -p "$WORK/studio/deploy" "$WORK/studio/public"
+[[ -f "$ROOT/studio/deploy/nginx-edge.conf" ]] && cp "$ROOT/studio/deploy/nginx-edge.conf" "$WORK/studio/deploy/"
+[[ -f "$ROOT/studio/public/maintenance.html" ]] && cp "$ROOT/studio/public/maintenance.html" "$WORK/studio/public/"
+# Coolify historically looks for docker-compose.yaml — keep a copy of the studio stack.
+cp "$WORK/docker-compose.studio.yml" "$WORK/docker-compose.yaml"
 
 # Not required by studio/Dockerfile; dropping them keeps packs under proxy limits.
 find "$WORK" -type f \( -name '*.mp4' -o -name '*.bvh' -o -name '*.mov' -o -name '*.webm' \) -delete
@@ -109,3 +140,90 @@ fi
 
 echo "OK synced ${SHA} → ${REMOTE} ${BRANCH}"
 echo "Coolify auto-deploys via GitLab webhook on push to ${BRANCH}."
+
+# --- GitHub mirror (full local HEAD → main; never the slim Coolify pack) ---
+mirror_github() {
+  if [[ "${GITHUB_MIRROR_SKIP}" == "1" ]]; then
+    echo "==> GitHub mirror skipped (GITHUB_MIRROR_SKIP=1)"
+    return 0
+  fi
+
+  local gh_remote="${GITHUB_MIRROR_REMOTE}"
+  if [[ -z "${gh_remote}" ]]; then
+    if git -C "$ROOT" remote get-url github >/dev/null 2>&1; then
+      gh_remote="$(git -C "$ROOT" remote get-url github)"
+    elif git -C "$ROOT" remote get-url origin >/dev/null 2>&1; then
+      local origin_url
+      origin_url="$(git -C "$ROOT" remote get-url origin)"
+      case "${origin_url}" in
+        *github.com*) gh_remote="${origin_url}" ;;
+        *) gh_remote="${GITHUB_MIRROR_DEFAULT}" ;;
+      esac
+    else
+      gh_remote="${GITHUB_MIRROR_DEFAULT}"
+    fi
+  fi
+
+  # Optional HTTPS PAT: GITHUB_TOKEN → https://x-access-token:…@github.com/...
+  if [[ -n "${GITHUB_TOKEN:-}" && "${gh_remote}" == git@github.com:* ]]; then
+    local path="${gh_remote#git@github.com:}"
+    path="${path%.git}.git"
+    gh_remote="https://x-access-token:${GITHUB_TOKEN}@github.com/${path}"
+  elif [[ -n "${GITHUB_TOKEN:-}" && "${gh_remote}" == https://github.com/* ]]; then
+    local path="${gh_remote#https://github.com/}"
+    gh_remote="https://x-access-token:${GITHUB_TOKEN}@github.com/${path}"
+  fi
+
+  local full_sha
+  full_sha="$(git -C "$ROOT" rev-parse --short HEAD)"
+  # Hide token in logs if present
+  local push_url="${gh_remote}"
+  if [[ "${push_url}" == https://x-access-token:*@github.com/* ]]; then
+    push_url="https://github.com/${push_url#*@github.com/}"
+  fi
+  echo "==> Mirroring full repo ${full_sha} → ${push_url} (${GITHUB_MIRROR_BRANCH})"
+
+  local -a push_args=(-C "$ROOT" push)
+  if [[ "${GITHUB_MIRROR_FORCE}" == "1" ]]; then
+    push_args+=(-f)
+  fi
+  push_args+=("${gh_remote}" "HEAD:${GITHUB_MIRROR_BRANCH}")
+
+  if git "${push_args[@]}"; then
+    echo "OK mirrored ${full_sha} → GitHub ${GITHUB_MIRROR_BRANCH}"
+    echo "NOTE: GitHub gets committed HEAD only; uncommitted WIP still ships on dtok slim deploy."
+    return 0
+  fi
+  echo "WARN GitHub mirror failed (Coolify deploy already pushed to dtok)."
+  return 1
+}
+
+if ! mirror_github; then
+  if [[ "${GITHUB_MIRROR_REQUIRED}" == "1" ]]; then
+    echo "ERROR GITHUB_MIRROR_REQUIRED=1 and GitHub push failed"
+    exit 1
+  fi
+fi
+
+# Project state + media blobs dual-write to Postgres (drama-db / drama_pg volume).
+# Disk under drama_projects is a cache; avoid Coolify "Remove volumes" on drama_pg.
+echo "NOTE: Projects + media + secrets/credits persist in Postgres (drama_pg). Disk is cache."
+STUDIO_URL="${STUDIO_URL:-https://openmontage.dtok.io}"
+if [[ -f "$ROOT/studio/.env" && -f "$ROOT/scripts/restore_studio_keys.sh" ]]; then
+  echo "==> Waiting for ${STUDIO_URL}/api/health then restoring keys from studio/.env"
+  ok=0
+  for i in $(seq 1 36); do
+    if curl -fsS --max-time 8 "${STUDIO_URL}/api/health" >/dev/null 2>&1; then
+      ok=1
+      break
+    fi
+    sleep 5
+  done
+  if [[ "$ok" -eq 1 ]]; then
+    # Extra settle time after health flips during rolling deploy
+    sleep 8
+    STUDIO_URL="$STUDIO_URL" "$ROOT/scripts/restore_studio_keys.sh" || echo "WARN key restore failed (UI can still paste keys)"
+  else
+    echo "WARN ${STUDIO_URL} not healthy yet — run: STUDIO_URL=${STUDIO_URL} ./scripts/restore_studio_keys.sh"
+  fi
+fi

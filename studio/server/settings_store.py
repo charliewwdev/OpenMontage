@@ -1,4 +1,8 @@
-"""Persist Drama Studio API keys to a local secrets file and inject into process env."""
+"""Drama Studio secrets store — Postgres is source of truth when DATABASE_URL is set.
+
+Without Postgres (local/dev), falls back to JSON files under PROJECTS_ROOT.
+Env vars remain ops bootstrap only (Coolify); UI saves never mutate os.environ.
+"""
 
 from __future__ import annotations
 
@@ -7,21 +11,62 @@ import os
 from pathlib import Path
 from typing import Any
 
-SECRET_KEYS = (
-    "DEEPSEEK_API_KEY",
-    "DEEPSEEK_BASE_URL",
-    "DEEPSEEK_MODEL",
-    "VOLCENGINE_API_KEY",
-    "ARK_API_KEY",
-    "SEEDREAM_MODEL",
-    "SEEDANCE_MODEL",
-)
+from providers.llm_catalog import LLM_PROVIDERS, all_secret_envs, provider_by_id
 
-MASKABLE = frozenset({"DEEPSEEK_API_KEY", "VOLCENGINE_API_KEY", "ARK_API_KEY"})
+SECRET_KEYS = all_secret_envs()
+
+MASKABLE = frozenset(
+    env for item in LLM_PROVIDERS for env in (item.get("keyEnv"),) if env
+) | frozenset({"VOLCENGINE_API_KEY", "ARK_API_KEY"})
+
+_projects_root: Path | None = None
+_cache: dict[str, str] | None = None
+_cache_key: str | None = None
 
 
-def secrets_path(projects_root: Path) -> Path:
-    return Path(projects_root) / ".studio_secrets.json"
+def secrets_path(projects_root: Path | None = None, user_id: str | None = None) -> Path:
+    root = projects_root if projects_root is not None else _projects_root
+    if root is None:
+        raise RuntimeError("secrets store not initialized; call init_secrets() first")
+    uid = (user_id or "").strip()
+    if not uid:
+        try:
+            from auth_context import current_user_id
+
+            uid = current_user_id()
+        except Exception:
+            uid = ""
+    if uid and uid not in {".", ".."} and "/" not in uid and "\\" not in uid:
+        return Path(root) / ".users" / uid / "secrets.json"
+    return Path(root) / ".studio_secrets.json"
+
+
+def _secrets_rel(path: Path) -> str:
+    if _projects_root is None:
+        return path.name
+    try:
+        return str(path.relative_to(_projects_root)).replace("\\", "/")
+    except ValueError:
+        return path.name
+
+
+def _kv_key_for_path(path: Path) -> str:
+    return f"secrets:{_secrets_rel(path)}"
+
+
+def _pg_enabled() -> bool:
+    try:
+        import pg_backend as _pg
+
+        return bool(_pg.enabled())
+    except Exception:
+        return False
+
+
+def _invalidate_cache() -> None:
+    global _cache, _cache_key
+    _cache = None
+    _cache_key = None
 
 
 def _load_file(path: Path) -> dict[str, str]:
@@ -41,16 +86,175 @@ def _load_file(path: Path) -> dict[str, str]:
     return out
 
 
-def apply_to_environ(values: dict[str, str]) -> None:
-    for key, value in values.items():
-        if value:
-            os.environ[key] = value
+def _normalize_secret_map(data: Any) -> dict[str, str]:
+    if not isinstance(data, dict):
+        return {}
+    out: dict[str, str] = {}
+    for key in SECRET_KEYS:
+        val = data.get(key)
+        if isinstance(val, str) and val.strip():
+            out[key] = val.strip()
+    return out
+
+
+def _load_pg_map(path: Path) -> dict[str, str] | None:
+    """Load secrets dict from Postgres for *path*; None if missing / PG off."""
+    if not _pg_enabled():
+        return None
+    try:
+        import pg_backend as _pg
+
+        hit = _pg.load_kv(_kv_key_for_path(path))
+        if isinstance(hit, dict):
+            return _normalize_secret_map(hit)
+    except Exception:
+        return None
+    return None
+
+
+def _write_pg_map(path: Path, data: dict[str, str]) -> None:
+    import pg_backend as _pg
+
+    _pg.upsert_kv(_kv_key_for_path(path), data)
+
+
+def _write_disk_map(path: Path, data: dict[str, str]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    try:
+        path.chmod(0o600)
+    except OSError:
+        pass
+
+
+def _read_merged_secrets() -> dict[str, str]:
+    """Current-user secrets overlaid on shared instance secrets."""
+    global _cache, _cache_key
+    if _projects_root is None:
+        return {}
+    path = secrets_path(_projects_root)
+    cache_key = f"pg:{_pg_enabled()}:{path}"
+    if _cache is not None and _cache_key == cache_key:
+        return _cache
+
+    loaded: dict[str, str] = {}
+    if _pg_enabled():
+        shared_path = Path(_projects_root) / ".studio_secrets.json"
+        shared = _load_pg_map(shared_path) or {}
+        user = _load_pg_map(path) if path != shared_path else {}
+        # If user key missing entirely, treat as empty overlay (not disk).
+        if user is None:
+            user = {}
+        loaded = {**shared, **user}
+        # One-time migrate: PG empty but disk has data → push disk into PG.
+        if not loaded:
+            disk_shared = _load_file(shared_path)
+            disk_user = _load_file(path) if path != shared_path else {}
+            migrated = {**disk_shared, **disk_user}
+            if migrated:
+                if disk_shared:
+                    try:
+                        _write_pg_map(shared_path, disk_shared)
+                    except Exception:
+                        pass
+                if disk_user and path != shared_path:
+                    try:
+                        _write_pg_map(path, disk_user)
+                    except Exception:
+                        pass
+                loaded = migrated
+    else:
+        loaded = _load_file(path)
+        if path.name == "secrets.json":
+            shared = Path(_projects_root) / ".studio_secrets.json"
+            if shared.is_file() and shared != path:
+                merged = dict(_load_file(shared))
+                merged.update(loaded)
+                loaded = merged
+
+    _cache = loaded
+    _cache_key = cache_key
+    return loaded
+
+
+def get_secret(name: str, default: str = "") -> str:
+    """Read one secret: Postgres (or file fallback) first, then process env."""
+    file_vals = _read_merged_secrets()
+    if name in file_vals and file_vals[name]:
+        return file_vals[name]
+    return (os.environ.get(name) or default or "").strip()
+
+
+def all_secrets() -> dict[str, str]:
+    """Merged view: store values override env for the same key."""
+    merged: dict[str, str] = {}
+    for key in SECRET_KEYS:
+        env_val = (os.environ.get(key) or "").strip()
+        if env_val:
+            merged[key] = env_val
+    merged.update(_read_merged_secrets())
+    return merged
+
+
+def hydrate_secrets_from_pg(projects_root: Path) -> list[str]:
+    """No-op when PG is primary — kept for call-site compatibility.
+
+    Historically copied KV → disk; now readers hit Postgres directly.
+    Still migrates orphan disk files into PG once if KV is empty.
+    """
+    restored: list[str] = []
+    if not _pg_enabled():
+        return restored
+    root = Path(projects_root)
+    try:
+        import pg_backend as _pg
+
+        for key in _pg.list_kv_keys():
+            if not str(key).startswith("secrets:"):
+                continue
+            rel = str(key)[len("secrets:") :]
+            if not rel or ".." in Path(rel).parts:
+                continue
+            data = _pg.load_kv(key)
+            if isinstance(data, dict) and data:
+                restored.append(rel)
+        # Migrate leftover disk secrets into PG when present and KV empty for that path.
+        candidates = [root / ".studio_secrets.json"]
+        users = root / ".users"
+        if users.is_dir():
+            for user_dir in users.iterdir():
+                if user_dir.is_dir():
+                    candidates.append(user_dir / "secrets.json")
+        for path in candidates:
+            if not path.is_file():
+                continue
+            disk = _load_file(path)
+            if not disk:
+                continue
+            existing = _load_pg_map(path)
+            if existing:
+                continue
+            try:
+                _write_pg_map(path, disk)
+                restored.append(str(path.relative_to(root)).replace("\\", "/"))
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return restored
+
+
+def init_secrets(projects_root: Path) -> dict[str, str]:
+    """Remember projects root. Does not mutate os.environ."""
+    global _projects_root
+    _projects_root = Path(projects_root)
+    hydrate_secrets_from_pg(_projects_root)
+    _invalidate_cache()
+    return all_secrets()
 
 
 def load_and_apply(projects_root: Path) -> dict[str, str]:
-    values = _load_file(secrets_path(projects_root))
-    apply_to_environ(values)
-    return values
+    return init_secrets(projects_root)
 
 
 def mask_secret(value: str | None) -> str:
@@ -61,41 +265,169 @@ def mask_secret(value: str | None) -> str:
     return f"{value[:3]}…{value[-4:]}"
 
 
-def public_status() -> dict[str, Any]:
-    deepseek = bool(os.environ.get("DEEPSEEK_API_KEY"))
-    volc = bool(os.environ.get("VOLCENGINE_API_KEY") or os.environ.get("ARK_API_KEY"))
-    try:
-        from platform_config import deepseek_base_url, deepseek_model, seedance_model, seedream_model
-
-        base_url = deepseek_base_url()
-        model = deepseek_model()
-        seedream = seedream_model()
-        seedance = seedance_model()
-    except Exception:
-        base_url = os.environ.get("DEEPSEEK_BASE_URL") or ""
-        model = os.environ.get("DEEPSEEK_MODEL") or ""
-        seedream = os.environ.get("SEEDREAM_MODEL") or ""
-        seedance = os.environ.get("SEEDANCE_MODEL") or ""
+def _provider_public(item: dict[str, Any]) -> dict[str, Any]:
+    key_env = str(item.get("keyEnv") or "")
+    base_env = str(item.get("baseEnv") or "")
+    model_env = str(item.get("modelEnv") or "")
+    key = get_secret(key_env) if key_env else ""
+    base = get_secret(base_env, str(item.get("defaultBase") or ""))
+    model = get_secret(model_env, str(item.get("defaultModel") or ""))
+    models = item.get("models") or []
+    model_ids = [str(m.get("id") or m) for m in models if (m.get("id") if isinstance(m, dict) else m)]
     return {
-        "deepseek": {
-            "configured": deepseek,
-            "masked": mask_secret(os.environ.get("DEEPSEEK_API_KEY")),
-            "baseUrl": base_url,
-            "model": model,
-        },
-        "volcengine": {
-            "configured": volc,
-            "masked": mask_secret(os.environ.get("VOLCENGINE_API_KEY") or os.environ.get("ARK_API_KEY")),
-            "seedreamModel": seedream,
-            "seedanceModel": seedance,
-        },
-        "ready": deepseek and volc,
+        "id": item["id"],
+        "label": item["label"],
+        "kind": item["kind"],
+        "configured": bool(key),
+        "masked": mask_secret(key) if key else "",
+        "baseUrl": base,
+        "model": model,
+        "models": [
+            {"id": str(m["id"]), "label": str(m.get("label") or m["id"])}
+            if isinstance(m, dict)
+            else {"id": str(m), "label": str(m)}
+            for m in models
+            if (m.get("id") if isinstance(m, dict) else m)
+        ],
+        "modelKnown": bool(model) and (not model_ids or model in model_ids),
+        "docs": item.get("docs") or "",
+        "placeholder": item.get("placeholder") or "sk-...",
+        "hint": item.get("hint") or "",
+        "keyEnv": key_env,
+        "baseEnv": base_env,
+        "modelEnv": model_env,
     }
 
 
-def save_secrets(projects_root: Path, payload: dict[str, Any]) -> dict[str, Any]:
-    path = secrets_path(projects_root)
-    current = _load_file(path)
+def _comfyui_public() -> dict[str, Any]:
+    try:
+        from providers.comfyui import public_status as comfy_status
+
+        return comfy_status()
+    except Exception:
+        return {
+            "configured": bool(get_secret("COMFYUI_SERVER_URL")),
+            "reachable": False,
+            "serverUrl": get_secret("COMFYUI_SERVER_URL") or "",
+            "imageUrl": get_secret("COMFYUI_IMAGE_SERVER_URL") or "",
+            "videoUrl": get_secret("COMFYUI_VIDEO_SERVER_URL") or "",
+            "docs": "https://docs.gpuhome.cc/docs/env/comfyui.html",
+            "portsDocs": "https://docs.gpuhome.cc/docs/instance/open-ports.html",
+            "market": "https://gpuhome.cc/market",
+            "checkpoints": [],
+            "checkpoint": get_secret("COMFYUI_CHECKPOINT") or "",
+            "deviceName": "",
+            "error": "",
+            "hint": "在 gpuhome.cc/market 租 GPU → 选 ComfyUI 镜像 → 开放端口 → 填入自定义服务地址。",
+        }
+
+
+def _image_backend_id(volc_key: str) -> str:
+    if get_secret("COMFYUI_SERVER_URL") or get_secret("COMFYUI_IMAGE_SERVER_URL"):
+        return "comfyui"
+    if volc_key:
+        return "seedream"
+    return "none"
+
+
+def public_status() -> dict[str, Any]:
+    providers = [_provider_public(item) for item in LLM_PROVIDERS]
+    configured = [p for p in providers if p["configured"]]
+    preferred = get_secret("LLM_PROVIDER").lower()
+    backend = "none"
+    if preferred:
+        meta = provider_by_id(preferred)
+        if meta and any(p["id"] == preferred and p["configured"] for p in providers):
+            backend = preferred
+        elif configured:
+            backend = configured[0]["id"]
+    elif configured:
+        try:
+            from providers.llm import llm_backend_id
+
+            backend = llm_backend_id()
+        except Exception:
+            backend = configured[0]["id"]
+
+    deepseek = next((p for p in providers if p["id"] == "deepseek"), None)
+    cursor = next((p for p in providers if p["id"] == "cursor"), None)
+    volc_key = get_secret("VOLCENGINE_API_KEY") or get_secret("ARK_API_KEY")
+    try:
+        from platform_config import seedance_model, seedream_model
+
+        seedream = seedream_model()
+        seedance = seedance_model()
+    except Exception:
+        seedream = get_secret("SEEDREAM_MODEL")
+        seedance = get_secret("SEEDANCE_MODEL")
+
+    llm_ready = bool(configured)
+    return {
+        "llmProvider": preferred or (backend if backend != "none" else ""),
+        "llmProviders": providers,
+        "llmReady": llm_ready,
+        "llmBackend": backend,
+        "deepseek": {
+            "configured": bool(deepseek and deepseek["configured"]),
+            "masked": (deepseek or {}).get("masked") or "",
+            "baseUrl": (deepseek or {}).get("baseUrl") or "",
+            "model": (deepseek or {}).get("model") or "",
+        },
+        "cursor": {
+            "configured": bool(cursor and cursor["configured"]),
+            "masked": (cursor or {}).get("masked") or "",
+            "baseUrl": (cursor or {}).get("baseUrl") or "",
+            "model": (cursor or {}).get("model") or "auto",
+        },
+        "volcengine": {
+            "configured": bool(volc_key),
+            "masked": mask_secret(volc_key),
+            "seedreamModel": seedream,
+            "seedanceModel": seedance,
+        },
+        "comfyui": _comfyui_public(),
+        "imageBackend": _image_backend_id(volc_key),
+        "videoBackend": (
+            "comfyui"
+            if (get_secret("COMFYUI_SERVER_URL") or get_secret("COMFYUI_VIDEO_SERVER_URL"))
+            else ("seedance" if volc_key else "none")
+        ),
+        "storage": "postgres" if _pg_enabled() else "disk",
+        "ready": llm_ready
+        and (
+            bool(volc_key)
+            or bool(get_secret("COMFYUI_SERVER_URL"))
+            or bool(get_secret("COMFYUI_VIDEO_SERVER_URL"))
+        ),
+    }
+
+
+def save_secrets(
+    projects_root: Path,
+    payload: dict[str, Any],
+    *,
+    user_id: str | None = None,
+) -> dict[str, Any]:
+    """Persist secrets to Postgres when enabled; otherwise JSON file.
+
+    Pass user_id="" to force the shared instance scope (.studio_secrets.json),
+    e.g. Coolify bootstrap restore for all users' env fallback.
+    """
+    global _projects_root
+    _projects_root = Path(projects_root)
+    if user_id is not None:
+        path = secrets_path(_projects_root, user_id=user_id)
+    else:
+        path = secrets_path(_projects_root)
+
+    if _pg_enabled():
+        current = _load_pg_map(path) or {}
+        # Seed from disk once if PG row empty (migration).
+        if not current:
+            current = _load_file(path)
+    else:
+        current = _load_file(path)
+
     for key in SECRET_KEYS:
         if key not in payload:
             continue
@@ -104,20 +436,22 @@ def save_secrets(projects_root: Path, payload: dict[str, Any]) -> dict[str, Any]
             continue
         text = str(raw).strip()
         if text == "" or text == "********":
-            # empty means clear; mask placeholder means keep
             if text == "":
                 current.pop(key, None)
-                os.environ.pop(key, None)
             continue
         if key in MASKABLE and "…" in text and current.get(key):
-            # ignore accidental masked resubmit
             continue
         current[key] = text
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(current, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    try:
-        path.chmod(0o600)
-    except OSError:
-        pass
-    apply_to_environ(current)
+
+    if _pg_enabled():
+        try:
+            _write_pg_map(path, current)
+        except Exception as exc:
+            # Last-resort disk write if PG fails mid-request.
+            _write_disk_map(path, current)
+            raise RuntimeError(f"保存密钥到 Postgres 失败: {exc}") from exc
+    else:
+        _write_disk_map(path, current)
+
+    _invalidate_cache()
     return public_status()

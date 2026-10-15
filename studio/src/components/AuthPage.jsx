@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Clapperboard, Loader2 } from "lucide-react";
 import { api } from "../api";
 import { setSession } from "../lib/auth";
@@ -38,11 +39,12 @@ function isDemoCredentials(form, authConfig) {
   return form.username.trim().toLowerCase() === user && form.password === pass;
 }
 
-export function AuthPage({ brand, tagline, authConfig, onAuthed }) {
+export function AuthPage({ brand, tagline, authConfig, onAuthed, onClose, mode = "page" }) {
   const { t, locale, setLocale } = useLocale();
   const demoEnabled = authConfig?.demo?.enabled !== false;
   const googleCfg = authConfig?.google || {};
   const googleEnabled = Boolean(googleCfg.enabled && googleCfg.clientId);
+  const isModal = mode === "modal";
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
   const [form, setForm] = useState(() => demoPrefill(authConfig));
@@ -84,7 +86,7 @@ export function AuthPage({ brand, tagline, authConfig, onAuthed }) {
       body: "{}",
     });
     finish(res);
-    toast.success(t("auth.demoOk"));
+    toast.success(t("auth_page_demo_ok"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t]);
 
@@ -114,7 +116,7 @@ export function AuthPage({ brand, tagline, authConfig, onAuthed }) {
           body: JSON.stringify({ idToken, client: "WEB" }),
         });
         finish(res);
-        toast.success(t("auth.googleOk"));
+        toast.success(t("auth_page_google_ok"));
       } catch (err) {
         toast.error(String(err.message || err));
       } finally {
@@ -131,7 +133,7 @@ export function AuthPage({ brand, tagline, authConfig, onAuthed }) {
       clientId: googleCfg.clientId,
       locale,
       onCredential: (token) => void onGoogleCredential(token),
-      onError: (err) => toast.error(String(err.message || err || t("auth.googleFail"))),
+      onError: (err) => toast.error(String(err.message || err || t("auth_page_google_fail"))),
     });
   }, [googleEnabled, googleCfg.clientId, locale, onGoogleCredential, t]);
 
@@ -152,7 +154,7 @@ export function AuthPage({ brand, tagline, authConfig, onAuthed }) {
           }),
         });
         finish(res);
-        toast.success(t("auth.submitLogin"));
+        toast.success(t("auth_page_submit_login"));
       }
     } catch (err) {
       toast.error(String(err.message || err));
@@ -161,10 +163,22 @@ export function AuthPage({ brand, tagline, authConfig, onAuthed }) {
     }
   };
 
-  return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--stage)] px-4 text-[var(--ink)]">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(124,108,255,.22),_transparent_55%),radial-gradient(ellipse_at_bottom,_rgba(56,189,248,.12),_transparent_50%)]" />
-      <div className="relative w-full max-w-md rounded-3xl border border-[var(--line)] bg-[#0c0d14]/90 p-6 shadow-[0_30px_80px_rgba(0,0,0,.45)] backdrop-blur">
+  const content = (
+    <div
+      className={
+        isModal
+          ? "fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-black/70 px-4 py-8 backdrop-blur-sm"
+          : "relative flex min-h-screen items-center justify-center overflow-hidden bg-[var(--stage)] px-4 text-[var(--ink)]"
+      }
+      style={isModal ? { left: 0, top: 0, right: 0, bottom: 0 } : undefined}
+      role={isModal ? "dialog" : undefined}
+      aria-modal={isModal ? true : undefined}
+      onClick={isModal && onClose ? (e) => { if (e.target === e.currentTarget) onClose(); } : undefined}
+    >
+      {!isModal ? (
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(124,108,255,.22),_transparent_55%),radial-gradient(ellipse_at_bottom,_rgba(56,189,248,.12),_transparent_50%)]" />
+      ) : null}
+      <div className="relative w-full max-w-md rounded-3xl border border-[var(--line)] bg-[#0c0d14]/95 p-6 text-[var(--ink)] shadow-[0_30px_80px_rgba(0,0,0,.45)] backdrop-blur">
         <div className="mb-6 flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--gradient)] text-white shadow-[0_0_28px_rgba(124,108,255,.4)]">
@@ -172,32 +186,43 @@ export function AuthPage({ brand, tagline, authConfig, onAuthed }) {
             </span>
             <div>
               <div className="text-base font-semibold tracking-wide">{brand || "OpenMontage"}</div>
-              <div className="text-xs text-[var(--muted)]">{tagline || t("app.tagline")}</div>
+              <div className="text-xs text-[var(--muted)]">{tagline || t("shell_brand_tagline")}</div>
             </div>
           </div>
-          <div className="flex rounded-lg border border-[var(--line)] p-0.5 text-[11px]">
-            <button
-              type="button"
-              className={`rounded-md px-2 py-1 ${locale === "zh" ? "bg-white/10 text-white" : "text-white/50"}`}
-              onClick={() => setLocale("zh")}
-            >
-              {t("lang.zh")}
-            </button>
-            <button
-              type="button"
-              className={`rounded-md px-2 py-1 ${locale === "en" ? "bg-white/10 text-white" : "text-white/50"}`}
-              onClick={() => setLocale("en")}
-            >
-              {t("lang.en")}
-            </button>
+          <div className="flex items-center gap-2">
+            <div className="flex rounded-lg border border-[var(--line)] p-0.5 text-[11px]">
+              <button
+                type="button"
+                className={`rounded-md px-2 py-1 ${locale === "zh" ? "bg-white/10 text-white" : "text-white/50"}`}
+                onClick={() => setLocale("zh")}
+              >
+                {t("shell_locale_zh")}
+              </button>
+              <button
+                type="button"
+                className={`rounded-md px-2 py-1 ${locale === "en" ? "bg-white/10 text-white" : "text-white/50"}`}
+                onClick={() => setLocale("en")}
+              >
+                {t("shell_locale_en")}
+              </button>
+            </div>
+            {isModal && onClose ? (
+              <button
+                type="button"
+                className="rounded-lg px-2 py-1 text-xs text-white/45 hover:bg-white/[.06] hover:text-white"
+                onClick={onClose}
+              >
+                {t("auth_page_close")}
+              </button>
+            ) : null}
           </div>
         </div>
 
-        <h1 className="text-xl font-semibold">{t("auth.welcome")}</h1>
-        <p className="mt-1 text-sm text-white/55">{t("auth.subtitle")}</p>
+        <h1 className="text-xl font-semibold">{t("auth_page_welcome")}</h1>
+        <p className="mt-1 text-sm text-white/55">{isModal ? t("auth_page_subtitle_modal") : t("auth_page_subtitle")}</p>
 
         <form className="mt-5 space-y-3" onSubmit={onSubmit}>
-          <Field label={t("auth.username")}>
+          <Field label={t("auth_page_username")}>
             <input
               className={inputClass}
               value={form.username}
@@ -206,7 +231,7 @@ export function AuthPage({ brand, tagline, authConfig, onAuthed }) {
               required
             />
           </Field>
-          <Field label={t("auth.password")}>
+          <Field label={t("auth_page_password")}>
             <input
               className={inputClass}
               type="password"
@@ -217,11 +242,11 @@ export function AuthPage({ brand, tagline, authConfig, onAuthed }) {
             />
           </Field>
           {demoEnabled ? (
-            <p className="text-[11px] text-white/40">{t("auth.demoHint")}</p>
+            <p className="text-[11px] text-white/40">{t("auth_page_demo_hint")}</p>
           ) : null}
           <button type="submit" className="btn-primary mt-2 w-full" disabled={busy || googleBusy}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {t("auth.submitLogin")}
+            {t("auth_page_submit_login")}
           </button>
         </form>
 
@@ -229,23 +254,30 @@ export function AuthPage({ brand, tagline, authConfig, onAuthed }) {
           <div className="mt-5 space-y-2">
             <div className="flex items-center gap-3 text-[11px] text-white/30">
               <span className="h-px flex-1 bg-white/10" />
-              <span>{t("auth.googleHint")}</span>
+              <span>{t("auth_page_google_hint")}</span>
               <span className="h-px flex-1 bg-white/10" />
             </div>
             <div className="flex min-h-[44px] items-center justify-center" ref={googleBtnRef} />
             {googleBusy ? (
               <p className="flex items-center justify-center gap-2 text-[11px] text-white/45">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                {t("auth.googleBusy")}
+                {t("auth_page_google_busy")}
               </p>
             ) : null}
           </div>
         ) : null}
 
-        <p className="mt-4 text-center text-[11px] text-white/35">{t("auth.requiredHint")}</p>
+        <p className="mt-4 text-center text-[11px] text-white/35">
+          {isModal ? t("auth_page_modal_hint") : t("auth_page_required_hint")}
+        </p>
       </div>
     </div>
   );
+
+  if (isModal && typeof document !== "undefined") {
+    return createPortal(content, document.body);
+  }
+  return content;
 }
 
 export { SKIP_AUTO_DEMO_KEY };

@@ -20,10 +20,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# Healthcheck + FFmpeg (成片导出) + CJK fonts for board drawtext
+# Healthcheck + FFmpeg (成片导出) + CJK fonts for board drawtext + nginx edge
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends curl ffmpeg fonts-noto-cjk \
-  && rm -rf /var/lib/apt/lists/*
+  && apt-get install -y --no-install-recommends curl ffmpeg fonts-noto-cjk nginx \
+  && rm -rf /var/lib/apt/lists/* \
+  && mkdir -p /usr/share/nginx/html /var/lib/nginx /var/log/nginx /var/run \
+  && rm -f /etc/nginx/sites-enabled/default
 
 # Studio API: FastAPI + schema validation + YAML pipeline manifests
 COPY studio/server/requirements.txt /tmp/studio-requirements.txt
@@ -40,6 +42,9 @@ COPY studio/server ./studio/server
 COPY studio/skills ./studio/skills
 COPY studio/config ./studio/config
 COPY --from=ui /ui/dist ./studio/dist
+COPY studio/public/maintenance.html /usr/share/nginx/html/maintenance.html
+COPY studio/deploy/nginx-incontainer.conf /etc/nginx/conf.d/studio.conf.template
+COPY studio/deploy/entrypoint.sh /entrypoint.sh
 
 # Seed project lives in-repo (projects/ is gitignored for agent corpora)
 COPY studio/seed/welcome-ep01 ./studio/seed/welcome-ep01
@@ -47,13 +52,15 @@ COPY studio/seed/welcome-ep01 ./studio/seed/welcome-ep01
 RUN mkdir -p /data/projects \
   && cp -R ./studio/seed/welcome-ep01 /data/projects/welcome-ep01 \
   && useradd -m -u 10001 studio \
+  && chmod +x /entrypoint.sh \
   && chown -R studio:studio /app /data
 
-USER studio
+# Entrypoint runs nginx (root) + uvicorn; project files owned by studio.
 EXPOSE 8787
-ENV PYTHONPATH=/app/studio/server:/app
+ENV PYTHONPATH=/app/studio/server:/app \
+    STUDIO_APP_PORT=8788
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD curl -fsS "http://127.0.0.1:${PORT}/api/health" || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=25s --retries=5 \
+  CMD curl -fsS "http://127.0.0.1:${PORT}/api/health" || curl -fsS "http://127.0.0.1:${PORT}/maintenance.html" || exit 1
 
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8787", "--app-dir", "/app/studio/server"]
+CMD ["/entrypoint.sh"]

@@ -1,15 +1,34 @@
 # Local / Coolify-compatible Drama Studio stack
 # Usage:
 #   docker compose -f docker-compose.studio.yml up --build
-# Coolify: point Dockerfile to studio/Dockerfile, context = repo root, port 8787
+# Coolify: docker-compose build pack → this file (or Dockerfile-only + DATABASE_URL)
 
 services:
+  drama-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-omstudio}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-omstudio_change_me}
+      POSTGRES_DB: ${POSTGRES_DB:-omstudio}
+    volumes:
+      - drama_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
   drama-studio:
     build:
       context: .
       dockerfile: studio/Dockerfile
     image: openmontage-drama-studio:local
     restart: unless-stopped
+    depends_on:
+      drama-db:
+        condition: service_healthy
     ports:
       - "${PORT:-8787}:8787"
     environment:
@@ -17,9 +36,18 @@ services:
       PORT: "8787"
       OPENMONTAGE_ROOT: /app
       PROJECTS_ROOT: /data/projects
+      # Default: same-compose Postgres. Override with Coolify/aaPanel URL if needed.
+      DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-omstudio}:${POSTGRES_PASSWORD:-omstudio_change_me}@drama-db:5432/${POSTGRES_DB:-omstudio}?sslmode=disable}
+      STUDIO_DATABASE_URL: ${STUDIO_DATABASE_URL:-}
       STUDIO_DIST: /app/studio/dist
       STUDIO_PUBLIC_URL: ${STUDIO_PUBLIC_URL:-http://localhost:8787}
+      STUDIO_CORS_ORIGINS: ${STUDIO_CORS_ORIGINS:-${STUDIO_PUBLIC_URL:-http://localhost:8787}}
       API_BASE_URL: ${API_BASE_URL:-https://api-app.dtok.io/api/v1}
+      STUDIO_AUTH_REQUIRED: ${STUDIO_AUTH_REQUIRED:-true}
+      STUDIO_DEMO_ENABLED: ${STUDIO_DEMO_ENABLED:-true}
+      STUDIO_DEMO_AUTO_ENTER: ${STUDIO_DEMO_AUTO_ENTER:-false}
+      STUDIO_DEMO_SECRET: ${STUDIO_DEMO_SECRET:-}
+      STUDIO_OPS_TOKEN: ${STUDIO_OPS_TOKEN:-}
       # Optional generation keys (same names as repo .env.example / dtok-style secrets)
       FAL_KEY: ${FAL_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
@@ -29,10 +57,24 @@ services:
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       DEEPSEEK_BASE_URL: ${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
       DEEPSEEK_MODEL: ${DEEPSEEK_MODEL:-deepseek-chat}
+      LLM_PROVIDER: ${LLM_PROVIDER:-}
+      CURSOR_API_KEY: ${CURSOR_API_KEY:-}
+      CURSOR_API_BASE: ${CURSOR_API_BASE:-https://api.cursor.com}
+      CURSOR_MODEL: ${CURSOR_MODEL:-auto}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       VOLCENGINE_API_KEY: ${VOLCENGINE_API_KEY:-}
       ARK_API_KEY: ${ARK_API_KEY:-}
       DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
       ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
+      OSS_API_BASE_URL: ${OSS_API_BASE_URL:-}
+      OSS_CONSOLE_USERNAME: ${OSS_CONSOLE_USERNAME:-}
+      OSS_CONSOLE_PASSWORD: ${OSS_CONSOLE_PASSWORD:-}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
+      MINIO_BUCKET: ${MINIO_BUCKET:-dtok-app}
+      MINIO_PREFIX: ${MINIO_PREFIX:-openmontage}
     volumes:
       - drama_projects:/data/projects
     healthcheck:
@@ -40,7 +82,8 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 15s
+      start_period: 20s
 
 volumes:
   drama_projects:
+  drama_pg:

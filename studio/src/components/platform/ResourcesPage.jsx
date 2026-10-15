@@ -1,18 +1,39 @@
+import { useMemo, useState } from "react";
 import { resolveIcon } from "../../lib/icons";
 import { PageShell } from "./PageShell";
+
+const GROUPS = [
+  { id: "all", label: "全部" },
+  { id: "docs", label: "文档" },
+  { id: "studio", label: "站内入口" },
+  { id: "providers", label: "模型与工具" },
+];
 
 export function ResourcesPage({ config, onNavigate }) {
   const links = config?.resources || [];
   const page = config?.pages?.resources || {};
+  const [group, setGroup] = useState("all");
+
+  const visible = useMemo(() => {
+    if (group === "all") return links;
+    return links.filter((l) => (l.group || "docs") === group);
+  }, [links, group]);
 
   return (
     <PageShell
       eyebrow={page.eyebrow || "Resources"}
-      title={page.title || "资源中心"}
-      description={page.description || "文档、模型控制台与制作参考入口。"}
+      title={page.title || "资源导航"}
+      description={page.description || "文档、站内入口、模型控制台与制作参考。"}
     >
+      <div className="mb-4 flex flex-wrap gap-2">
+        {GROUPS.map((g) => (
+          <button key={g.id} type="button" className={group === g.id ? "chip-active" : "chip"} onClick={() => setGroup(g.id)}>
+            {g.label}
+          </button>
+        ))}
+      </div>
       <div className="grid gap-3 md:grid-cols-2">
-        {links.map((link) => {
+        {visible.map((link) => {
           const Icon = resolveIcon(link.icon);
           return (
             <a

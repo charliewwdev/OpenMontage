@@ -14,7 +14,11 @@ export async function api(path, options = {}) {
     clearSession();
   }
   if (!res.ok) {
-    throw new Error((data && (data.error || data.msg || data.message)) || res.statusText || "request failed");
+    const msg = (data && (data.error || data.msg || data.message)) || res.statusText || "request failed";
+    if (res.status === 401 && /login required/i.test(String(msg))) {
+      throw new Error("请先登录后再调用模型或保存内容");
+    }
+    throw new Error(msg);
   }
   return data;
 }

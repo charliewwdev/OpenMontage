@@ -1,4 +1,5 @@
 import {
+  Activity,
   BookOpen,
   Clapperboard,
   Compass,
@@ -29,6 +30,7 @@ import {
 } from "lucide-react";
 
 const ICONS = {
+  Activity,
   BookOpen,
   Clapperboard,
   Compass,

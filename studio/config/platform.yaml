@@ -5,22 +5,26 @@
 product:
   name: OpenMontage Drama Studio
   brand: OpenMontage
-  tagline: 影视工坊 · 本地生产
+  tagline: 自带密钥 · 一站式短剧工坊
   publicUrlEnv: STUDIO_PUBLIC_URL
 
 auth:
+  # Browse-first: left nav + public GETs need no login.
+  # Auth is required only for model/generation calls and other mutations.
   required: true
+  gateApp: false
+  defaultNav: workshop
   client: WEB
   methods:
     - password
     - google
-  # Prefill + auto-enter Demo so first visit lands in the studio immediately.
+  # Soft launch: Demo is opt-in only (no auto-enter).
   # Override Google web client via STUDIO_GOOGLE_CLIENT_ID if needed.
   google:
     enabled: true
     # Google Cloud OAuth client "OpenMontage Studio" (dtok-438fb) — GIS one-tap / button
     clientId: 165025931859-umal625a9njtveircsijfcr6d1v5s2dk.apps.googleusercontent.com
-  # Public demo: one-click / auto enter without DTok; operates shared project data
+  # Optional Demo (shared seed data). Disabled auto-enter for product launch.
   demo:
     enabled: true
     userId: demo
@@ -29,8 +33,8 @@ auth:
     displayName: Demo 体验账号
     ttlDays: 7
     seedProjectId: welcome-ep01
-    autoEnter: true
-    prefill: true
+    autoEnter: false
+    prefill: false
 
 i18n:
   defaultLocale: zh
@@ -81,8 +85,8 @@ defaults:
   episodeCount: 3
   deepseekBaseUrl: https://api.deepseek.com
   deepseekModel: deepseek-chat
-  seedreamModel: doubao-seedream-5-0-260128
-  seedanceModel: ""
+  seedreamModel: doubao-seedream-5-0-pro-260628
+  seedanceModel: doubao-seedance-2-0-fast-260128
   visualStyle: 当代都市夜戏，电影感冷暖对比
   seedanceApiUrl: https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks
 
@@ -127,6 +131,9 @@ sixSteps:
   - id: storyboard
     label: 分镜
     note: 镜头与视频
+  - id: audio
+    label: 配音
+    note: 旁白与对白
   - id: edit
     label: 剪辑
     note: 排序与成片
@@ -164,26 +171,39 @@ entryCards:
     desc: 专业爽剧模型 · 竖屏 9:16
     tone: from-[#ef4444] via-[#f97316] to-[#fb7185]
     available: true
+    preset:
+      genre: 赘婿逆袭
+      ratio: "9:16"
   - id: short
     title: 短剧
     badge: "+"
     desc: 小说改编 / 横屏 16:9
     tone: from-[#3b82f6] via-[#6366f1] to-[#8b5cf6]
     available: true
+    preset:
+      genre: 都市情感
+      ratio: "16:9"
   - id: formal
     title: 正剧
-    badge: ""
-    desc: 即将上线
+    badge: "+"
+    desc: 现实题材 · 横屏 16:9
     tone: from-[#475569] to-[#334155]
-    available: false
+    available: true
+    preset:
+      genre: 都市情感
+      ratio: "16:9"
   - id: upload
     title: 上传剧本
     badge: "+"
     desc: TXT / MD / DOCX 转制作
     tone: from-[#eab308] via-[#f59e0b] to-[#f97316]
-    available: false
+    available: true
+    mode: upload
 
 nav:
+  - id: tv
+    label: 作品频道
+    icon: Tv
   - id: assets
     label: 个人资产
     icon: Images
@@ -205,9 +225,6 @@ nav:
   - id: inspire
     label: 灵感广场
     icon: Compass
-  - id: tv
-    label: 作品频道
-    icon: Tv
   - id: cup
     label: 创作挑战
     icon: Trophy
@@ -215,8 +232,11 @@ nav:
     label: 资源导航
     icon: Globe
   - id: keys
-    label: 密钥配置
+    label: 模型配置
     icon: KeyRound
+  - id: usage
+    label: 用量统计
+    icon: Activity
   - id: help
     label: 帮助中心
     icon: HelpCircle
@@ -230,49 +250,102 @@ nav:
 tools:
   - id: script
     title: 剧本工作台
-    desc: 生成 / 续写 / 重写 / 定稿
+    desc: AI 剧本创作、续写、重写与定稿
     icon: ScrollText
+    group: text
     nav: workshop
     step: script
+  - id: brief
+    title: 需求优化
+    desc: 把一句话想法扩写成完整 brief
+    icon: Sparkles
+    group: text
+    nav: agent
   - id: character
     title: 角色造型
-    desc: Seedream 出图与版本管理
+    desc: 概念设计与角色原画出图
     icon: Users
+    group: visual
     nav: workshop
     step: character
   - id: scene
     title: 空镜场景
-    desc: 空间与光线设定稿
+    desc: 场景绘制、空间与光线设定
     icon: ImageIcon
+    group: visual
     nav: workshop
     step: scene
+  - id: prop
+    title: 道具设计
+    desc: 关键道具与材质细节生成
+    icon: ImageIcon
+    group: visual
+    nav: workshop
+    step: prop
   - id: storyboard
     title: 分镜导演台
-    desc: 拆镜与 Seedance 视频
+    desc: 视觉分镜拆解与镜头脚本
     icon: Clapperboard
+    group: video
+    nav: workshop
+    step: storyboard
+  - id: seedance
+    title: AI 视频生成
+    desc: Seedance 动态分镜与影像合成
+    icon: Film
+    group: video
     nav: workshop
     step: storyboard
   - id: edit
     title: 剪辑成片
-    desc: 时间线与 FFmpeg 导出
+    desc: 时间线编排与 FFmpeg 导出
     icon: Scissors
+    group: video
     nav: workshop
     step: edit
+  - id: audio-guide
+    title: 配音工作台
+    desc: 按集生成旁白与对白配音
+    icon: Mic2
+    group: audio
+    nav: workshop
+    step: audio
   - id: agent
     title: 创作 Agent
-    desc: 一句话建立项目并开写
+    desc: 一句话或剧本一键成片
     icon: Sparkles
+    group: workflow
     nav: agent
-  - id: keys
-    title: 密钥配置
-    desc: DeepSeek / 火山一键写入
-    icon: KeyRound
-    nav: keys
   - id: canvas
     title: 无限画布
     desc: 项目流程节点可视化
     icon: Wand2
+    group: workflow
     nav: canvas
+  - id: inspire
+    title: 灵感广场
+    desc: 浏览提示词与影视参考图
+    icon: Compass
+    group: workflow
+    nav: inspire
+  - id: assets
+    title: 个人资产
+    desc: 素材库与提示词管理
+    icon: Images
+    group: workflow
+    nav: assets
+  - id: keys
+    title: 模型配置
+    desc: 文本与媒体供应商 API Key
+    icon: KeyRound
+    group: workflow
+    nav: keys
+  - id: usage
+    title: 用量统计
+    desc: 请求、Token 与费用趋势
+    icon: Activity
+    group: workflow
+    nav: usage
 
 inspirePrompts:
   - tag: 都市爽剧
@@ -312,36 +385,65 @@ resources:
     href: help
     icon: FileText
     external: false
+    group: docs
   - title: 六步工坊说明
     desc: 剧本 → 角色 → 场景 → 道具 → 分镜 → 剪辑
     href: help
     icon: Film
     external: false
+    group: docs
+  - title: Skill 专家
+    desc: 浏览内置导演与优化 Skill
+    href: skills
+    icon: BookOpen
+    external: false
+    group: docs
+  - title: 个人资产
+    desc: 素材库与提示词管理
+    href: assets
+    icon: Images
+    external: false
+    group: studio
+  - title: 灵感广场
+    desc: 影视参考图与提示词
+    href: inspire
+    icon: Compass
+    external: false
+    group: studio
+  - title: 文本大模型
+    desc: OpenAI / Claude / Gemini / 通义等控制台
+    href: https://platform.openai.com/api-keys
+    icon: ExternalLink
+    external: true
+    group: providers
   - title: DeepSeek API
     desc: 剧本模型文档
     href: https://platform.deepseek.com/api-docs/
     icon: ExternalLink
     external: true
+    group: providers
   - title: 火山方舟
     desc: Seedream / Seedance 控制台
     href: https://console.volcengine.com/ark
     icon: ExternalLink
     external: true
+    group: providers
   - title: FFmpeg 指南
     desc: 剪辑与导出依赖
     href: https://ffmpeg.org/documentation.html
     icon: Mic2
     external: true
+    group: providers
 
 helpSections:
   - title: 快速开始
-    body: 1. 在「密钥配置」写入 DeepSeek 与火山 ARK Key。2. 新建项目或用创作 Agent。3. 按六步完成剧本到成片。
+    body: 1. 登录账号。2. 打开「模型配置」，填入文本大模型与火山 ARK Key（BYOK，密钥仅你可见）。3. 用创作 Agent「一键全流程成片」，或新建项目后逐步走六步工坊。
   - title: 六步工坊
-    body: 剧本（DeepSeek）→ 角色/场景/道具（Seedream）→ 分镜（Seedance）→ 剪辑（FFmpeg）。每一步都可以单独重跑或换版本。
-  - title: 密钥与能力
-    body: 未配置 Key 时，相关按钮会引导你一键进入密钥页。密钥保存在服务器 PROJECTS_ROOT/.studio_secrets.json，热加载无需重启。
+    body: 剧本（文本大模型）→ 角色/场景/道具（Seedream）→ 分镜（Seedance）→ 配音 → 剪辑（FFmpeg）。也可用「一键全流程」后台自动跑通；每一步仍可单独重跑或换版本。
+  - title: 模型配置与能力
+    body: 支持智川云 Token（tokens.gpuhome.cc）、DeepSeek、OpenAI、Claude、Gemini、通义、Kimi、豆包、智谱、Grok、MiniMax、OpenRouter、Cursor Auto 等。出图/出片可用火山方舟，或在智川云租 GPU 后填写 ComfyUI 地址。密钥按账号隔离保存，热加载无需重启。
   - title: 资产与画布
-    body: 资产库汇总角色/场景/道具图片；无限画布展示当前项目节点进度；TV 页回看成片导出。
+    body: 资产库汇总角色/场景/道具图片与个人上传；提示词库可新建复用；无限画布展示当前项目节点进度；作品频道回看成片导出。
 
 splitStages:
   - startsAt: 0
@@ -384,38 +486,216 @@ canvasSteps:
     y: 120
   - id: character
     label: 角色
-    x: 320
+    x: 280
     y: 40
   - id: scene
     label: 场景
-    x: 320
+    x: 280
     y: 200
   - id: prop
     label: 道具
-    x: 320
+    x: 280
     y: 360
   - id: storyboard
     label: 分镜
-    x: 560
-    y: 200
+    x: 520
+    y: 120
+  - id: audio
+    label: 配音
+    x: 520
+    y: 280
   - id: edit
     label: 剪辑
-    x: 800
+    x: 760
     y: 200
+
+skillSources:
+  - id: all
+    label: 全部来源
+  - id: official
+    label: 官方精选
+  - id: community
+    label: 用户分享
+
+skillCategories:
+  - id: all
+    label: 全部分类
+  - id: text
+    label: 文本写作
+  - id: image
+    label: 图片设计
+  - id: video
+    label: 视频创作
+  - id: audio
+    label: 音频音乐
+  - id: film
+    label: 影视制作
+  - id: business
+    label: 商业营销
+  - id: productivity
+    label: 效率工具
+  - id: other
+    label: 其他
+
+skillTags:
+  - 全部标签
+  - 短剧漫剧
+  - 剧本创作
+  - 分镜设计
+  - 角色设计
+  - 场景设计
+  - 提示词
+  - 镜头语言
+  - 表演指导
+  - 图片生成
+  - 视频生成
+  - 配音旁白
+  - 歌曲音乐
+  - 视频拆解
+  - 优化改写
+  - 广告营销
+  - 电商视觉
+  - 社媒运营
+  - Seedance
+  - 创作工作流
+
+# Catalog metadata merged onto local SKILL.md; extras appear as official cards.
+skillCatalog:
+  - id: drama-script
+    title: 分集剧本生成
+    summary: 根据题材与画幅生成可拍摄短剧分集剧本，并同步角色 / 场景 / 道具档案。
+    source: official
+    category: film
+    tags: [短剧漫剧, 剧本创作]
+    accent: "#7c6cff"
+  - id: drama-shot-prompt
+    title: 影视分镜提示词
+    summary: 把定稿单集拆成 Seedance 可用镜头提示词，保留对白与素材引用。
+    source: official
+    category: film
+    tags: [短剧漫剧, 分镜设计, 镜头语言, Seedance]
+    accent: "#a78bfa"
+  - id: script-brief
+    title: 爽剧创作需求优化
+    summary: 把一句话想法整理成可执行 brief，直接回填后续剧本生成。
+    source: official
+    category: text
+    tags: [优化改写, 剧本创作, 短剧漫剧]
+    accent: "#60a5fa"
+  - id: character-look
+    title: 角色造型设计
+    summary: 为短剧主角生成稳定造型描述与出图指引，保持多场戏一致。
+    source: official
+    category: image
+    tags: [角色设计, 图片生成, 短剧漫剧]
+    accent: "#f472b6"
+    prompt: 请按角色造型 Skill：为短剧主角设计稳定造型（发型服装妆面）、三视图要点与 Seedream 出图提示词。
+  - id: scene-look
+    title: 场景空间设计
+    summary: 空镜与实景空间设定，输出光线、色调与可复用场景板。
+    source: official
+    category: image
+    tags: [场景设计, 图片生成]
+    accent: "#34d399"
+    prompt: 请按场景设计 Skill：为一组短剧空镜设计空间、光线与色调，并给出可复用场景板提示词。
+  - id: director-workflow
+    title: 导演工作流
+    summary: 用导演思维串联剧本→素材→分镜→成片，控制品质与节奏。
+    source: official
+    category: productivity
+    tags: [创作工作流, 短剧漫剧]
+    accent: "#fbbf24"
+    prompt: 请按导演工作流 Skill：帮我规划从剧本到成片的六步计划，并指出每步验收标准。
+  - id: voice-guide
+    title: 角色配音旁白
+    summary: 为角色选择音色气质，生成旁白与对白配音说明。
+    source: official
+    category: audio
+    tags: [配音旁白, 短剧漫剧]
+    accent: "#fb923c"
+    prompt: 请按配音旁白 Skill：为主要角色设定音色气质，并写一段开场旁白。
+  - id: seedance-clip
+    title: Seedance 镜头成片
+    summary: 针对单镜图生视频，控制时长、运镜与对白节奏。
+    source: official
+    category: video
+    tags: [视频生成, Seedance, 镜头语言]
+    accent: "#22d3ee"
+    prompt: 请按 Seedance 镜头 Skill：把这一场戏拆成 4–15 秒可生成片段，写清景别运镜与对白。
+
+toolHub:
+  categories:
+    - id: text
+      title: 文本创作
+      desc: AI剧本创作、短剧脚本、影视分镜、叙事构思
+      accent: "from-[#1d4ed8] to-[#60a5fa]"
+      nav: workshop
+      step: script
+    - id: visual
+      title: 视觉创作
+      desc: 概念设计、角色原画、场景绘制、视觉分镜
+      accent: "from-[#9d174d] to-[#f472b6]"
+      nav: workshop
+      step: character
+    - id: audio
+      title: 音频创作
+      desc: 配音合成、音效设计、背景音乐、角色语音
+      accent: "from-[#c2410c] to-[#fb923c]"
+      nav: workshop
+      step: audio
+    - id: video
+      title: 视频创作
+      desc: AI视频生成、动态分镜、影像合成、特效制作
+      accent: "from-[#047857] to-[#34d399]"
+      nav: workshop
+      step: storyboard
+    - id: workshop
+      title: 影视工坊
+      desc: 面向短剧、MV、广告等成片目标的专业场景化工作流
+      accent: "from-[#4c1d95] to-[#8b5cf6]"
+      nav: workshop
+    - id: canvas
+      title: 画布创作
+      desc: 可视化工作流编排，连接多个AI节点，创造无限可能
+      accent: "from-[#a16207] to-[#fbbf24]"
+      nav: canvas
+  workflow:
+    title: AI短剧创作完整流程
+    description: 用导演思维驾驭AI创作：平台提供AI创作能力，你是导演——生成素材、把控品质、剪辑成片
+    steps:
+      - title: 定剧本
+        desc: AI生成分镜剧本，包含场景描述、角色对话、动作指示
+        step: script
+      - title: 选演员
+        desc: AI生成虚拟角色形象和场景概念图
+        step: character
+      - title: 拍画面
+        desc: AI图生视频，让静态角色和场景动起来
+        step: storyboard
+      - title: 做配音
+        desc: AI生成旁白与对白配音，剪辑时可混入音轨
+        step: audio
+      - title: 剪成片
+        desc: 把素材剪辑成完整短剧并导出
+        step: edit
 
 pages:
   inspire:
     eyebrow: Inspiration
     title: 灵感广场
-    description: Pinterest 影视灵感素材墙，按角色 / 场景 / 道具浏览；下方开篇点子可一键带入创作。
+    description: 探索影视灵感素材，学习提示词技巧；点击卡片查看完整创作提示词，一键复制或带入创作。
   challenge:
     eyebrow: Challenge
     title: 创作挑战
     description: 限时主题任务，帮你练熟六步工坊节奏。完成进度会计入项目备注。
   tools:
     eyebrow: Creation center
-    title: 创作中心
-    description: 多模态影视工具入口。点击即可跳转到对应工作台或配置页。
+    title: AI创作中心
+    description: 直接描述创意，或选择专业分类开始创作
+  skills:
+    eyebrow: Skills
+    title: 把专业方法装进你的创作 Agent
+    description: 发现、安装并管理创作 Skill。输入 /skill-name 可直接指定技能，也可按需允许 Agent 自动调用。
   resources:
     eyebrow: Resources
     title: 资源中心

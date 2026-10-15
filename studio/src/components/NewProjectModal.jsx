@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { api } from "../api";
+import { ModalOverlay } from "./ModalPortal";
 
 export function NewProjectModal({ open, onClose, onCreated }) {
   const [title, setTitle] = useState("");
@@ -32,10 +33,11 @@ export function NewProjectModal({ open, onClose, onCreated }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(16,24,39,.55)] p-4" onClick={onClose}>
+    <ModalOverlay onClose={onClose} className="bg-[rgba(16,24,39,.55)]">
       <div
-        className="panel max-h-[90vh] w-full max-w-2xl overflow-y-auto p-6 shadow-float"
+        className="panel my-auto max-h-[90vh] w-full max-w-2xl overflow-y-auto p-6 shadow-float"
         onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
       >
         <header className="mb-5 flex items-start justify-between gap-4">
           <div>
@@ -103,6 +105,6 @@ export function NewProjectModal({ open, onClose, onCreated }) {
           </button>
         </footer>
       </div>
-    </div>
+    </ModalOverlay>
   );
 }

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import socket
 import ssl
@@ -29,6 +30,19 @@ _UA = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
 )
+
+_STREAM_TAIL = re.compile(
+    r"(?is)\s*(?:stream|catch up|now streaming|watch now|see which|available on|"
+    r"on hbo|on max|on netflix|utm_source=).*$"
+)
+
+_CATEGORY_PROMPT_HINTS = {
+    "character": "电影级角色肖像，浅景深，自然皮肤纹理，电影灯光，情绪明确",
+    "scene": "电影场景空镜，广角构图，氛围光，空间关系清晰，画面中不出现主体角色",
+    "prop": "电影道具特写，材质细节清晰，柔光产品摄影，干净背景",
+    "style": "强视觉风格定调，统一色板与光影语言，电影调色，专业摄影构图",
+    "storyboard": "影视分镜感画面，叙事构图，镜头语言明确，电影质感",
+}
 
 _SEED_CANDIDATES = (
     Path(os.environ.get("STUDIO_PINTEREST_SEED", "")),
@@ -122,16 +136,20 @@ def _pin_from_raw(pin: dict[str, Any], *, fallback_board: str = "") -> dict[str,
     if isinstance(board, dict):
         board_name = str(board.get("name") or board.get("url") or "")
     title = str(pin.get("description") or pin.get("grid_title") or board_name or "Pin").strip() or "Pin"
-    return {
-        "id": str(pin.get("id") or image),
-        "title": title[:120],
-        "description": title[:400],
-        "imageUrl": image,
-        "link": str(pin.get("link") or f"https://www.pinterest.com/pin/{pin.get('id')}/"),
-        "board": board_name or fallback_board or "pinterest",
-        "category": _guess_category(title, board_name),
-        "source": "pinterest",
-    }
+    category = _guess_category(title, board_name)
+    return _with_prompt(
+        {
+            "id": str(pin.get("id") or image),
+            "title": title[:120],
+            "description": title[:400],
+            "imageUrl": image,
+            "link": str(pin.get("link") or f"https://www.pinterest.com/pin/{pin.get('id')}/"),
+            "board": board_name or fallback_board or "pinterest",
+            "category": category,
+            "mediaType": "image",
+            "source": "pinterest",
+        }
+    )
 
 
 def _guess_category(text: str, board: str = "") -> str:
@@ -147,6 +165,42 @@ def _guess_category(text: str, board: str = "") -> str:
         if any(k in blob for k in kws):
             return cat
     return "style"
+
+
+def _clean_prompt_text(text: str) -> str:
+    cleaned = _STREAM_TAIL.sub("", (text or "").strip())
+    cleaned = re.sub(r"\s+", " ", cleaned).strip(" -–—|")
+    return cleaned
+
+
+def _build_prompt(*, title: str, description: str, category: str, explicit: str = "") -> str:
+    if explicit.strip():
+        return explicit.strip()[:1200]
+    raw = _clean_prompt_text(description or title)
+    if len(raw) >= 60:
+        return raw[:1200]
+    subject = _clean_prompt_text(title or description) or "影视画面"
+    hint = _CATEGORY_PROMPT_HINTS.get(category, "电影级画面，专业摄影构图，清晰细节")
+    return (
+        f"{subject[:220]}。"
+        f"{hint}。"
+        "画面干净，清晰度高，细节清晰，专业摄影构图，无文字、无水印、无 LOGO。"
+    )[:1200]
+
+
+def _with_prompt(item: dict[str, Any]) -> dict[str, Any]:
+    category = str(item.get("category") or "style")
+    prompt = _build_prompt(
+        title=str(item.get("title") or ""),
+        description=str(item.get("description") or ""),
+        category=category,
+        explicit=str(item.get("prompt") or ""),
+    )
+    out = dict(item)
+    out["prompt"] = prompt
+    out["hasPrompt"] = bool(prompt.strip())
+    out["mediaType"] = str(item.get("mediaType") or "image")
+    return out
 
 
 def _load_seed() -> list[dict[str, Any]]:
@@ -165,17 +219,27 @@ def _load_seed() -> list[dict[str, Any]]:
             image = str(item.get("imageUrl") or item.get("image") or "").strip()
             if not image:
                 continue
+            title = str(item.get("title") or "Pin")[:120]
+            description = str(item.get("description") or item.get("title") or "")[:800]
+            category = str(
+                item.get("category")
+                or _guess_category(title, str(item.get("board") or ""))
+            )
             out.append(
-                {
-                    "id": str(item.get("id") or image),
-                    "title": str(item.get("title") or "Pin")[:120],
-                    "description": str(item.get("description") or item.get("title") or "")[:400],
-                    "imageUrl": _normalize_image(image),
-                    "link": str(item.get("link") or "https://www.pinterest.com/"),
-                    "board": str(item.get("board") or "seed"),
-                    "category": str(item.get("category") or _guess_category(str(item.get("title") or ""), str(item.get("board") or ""))),
-                    "source": "pinterest",
-                }
+                _with_prompt(
+                    {
+                        "id": str(item.get("id") or image),
+                        "title": title,
+                        "description": description[:400],
+                        "imageUrl": _normalize_image(image),
+                        "link": str(item.get("link") or "https://www.pinterest.com/"),
+                        "board": str(item.get("board") or "seed"),
+                        "category": category,
+                        "prompt": str(item.get("prompt") or ""),
+                        "mediaType": "image",
+                        "source": "pinterest",
+                    }
+                )
             )
         if out:
             return out
@@ -261,67 +325,180 @@ def _dedupe(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return uniq
 
 
+def proxied_image_url(url: str) -> str:
+    """Legacy helper — prefer inspire_store.public_media_url after ingest."""
+    raw = (url or "").strip()
+    if not raw:
+        return ""
+    if raw.startswith("/api/inspire/media/") or raw.startswith("/api/inspire/img"):
+        return raw
+    return raw
+
+
+def _public_items(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Strip remote URLs / external links — clients only see local media paths."""
+    out: list[dict[str, Any]] = []
+    for item in items:
+        row = dict(item)
+        iid = str(row.get("id") or "").strip()
+        image = str(row.get("imageUrl") or "").strip()
+        if image.startswith("/api/inspire/media/"):
+            pass
+        elif iid:
+            row["imageUrl"] = f"/api/inspire/media/{iid}"
+        else:
+            continue
+        row.pop("link", None)
+        row.pop("originUrl", None)
+        row.pop("boardUrl", None)
+        out.append(row)
+    return out
+
+
+def fetch_remote_image(url: str) -> tuple[bytes, str]:
+    """Fetch a remote inspiration image (used by /api/inspire/img)."""
+    raw = (url or "").strip()
+    if not raw.startswith("https://"):
+        raise ValueError("invalid image url")
+    host = (urllib.parse.urlparse(raw).hostname or "").lower()
+    if not (host.endswith("pinimg.com") or host.endswith("pinterest.com") or host.endswith("pinimg.com.")):
+        raise ValueError("host not allowed")
+    data = b""
+    curl = shutil.which("curl")
+    if curl:
+        proc = subprocess.run(
+            [
+                curl,
+                "-fsSL",
+                "--connect-timeout",
+                "8",
+                "--max-time",
+                "25",
+                "-A",
+                _UA,
+                "-H",
+                "Accept: image/avif,image/webp,image/*,*/*",
+                raw,
+            ],
+            capture_output=True,
+            check=False,
+        )
+        if proc.returncode == 0 and proc.stdout:
+            data = proc.stdout
+    if not data:
+        req = urllib.request.Request(
+            raw,
+            headers={"Accept": "image/avif,image/webp,image/*,*/*", "User-Agent": _UA},
+        )
+        with urllib.request.urlopen(req, timeout=20, context=_ssl_context()) as resp:
+            data = resp.read()
+    if not data:
+        raise RuntimeError("empty image body")
+    ctype = "image/jpeg"
+    lower = raw.lower()
+    if lower.endswith(".png"):
+        ctype = "image/png"
+    elif lower.endswith(".webp"):
+        ctype = "image/webp"
+    elif lower.endswith(".gif"):
+        ctype = "image/gif"
+    return data, ctype
+
+
 def fetch_pins(
     limit: int = 48,
     force: bool = False,
     category: str = "all",
     offset: int = 0,
+    q: str = "",
+    media_type: str = "all",
 ) -> dict[str, Any]:
-    now = time.time()
-    cached = False
-    if not force and _CACHE["items"] and now - float(_CACHE["ts"]) < _CACHE_TTL:
-        pool = list(_CACHE["items"])
-        source = str(_CACHE["source"] or "pinterest")
-        cached = True
-    else:
-        seed = _load_seed()
-        live: list[dict[str, Any]] = []
-        errors: list[str] = []
-        # Pull more pins from more sources so the wall stays dense after pagination.
-        for src in _sources()[:12]:
-            try:
-                if src.get("kind") == "board":
-                    batch = _from_board_pidgets(src["user"], src.get("board") or "", 50)
-                else:
-                    batch = _from_user_pidgets(src["user"], 50)
-                live.extend(batch)
-            except Exception as exc:  # noqa: BLE001
-                errors.append(f"{src.get('label') or src.get('user')}: {exc}")
-            if len(live) >= 240:
-                break
-
-        if live:
-            pool = _dedupe(live + seed)
-            source = "pinterest"
-        elif seed:
-            pool = _dedupe(seed)
-            source = "pinterest-seed"
-        else:
-            pool = []
-            source = "empty"
-
-        _CACHE["ts"] = now
-        _CACHE["items"] = pool
-        _CACHE["source"] = source
-        _CACHE["errors"] = errors[:6]
-
-    cat = (category or "all").strip().lower()
-    if cat and cat not in ("all", "全部", "*"):
-        filtered = [x for x in pool if str(x.get("category") or "").lower() == cat]
-        pool_view = filtered or pool
-    else:
-        pool_view = pool
+    """Serve inspiration from local PG/disk store; optionally refresh remote → ingest."""
+    import inspire_store
 
     page_size = max(1, min(int(limit or 48), 120))
     start = max(0, int(offset or 0))
-    end = start + page_size
-    items = pool_view[start:end]
-    total = len(pool_view)
-    next_offset = end if end < total else None
+    errors: list[str] = []
+
+    local_count = inspire_store.count_local()
+    # Prefer already-localized library; only pull remote when empty or force refresh.
+    if force or local_count < 12:
+        now = time.time()
+        if force or not _CACHE["items"] or now - float(_CACHE["ts"]) >= _CACHE_TTL:
+            seed = _load_seed()
+            live: list[dict[str, Any]] = []
+            for src in _sources()[:12]:
+                try:
+                    if src.get("kind") == "board":
+                        batch = _from_board_pidgets(src["user"], src.get("board") or "", 50)
+                    else:
+                        batch = _from_user_pidgets(src["user"], 50)
+                    live.extend(batch)
+                except Exception as exc:  # noqa: BLE001
+                    errors.append(f"{src.get('label') or src.get('user')}: {exc}")
+                if len(live) >= 240:
+                    break
+            if live:
+                pool = [_with_prompt(x) for x in _dedupe(live + seed)]
+                source_tag = "pinterest"
+            elif seed:
+                pool = [_with_prompt(x) for x in _dedupe(seed)]
+                source_tag = "pinterest-seed"
+            else:
+                pool = []
+                source_tag = "empty"
+            for row in pool:
+                src = str(row.get("imageUrl") or "").strip()
+                if src.startswith("https://"):
+                    row["originUrl"] = src
+            _CACHE["ts"] = now
+            _CACHE["items"] = pool
+            _CACHE["source"] = source_tag
+            _CACHE["errors"] = errors[:6]
+        # Localize into PG/disk so clients never hit pinimg.
+        candidates = list(_CACHE.get("items") or [])
+        try:
+            # Sync: enough for the current page so the response is useful.
+            inspire_store.ingest_many(
+                candidates[start : start + page_size + 8],
+                fetch_remote_image,
+                max_items=page_size + 8,
+            )
+        except Exception as exc:  # noqa: BLE001
+            errors.append(f"ingest: {exc}")
+
+        # Async: fill the rest of the library without blocking this request.
+        def _bg_ingest() -> None:
+            try:
+                inspire_store.ingest_many(candidates, fetch_remote_image, max_items=120)
+            except Exception as exc:  # noqa: BLE001
+                _CACHE.setdefault("errors", []).append(f"bg-ingest: {exc}")
+
+        try:
+            import threading
+
+            threading.Thread(target=_bg_ingest, name="inspire-ingest", daemon=True).start()
+        except Exception:
+            pass
+
+    items, total = inspire_store.list_local(
+        category=category,
+        media_type=media_type,
+        q=q,
+        limit=page_size,
+        offset=start,
+    )
+    items = _public_items(items)
+    # Attach prompts if metadata was thin
+    items = [_with_prompt(x) for x in items]
+    items = _public_items(items)
+    end = start + len(items)
+    next_offset = start + page_size if (start + page_size) < total else None
+    source = "local" if inspire_store.count_local() else str(_CACHE.get("source") or "empty")
     return {
         "items": items,
         "source": source,
-        "cached": cached,
+        "cached": not force and local_count >= 12,
         "count": len(items),
         "total": total,
         "offset": start,
@@ -329,6 +506,6 @@ def fetch_pins(
         "nextOffset": next_offset,
         "hasMore": next_offset is not None,
         "categories": _categories(),
-        "errors": list(_CACHE.get("errors") or [])[:5],
-        "boards": [s.get("label") or s.get("user") for s in _sources()],
+        "errors": (errors or list(_CACHE.get("errors") or []))[:5],
+        "boards": [],
     }

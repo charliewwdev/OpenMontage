@@ -89,6 +89,19 @@ defaults:
   seedanceModel: doubao-seedance-2-0-fast-260128
   visualStyle: 当代都市夜戏，电影感冷暖对比
   seedanceApiUrl: https://ark.cn-beijing.volces.com/api/v3/contents/generations/tasks
+  # Prompt-fit QA loop (entity stills + segment video frames)
+  qaMinScore: 0.7
+  entityQaMaxAttempts: 5
+  videoQaMaxAttempts: 5
+  # Bounded media thread pool (entity stills + video + QA) when Redis is unset.
+  # With REDIS_URL, jobs go to Redis and media_worker processes them.
+  # Override with env STUDIO_MEDIA_WORKERS. Do not set high — Comfy GPU saturates fast.
+  mediaJobWorkers: 2
+  # Multi-process uvicorn (entrypoint UVICORN_WORKERS). Store uses fcntl locks.
+  uvicornWorkers: 2
+  maxCharacters: 24
+  maxScenes: 24
+  maxProps: 24
 
 genres:
   - 都市情感
@@ -128,6 +141,10 @@ sixSteps:
   - id: prop
     label: 道具
     note: 关键物件
+  - id: workspace
+    label: 工作台
+    note: 片段内聚制作
+  # legacy aliases kept for older clients / deep-links
   - id: storyboard
     label: 分镜
     note: 镜头与视频
@@ -462,6 +479,16 @@ splitStages:
     title: 正在检查完整性并组装结果
     detail: 核对剧情覆盖、片段时长、素材引用和输出结构。
 
+seedreamModels:
+  - id: doubao-seedream-5-0-pro-260628
+    name: Seedream 5.0 Pro
+  - id: doubao-seedream-4-5-251128
+    name: Seedream 4.5
+  - id: doubao-seedream-4-0-250828
+    name: Seedream 4.0
+  - id: doubao-seedream-3-0-t2i-250415
+    name: Seedream 3.0
+
 seedanceModels:
   - id: doubao-seedance-2-0-260128
     name: Seedance 2.0 Pro
@@ -568,6 +595,13 @@ skillCatalog:
     category: film
     tags: [短剧漫剧, 剧本创作]
     accent: "#7c6cff"
+  - id: drama-entity-still
+    title: 资产定妆图
+    summary: 角色/场景/道具定妆出图，变体锁脸 + 质检失败经验回流，与工作台补图同一链路。
+    source: official
+    category: image
+    tags: [短剧漫剧, 图片生成, 角色设计, 质检]
+    accent: "#f472b6"
   - id: drama-shot-prompt
     title: 影视分镜提示词
     summary: 把定稿单集拆成 Seedance 可用镜头提示词，保留对白与素材引用。

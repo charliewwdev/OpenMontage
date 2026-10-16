@@ -43,6 +43,12 @@ description: Generate multi-episode short-drama scripts and asset bibles as JSON
 - 场景：空镜可拍的空间描述（无人物），名称稳定，供分镜 `@场景`。
 - 道具：外形材质 + 剧情功能；跨集关键物必建档。
 
+### 资产 `description` 写法（直接影响出图，硬约束）
+
+- **角色 looks.description**：按「身份外貌 → 发型五官体型 → 服装配饰 →（可选）光线」顺序写，**禁止**以「夜间室内 / 城市夜景 / 街角」等环境句开头（否则模型会画成空镜）。例：`25 岁东亚女性，微卷长发低马尾，清冷眉眼；米白风衣内搭黑高领；暖黄顶光与窗外冷蓝雨光在脸部形成对比。`
+- **场景 description**：空间 + 陈设 + 光影，明确无人物；可写夜景城市，因为主体就是空间。
+- **道具 description**：只写**相机看得见**的外形/材质/磨损/可见铭文；不要写「内含录音 / 三年前缴费记录」等不可见剧情。剧情功能可另放 category 或正文，勿塞进出图描述。
+
 ## 输出 JSON
 
 ```json
@@ -73,7 +79,7 @@ description: Generate multi-episode short-drama scripts and asset bibles as JSON
       "introduction": "",
       "voiceDescription": "",
       "looks": [
-        { "name": "默认形象", "description": "外貌服装光线", "episodes": [1] }
+        { "name": "默认形象", "description": "年龄外貌发型五官体型→服装→可选光线（勿以场景句开头）", "episodes": [1] }
       ]
     }
   ],
@@ -81,7 +87,7 @@ description: Generate multi-episode short-drama scripts and asset bibles as JSON
     { "name": "场景名", "description": "空间光线陈设，无人物", "episodes": [1] }
   ],
   "props": [
-    { "name": "道具名", "category": "item", "description": "外形材质与用法", "episodes": [1] }
+    { "name": "道具名", "category": "item", "description": "可见外形材质磨损（勿写不可见剧情内容）", "episodes": [1] }
   ]
 }
 ```

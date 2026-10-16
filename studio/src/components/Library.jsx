@@ -67,7 +67,17 @@ function ProjectCover({ project }) {
   );
 }
 
-export function Library({ projects, config, onOpen, onCreate, onDeleted, onRefresh, onNeedKeys }) {
+export function Library({
+  projects,
+  config,
+  onOpen,
+  onCreate,
+  onDeleted,
+  onRefresh,
+  onNeedKeys,
+  onRequireAuth,
+  authed = false,
+}) {
   const [confirmId, setConfirmId] = useState(null);
   const [query, setQuery] = useState("");
   const caps = config?.capabilities || {};
@@ -76,9 +86,9 @@ export function Library({ projects, config, onOpen, onCreate, onDeleted, onRefre
   const entryCards = config?.entryCards || [];
   const hasRealProject = (projects || []).some((p) => !String(p.id || "").startsWith("welcome"));
   const onboardingSteps = [
-    { n: "01", title: "登录账号", done: true },
-    { n: "02", title: "配置模型密钥", done: keysReady },
-    { n: "03", title: "新建项目开拍", done: keysReady && hasRealProject },
+    { n: "01", title: "登录账号", done: Boolean(authed) },
+    { n: "02", title: "配置模型密钥", done: Boolean(authed) && keysReady },
+    { n: "03", title: "新建项目开拍", done: Boolean(authed) && keysReady && hasRealProject },
   ];
   const onboardingDone = onboardingSteps.every((s) => s.done);
 
@@ -91,6 +101,7 @@ export function Library({ projects, config, onOpen, onCreate, onDeleted, onRefre
   }, [projects, query]);
 
   const remove = async (id) => {
+    if (onRequireAuth && !onRequireAuth()) return;
     try {
       await api(`/api/projects/${encodeURIComponent(id)}`, { method: "DELETE" });
       onDeleted?.(id);
@@ -122,6 +133,25 @@ export function Library({ projects, config, onOpen, onCreate, onDeleted, onRefre
             </div>
           </div>
         </header>
+
+        {!authed ? (
+          <section className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/35 bg-amber-500/10 px-3 py-2.5 md:px-4">
+            <div className="min-w-0 text-xs leading-5 text-amber-50/90">
+              <strong className="font-semibold text-amber-100">浏览模式</strong>
+              <span className="text-amber-100/70">
+                {" "}
+                · 可打开项目查看进度与素材；生成剧本 / 出图 / 出片 / 配音等耗 Token 操作需先登录
+              </span>
+            </div>
+            <button
+              type="button"
+              className="btn-primary !min-h-8 shrink-0 !px-3 text-xs"
+              onClick={() => onRequireAuth?.()}
+            >
+              登录后创作
+            </button>
+          </section>
+        ) : null}
 
         <section className="mt-3 rounded-xl border border-[#7c6cff]/35 bg-[linear-gradient(90deg,rgba(124,108,255,.18),rgba(79,140,255,.12))] px-3 py-2 md:px-4">
           <div className="flex flex-wrap items-center gap-2 text-xs text-white/80">

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import re
-import threading
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -323,12 +322,18 @@ def continue_script(store: ProjectStore, project_id: str, episode_count: int, in
         },
         ensure_ascii=False,
     )
+    # Smaller batches need fewer tokens; large ceilings truncate mid-JSON on some gateways.
+    tok = 6000 if count <= 1 else (10000 if count <= 2 else 14000)
     data = chat_json(
-        system=skill + "\n\n续写后续集，不要改写已有集。只输出一个完整 JSON 对象，禁止 Markdown/注释/尾随逗号。",
+        system=(
+            skill
+            + "\n\n续写后续集，不要改写已有集。只输出一个完整 JSON 对象，"
+            "禁止 Markdown/注释/尾随逗号；字符串内不要未转义引号；每集 content 精简。"
+        ),
         user=user,
-        temperature=0.45,
-        max_tokens=16000,
-        retries=4,
+        temperature=0.4,
+        max_tokens=tok,
+        retries=5,
     )
     state = _apply_generated_script(state, data, replace_episodes=False, start_number=last + 1)
     return store.save(state)
@@ -448,9 +453,12 @@ def upsert_entity(store: ProjectStore, project_id: str, payload: dict) -> dict:
             if e["id"] == entity_id:
                 desc_changed = "description" in payload and payload["description"] != e.get("description")
                 name_changed = "name" in payload and payload["name"] != e.get("name")
-                for key in ("name", "variant", "description", "category"):
+                for key in ("name", "variant", "description", "category", "imageStatus", "imageError"):
                     if key in payload:
                         e[key] = payload[key]
+                if payload.get("clearQaFailed"):
+                    e.pop("qaFailed", None)
+                    e.pop("qaFailReason", None)
                 if desc_changed or name_changed:
                     _mark_shots_stale(
                         state,
@@ -500,36 +508,103 @@ def soft_delete_entity(store: ProjectStore, project_id: str, entity_id: str) -> 
     raise FileNotFoundError("entity not found")
 
 
-def generate_entity_image(
-    store: ProjectStore,
-    project_id: str,
-    entity_id: str,
+def _clean_desc(text: str) -> str:
+    t = " ".join(str(text or "").strip().split())
+    return t.rstrip("。.;；,，")
+
+
+def _split_character_desc(desc: str) -> tuple[str, str]:
+    """Keep identity/wardrobe first; push leading place/time cues to atmosphere.
+
+    LLM asset bibles often start with「夜间室内…」which makes T2I latch onto
+    city/night empty shots instead of the named person.
+    """
+    raw = _clean_desc(desc)
+    if not raw:
+        return "", ""
+    env_heads = (
+        "夜间室内",
+        "夜晚室内",
+        "夜晚",
+        "夜间",
+        "深夜",
+        "白昼",
+        "白天",
+        "室内",
+        "室外",
+        "高层",
+        "窗外",
+    )
+    for head in env_heads:
+        if raw.startswith(head):
+            rest = raw[len(head) :].lstrip("，,、 ")
+            if rest:
+                return rest, head
+    return raw, ""
+
+
+def build_entity_image_prompt(
+    state: dict[str, Any],
+    ent: dict[str, Any],
     *,
     three_view: bool = False,
-    redraw: bool = False,
     force_illustration: bool = False,
-) -> dict:
-    from providers.media import generate_image
+    qa_reason: str = "",
+    projects_root: Path | None = None,
+) -> dict[str, Any]:
+    """Build the exact T2I prompt (+ negative) that would be sent for an entity still.
 
-    state = store.load(project_id)
-    if not state:
-        raise FileNotFoundError("project not found")
-    ent = next((e for e in state.get("entities") or [] if e["id"] == entity_id and not e.get("deletedAt")), None)
-    if not ent:
-        raise FileNotFoundError("entity not found")
-    style = resolve_style_prompt(state["project"].get("visualStyle") or "")
-    # Illustration only when explicitly requested (avoids flat cartoon locks for short drama).
+    Driven by studio skill ``drama-entity-still`` Runtime + accumulated experience patches
+    (Skill 管理页可见)，不是与 Skill 脱节的硬编码玩具。
+    """
+    from skill_runtime import (
+        apply_experience_to_prompt,
+        get_skill_runtime,
+        match_experience_patches,
+    )
+
+    skill = get_skill_runtime("drama-entity-still")
+    runtime = skill.get("runtime") or {}
+    _ = load_skill("drama-entity-still")
+    style = resolve_style_prompt((state.get("project") or {}).get("visualStyle") or "")
     use_illustration = bool(force_illustration)
     if use_illustration and "插画" not in style and "动漫" not in style and "二次元" not in style and "写实" not in style:
         style = f"{style}。国漫插画风格，清晰线条与色块，非写实真人摄影"
-    ratio = state["project"].get("ratio") or "9:16"
-    name = ent["name"]
+    name = ent.get("name") or ""
     variant = ent.get("variant") or ""
-    desc = ent.get("description") or ""
-    if ent["kind"] == "character":
-        prompt = f"{style}。华语竖屏短剧角色定妆：单人特写，仅 {name} {variant}，不要第二个人物。{desc}。"
+    desc = _clean_desc(ent.get("description") or "")
+    kind = ent.get("kind") or "prop"
+    negative = None
+    applied_patches: list[dict[str, Any]] = []
+    if kind == "character":
+        look, atmosphere = _split_character_desc(desc)
+        who = f"{name}{(' · ' + variant) if variant else ''}"
+        prompt = (
+            f"Photorealistic short-drama character portrait of ONE East Asian person "
+            f"named 「{who}」, clear face, identifiable hair and wardrobe, half-body or "
+            f"full-body, cinematic still, centered, shallow depth of field. "
+            f"华语竖屏短剧角色定妆肖像：画面中央只有一个人，就是「{who}」。"
+            f"必须画出可辨认的五官、发型与服装：{look or '短剧主角，五官清晰，服装完整'}。"
+        )
+        if atmosphere:
+            prompt += (
+                f"光线与环境仅作氛围参考（{atmosphere}），"
+                "禁止变成无人街景、城市空镜或自然风景空镜。"
+            )
+        prompt += (
+            "禁止航拍城市、街景空镜、人群市集、山景风景大远景、岩石植被空镜、"
+            "第二个人物。No landscape, no mountain, no cityscape, no empty scenery."
+        )
+        if variant and variant not in {"默认形象", "默认造型", "default"}:
+            hint = str(runtime.get("variant_prompt_hint") or "").strip()
+            prompt += (
+                f" 本条为变体「{variant}」，必须让变体差异在画面中清晰可见（妆造/伤势/服装状态），"
+                "同时保持与参考定妆图同一张脸。"
+            )
+            if hint:
+                prompt += f" {hint}"
         if three_view:
-            prompt += "三视图：正面、侧面、背面，同一人物同一服装，纯色背景。"
+            prompt += "同一人物同一服装的三视图设定稿：正面、侧面、背面，纯色背景。"
         else:
             prompt += (
                 "半身或全身定妆，清晰五官与发型层次，服装面料与配饰细节完整，"
@@ -538,54 +613,827 @@ def generate_entity_image(
         if use_illustration:
             prompt += "虚构角色插画，避免真人照片质感。"
         else:
-            prompt += (
-                "虚构短剧角色，影视剧照质感与妆造完成度，"
-                "不是简笔卡通、不是证件照、不是AI塑料脸。"
-            )
-    elif ent["kind"] == "scene":
+            prompt += "虚构短剧角色，影视剧照质感与妆造完成度，不是简笔卡通、不是证件照、不是AI塑料脸。"
+        if style:
+            prompt += f"色调气质可参考：{style}（不可盖过人物主体）。"
+        negative = (
+            "aerial view, drone shot, cityscape, skyline, landscape, mountain, hillside, "
+            "rocks, forest, nature scenery, empty street, crowded market, crowd, "
+            "architecture only, bird's eye, map, no person, multiple people, text, watermark"
+        )
+    elif kind == "scene":
         prompt = (
-            f"{style}。短剧场景空镜：{name}。{desc}。"
+            f"短剧场景空镜：{name}。"
+            f"{desc or '可拍的竖屏短剧空间'}。"
             "制作设计完整：空间层次、道具陈设、材质与光影氛围，电影级构图，画面中不要出现人物。"
         )
+        if style:
+            prompt += f"色调气质可参考：{style}。"
+        negative = "close-up portrait, face closeup, character sheet, product packshot"
     else:
-        prompt = f"{style}。关键道具特写：{name}。{desc}。产品级质感，材质与反光真实。"
+        prompt = (
+            f"关键道具特写：{name}。"
+            f"只表现物体可见外形与材质：{desc or name}。"
+            "产品级质感，材质与反光真实；禁止人物、城市空镜；不要试图画清纸上的长段剧情文字。"
+        )
         if three_view:
             prompt += "多角度产品级展示。"
+        if style:
+            prompt += f"色调气质可参考：{style}。"
+        negative = "cityscape, aerial view, full body portrait, crowd, people"
+
+    applied_patches = match_experience_patches(
+        skill_id="drama-entity-still",
+        kind=kind,
+        variant=variant,
+        reason=qa_reason or "",
+        projects_root=projects_root,
+    )
+    prompt, negative = apply_experience_to_prompt(prompt, negative, applied_patches)
+    return {
+        "prompt": prompt,
+        "negativePrompt": negative,
+        "kind": kind,
+        "name": name,
+        "variant": variant,
+        "description": desc,
+        "style": style,
+        "skillId": "drama-entity-still",
+        "experiencePatchIds": [p.get("id") for p in applied_patches if p.get("id")],
+    }
+
+
+def preview_entity_prompt(
+    store: ProjectStore,
+    project_id: str,
+    entity_id: str,
+    *,
+    three_view: bool = False,
+) -> dict[str, Any]:
+    state = store.load(project_id)
+    if not state:
+        raise FileNotFoundError("project not found")
+    ent = next((e for e in state.get("entities") or [] if e["id"] == entity_id and not e.get("deletedAt")), None)
+    if not ent:
+        raise FileNotFoundError("entity not found")
+    built = build_entity_image_prompt(state, ent, three_view=three_view)
+    selected = next(
+        (i for i in (ent.get("images") or []) if i.get("id") == ent.get("selectedImageId")),
+        None,
+    )
+    return {
+        **built,
+        "entityId": entity_id,
+        "selectedImagePrompt": (selected or {}).get("prompt") or "",
+        "selectedImageQa": (selected or {}).get("qa") or {},
+        "selectedQaPass": bool((selected or {}).get("qaPass")),
+    }
+
+
+def _character_identity_ref_path(
+    store: ProjectStore,
+    project_id: str,
+    state: dict[str, Any],
+    ent: dict[str, Any],
+) -> Path | None:
+    """Prefer same-name「默认形象」still so variants keep one face."""
+    if (ent.get("kind") or "") != "character":
+        return None
+    name = (ent.get("name") or "").strip()
+    if not name:
+        return None
+    variant = (ent.get("variant") or "").strip()
+    prefer_default = variant and variant not in {"默认形象", "默认造型", "default"}
+    candidates: list[dict[str, Any]] = []
+    for e in state.get("entities") or []:
+        if e.get("deletedAt") or e.get("kind") != "character":
+            continue
+        if (e.get("name") or "").strip() != name:
+            continue
+        if e.get("id") == ent.get("id"):
+            continue
+        v = (e.get("variant") or "").strip()
+        if prefer_default and v in {"默认形象", "默认造型", "", "default"}:
+            candidates.insert(0, e)
+        else:
+            candidates.append(e)
+    # Also allow current entity's own selected still when redrawing.
+    pool = candidates + [ent]
+    for e in pool:
+        sid = e.get("selectedImageId")
+        if not sid:
+            continue
+        img = next((i for i in (e.get("images") or []) if i.get("id") == sid), None)
+        if not img or not img.get("path"):
+            continue
+        # Only lock face when that still actually passed QA.
+        if img.get("qaPass") is False:
+            continue
+        path = store._dir(project_id) / img["path"]
+        if path.is_file():
+            return path
+    return None
+
+
+def start_entity_image_job(
+    store: ProjectStore,
+    project_id: str,
+    entity_id: str,
+    *,
+    three_view: bool = False,
+    redraw: bool = False,
+    force_illustration: bool = False,
+) -> dict[str, Any]:
+    """Enqueue entity still generation (Redis worker or bounded pool); return immediately."""
+    from job_queue import enqueue
+
+    state = store.load(project_id)
+    if not state:
+        raise FileNotFoundError("project not found")
+    ent = next((e for e in state.get("entities") or [] if e["id"] == entity_id and not e.get("deletedAt")), None)
+    if not ent:
+        raise FileNotFoundError("entity not found")
+    # Allow re-enqueue when stuck in generating (worker crash / lost Redis job).
+    # redraw=True always forces a fresh queue entry.
+    if ent.get("imageStatus") == "generating" and not redraw:
+        # Soft-block only if updated within the last 3 minutes (likely in-flight).
+        from datetime import datetime, timezone
+
+        updated = str(ent.get("updatedAt") or "")
+        fresh = False
+        try:
+            ts = datetime.fromisoformat(updated.replace("Z", "+00:00"))
+            fresh = (datetime.now(timezone.utc) - ts).total_seconds() < 180
+        except Exception:
+            fresh = False
+        if fresh:
+            raise RuntimeError(f"「{ent.get('name') or entity_id}」正在出图")
+    ent["imageStatus"] = "generating"
+    ent["imageError"] = None
+    ent.pop("qaFailed", None)
+    ent.pop("qaFailReason", None)
+    ent["updatedAt"] = _now()
+    store.save(state)
+
+    stub = enqueue(
+        "entity_image",
+        {
+            "projectId": project_id,
+            "entityId": entity_id,
+            "threeView": three_view,
+            "redraw": redraw,
+            "forceIllustration": force_illustration,
+        },
+    )
+    return {
+        "entityId": entity_id,
+        "name": ent.get("name"),
+        "kind": ent.get("kind"),
+        "imageStatus": "generating",
+        "queued": True,
+        "async": True,
+        "jobId": stub.get("jobId"),
+        "backend": stub.get("backend"),
+    }
+
+
+def generate_entity_image(
+    store: ProjectStore,
+    project_id: str,
+    entity_id: str,
+    *,
+    three_view: bool = False,
+    redraw: bool = False,
+    force_illustration: bool = False,
+    wait: bool = True,
+) -> dict:
+    """Generate (+ QA-loop) an entity still.
+
+    ``wait=False`` enqueues on the bounded media thread pool and returns a job stub.
+    ``wait=True`` (default for internal workers) runs synchronously in the current thread.
+    """
+    if not wait:
+        return start_entity_image_job(
+            store,
+            project_id,
+            entity_id,
+            three_view=three_view,
+            redraw=redraw,
+            force_illustration=force_illustration,
+        )
+
+    from providers.media import generate_image
+    from skill_runtime import apply_experience_to_prompt, match_experience_patches, record_qa_failure
+
+    state = store.load(project_id)
+    if not state:
+        raise FileNotFoundError("project not found")
+    ent = next((e for e in state.get("entities") or [] if e["id"] == entity_id and not e.get("deletedAt")), None)
+    if not ent:
+        raise FileNotFoundError("entity not found")
+    # Ensure generating flag while sync path runs (also set by async enqueue).
+    ent["imageStatus"] = "generating"
+    ent["imageError"] = None
+    projects_root = store.root
+    built = build_entity_image_prompt(
+        state,
+        ent,
+        three_view=three_view,
+        force_illustration=force_illustration,
+        projects_root=projects_root,
+    )
+    prompt = built["prompt"]
+    negative = built.get("negativePrompt")
+    kind = built["kind"]
+    ratio = state["project"].get("ratio") or "9:16"
 
     ref = None
     if redraw and ent.get("selectedImageId"):
         img = next((i for i in ent.get("images") or [] if i["id"] == ent["selectedImageId"]), None)
         if img and img.get("path"):
             ref = store._dir(project_id) / img["path"]
+    if ref is None:
+        ref = _character_identity_ref_path(store, project_id, state, ent)
+        if ref is not None and kind == "character":
+            prompt += " Keep the SAME face identity as the reference image; only change wardrobe/injury state as described."
 
-    img_id = new_id("img_")
-    rel = f"media/images/{img_id}.png"
-    out = store._dir(project_id) / rel
-    generate_image(prompt=prompt, ratio=ratio, out_path=out, reference_path=ref)
-    store.persist_media(project_id, rel)
-    version = {
-        "id": img_id,
+    def _gen_once(ptext: str, neg: str | None, img_id: str) -> tuple[str, Path]:
+        rel_path = f"media/images/{img_id}.png"
+        dest = store._dir(project_id) / rel_path
+        generate_image(
+            prompt=ptext,
+            ratio=ratio,
+            out_path=dest,
+            reference_path=ref,
+            negative_prompt=neg,
+        )
+        store.persist_media(project_id, rel_path)
+        return rel_path, dest
+
+    from prompt_qa import entity_qa_max_attempts, judge_image_against_prompt, qa_meets_bar, qa_min_score
+
+    max_attempts = entity_qa_max_attempts()
+    min_score = qa_min_score()
+    base_prompt = prompt
+    best: dict[str, Any] | None = None
+    last_reason = ""
+
+    for attempt in range(1, max_attempts + 1):
+        ptext = base_prompt
+        neg = negative
+        if attempt > 1 and last_reason:
+            # Skill 经验：按上次 QA reason 叠加补丁，并写入经验库。
+            record_qa_failure(
+                skill_id="drama-entity-still",
+                kind=kind,
+                variant=str(ent.get("variant") or ""),
+                reason=last_reason,
+                entity_name=str(ent.get("name") or ""),
+                projects_root=projects_root,
+            )
+            retry_patches = match_experience_patches(
+                skill_id="drama-entity-still",
+                kind=kind,
+                variant=str(ent.get("variant") or ""),
+                reason=last_reason,
+                projects_root=projects_root,
+            )
+            ptext, neg = apply_experience_to_prompt(base_prompt, negative, retry_patches)
+            ptext = (
+                ptext
+                + f" 【质检重试 {attempt}/{max_attempts}】必须严格符合上述主体，"
+                "禁止无关风景/城市航拍/人群/空镜/错误性别。"
+                + f"上次失败原因：{last_reason}。"
+            )
+        elif attempt > 1:
+            ptext = (
+                base_prompt
+                + f" 【质检重试 {attempt}/{max_attempts}】必须严格符合上述主体，"
+                "禁止无关风景/城市航拍/人群/空镜/错误性别。"
+            )
+        img_id = new_id("img_")
+        try:
+            rel, out = _gen_once(ptext, neg, img_id)
+        except Exception as exc:  # noqa: BLE001
+            last_reason = str(exc)[:200]
+            qa = {
+                "pass": False,
+                "score": 0,
+                "reason": f"generate_error:{last_reason}",
+                "skipped": False,
+                "attempts": attempt,
+            }
+            cand = {
+                "id": img_id,
+                "entityId": entity_id,
+                "path": None,
+                "prompt": ptext,
+                "negativePrompt": neg,
+                "qa": qa,
+                "qaPass": False,
+                "createdAt": _now(),
+            }
+            if best is None:
+                best = cand
+            continue
+        try:
+            qa = judge_image_against_prompt(
+                out,
+                prompt=ptext,
+                kind=kind,
+                entity_name=str(ent.get("name") or ""),
+                entity_description=str(ent.get("description") or ""),
+            )
+        except Exception as exc:  # noqa: BLE001
+            # Fail closed — never soft-pass when the judge itself crashes.
+            qa = {
+                "pass": False,
+                "score": 0,
+                "reason": f"qa_exception:{exc}",
+                "skipped": True,
+            }
+        qa["attempts"] = attempt
+        if last_reason:
+            qa["prevReason"] = last_reason
+        last_reason = str(qa.get("reason") or "")
+        cand = {
+            "id": img_id,
+            "entityId": entity_id,
+            "path": rel,
+            "prompt": ptext,
+            "negativePrompt": neg,
+            "qa": qa,
+            "qaPass": qa_meets_bar(qa, min_score=min_score),
+            "createdAt": _now(),
+        }
+        if best is None:
+            best = cand
+        else:
+            prev_score = float((best.get("qa") or {}).get("score") or 0)
+            cur_score = float(qa.get("score") or 0)
+            if cand["qaPass"] or (not best.get("qaPass") and cur_score >= prev_score):
+                best = cand
+        if cand["qaPass"]:
+            break
+
+    version = best or {
+        "id": new_id("img_"),
         "entityId": entity_id,
-        "path": rel,
-        "prompt": prompt,
+        "path": None,
+        "prompt": base_prompt,
+        "negativePrompt": negative,
+        "qa": {"pass": False, "score": 0, "reason": "no_attempt", "skipped": False, "attempts": 0},
+        "qaPass": False,
         "createdAt": _now(),
     }
-    ent.setdefault("images", []).append(version)
-    ent["selectedImageId"] = img_id
+    if version.get("path"):
+        ent.setdefault("images", []).append(version)
+    # Only promote to selected when QA bar is met (keep prior good image otherwise).
+    if version.get("qaPass") and version.get("path"):
+        ent["selectedImageId"] = version["id"]
+        ent.pop("qaFailed", None)
+        ent.pop("qaFailReason", None)
+    elif not ent.get("selectedImageId"):
+        ent["qaFailed"] = True
+        ent["qaFailReason"] = str((version.get("qa") or {}).get("reason") or "qa_failed")
+    else:
+        # Keep old selection only if it still looks like a real pass.
+        prev = next((i for i in (ent.get("images") or []) if i.get("id") == ent.get("selectedImageId")), None)
+        from prompt_qa import is_soft_pass_qa
+
+        if prev and (prev.get("qaPass") is False or is_soft_pass_qa(prev.get("qa"))):
+            ent["qaFailed"] = True
+            ent["qaFailReason"] = str((version.get("qa") or {}).get("reason") or "qa_failed")
+    if not version.get("qaPass"):
+        fail_reason = str((version.get("qa") or {}).get("reason") or last_reason or "qa_failed")
+        try:
+            record_qa_failure(
+                skill_id="drama-entity-still",
+                kind=kind,
+                variant=str(ent.get("variant") or ""),
+                reason=fail_reason,
+                entity_name=str(ent.get("name") or ""),
+                projects_root=projects_root,
+            )
+        except Exception:
+            pass
     ent["updatedAt"] = _now()
+    ent["imageStatus"] = "done" if version.get("path") else "failed"
+    if version.get("qaPass"):
+        ent.pop("imageError", None)
+    elif version.get("path"):
+        ent["imageError"] = str((version.get("qa") or {}).get("reason") or "qa_failed")[:300]
+    else:
+        ent["imageError"] = str(
+            (version.get("qa") or {}).get("reason") or last_reason or "generate_failed"
+        )[:300]
     # Prefer character still as project library cover
     proj = state.get("project") or {}
-    if ent.get("kind") == "character" or not proj.get("coverPath"):
-        proj["coverPath"] = rel
+    if version.get("qaPass") and version.get("path") and (
+        ent.get("kind") == "character" or not proj.get("coverPath")
+    ):
+        proj["coverPath"] = version["path"]
         proj["updatedAt"] = _now()
         state["project"] = proj
-    _mark_shots_stale(
-        state,
-        entity_id=entity_id,
-        reason=f"参考素材「{ent.get('name') or entity_id}」图片已更新，引用该素材的镜头建议重生成",
-    )
+    if version.get("qaPass") and version.get("path"):
+        _mark_shots_stale(
+            state,
+            entity_id=entity_id,
+            reason=f"参考素材「{ent.get('name') or entity_id}」图片已更新，引用该素材的镜头建议重生成",
+        )
     store.save(state)
     return version
+
+
+def recheck_entity_qa(
+    store: ProjectStore,
+    project_id: str,
+    *,
+    entity_ids: list[str] | None = None,
+    clear_soft_pass: bool = True,
+    regenerate_failed: bool = False,
+) -> dict[str, Any]:
+    """Re-run vision QA on selected stills for characters / scenes / props."""
+    from prompt_qa import is_soft_pass_qa, judge_image_against_prompt, qa_meets_bar, qa_min_score
+
+    state = store.load(project_id)
+    if not state:
+        raise FileNotFoundError("project not found")
+    min_score = qa_min_score()
+    wanted = {str(x) for x in (entity_ids or []) if x} or None
+    results: list[dict[str, Any]] = []
+    regen_ids: list[str] = []
+
+    for ent in state.get("entities") or []:
+        if ent.get("deletedAt"):
+            continue
+        if wanted is not None and ent.get("id") not in wanted:
+            continue
+        kind = ent.get("kind") or "prop"
+        sid = ent.get("selectedImageId")
+        imgs = [i for i in (ent.get("images") or []) if i.get("path")]
+        sel = next((i for i in imgs if i.get("id") == sid), None)
+        # If soft-pass demotion cleared selection, still re-judge the newest still on disk.
+        if not sel and imgs:
+            sel = imgs[-1]
+        if not sel or not sel.get("path"):
+            results.append(
+                {
+                    "entityId": ent.get("id"),
+                    "name": ent.get("name"),
+                    "kind": kind,
+                    "status": "no_image",
+                    "qaPass": False,
+                }
+            )
+            ent["qaFailed"] = True
+            ent["qaFailReason"] = "no_image"
+            continue
+        path = store._dir(project_id) / sel["path"]
+        if not path.is_file():
+            results.append(
+                {
+                    "entityId": ent.get("id"),
+                    "name": ent.get("name"),
+                    "kind": kind,
+                    "status": "missing_file",
+                    "qaPass": False,
+                }
+            )
+            ent["qaFailed"] = True
+            ent["qaFailReason"] = "missing_file"
+            continue
+        prompt = sel.get("prompt") or build_entity_image_prompt(state, ent)["prompt"]
+        try:
+            qa = judge_image_against_prompt(
+                path,
+                prompt=prompt,
+                kind=kind,
+                entity_name=str(ent.get("name") or ""),
+                entity_description=str(ent.get("description") or ""),
+            )
+        except Exception as exc:  # noqa: BLE001
+            qa = {"pass": False, "score": 0, "reason": f"qa_exception:{exc}", "skipped": True}
+        qa_pass = qa_meets_bar(qa, min_score=min_score) and not is_soft_pass_qa(qa)
+        sel["qa"] = qa
+        sel["qaPass"] = qa_pass
+        sel["prompt"] = prompt
+        status = "pass" if qa_pass else "fail"
+        if qa_pass:
+            ent["selectedImageId"] = sel["id"]
+            ent.pop("qaFailed", None)
+            ent.pop("qaFailReason", None)
+        elif clear_soft_pass:
+            # Demote soft-pass / mismatch selections so the UI stops treating them as OK.
+            ent["qaFailed"] = True
+            ent["qaFailReason"] = str(qa.get("reason") or "qa_failed")
+            # Keep the image in history but clear selection when soft-pass garbage / hard mismatch.
+            if is_soft_pass_qa(qa) or float(qa.get("score") or 0) < 0.4:
+                if ent.get("selectedImageId") == sel.get("id"):
+                    ent["selectedImageId"] = None
+                status = "cleared"
+            if regenerate_failed:
+                regen_ids.append(str(ent.get("id")))
+        else:
+            ent["qaFailed"] = True
+            ent["qaFailReason"] = str(qa.get("reason") or "qa_failed")
+            if regenerate_failed:
+                regen_ids.append(str(ent.get("id")))
+        ent["updatedAt"] = _now()
+        results.append(
+            {
+                "entityId": ent.get("id"),
+                "name": ent.get("name"),
+                "kind": kind,
+                "variant": ent.get("variant") or "",
+                "status": status,
+                "qaPass": qa_pass,
+                "score": qa.get("score"),
+                "reason": qa.get("reason"),
+            }
+        )
+
+    store.save(state)
+    regenerated: list[dict[str, Any]] = []
+    if regenerate_failed and regen_ids:
+        for eid in regen_ids:
+            try:
+                # Enqueue — do not block the recheck HTTP request on Comfy.
+                regenerated.append(
+                    generate_entity_image(store, project_id, eid, redraw=False, wait=False)
+                )
+            except Exception as exc:  # noqa: BLE001
+                regenerated.append({"entityId": eid, "error": str(exc)})
+        state = store.load(project_id) or state
+
+    summary = {
+        "total": len(results),
+        "pass": sum(1 for r in results if r.get("qaPass")),
+        "fail": sum(1 for r in results if not r.get("qaPass")),
+        "cleared": sum(1 for r in results if r.get("status") == "cleared"),
+        "results": results,
+        "regenerated": regenerated,
+    }
+    return summary
+
+
+def fill_entity_stills(
+    store: ProjectStore,
+    project_id: str,
+    *,
+    episode_id: str | None = None,
+    segment_order: int | None = None,
+    kinds: list[str] | None = None,
+    entity_ids: list[str] | None = None,
+    only_missing: bool = True,
+    wait_generate: bool = False,
+) -> dict[str, Any]:
+    """Skill-aligned asset fill: generate stills for entities missing image or QA.
+
+    Uses the same ``generate_entity_image`` path (drama-entity-still + fail-closed QA loop)
+    that the Studio agent / out-gate depend on — not a detached Skills-page flow.
+    ``wait_generate=False`` (default) enqueues each still on the shared media queue.
+    """
+    state = store.load(project_id)
+    if not state:
+        raise FileNotFoundError("project not found")
+    kind_set = {k for k in (kinds or ["character", "scene"]) if k}
+    alive = [e for e in (state.get("entities") or []) if not e.get("deletedAt")]
+    by_id = {e["id"]: e for e in alive}
+
+    target_ids: list[str] = []
+    if entity_ids:
+        target_ids = [str(x) for x in entity_ids if str(x) in by_id]
+    elif episode_id:
+        ep_shots = [
+            s
+            for s in (state.get("shots") or [])
+            if s.get("episodeId") == episode_id and not s.get("deletedAt")
+        ]
+        if segment_order is not None:
+            ep_shots = [s for s in ep_shots if int(s.get("segmentOrder") or 0) == int(segment_order)]
+        seen: set[str] = set()
+        for s in ep_shots:
+            for eid in s.get("referenceEntityIds") or []:
+                if eid in seen:
+                    continue
+                ent = by_id.get(eid)
+                if not ent or (ent.get("kind") or "") not in kind_set:
+                    continue
+                seen.add(eid)
+                target_ids.append(eid)
+        # Also pull by @name / sceneName so unbound refs still get filled.
+        import re as _re
+
+        names: set[str] = set()
+        for s in ep_shots:
+            for m in _re.finditer(r"@([^\s@,，。；;（）()]+)", s.get("prompt") or ""):
+                names.add(m.group(1).split("-")[0])
+            if s.get("sceneName"):
+                names.add(str(s["sceneName"]))
+        for ent in alive:
+            if ent["id"] in seen:
+                continue
+            if (ent.get("kind") or "") not in kind_set:
+                continue
+            if (ent.get("name") or "") in names:
+                seen.add(ent["id"])
+                target_ids.append(ent["id"])
+    else:
+        target_ids = [e["id"] for e in alive if (e.get("kind") or "") in kind_set]
+
+    def _needs_fill(ent: dict[str, Any]) -> bool:
+        img = _selected_entity_image(ent)
+        if not img or not img.get("path"):
+            return True
+        if not only_missing:
+            return True
+        from prompt_qa import is_soft_pass_qa, qa_meets_bar
+
+        qa = img.get("qa") or {}
+        return not (
+            img.get("qaPass") is True and qa_meets_bar(qa) and not is_soft_pass_qa(qa)
+        )
+
+    todo = [eid for eid in target_ids if _needs_fill(by_id[eid])]
+    # Default: enqueue on shared media queue (HTTP returns immediately).
+    wait = bool(wait_generate)
+    results: list[dict[str, Any]] = []
+    queued = 0
+    for eid in todo:
+        ent = by_id[eid]
+        try:
+            ver = generate_entity_image(store, project_id, eid, wait=wait)
+            if ver.get("queued") or ver.get("async"):
+                queued += 1
+                results.append(
+                    {
+                        "entityId": eid,
+                        "name": ent.get("name"),
+                        "kind": ent.get("kind"),
+                        "variant": ent.get("variant") or "",
+                        "queued": True,
+                        "imageStatus": "generating",
+                        "skill": "drama-entity-still",
+                    }
+                )
+            else:
+                results.append(
+                    {
+                        "entityId": eid,
+                        "name": ent.get("name"),
+                        "kind": ent.get("kind"),
+                        "variant": ent.get("variant") or "",
+                        "qaPass": bool(ver.get("qaPass")),
+                        "score": (ver.get("qa") or {}).get("score"),
+                        "reason": (ver.get("qa") or {}).get("reason"),
+                        "imageId": ver.get("id"),
+                        "skill": "drama-entity-still",
+                    }
+                )
+        except Exception as exc:  # noqa: BLE001
+            results.append(
+                {
+                    "entityId": eid,
+                    "name": ent.get("name"),
+                    "kind": ent.get("kind"),
+                    "variant": ent.get("variant") or "",
+                    "qaPass": False,
+                    "error": str(exc),
+                    "skill": "drama-entity-still",
+                }
+            )
+        state = store.load(project_id) or state
+        by_id = {e["id"]: e for e in (state.get("entities") or []) if not e.get("deletedAt")}
+
+    return {
+        "skill": "drama-entity-still",
+        "async": True,
+        "requested": len(target_ids),
+        "attempted": len(todo),
+        "queued": queued,
+        "pass": sum(1 for r in results if r.get("qaPass")),
+        "fail": sum(1 for r in results if r.get("error") or (r.get("qaPass") is False and not r.get("queued"))),
+        "results": results,
+    }
+
+
+def effective_segment_video_prompt(
+    store: ProjectStore,
+    project_id: str,
+    *,
+    episode_id: str,
+    segment_order: int,
+) -> dict[str, Any]:
+    """Return the exact text prompt that would be sent to the video model for a segment."""
+    state = store.load(project_id)
+    if not state:
+        raise FileNotFoundError("project not found")
+    ep_shots = [
+        s
+        for s in (state.get("shots") or [])
+        if s.get("episodeId") == episode_id and not s.get("deletedAt")
+    ]
+    segments = group_shots_by_segment(ep_shots)
+    seg = next((g for g in segments if int(g["segmentOrder"]) == int(segment_order)), None)
+    if not seg:
+        raise FileNotFoundError(f"片段 {segment_order} 不存在")
+    combined = build_segment_prompt(seg)
+    lead = seg.get("lead") or {}
+    entities = {e["id"]: e for e in state.get("entities") or [] if not e.get("deletedAt")}
+    refs: list[dict[str, Any]] = []
+    for s in seg.get("shots") or []:
+        for eid in s.get("referenceEntityIds") or []:
+            ent = entities.get(eid)
+            if not ent:
+                continue
+            if any(r.get("id") == eid for r in refs):
+                continue
+            refs.append(
+                {
+                    "id": eid,
+                    "name": ent.get("name"),
+                    "kind": ent.get("kind"),
+                    "variant": ent.get("variant") or "",
+                    "description": (ent.get("description") or "")[:300],
+                    "hasImage": bool(ent.get("selectedImageId")),
+                }
+            )
+    shot_prompts = [
+        {
+            "shotId": s.get("id"),
+            "beatIndex": s.get("beatIndex") or s.get("shotOrder"),
+            "prompt": s.get("prompt") or "",
+            "dialogue": s.get("dialogue") or "",
+            "action": s.get("action") or "",
+        }
+        for s in (seg.get("shots") or [])
+    ]
+    return {
+        "segmentOrder": int(segment_order),
+        "episodeId": episode_id,
+        "videoPrompt": combined,
+        "duration": int(seg.get("duration") or lead.get("segmentDuration") or 12),
+        "references": refs,
+        "shots": shot_prompts,
+        "note": "videoPrompt 为合并后发给 Seedance/Comfy 的正文；references 会作为参考图一并提交。",
+    }
+
+
+def recheck_video_qa(
+    store: ProjectStore,
+    project_id: str,
+    *,
+    shot_ids: list[str] | None = None,
+) -> dict[str, Any]:
+    """Re-judge selected videos against prompt + referenced cast/scene/prop bible."""
+    state = store.load(project_id)
+    if not state:
+        raise FileNotFoundError("project not found")
+    wanted = {str(x) for x in (shot_ids or []) if x} or None
+    entities = [e for e in (state.get("entities") or []) if not e.get("deletedAt")]
+    by_id = {e["id"]: e for e in entities}
+    results: list[dict[str, Any]] = []
+
+    for sh in state.get("shots") or []:
+        if sh.get("deletedAt"):
+            continue
+        if wanted is not None and sh.get("id") not in wanted:
+            continue
+        vid = next((v for v in (sh.get("videos") or []) if v.get("id") == sh.get("selectedVideoId")), None)
+        if not vid or not vid.get("path"):
+            continue
+        path = store._dir(project_id) / vid["path"]
+        prompt_used = vid.get("prompt") or sh.get("prompt") or ""
+        ref_ents = [by_id[eid] for eid in (sh.get("referenceEntityIds") or []) if eid in by_id]
+        qa = _judge_video_file(path, prompt=prompt_used, entities=ref_ents)
+        vid["qa"] = qa
+        vid["qaPass"] = bool(qa.get("qaPass"))
+        if vid["qaPass"]:
+            sh["status"] = "success"
+            sh["error"] = None
+        else:
+            sh["status"] = "failed"
+            sh["error"] = f"质检未达标: {qa.get('reason') or 'mismatch'}"
+        sh["updatedAt"] = _now()
+        results.append(
+            {
+                "shotId": sh.get("id"),
+                "segmentOrder": sh.get("segmentOrder"),
+                "qaPass": vid["qaPass"],
+                "score": qa.get("score"),
+                "reason": qa.get("reason"),
+            }
+        )
+        _propagate_segment_video(state, sh)
+
+    store.save(state)
+    return {
+        "total": len(results),
+        "pass": sum(1 for r in results if r.get("qaPass")),
+        "fail": sum(1 for r in results if not r.get("qaPass")),
+        "results": results,
+    }
 
 
 def select_entity_image(store: ProjectStore, project_id: str, entity_id: str, image_id: str) -> dict:
@@ -676,7 +1524,7 @@ def _compose_short_drama_prompt(
     scene = f"@{scene_name}" if scene_name else "场景中"
     act = (action or "完成一个明确可见动作").strip()
     speaker, spoken = _spoken_line(dialogue)
-    dur = max(3, min(12, int(duration or 4)))
+    dur = max(2, min(8, int(duration or 4)))
     head = f"【分镜{max(1, int(shot_order))}】{dur}s: "
     if shot_order and int(shot_order) > 1:
         head += f"承接分镜{int(shot_order) - 1}。"
@@ -718,7 +1566,7 @@ def _normalize_short_drama_prompt(prompt: str, *, dialogue: str = "") -> str:
     return text.strip("。 ")
 
 
-def _parse_ref_tags(prompt: str, entities: list[dict]) -> list[str]:
+def _parse_ref_tags(prompt: str, entities: list[dict], *, require_image: bool = False) -> list[str]:
     """Map @Name or @Name-Variant tags to entity ids (max 9)."""
     tags = re.findall(r"@([^\s@,，。；;]+)", prompt or "")
     ids = []
@@ -728,7 +1576,9 @@ def _parse_ref_tags(prompt: str, entities: list[dict]) -> list[str]:
             if e.get("deletedAt"):
                 continue
             if e["name"] == name and (not variant or (e.get("variant") or "") == variant):
-                if e["id"] not in ids and e.get("selectedImageId"):
+                if require_image and not e.get("selectedImageId"):
+                    continue
+                if e["id"] not in ids:
                     ids.append(e["id"])
                 break
         if len(ids) >= 9:
@@ -736,11 +1586,201 @@ def _parse_ref_tags(prompt: str, entities: list[dict]) -> list[str]:
     return ids
 
 
-# SceneMixer-aligned episode density: 12–30 shots, 3–6 minutes.
-_STORYBOARD_SHOT_MIN = 12
-_STORYBOARD_SHOT_MAX = 30
-_STORYBOARD_DUR_MIN = 180
+def _resolve_shot_entity_ids(
+    shot: dict,
+    entities: list[dict],
+    *,
+    require_image: bool = False,
+    episode_number: int | None = None,
+) -> list[str]:
+    """Bind characters / scenes / props mentioned in a beat to entity ids.
+
+    Matching order: explicit @tags → characters[] → dialogue speaker → sceneName/location
+    → longest entity-name substring in prompt/action. Prefer episode-tagged entities when
+    the same name appears twice; still bind names even if episodes[] is wrong/stale.
+    """
+    alive = [e for e in (entities or []) if not e.get("deletedAt")]
+    if not alive:
+        return []
+
+    def _ok(e: dict) -> bool:
+        return (not require_image) or bool(e.get("selectedImageId"))
+
+    def _rank(e: dict) -> tuple:
+        eps = e.get("episodes") or []
+        on_ep = 0 if (episode_number is None or not eps or episode_number in eps) else 1
+        has_img = 0 if e.get("selectedImageId") else 1
+        return (on_ep, has_img, len(str(e.get("name") or "")))
+
+    by_name: dict[str, list[dict]] = {}
+    for e in alive:
+        by_name.setdefault(str(e.get("name") or "").strip(), []).append(e)
+
+    def _pick_name(name: str) -> str | None:
+        name = (name or "").strip()
+        if not name or name not in by_name:
+            return None
+        cands = [e for e in by_name[name] if _ok(e)]
+        if not cands:
+            return None
+        cands.sort(key=_rank)
+        return cands[0]["id"]
+
+    ids: list[str] = []
+
+    def _add(eid: str | None) -> None:
+        if eid and eid not in ids and len(ids) < 9:
+            ids.append(eid)
+
+    for eid in _parse_ref_tags(str(shot.get("prompt") or ""), alive, require_image=require_image):
+        _add(eid)
+
+    for name in shot.get("characters") or []:
+        if isinstance(name, str):
+            _add(_pick_name(name))
+        elif isinstance(name, dict):
+            _add(_pick_name(str(name.get("name") or "")))
+
+    dialogue = str(shot.get("dialogue") or "").strip()
+    if dialogue:
+        m = re.match(r"^([^：:\n]{1,24})\s*[：:]", dialogue)
+        if m:
+            _add(_pick_name(m.group(1).strip()))
+
+    for key in ("sceneName", "location"):
+        _add(_pick_name(str(shot.get(key) or "")))
+
+    # Substring scan: longest names first to avoid partial collisions.
+    blob = " ".join(
+        str(shot.get(k) or "")
+        for k in ("prompt", "action", "dialogue", "sceneName", "location", "openingState")
+    )
+    names = sorted(
+        (n for n in by_name if n and len(n) >= 2),
+        key=len,
+        reverse=True,
+    )
+    for name in names:
+        if name in blob:
+            _add(_pick_name(name))
+        if len(ids) >= 9:
+            break
+
+    return ids[:9]
+
+
+def bind_episode_refs(store: ProjectStore, project_id: str, episode_id: str) -> list[dict]:
+    """Re-scan episode shots and fill referenceEntityIds from names in prompts/dialogue."""
+    state = store.load(project_id)
+    if not state:
+        raise FileNotFoundError("project not found")
+    ep = next((e for e in state.get("episodes") or [] if e["id"] == episode_id), None)
+    ep_num = int(ep["episodeNumber"]) if ep else None
+    entities = [e for e in (state.get("entities") or []) if not e.get("deletedAt")]
+    changed = 0
+    out = []
+    for s in state.get("shots") or []:
+        if s.get("episodeId") != episode_id or s.get("deletedAt"):
+            continue
+        refs = _resolve_shot_entity_ids(s, entities, require_image=False, episode_number=ep_num)
+        prev = list(s.get("referenceEntityIds") or [])
+        if refs != prev:
+            s["referenceEntityIds"] = refs
+            s["updatedAt"] = _now()
+            changed += 1
+        out.append(s)
+    if changed:
+        store.save(state)
+    return out
+
+
+# SceneMixer-aligned: ~12 segments × 3–4 beats; episode ~2.5–6 min.
+_STORYBOARD_SEG_MIN = 10
+_STORYBOARD_SEG_MAX = 14
+_STORYBOARD_SHOT_MIN = 30  # 10×3
+_STORYBOARD_SHOT_MAX = 56  # 14×4
+_STORYBOARD_DUR_MIN = 150
 _STORYBOARD_DUR_MAX = 360
+_SEGMENT_DUR_MIN = 10
+_SEGMENT_DUR_MAX = 15
+
+
+def _materialize_one_beat(
+    *,
+    project_id: str,
+    episode_id: str,
+    sh: dict,
+    available: list[dict],
+    style_hint: str,
+    shot_order: int,
+    segment_order: int,
+    beat_index: int,
+    segment_meta: dict | None = None,
+    ts: str | None = None,
+) -> dict:
+    """One SceneMixer beat → store shot row (video unit is the segment, not the beat)."""
+    ts = ts or _now()
+    meta = segment_meta or {}
+    prompt = (sh.get("prompt") or "").strip()
+    action = (sh.get("action") or "").strip()
+    dialogue = (sh.get("dialogue") or "").strip()
+    scene_name = (sh.get("sceneName") or meta.get("location") or "").strip()
+    default_dur = 4 if dialogue else 3
+    duration = max(2, min(8, int(sh.get("duration") or default_dur)))
+    if len(prompt) < 12 or prompt.lower() in {"subtle performance, cinematic", "cinematic", "performance"}:
+        prompt = _compose_short_drama_prompt(
+            style_hint=style_hint,
+            scene_name=scene_name,
+            action=action,
+            dialogue=dialogue,
+            characters=sh.get("characters") or [],
+            shot_order=shot_order,
+            duration=duration,
+        )
+    else:
+        prompt = _normalize_short_drama_prompt(prompt, dialogue=dialogue)
+        if f"【分镜{shot_order}】" not in prompt and "【分镜" not in prompt[:12]:
+            prompt = f"【分镜{shot_order}】{duration}s: {prompt}"
+    is_lead = int(beat_index) == 1
+    draft = {
+        "prompt": prompt,
+        "dialogue": dialogue,
+        "action": action,
+        "sceneName": scene_name,
+        "location": (meta.get("location") or scene_name or "").strip(),
+        "characters": sh.get("characters") or [],
+        "openingState": (meta.get("openingState") or "").strip() if is_lead else "",
+    }
+    refs = _resolve_shot_entity_ids(draft, available, require_image=False)
+    return {
+        "id": new_id("sh_"),
+        "projectId": project_id,
+        "episodeId": episode_id,
+        "shotOrder": shot_order,
+        "segmentOrder": int(segment_order),
+        "beatIndex": int(beat_index),
+        "isSegmentLead": is_lead,
+        "location": (meta.get("location") or scene_name or "").strip(),
+        "timeOfDay": (meta.get("timeOfDay") or "").strip(),
+        "weather": (meta.get("weather") or "").strip(),
+        "openingState": (meta.get("openingState") or "").strip() if is_lead else "",
+        "setDressing": (meta.get("setDressing") or "").strip() if is_lead else "",
+        "ambientSound": (meta.get("ambientSound") or "").strip(),
+        "segmentDuration": int(meta.get("duration") or 0) or None,
+        "prompt": prompt,
+        "duration": duration,
+        "referenceEntityIds": refs,
+        "status": "pending",
+        "providerTaskId": None,
+        "error": None,
+        "selectedVideoId": None,
+        "videos": [],
+        "sceneName": scene_name,
+        "action": action,
+        "dialogue": dialogue,
+        "createdAt": ts,
+        "updatedAt": ts,
+    }
 
 
 def _materialize_storyboard_shots(
@@ -752,57 +1792,154 @@ def _materialize_storyboard_shots(
     style_hint: str,
     start_order: int = 1,
 ) -> list[dict]:
-    """Turn LLM shot objects into store rows (SceneMixer density: 5–12s each)."""
+    """Legacy flat shots → rows; auto-pack into segments of 3–4 beats / ~12–15s."""
     ts = _now()
     shots: list[dict] = []
+    seg_order = 1
+    beat_in_seg = 0
+    seg_dur = 0
     for i, sh in enumerate(raw_shots or [], start_order):
         if not isinstance(sh, dict):
             continue
-        prompt = (sh.get("prompt") or "").strip()
-        action = (sh.get("action") or "").strip()
-        dialogue = (sh.get("dialogue") or "").strip()
-        scene_name = (sh.get("sceneName") or "").strip()
-        shot_order = int(sh.get("shotOrder") or i)
-        # Prefer 6–12s beats so 12–30 shots land in the 3–6 min band.
-        default_dur = 8 if dialogue else 6
-        duration = max(5, min(12, int(sh.get("duration") or default_dur)))
-        if len(prompt) < 24 or prompt.lower() in {"subtle performance, cinematic", "cinematic", "performance"}:
-            prompt = _compose_short_drama_prompt(
-                style_hint=style_hint,
-                scene_name=scene_name,
-                action=action,
-                dialogue=dialogue,
-                characters=sh.get("characters") or [],
-                shot_order=shot_order,
-                duration=duration,
-            )
-        else:
-            prompt = _normalize_short_drama_prompt(prompt, dialogue=dialogue)
-            if f"【分镜{shot_order}】" not in prompt and "【分镜" not in prompt[:12]:
-                prompt = f"【分镜{shot_order}】{duration}s: {prompt}"
-        refs = _parse_ref_tags(prompt, available)
-        shots.append(
-            {
-                "id": new_id("sh_"),
-                "projectId": project_id,
-                "episodeId": episode_id,
-                "shotOrder": shot_order,
-                "prompt": prompt,
-                "duration": duration,
-                "referenceEntityIds": refs,
-                "status": "pending",
-                "providerTaskId": None,
-                "error": None,
-                "selectedVideoId": None,
-                "videos": [],
-                "sceneName": scene_name,
-                "action": action,
-                "dialogue": dialogue,
-                "createdAt": ts,
-                "updatedAt": ts,
-            }
+        # Start a new segment every 4 beats or when segment duration would exceed 15s.
+        default_dur = 4 if (sh.get("dialogue") or "").strip() else 3
+        guess = max(2, min(8, int(sh.get("duration") or default_dur)))
+        if beat_in_seg >= 4 or (beat_in_seg >= 3 and seg_dur + guess > _SEGMENT_DUR_MAX):
+            seg_order += 1
+            beat_in_seg = 0
+            seg_dur = 0
+        beat_in_seg += 1
+        row = _materialize_one_beat(
+            project_id=project_id,
+            episode_id=episode_id,
+            sh=sh,
+            available=available,
+            style_hint=style_hint,
+            shot_order=i,
+            segment_order=seg_order,
+            beat_index=beat_in_seg,
+            segment_meta={"location": (sh.get("sceneName") or "").strip(), "duration": 0},
+            ts=ts,
         )
+        seg_dur += int(row["duration"])
+        shots.append(row)
+    # Fill segmentDuration on leads
+    by_seg: dict[int, list[dict]] = {}
+    for s in shots:
+        by_seg.setdefault(int(s["segmentOrder"]), []).append(s)
+    for seg_shots in by_seg.values():
+        total = sum(int(x.get("duration") or 0) for x in seg_shots)
+        for x in seg_shots:
+            x["segmentDuration"] = total
     return shots
+
+
+def _materialize_storyboard_segments(
+    *,
+    project_id: str,
+    episode_id: str,
+    raw_segments: list,
+    available: list[dict],
+    style_hint: str,
+) -> list[dict]:
+    """SceneMixer segments[] → flat shot rows with segmentOrder / beatIndex."""
+    ts = _now()
+    shots: list[dict] = []
+    shot_order = 0
+    for seg in raw_segments or []:
+        if not isinstance(seg, dict):
+            continue
+        seg_order = int(seg.get("segmentOrder") or (shots[-1]["segmentOrder"] + 1 if shots else 1))
+        beats = seg.get("beats") or seg.get("shots") or []
+        if not isinstance(beats, list) or not beats:
+            continue
+        meta = {
+            "location": (seg.get("location") or "").strip(),
+            "timeOfDay": (seg.get("timeOfDay") or "").strip(),
+            "weather": (seg.get("weather") or "").strip(),
+            "openingState": (seg.get("openingState") or "").strip(),
+            "setDressing": (seg.get("setDressing") or "").strip(),
+            "ambientSound": (seg.get("ambientSound") or "").strip(),
+            "duration": int(seg.get("duration") or 0),
+        }
+        seg_shots: list[dict] = []
+        for bi, beat in enumerate(beats[:4], 1):
+            if not isinstance(beat, dict):
+                continue
+            shot_order += 1
+            row = _materialize_one_beat(
+                project_id=project_id,
+                episode_id=episode_id,
+                sh=beat,
+                available=available,
+                style_hint=style_hint,
+                shot_order=shot_order,
+                segment_order=seg_order,
+                beat_index=bi,
+                segment_meta=meta,
+                ts=ts,
+            )
+            seg_shots.append(row)
+        if not seg_shots:
+            continue
+        total = sum(int(x.get("duration") or 0) for x in seg_shots)
+        # Prefer model segment duration when in band; else sum of beats.
+        seg_dur = int(meta.get("duration") or 0)
+        if seg_dur < _SEGMENT_DUR_MIN or seg_dur > _SEGMENT_DUR_MAX:
+            seg_dur = max(_SEGMENT_DUR_MIN, min(_SEGMENT_DUR_MAX, total or _SEGMENT_DUR_MIN))
+        for x in seg_shots:
+            x["segmentDuration"] = seg_dur
+            if meta.get("ambientSound") and "环境音" not in (x.get("prompt") or "") and x.get("isSegmentLead"):
+                x["prompt"] = f"{(x.get('prompt') or '').rstrip('。')}。环境音：{meta['ambientSound']}"
+        shots.extend(seg_shots)
+    return shots
+
+
+def group_shots_by_segment(shots: list[dict]) -> list[dict]:
+    """Return [{segmentOrder, duration, shots, lead}, ...] sorted."""
+    buckets: dict[int, list[dict]] = {}
+    for s in shots or []:
+        if s.get("deletedAt"):
+            continue
+        so = int(s.get("segmentOrder") or s.get("shotOrder") or 0)
+        if so <= 0:
+            so = 1
+        buckets.setdefault(so, []).append(s)
+    out = []
+    for so in sorted(buckets):
+        group = sorted(
+            buckets[so],
+            key=lambda x: (int(x.get("beatIndex") or 0), int(x.get("shotOrder") or 0)),
+        )
+        lead = next((x for x in group if x.get("isSegmentLead")), group[0])
+        dur = int(lead.get("segmentDuration") or 0) or sum(int(x.get("duration") or 0) for x in group)
+        out.append({"segmentOrder": so, "duration": dur, "shots": group, "lead": lead})
+    return out
+
+
+def build_segment_prompt(segment: dict) -> str:
+    """Combine segment header + beat prompts for one Seedance/H3 call."""
+    lead = segment.get("lead") or (segment.get("shots") or [None])[0] or {}
+    parts: list[str] = []
+    loc = (lead.get("location") or lead.get("sceneName") or "").strip()
+    if loc:
+        parts.append(f"地点：{loc}")
+    if lead.get("timeOfDay"):
+        parts.append(f"时间：{lead['timeOfDay']}")
+    if lead.get("weather"):
+        parts.append(f"天气：{lead['weather']}")
+    if lead.get("openingState"):
+        parts.append(f"起始画面状态：{lead['openingState']}")
+    if lead.get("setDressing"):
+        parts.append(f"场上布景：{lead['setDressing']}")
+    for beat in segment.get("shots") or []:
+        p = (beat.get("prompt") or "").strip()
+        if p:
+            parts.append(p)
+    if lead.get("ambientSound"):
+        parts.append(f"环境音：{lead['ambientSound']}")
+    parts.append("保持人物样貌与服装与参考图一致，无字幕，无解说旁白。")
+    return "\n".join(parts)
 
 
 def _top_up_shot_durations(shots: list[dict], need_sec: int) -> None:
@@ -817,9 +1954,9 @@ def _top_up_shot_durations(shots: list[dict], need_sec: int) -> None:
         for s in shots:
             if left <= 0:
                 break
-            if int(s.get("duration") or 0) >= 12:
+            if int(s.get("duration") or 0) >= 8:
                 continue
-            s["duration"] = int(s.get("duration") or 5) + 1
+            s["duration"] = int(s.get("duration") or 3) + 1
             left -= 1
             progressed = True
             # Keep prompt header in sync when present.
@@ -835,6 +1972,52 @@ def _top_up_shot_durations(shots: list[dict], need_sec: int) -> None:
                 )
         if not progressed:
             break
+
+
+def migrate_episode_segments(store: ProjectStore, project_id: str, episode_id: str) -> list[dict]:
+    """Assign segmentOrder/beatIndex to legacy flat shots without wiping videos."""
+    state = store.load(project_id)
+    if not state:
+        raise FileNotFoundError("project not found")
+    shots = [
+        s
+        for s in (state.get("shots") or [])
+        if s.get("episodeId") == episode_id and not s.get("deletedAt")
+    ]
+    if not shots:
+        return []
+    if all(int(s.get("segmentOrder") or 0) > 0 for s in shots):
+        # Segments already assigned — still refresh name→entity refs for the desk.
+        return bind_episode_refs(store, project_id, episode_id)
+    ordered = sorted(shots, key=lambda s: int(s.get("shotOrder") or 0))
+    seg_order = 1
+    beat_in_seg = 0
+    seg_dur = 0
+    for s in ordered:
+        guess = max(2, min(8, int(s.get("duration") or 4)))
+        if beat_in_seg >= 4 or (beat_in_seg >= 3 and seg_dur + guess > _SEGMENT_DUR_MAX):
+            seg_order += 1
+            beat_in_seg = 0
+            seg_dur = 0
+        beat_in_seg += 1
+        seg_dur += guess
+        s["segmentOrder"] = seg_order
+        s["beatIndex"] = beat_in_seg
+        s["isSegmentLead"] = beat_in_seg == 1
+        s.setdefault("location", s.get("sceneName") or "")
+        s.setdefault("timeOfDay", "")
+        s.setdefault("weather", "")
+        s.setdefault("openingState", "")
+        s.setdefault("setDressing", "")
+        s.setdefault("ambientSound", "")
+        s["updatedAt"] = _now()
+    for g in group_shots_by_segment(ordered):
+        total = sum(int(x.get("duration") or 0) for x in g["shots"])
+        for x in g["shots"]:
+            x["segmentDuration"] = max(_SEGMENT_DUR_MIN, min(_SEGMENT_DUR_MAX, total or _SEGMENT_DUR_MIN))
+    store.save(state)
+    # Also attach cast/prop/scene refs so the segment desk can show them.
+    return bind_episode_refs(store, project_id, episode_id)
 
 
 def generate_storyboard(store: ProjectStore, project_id: str, episode_id: str) -> dict:
@@ -882,111 +2065,155 @@ def generate_storyboard(store: ProjectStore, project_id: str, episode_id: str) -
         "visualStyle": p.get("visualStyle"),
         "visualStylePrompt": style_hint,
         "assets": assets,
-        "shotCountMin": _STORYBOARD_SHOT_MIN,
-        "shotCountMax": _STORYBOARD_SHOT_MAX,
-        "shotCountTarget": 20,
+        "segmentCountMin": _STORYBOARD_SEG_MIN,
+        "segmentCountMax": _STORYBOARD_SEG_MAX,
+        "segmentCountTarget": 12,
+        "beatsPerSegment": "3-4",
+        "segmentDurationSec": "10-15",
         "episodeDurationSecMin": _STORYBOARD_DUR_MIN,
         "episodeDurationSecMax": _STORYBOARD_DUR_MAX,
-        "episodeDurationSecTarget": 240,
+        "episodeDurationSecTarget": 162,
         "note": (
-            "必须输出 12–30 个分镜，各镜 duration 之和 180–360 秒（目标约 4 分钟 / 20 镜）。"
-            "对齐 SceneMixer：一镜一节拍，对白与反应拆镜，写清机位/承接/闭唇/光源。"
+            "必须输出 segments 数组：10–14 个片段，每段 3–4 个 beats，每段 duration 10–15 秒。"
+            "对齐 SceneMixer《染血玉令》：一段一次出片；一镜一节拍；对白与反应拆镜；写清机位/承接/闭唇/光源。"
         ),
     }
-    system = skill + "\n\n只输出一个完整 JSON 对象（键 shots 为数组）。禁止 Markdown、注释与尾随逗号。"
+    system = (
+        skill
+        + "\n\n只输出一个完整 JSON 对象（键 segments 为数组）。禁止 Markdown、注释与尾随逗号。"
+    )
     data = chat_json(
         system=system,
         user=json.dumps({**base_ctx, "action": "generate"}, ensure_ascii=False),
         temperature=0.35,
-        max_tokens=24000,
+        max_tokens=28000,
         retries=4,
     )
-    shots = _materialize_storyboard_shots(
-        project_id=project_id,
-        episode_id=episode_id,
-        raw_shots=data.get("shots") or [],
-        available=available,
-        style_hint=style_hint,
-        start_order=1,
-    )
+    if data.get("segments"):
+        shots = _materialize_storyboard_segments(
+            project_id=project_id,
+            episode_id=episode_id,
+            raw_segments=data.get("segments") or [],
+            available=available,
+            style_hint=style_hint,
+        )
+    else:
+        # Backward compat if model still returns flat shots[]
+        shots = _materialize_storyboard_shots(
+            project_id=project_id,
+            episode_id=episode_id,
+            raw_shots=data.get("shots") or [],
+            available=available,
+            style_hint=style_hint,
+            start_order=1,
+        )
 
-    # Continue in batches until density targets are met (LLM often returns sample-sized boards).
+    # Continue adding segments until density targets are met.
     guard = 0
-    while guard < 4 and len(shots) < _STORYBOARD_SHOT_MAX:
+    while guard < 3:
+        segments = group_shots_by_segment(shots)
         total_dur = sum(int(s.get("duration") or 0) for s in shots)
-        if len(shots) >= _STORYBOARD_SHOT_MIN and total_dur >= _STORYBOARD_DUR_MIN:
+        if len(segments) >= _STORYBOARD_SEG_MIN and total_dur >= _STORYBOARD_DUR_MIN:
             break
-        need = min(8, _STORYBOARD_SHOT_MAX - len(shots))
-        if need <= 0:
+        need_seg = min(4, _STORYBOARD_SEG_MAX - len(segments))
+        if need_seg <= 0:
             break
         guard += 1
         cont_user = {
             **base_ctx,
             "action": "continue",
-            "startShotOrder": len(shots) + 1,
-            "addShotCount": need,
-            "haveShotCount": len(shots),
+            "startSegmentOrder": len(segments) + 1,
+            "addSegmentCount": need_seg,
+            "haveSegmentCount": len(segments),
+            "haveBeatCount": len(shots),
             "haveDurationSec": total_dur,
             "remainingDurationSecMin": max(0, _STORYBOARD_DUR_MIN - total_dur),
-            "previousShots": [
+            "previousSegments": [
                 {
-                    "shotOrder": s.get("shotOrder"),
-                    "sceneName": s.get("sceneName"),
-                    "action": (s.get("action") or "")[:120],
-                    "dialogue": (s.get("dialogue") or "")[:80],
-                    "duration": s.get("duration"),
+                    "segmentOrder": g["segmentOrder"],
+                    "duration": g["duration"],
+                    "location": (g["lead"].get("location") or "")[:80],
+                    "beatCount": len(g["shots"]),
+                    "lastAction": ((g["shots"][-1].get("action") or "")[:100]),
                 }
-                for s in shots[-6:]
+                for g in segments[-3:]
             ],
             "note": (
-                f"已有 {len(shots)} 镜 / {total_dur}s，请续写接下来约 {need} 镜，"
-                f"承接上一镜轴线与剧情，补足至整集至少 {_STORYBOARD_SHOT_MIN} 镜且总时长≥{_STORYBOARD_DUR_MIN}s。"
+                f"已有 {len(segments)} 段 / {len(shots)} 拍 / {total_dur}s，"
+                f"请续写接下来约 {need_seg} 个 segments（每段 3–4 beats），"
+                f"补足至至少 {_STORYBOARD_SEG_MIN} 段且总时长≥{_STORYBOARD_DUR_MIN}s。"
             ),
         }
         more_data = chat_json(
-            system=system + "\n续写后续分镜，不要重复已有 shotOrder。",
+            system=system + "\n续写后续片段，不要重复已有 segmentOrder。",
             user=json.dumps(cont_user, ensure_ascii=False),
             temperature=0.35,
-            max_tokens=16000,
+            max_tokens=20000,
             retries=3,
         )
-        more = _materialize_storyboard_shots(
-            project_id=project_id,
-            episode_id=episode_id,
-            raw_shots=more_data.get("shots") or [],
-            available=available,
-            style_hint=style_hint,
-            start_order=len(shots) + 1,
-        )
+        if more_data.get("segments"):
+            more = _materialize_storyboard_segments(
+                project_id=project_id,
+                episode_id=episode_id,
+                raw_segments=more_data.get("segments") or [],
+                available=available,
+                style_hint=style_hint,
+            )
+        else:
+            more = _materialize_storyboard_shots(
+                project_id=project_id,
+                episode_id=episode_id,
+                raw_shots=more_data.get("shots") or [],
+                available=available,
+                style_hint=style_hint,
+                start_order=len(shots) + 1,
+            )
         if not more:
             break
-        # Re-number contiguously in case the model drifted.
+        # Re-number shotOrder contiguously; keep relative segmentOrder from model when possible.
+        base_seg = max((int(s.get("segmentOrder") or 0) for s in shots), default=0)
+        for s in more:
+            if int(s.get("segmentOrder") or 0) <= base_seg:
+                s["segmentOrder"] = base_seg + 1
+                base_seg = int(s["segmentOrder"])
         for idx, s in enumerate(more, len(shots) + 1):
             s["shotOrder"] = idx
         shots.extend(more)
 
-    if len(shots) > _STORYBOARD_SHOT_MAX:
-        shots = shots[:_STORYBOARD_SHOT_MAX]
+    # Cap by segment count first
+    segments = group_shots_by_segment(shots)
+    if len(segments) > _STORYBOARD_SEG_MAX:
+        keep_orders = {g["segmentOrder"] for g in segments[:_STORYBOARD_SEG_MAX]}
+        shots = [s for s in shots if int(s.get("segmentOrder") or 0) in keep_orders]
 
     total_dur = sum(int(s.get("duration") or 0) for s in shots)
     if total_dur < _STORYBOARD_DUR_MIN:
         _top_up_shot_durations(shots, _STORYBOARD_DUR_MIN - total_dur)
-        total_dur = sum(int(s.get("duration") or 0) for s in shots)
-    # Prefer denser early/mid drama; drop trailing filler only if far over the 6-min ceiling.
-    while (
-        len(shots) > _STORYBOARD_SHOT_MIN
-        and sum(int(s.get("duration") or 0) for s in shots) > _STORYBOARD_DUR_MAX
-    ):
-        shots.pop()
+        # refresh segmentDuration
+        for g in group_shots_by_segment(shots):
+            d = sum(int(x.get("duration") or 0) for x in g["shots"])
+            for x in g["shots"]:
+                x["segmentDuration"] = max(_SEGMENT_DUR_MIN, min(_SEGMENT_DUR_MAX, d))
 
-    if len(shots) < _STORYBOARD_SHOT_MIN:
+    while True:
+        segments = group_shots_by_segment(shots)
+        total_dur = sum(int(s.get("duration") or 0) for s in shots)
+        if len(segments) <= _STORYBOARD_SEG_MIN or total_dur <= _STORYBOARD_DUR_MAX:
+            break
+        drop = segments[-1]["segmentOrder"]
+        shots = [s for s in shots if int(s.get("segmentOrder") or 0) != drop]
+
+    segments = group_shots_by_segment(shots)
+    if len(segments) < _STORYBOARD_SEG_MIN:
         raise RuntimeError(
-            f"分镜过少（{len(shots)} 镜），整集需要对齐 12–30 镜 / 3–6 分钟。请重试拆分或加厚剧本场次。"
+            f"片段过少（{len(segments)} 段 / {len(shots)} 拍），"
+            f"整集需对齐 {_STORYBOARD_SEG_MIN}–{_STORYBOARD_SEG_MAX} 段（每段 3–4 镜，约 10–15s）。请重试拆分。"
         )
 
     state["shots"].extend(shots)
     store.save(state)
-    return shots
+    # Name-scan prompts/dialogue so workspace left rail is populated even without @tags.
+    return bind_episode_refs(store, project_id, episode_id)
 
 
 def _mark_shots_stale(state: dict, *, entity_id: str | None = None, episode_id: str | None = None, reason: str = "") -> int:
@@ -1048,14 +2275,31 @@ def add_shot(store: ProjectStore, project_id: str, episode_id: str) -> dict:
         if s.get("episodeId") == episode_id and not s.get("deletedAt")
     ]
     order = max((int(s.get("shotOrder") or 0) for s in existing), default=0) + 1
+    last_seg = max((int(s.get("segmentOrder") or 0) for s in existing), default=0) or 1
+    beats_in_last = sum(1 for s in existing if int(s.get("segmentOrder") or 0) == last_seg)
+    if beats_in_last >= 4:
+        last_seg += 1
+        beat_index = 1
+    else:
+        beat_index = beats_in_last + 1
     ts = _now()
     shot = {
         "id": new_id("sh_"),
         "projectId": project_id,
         "episodeId": episode_id,
         "shotOrder": order,
+        "segmentOrder": last_seg,
+        "beatIndex": beat_index,
+        "isSegmentLead": beat_index == 1,
+        "location": "",
+        "timeOfDay": "",
+        "weather": "",
+        "openingState": "",
+        "setDressing": "",
+        "ambientSound": "",
+        "segmentDuration": None,
         "prompt": "",
-        "duration": 5,
+        "duration": 4,
         "referenceEntityIds": [],
         "status": "pending",
         "providerTaskId": None,
@@ -1120,6 +2364,333 @@ def _download(url: str, dest: Path) -> None:
     assert_media_ok(dest, unlink_on_fail=True)
 
 
+def _propagate_segment_video(state: dict, lead: dict) -> None:
+    """Copy lead take status/video onto other beats in the same segment."""
+    sibs = set(lead.get("_segmentSiblingIds") or [])
+    if not sibs:
+        return
+    vid = lead.get("selectedVideoId")
+    version = next((v for v in (lead.get("videos") or []) if v.get("id") == vid), None) if vid else None
+    now = _now()
+    for s in state.get("shots") or []:
+        if s.get("id") not in sibs:
+            continue
+        if lead.get("status") == "success" and version:
+            shared = {**version, "shotId": s["id"], "note": (version.get("note") or "") or "segment-shared"}
+            vids = s.setdefault("videos", [])
+            if not any(v.get("id") == vid for v in vids):
+                vids.append(shared)
+            s["selectedVideoId"] = vid
+            s["status"] = "success"
+            s["error"] = None
+            s["staleReason"] = None
+            s["providerTaskId"] = lead.get("providerTaskId")
+        elif lead.get("status") == "failed":
+            s["status"] = "failed"
+            s["error"] = lead.get("error") or "片段生成失败"
+            s["providerTaskId"] = None
+        s["updatedAt"] = now
+
+
+class EntityQaBlockedError(RuntimeError):
+    """Raised when referenced entity stills have not passed QA and force is off."""
+
+    def __init__(self, blockers: list[dict[str, Any]], *, message: str = ""):
+        self.blockers = list(blockers or [])
+        labels = []
+        for b in self.blockers[:6]:
+            name = b.get("name") or b.get("entityId") or "?"
+            kind = b.get("kindLabel") or b.get("kind") or "素材"
+            labels.append(f"{kind}「{name}」")
+        summary = "、".join(labels) + ("…" if len(self.blockers) > 6 else "")
+        super().__init__(
+            message
+            or (
+                f"素材质检未过，已阻断出片（{len(self.blockers)} 项）：{summary}。"
+                "请先重生/复核素材，或传 forceEntityQa=true 强制出片。"
+            )
+        )
+
+
+def _selected_entity_image(ent: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not ent:
+        return None
+    sid = ent.get("selectedImageId")
+    if not sid:
+        return None
+    return next((i for i in (ent.get("images") or []) if i.get("id") == sid), None)
+
+
+def entity_ref_qa_blockers(
+    entities_by_id: dict[str, dict[str, Any]],
+    entity_ids: list[str] | None,
+) -> list[dict[str, Any]]:
+    """Return blockers for referenced entities whose selected still is not QA-ready."""
+    from prompt_qa import is_soft_pass_qa, qa_meets_bar
+
+    kind_label = {"character": "角色", "scene": "场景", "prop": "道具"}
+    blockers: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for eid in entity_ids or []:
+        eid = str(eid or "").strip()
+        if not eid or eid in seen:
+            continue
+        seen.add(eid)
+        ent = entities_by_id.get(eid)
+        if not ent:
+            blockers.append(
+                {
+                    "entityId": eid,
+                    "name": eid,
+                    "kind": "unknown",
+                    "kindLabel": "素材",
+                    "issue": "missing_entity",
+                    "reason": "引用的素材不存在",
+                }
+            )
+            continue
+        name = (ent.get("name") or eid).strip() or eid
+        kind = str(ent.get("kind") or "unknown")
+        label = kind_label.get(kind, "素材")
+        img = _selected_entity_image(ent)
+        if not img or not img.get("path"):
+            blockers.append(
+                {
+                    "entityId": eid,
+                    "name": name,
+                    "kind": kind,
+                    "kindLabel": label,
+                    "issue": "no_image",
+                    "reason": "尚无可用参考图",
+                }
+            )
+            continue
+        qa = img.get("qa") or {}
+        soft = is_soft_pass_qa(qa)
+        meets = bool(img.get("qaPass") is True) and qa_meets_bar(qa) and not soft
+        if meets:
+            continue
+        if soft:
+            issue = "soft_pass"
+            reason = str(qa.get("reason") or "质检无效（软通过/跳过）")
+        elif img.get("qaPass") is False or not qa_meets_bar(qa):
+            issue = "qa_fail"
+            reason = str(qa.get("reason") or ent.get("qaFailReason") or "质检未达标")
+        else:
+            issue = "qa_pending"
+            reason = str(qa.get("reason") or "尚未通过质检")
+        blockers.append(
+            {
+                "entityId": eid,
+                "name": name,
+                "kind": kind,
+                "kindLabel": label,
+                "issue": issue,
+                "reason": reason[:220],
+                "score": qa.get("score"),
+            }
+        )
+    return blockers
+
+
+def assert_entity_refs_ready_for_video(
+    state: dict[str, Any],
+    entity_ids: list[str] | None,
+    *,
+    force: bool = False,
+    skip_refs: bool = False,
+) -> list[dict[str, Any]]:
+    """Hard-gate video generation on entity still QA unless forced or text-only."""
+    if force or skip_refs:
+        return []
+    by_id = {e["id"]: e for e in (state.get("entities") or []) if e.get("id") and not e.get("deletedAt")}
+    blockers = entity_ref_qa_blockers(by_id, entity_ids)
+    if blockers:
+        raise EntityQaBlockedError(blockers)
+    return []
+
+
+def revise_segment(
+    store: ProjectStore,
+    project_id: str,
+    episode_id: str,
+    segment_order: int,
+    *,
+    instruction: str = "",
+    model: str = "",
+    resolution: str = "720p",
+    skip_refs: bool = False,
+    start_video: bool = True,
+    force_entity_qa: bool = False,
+) -> dict:
+    """Apply visual / dialogue revisions to a segment, then optionally regenerate its video.
+
+    - Syncs each beat's ``dialogue`` into its prompt (lip-sync line).
+    - Optionally rewrites beat prompts with a short ``instruction`` (LLM when available,
+      otherwise appends a 画面调整 note).
+    - Starts segment video generation when ``start_video`` is true.
+    """
+    state = store.load(project_id)
+    if not state:
+        raise FileNotFoundError("project not found")
+    ep_shots = [
+        s
+        for s in (state.get("shots") or [])
+        if s.get("episodeId") == episode_id and not s.get("deletedAt")
+    ]
+    segments = group_shots_by_segment(ep_shots)
+    seg = next((g for g in segments if int(g["segmentOrder"]) == int(segment_order)), None)
+    if not seg:
+        raise FileNotFoundError(f"片段 {segment_order} 不存在")
+    if any(s.get("status") == "generating" for s in seg["shots"]):
+        raise RuntimeError(f"片段 {segment_order} 正在生成，请稍后再改")
+
+    instruction = (instruction or "").strip()
+    rewritten: dict[str, str] = {}
+    if instruction:
+        try:
+            from providers.deepseek import chat_json
+
+            beats_payload = [
+                {
+                    "beatIndex": int(b.get("beatIndex") or i + 1),
+                    "prompt": (b.get("prompt") or "")[:800],
+                    "dialogue": (b.get("dialogue") or "")[:200],
+                }
+                for i, b in enumerate(seg["shots"])
+            ]
+            data = chat_json(
+                system=(
+                    "你是短剧分镜改写助手。根据用户的画面调整要求，改写每个 beat 的 prompt。"
+                    "保留人物名、台词口型、景别连贯与「承接分镜N」结构；不要加字幕/解说旁白；"
+                    "输出 JSON：{beats:[{beatIndex, prompt}]}。"
+                ),
+                user=(
+                    f"画面调整要求：{instruction}\n"
+                    f"当前片段 beats：{json.dumps(beats_payload, ensure_ascii=False)}"
+                ),
+            )
+            for item in data.get("beats") or []:
+                if not isinstance(item, dict):
+                    continue
+                bi = int(item.get("beatIndex") or 0)
+                p = (item.get("prompt") or "").strip()
+                if bi and p:
+                    rewritten[bi] = p
+        except Exception:
+            rewritten = {}
+
+    now = _now()
+    for beat in seg["shots"]:
+        dialogue = str(beat.get("dialogue") or "").strip()
+        bi = int(beat.get("beatIndex") or 0)
+        if bi in rewritten:
+            prompt = rewritten[bi]
+        else:
+            prompt = str(beat.get("prompt") or "").strip()
+            if instruction:
+                note = f"画面调整要求：{instruction}"
+                if note not in prompt:
+                    prompt = f"{prompt.rstrip('。')}。{note}" if prompt else note
+        if dialogue:
+            prompt = _normalize_short_drama_prompt(prompt, dialogue=dialogue)
+        if prompt != (beat.get("prompt") or ""):
+            beat["prompt"] = prompt
+            if beat.get("status") in ("success", "stale") and (beat.get("videos") or beat.get("selectedVideoId")):
+                beat["status"] = "stale"
+                beat["staleReason"] = "画面/台词已调整，请重新生成本段"
+            beat["updatedAt"] = now
+
+    # Prefer refreshed refs after dialogue/speaker changes.
+    ep = next((e for e in state.get("episodes") or [] if e["id"] == episode_id), None)
+    ep_num = int(ep["episodeNumber"]) if ep else None
+    entities = [e for e in (state.get("entities") or []) if not e.get("deletedAt")]
+    for beat in seg["shots"]:
+        beat["referenceEntityIds"] = _resolve_shot_entity_ids(
+            beat, entities, require_image=False, episode_number=ep_num
+        )
+
+    store.save(state)
+    if not start_video:
+        return seg["lead"]
+    return start_segment_video(
+        store,
+        project_id,
+        episode_id,
+        segment_order,
+        model=model,
+        resolution=resolution,
+        skip_refs=skip_refs,
+        force_entity_qa=force_entity_qa,
+    )
+
+
+def start_segment_video(
+    store: ProjectStore,
+    project_id: str,
+    episode_id: str,
+    segment_order: int,
+    *,
+    model: str,
+    resolution: str,
+    skip_refs: bool = False,
+    force_entity_qa: bool = False,
+) -> dict:
+    """Generate one video for a SceneMixer segment (all beats in one Seedance/H3 call)."""
+    state = store.load(project_id)
+    if not state:
+        raise FileNotFoundError("project not found")
+    ep_shots = [
+        s
+        for s in (state.get("shots") or [])
+        if s.get("episodeId") == episode_id and not s.get("deletedAt")
+    ]
+    segments = group_shots_by_segment(ep_shots)
+    seg = next((g for g in segments if int(g["segmentOrder"]) == int(segment_order)), None)
+    if not seg:
+        raise FileNotFoundError(f"片段 {segment_order} 不存在")
+    lead = seg["lead"]
+    if any(s.get("status") == "generating" for s in seg["shots"]):
+        raise RuntimeError(f"片段 {segment_order} 正在生成")
+    # Union reference images from all beats in the segment.
+    ref_ids: list[str] = []
+    for s in seg["shots"]:
+        for eid in s.get("referenceEntityIds") or []:
+            if eid not in ref_ids:
+                ref_ids.append(eid)
+    # Gate BEFORE marking siblings generating (avoids stuck state on QA block).
+    assert_entity_refs_ready_for_video(
+        state,
+        ref_ids,
+        force=force_entity_qa,
+        skip_refs=skip_refs,
+    )
+    combined = build_segment_prompt(seg)
+    seg_dur = max(_SEGMENT_DUR_MIN, min(_SEGMENT_DUR_MAX, int(seg.get("duration") or 12)))
+    lead["referenceEntityIds"] = ref_ids[:9]
+    lead["_segmentPromptOverride"] = combined
+    lead["_segmentDurationOverride"] = seg_dur
+    lead["_segmentSiblingIds"] = [s["id"] for s in seg["shots"] if s["id"] != lead["id"]]
+    if force_entity_qa:
+        lead["_forcedEntityQa"] = True
+    for s in seg["shots"]:
+        if s["id"] == lead["id"]:
+            continue
+        s["status"] = "generating"
+        s["error"] = None
+        s["updatedAt"] = _now()
+    store.save(state)
+    return start_shot_video(
+        store,
+        project_id,
+        lead["id"],
+        model=model,
+        resolution=resolution,
+        skip_refs=skip_refs,
+        force_entity_qa=force_entity_qa,
+    )
+
+
 def start_shot_video(
     store: ProjectStore,
     project_id: str,
@@ -1128,6 +2699,7 @@ def start_shot_video(
     model: str,
     resolution: str,
     skip_refs: bool = False,
+    force_entity_qa: bool = False,
 ) -> dict:
     from providers.media import video_backend
 
@@ -1137,7 +2709,7 @@ def start_shot_video(
     shot = next((s for s in state.get("shots") or [] if s["id"] == shot_id and not s.get("deletedAt")), None)
     if not shot:
         raise FileNotFoundError("shot not found")
-    if shot.get("status") == "generating":
+    if shot.get("status") == "generating" and not shot.get("_segmentPromptOverride"):
         # Allow retry if the poll thread died / hung (stuck > 20 minutes).
         try:
             from datetime import datetime, timezone
@@ -1160,12 +2732,23 @@ def start_shot_video(
             raise RuntimeError("该镜头正在生成")
 
     entities = {e["id"]: e for e in state.get("entities") or [] if not e.get("deletedAt")}
-    base_prompt = _normalize_short_drama_prompt(
+    override = (shot.get("_segmentPromptOverride") or "").strip()
+    base_prompt = override or _normalize_short_drama_prompt(
         (shot.get("prompt") or "").strip(),
         dialogue=str(shot.get("dialogue") or ""),
     )
     ratio = state["project"].get("ratio") or "9:16"
-    duration = int(shot.get("duration") or 5)
+    duration = int(shot.get("_segmentDurationOverride") or shot.get("duration") or 5)
+    duration = max(4, min(15, duration))
+
+    ref_entity_ids = list(shot.get("referenceEntityIds") or [])[:9]
+    # Segment path already asserted; re-assert for single-shot / retry paths.
+    assert_entity_refs_ready_for_video(
+        state,
+        ref_entity_ids,
+        force=force_entity_qa,
+        skip_refs=skip_refs,
+    )
 
     # Prefer first existing entity reference image for I2V (ComfyUI / Seedance).
     ref_paths: list[Path] = []
@@ -1173,7 +2756,7 @@ def start_shot_video(
     import base64
 
     if not skip_refs:
-        for eid in (shot.get("referenceEntityIds") or [])[:9]:
+        for eid in ref_entity_ids:
             ent = entities.get(eid)
             if not ent or not ent.get("selectedImageId"):
                 continue
@@ -1206,67 +2789,32 @@ def start_shot_video(
     shot["_pendingModel"] = model
     shot["_pendingResolution"] = resolution
     shot["_videoBackend"] = backend
+    if force_entity_qa:
+        shot["_forcedEntityQa"] = True
+    else:
+        shot.pop("_forcedEntityQa", None)
     store.save(state)
 
+    from job_queue import enqueue
+
+    payload: dict[str, Any] = {
+        "projectId": project_id,
+        "shotId": shot_id,
+        "model": model,
+        "resolution": resolution,
+        "backend": backend,
+        "forceEntityQa": force_entity_qa,
+        "basePrompt": base_prompt,
+        "ratio": ratio,
+        "duration": duration,
+        "refPath": str(ref_paths[0]) if ref_paths else None,
+    }
+
     if backend == "comfyui":
-        def _run_comfy() -> None:
-            from providers.media import generate_video_file
-            from media_qa import assert_media_ok
-
-            try:
-                vid_id = new_id("vid_")
-                rel = f"media/videos/{vid_id}.mp4"
-                dest = store._dir(project_id) / rel
-                result = generate_video_file(
-                    prompt=base_prompt,
-                    ratio=ratio,
-                    duration=duration,
-                    out_path=dest,
-                    reference_path=ref_paths[0] if ref_paths else None,
-                    resolution=resolution,
-                )
-                assert_media_ok(dest, unlink_on_fail=True)
-                if dest.is_file():
-                    store.persist_media(project_id, rel)
-                st = store.load(project_id)
-                sh = next((x for x in (st.get("shots") or []) if x["id"] == shot_id), None)
-                if not sh:
-                    return
-                version = {
-                    "id": vid_id,
-                    "shotId": shot_id,
-                    "path": rel if dest.is_file() else None,
-                    "providerTaskId": None,
-                    "model": result.get("model") or "minimax-h3",
-                    "backend": "comfyui",
-                    "duration": float(result.get("duration") or duration),
-                    "resolution": result.get("resolution") or resolution,
-                    "prompt": sh.get("prompt") or "",
-                    "rating": None,
-                    "note": "",
-                    "createdAt": _now(),
-                }
-                sh.setdefault("videos", []).append(version)
-                sh["selectedVideoId"] = vid_id
-                sh["status"] = "success"
-                sh["staleReason"] = None
-                sh["providerTaskId"] = None
-                sh["error"] = None
-                sh["updatedAt"] = _now()
-                store.save(st)
-            except Exception as exc:
-                st = store.load(project_id)
-                sh = next((x for x in (st.get("shots") or []) if x["id"] == shot_id), None)
-                if sh:
-                    sh["status"] = "failed"
-                    sh["error"] = str(exc)
-                    sh["updatedAt"] = _now()
-                    store.save(st)
-
-        threading.Thread(target=_run_comfy, name=f"comfy-video-{shot_id}", daemon=True).start()
+        enqueue("shot_video", payload)
         return shot
 
-    # Seedance async task + poll
+    # Seedance: create remote task on request thread (fast), poll on shared media queue.
     from providers.seedance import create_task
 
     task_id = create_task(
@@ -1279,78 +2827,342 @@ def start_shot_video(
     shot["providerTaskId"] = task_id
     shot["updatedAt"] = _now()
     store.save(state)
-
-    def _poll() -> None:
-        from providers.seedance import query_task
-
-        for _ in range(120):
-            try:
-                st = store.load(project_id)
-                sh = next((x for x in (st.get("shots") or []) if x["id"] == shot_id), None)
-                if not sh:
-                    return
-                result = query_task(task_id)
-                status = result.get("status")
-                if status in {"succeeded"}:
-                    vid_id = new_id("vid_")
-                    rel = f"media/videos/{vid_id}.mp4"
-                    dest = store._dir(project_id) / rel
-                    if result.get("videoUrl"):
-                        _download(result["videoUrl"], dest)
-                        if dest.is_file():
-                            store.persist_media(project_id, rel)
-                    version = {
-                        "id": vid_id,
-                        "shotId": shot_id,
-                        "path": rel if dest.is_file() else None,
-                        "providerTaskId": task_id,
-                        "model": model,
-                        "backend": "seedance",
-                        "duration": float(result.get("duration") or sh.get("duration") or 5),
-                        "resolution": result.get("resolution") or resolution,
-                        "prompt": sh.get("prompt") or "",
-                        "rating": None,
-                        "note": "",
-                        "createdAt": _now(),
-                    }
-                    sh.setdefault("videos", []).append(version)
-                    sh["selectedVideoId"] = vid_id
-                    sh["status"] = "success"
-                    sh["staleReason"] = None
-                    sh["providerTaskId"] = task_id
-                    sh["error"] = None
-                    sh["updatedAt"] = _now()
-                    store.save(st)
-                    return
-                if status in {"failed", "expired", "cancelled"}:
-                    sh["status"] = "failed"
-                    sh["error"] = result.get("error") or status
-                    sh["updatedAt"] = _now()
-                    store.save(st)
-                    return
-            except Exception as exc:
-                st = store.load(project_id)
-                sh = next((x for x in (st.get("shots") or []) if x["id"] == shot_id), None)
-                if sh:
-                    sh["status"] = "failed"
-                    sh["error"] = str(exc)
-                    sh["updatedAt"] = _now()
-                    store.save(st)
-                return
-            import time
-
-            time.sleep(5)
-
-        st = store.load(project_id)
-        sh = next((x for x in (st.get("shots") or []) if x["id"] == shot_id), None)
-        if sh and sh.get("status") == "generating":
-            sh["status"] = "failed"
-            sh["error"] = "生成超时"
-            sh["updatedAt"] = _now()
-            store.save(st)
-
-    threading.Thread(target=_poll, name=f"seedance-{shot_id}", daemon=True).start()
+    payload["seedanceTaskId"] = task_id
+    enqueue("shot_video", payload)
     return shot
+
+
+def run_shot_video_job(
+    store: ProjectStore,
+    project_id: str,
+    shot_id: str,
+    *,
+    model: str,
+    resolution: str,
+    backend: str,
+    force_entity_qa: bool = False,
+    base_prompt: str = "",
+    ratio: str = "9:16",
+    duration: int = 5,
+    ref_path: str | None = None,
+    seedance_task_id: str | None = None,
+) -> None:
+    """Blocking video job for the shared media queue (Comfy generate or Seedance poll)."""
+    backend = (backend or "").strip().lower()
+    if backend == "comfyui":
+        from media_qa import assert_media_ok
+        from providers.media import generate_video_file
+
+        try:
+            vid_id = new_id("vid_")
+            rel = f"media/videos/{vid_id}.mp4"
+            dest = store._dir(project_id) / rel
+            ref = Path(ref_path) if ref_path else None
+            result = generate_video_file(
+                prompt=base_prompt,
+                ratio=ratio or "9:16",
+                duration=int(duration or 5),
+                out_path=dest,
+                reference_path=ref if ref and ref.is_file() else None,
+                resolution=resolution or "720p",
+            )
+            assert_media_ok(dest, unlink_on_fail=True)
+            if dest.is_file():
+                store.persist_media(project_id, rel)
+            st = store.load(project_id)
+            sh = next((x for x in (st.get("shots") or []) if x["id"] == shot_id), None) if st else None
+            if not sh:
+                return
+            prompt_used = base_prompt or sh.get("prompt") or ""
+            ents_alive = [e for e in (st.get("entities") or []) if not e.get("deletedAt")]
+            by_id = {e["id"]: e for e in ents_alive}
+            ref_ents = [by_id[eid] for eid in (sh.get("referenceEntityIds") or []) if eid in by_id]
+            qa = _judge_video_file(dest, prompt=prompt_used, entities=ref_ents)
+            version = {
+                "id": vid_id,
+                "shotId": shot_id,
+                "path": rel if dest.is_file() else None,
+                "providerTaskId": None,
+                "model": result.get("model") or "minimax-h3",
+                "backend": "comfyui",
+                "duration": float(result.get("duration") or duration),
+                "resolution": result.get("resolution") or resolution,
+                "prompt": prompt_used,
+                "qa": qa,
+                "qaPass": bool(qa.get("qaPass")),
+                "rating": None,
+                "note": "",
+                "createdAt": _now(),
+            }
+            sh.setdefault("videos", []).append(version)
+            sh["selectedVideoId"] = vid_id
+            sh["providerTaskId"] = None
+            sh["staleReason"] = None
+            sh["updatedAt"] = _now()
+            sh.pop("_segmentPromptOverride", None)
+            sh.pop("_segmentDurationOverride", None)
+            if version["qaPass"]:
+                sh["status"] = "success"
+                sh["error"] = None
+            else:
+                sh["status"] = "failed"
+                sh["error"] = f"质检未达标: {qa.get('reason') or 'mismatch'}"
+            _propagate_segment_video(st, sh)
+            store.save(st)
+        except Exception as exc:
+            st = store.load(project_id)
+            sh = next((x for x in (st.get("shots") or []) if x["id"] == shot_id), None) if st else None
+            if sh:
+                sh["status"] = "failed"
+                sh["error"] = str(exc)
+                sh["updatedAt"] = _now()
+                _propagate_segment_video(st, sh)
+                store.save(st)
+        return
+
+    # Seedance poll loop (task already created on the HTTP thread).
+    from providers.seedance import query_task
+
+    task_id = seedance_task_id
+    if not task_id:
+        st0 = store.load(project_id)
+        sh0 = next((x for x in (st0.get("shots") or []) if x["id"] == shot_id), None) if st0 else None
+        task_id = (sh0 or {}).get("providerTaskId")
+    if not task_id:
+        st = store.load(project_id)
+        sh = next((x for x in (st.get("shots") or []) if x["id"] == shot_id), None) if st else None
+        if sh:
+            sh["status"] = "failed"
+            sh["error"] = "missing seedance task id"
+            sh["updatedAt"] = _now()
+            _propagate_segment_video(st, sh)
+            store.save(st)
+        return
+
+    import time
+
+    for _ in range(120):
+        try:
+            st = store.load(project_id)
+            sh = next((x for x in (st.get("shots") or []) if x["id"] == shot_id), None) if st else None
+            if not sh:
+                return
+            result = query_task(task_id)
+            status = result.get("status")
+            if status in {"succeeded"}:
+                vid_id = new_id("vid_")
+                rel = f"media/videos/{vid_id}.mp4"
+                dest = store._dir(project_id) / rel
+                if result.get("videoUrl"):
+                    _download(result["videoUrl"], dest)
+                    if dest.is_file():
+                        store.persist_media(project_id, rel)
+                prompt_used = (sh.get("_segmentPromptOverride") or sh.get("prompt") or base_prompt or "").strip()
+                ents_alive = [e for e in (st.get("entities") or []) if not e.get("deletedAt")]
+                by_id = {e["id"]: e for e in ents_alive}
+                ref_ents = [by_id[eid] for eid in (sh.get("referenceEntityIds") or []) if eid in by_id]
+                qa = (
+                    _judge_video_file(dest, prompt=prompt_used, entities=ref_ents)
+                    if dest.is_file()
+                    else {
+                        "pass": False,
+                        "score": 0,
+                        "reason": "missing_file",
+                        "skipped": False,
+                        "qaPass": False,
+                    }
+                )
+                version = {
+                    "id": vid_id,
+                    "shotId": shot_id,
+                    "path": rel if dest.is_file() else None,
+                    "providerTaskId": task_id,
+                    "model": model,
+                    "backend": "seedance",
+                    "duration": float(result.get("duration") or sh.get("duration") or 5),
+                    "resolution": result.get("resolution") or resolution,
+                    "prompt": prompt_used,
+                    "qa": qa,
+                    "qaPass": bool(qa.get("qaPass")),
+                    "rating": None,
+                    "note": "",
+                    "createdAt": _now(),
+                }
+                sh.setdefault("videos", []).append(version)
+                sh["selectedVideoId"] = vid_id
+                sh["staleReason"] = None
+                sh["providerTaskId"] = task_id
+                sh["updatedAt"] = _now()
+                sh.pop("_segmentPromptOverride", None)
+                sh.pop("_segmentDurationOverride", None)
+                if version["qaPass"]:
+                    sh["status"] = "success"
+                    sh["error"] = None
+                else:
+                    sh["status"] = "failed"
+                    sh["error"] = f"质检未达标: {qa.get('reason') or 'mismatch'}"
+                _propagate_segment_video(st, sh)
+                store.save(st)
+                return
+            if status in {"failed", "expired", "cancelled"}:
+                sh["status"] = "failed"
+                sh["error"] = result.get("error") or status
+                sh["updatedAt"] = _now()
+                _propagate_segment_video(st, sh)
+                store.save(st)
+                return
+        except Exception as exc:
+            st = store.load(project_id)
+            sh = next((x for x in (st.get("shots") or []) if x["id"] == shot_id), None) if st else None
+            if sh:
+                sh["status"] = "failed"
+                sh["error"] = str(exc)
+                sh["updatedAt"] = _now()
+                _propagate_segment_video(st, sh)
+                store.save(st)
+            return
+        time.sleep(5)
+
+    st = store.load(project_id)
+    sh = next((x for x in (st.get("shots") or []) if x["id"] == shot_id), None) if st else None
+    if sh and sh.get("status") == "generating":
+        sh["status"] = "failed"
+        sh["error"] = "生成超时"
+        sh["updatedAt"] = _now()
+        _propagate_segment_video(st, sh)
+        store.save(st)
+
+
+def _judge_video_file(
+    path: Path,
+    *,
+    prompt: str,
+    entities: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Prompt-fit QA for a finished video file; attaches qaPass using the shared score bar."""
+    try:
+        from prompt_qa import judge_video_against_prompt, qa_meets_bar, qa_min_score
+
+        qa = judge_video_against_prompt(
+            path,
+            prompt=prompt,
+            kind="shot",
+            entities=entities or [],
+        )
+        qa["qaPass"] = qa_meets_bar(qa, min_score=qa_min_score())
+        return qa
+    except Exception as exc:  # noqa: BLE001
+        # Never soft-pass — that promoted rainy-night→daytime garden mismatches.
+        return {
+            "pass": False,
+            "score": 0,
+            "reason": f"qa_exception:{exc}",
+            "skipped": True,
+            "qaPass": False,
+        }
+
+
+def _wait_shot_terminal(
+    store: ProjectStore,
+    project_id: str,
+    shot_id: str,
+    *,
+    timeout_s: float = 900,
+) -> dict:
+    import time
+
+    deadline = time.time() + max(30.0, float(timeout_s))
+    while time.time() < deadline:
+        shot = poll_shot(store, project_id, shot_id)
+        status = str(shot.get("status") or "")
+        if status in {"success", "failed", "cancelled"}:
+            return shot
+        time.sleep(4)
+    shot = poll_shot(store, project_id, shot_id)
+    if shot.get("status") == "generating":
+        shot["status"] = "failed"
+        shot["error"] = shot.get("error") or "生成超时"
+        shot["updatedAt"] = _now()
+        state = store.load(project_id) or {}
+        for s in state.get("shots") or []:
+            if s.get("id") == shot_id:
+                s.update(shot)
+                break
+        store.save(state)
+    return poll_shot(store, project_id, shot_id)
+
+
+def ensure_segment_video_qa(
+    store: ProjectStore,
+    project_id: str,
+    episode_id: str,
+    segment_order: int,
+    *,
+    model: str,
+    resolution: str,
+    skip_refs: bool = False,
+    max_attempts: int | None = None,
+) -> dict:
+    """Generate a segment video and revise until prompt-fit QA passes or attempts are exhausted."""
+    from prompt_qa import video_qa_max_attempts
+
+    attempts = max_attempts if max_attempts is not None else video_qa_max_attempts()
+    attempts = max(1, min(10, int(attempts)))
+    last_reason = ""
+    lead: dict[str, Any] | None = None
+    for attempt in range(1, attempts + 1):
+        if attempt == 1 and not last_reason:
+            lead = start_segment_video(
+                store,
+                project_id,
+                episode_id,
+                segment_order,
+                model=model,
+                resolution=resolution,
+                skip_refs=skip_refs,
+            )
+        else:
+            instruction = (
+                f"质检重试 {attempt}/{attempts}：画面必须严格符合分镜提示词。"
+                + (f"失败原因：{last_reason}" if last_reason else "")
+            )
+            lead = revise_segment(
+                store,
+                project_id,
+                episode_id,
+                segment_order,
+                instruction=instruction,
+                model=model,
+                resolution=resolution,
+                skip_refs=skip_refs,
+                start_video=True,
+            )
+        lead_id = str((lead or {}).get("id") or "")
+        if not lead_id:
+            raise RuntimeError(f"片段 {segment_order} 未返回 lead shot")
+        finished = _wait_shot_terminal(store, project_id, lead_id, timeout_s=1200)
+        vids = finished.get("videos") or []
+        selected = next((v for v in vids if v.get("id") == finished.get("selectedVideoId")), None)
+        qa = (selected or {}).get("qa") or {}
+        qa_pass = bool((selected or {}).get("qaPass") or qa.get("qaPass"))
+        if finished.get("status") == "success" and qa_pass:
+            return finished
+        last_reason = str(
+            finished.get("error")
+            or qa.get("reason")
+            or "mismatch"
+        )[:240]
+        # Reset failed lead so revise can re-submit cleanly.
+        state = store.load(project_id) or {}
+        for s in state.get("shots") or []:
+            if s.get("id") == lead_id and s.get("status") == "failed":
+                s["status"] = "pending"
+                s["providerTaskId"] = None
+                s["updatedAt"] = _now()
+        store.save(state)
+    raise RuntimeError(
+        f"片段 {segment_order} 质检未达标（{attempts} 次）：{last_reason or 'unknown'}"
+    )
 
 
 def poll_shot(store: ProjectStore, project_id: str, shot_id: str) -> dict:
@@ -1471,10 +3283,20 @@ def ensure_edit_draft(store: ProjectStore, project_id: str, episode_id: str) -> 
     edit = next((e for e in state.get("edits") or [] if e.get("episodeId") == episode_id and not e.get("deletedAt")), None)
     if edit:
         return edit
-    shots = sorted(
-        [s for s in state.get("shots") or [] if s.get("episodeId") == episode_id and not s.get("deletedAt") and s.get("selectedVideoId")],
-        key=lambda s: s["shotOrder"],
-    )
+    ready = [
+        s
+        for s in state.get("shots") or []
+        if s.get("episodeId") == episode_id and not s.get("deletedAt") and s.get("selectedVideoId")
+    ]
+    has_segments = any(int(s.get("segmentOrder") or 0) > 0 for s in ready)
+    if has_segments:
+        # One timeline clip per SceneMixer segment (lead beat holds the take).
+        ready = [
+            s
+            for s in ready
+            if s.get("isSegmentLead") or int(s.get("beatIndex") or 0) == 1
+        ]
+    shots = sorted(ready, key=lambda s: (int(s.get("segmentOrder") or 0), int(s.get("shotOrder") or 0)))
     clips = []
     for s in shots:
         vid = next((v for v in s.get("videos") or [] if v["id"] == s["selectedVideoId"]), None)

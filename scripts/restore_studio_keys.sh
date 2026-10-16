@@ -37,6 +37,10 @@ wanted = [
     "LLM_PROVIDER",
     "GPUHOME_API_KEY", "GPUHOME_BASE_URL", "GPUHOME_MODEL",
     "COMFYUI_SERVER_URL", "COMFYUI_IMAGE_SERVER_URL", "COMFYUI_VIDEO_SERVER_URL",
+    "COMFYUI_CHECKPOINT", "COMFYUI_VIDEO_MODEL",
+    "COMFY_API_KEY", "COMFYUI_API_KEY", "COMFY_ORG_API_KEY",
+    "STUDIO_MEDIA_QA",
+    "STUDIO_QA_MIN_SCORE", "STUDIO_ENTITY_QA_MAX_ATTEMPTS", "STUDIO_VIDEO_QA_MAX_ATTEMPTS",
     "CURSOR_API_KEY", "CURSOR_API_BASE", "CURSOR_MODEL",
     "DEEPSEEK_API_KEY", "DEEPSEEK_BASE_URL", "DEEPSEEK_MODEL",
     "OPENAI_API_KEY", "OPENAI_BASE_URL", "OPENAI_MODEL",
@@ -47,7 +51,21 @@ wanted = [
     "VOLCENGINE_API_KEY", "ARK_API_KEY", "ARK_API_BASE", "VOLCENGINE_API_BASE",
     "ARK_PLAN", "AGENT_PLAN_TIER", "SEEDREAM_MODEL", "SEEDANCE_MODEL",
 ]
+# Backend prefs: only restore when explicitly requested. Blind restore was flipping
+# a live UI choice (ComfyUI) back to whatever was last in .env / diagnostic seedream.
 payload = {k: vals[k] for k in wanted if vals.get(k)}
+force_backends = (os.environ.get("RESTORE_BACKEND_PREFS") or "").strip().lower() in {
+    "1", "true", "yes", "on",
+}
+if force_backends:
+    for k in ("STUDIO_IMAGE_BACKEND", "STUDIO_VIDEO_BACKEND"):
+        if vals.get(k):
+            payload[k] = vals[k]
+elif vals.get("STUDIO_IMAGE_BACKEND") or vals.get("STUDIO_VIDEO_BACKEND"):
+    print(
+        "note: skipping STUDIO_IMAGE_BACKEND / STUDIO_VIDEO_BACKEND "
+        "(UI sticky). Set RESTORE_BACKEND_PREFS=1 to force from .env."
+    )
 if not payload:
     print("skip restore: no usable keys in env file")
     raise SystemExit(0)

@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import random
+import re
 import time
 import urllib.error
 import urllib.parse
@@ -20,6 +21,65 @@ from typing import Any
 
 class ComfyUIError(RuntimeError):
     pass
+
+
+_CJK_RE = re.compile(r"[\u4e00-\u9fff]")
+
+
+def _has_cjk(text: str) -> bool:
+    return bool(_CJK_RE.search(text or ""))
+
+
+def _uses_latin_clip(model_label: str) -> bool:
+    """CheckpointLoaderSimple + CLIPTextEncode stacks are English-CLIP (RealVis/SDXL/SD1.5)."""
+    lower = (model_label or "").lower()
+    if not lower:
+        return True
+    if "qwen" in lower:
+        return False
+    return True
+
+
+def _translate_prompt_for_latin_clip(prompt: str) -> str:
+    """RealVis/SDXL CLIP barely reads Chinese — translate or English-lock the subject.
+
+    Without this, character prompts like「夜间室内，微卷长发…」often become empty
+    landscapes / cityscapes (the classic Chinese→SDXL failure mode).
+    """
+    raw = (prompt or "").strip()
+    if not raw or not _has_cjk(raw):
+        return raw
+    try:
+        from providers.llm import chat_json
+
+        data = chat_json(
+            system=(
+                "You rewrite image prompts for English-only CLIP (SDXL / RealVisXL). "
+                'Reply JSON only: {"english":"..."}. '
+                "Keep the same subject intent. Front-load the main subject "
+                "(person / object / place). For character portraits: single person, "
+                "clear face, hair, wardrobe, cinematic still. "
+                "Forbid landscape-only, aerial cityscape, empty scenery unless the "
+                "prompt is explicitly a location empty plate. No markdown."
+            ),
+            user=raw[:2200],
+            temperature=0.15,
+            max_tokens=900,
+            retries=2,
+        )
+        eng = str((data or {}).get("english") or "").strip()
+        if len(eng) >= 24:
+            return eng
+    except Exception:
+        pass
+    # Deterministic fallback — still better than feeding raw CJK into Latin CLIP.
+    return (
+        "photorealistic cinematic portrait of a single East Asian person, clear face, "
+        "detailed hair and clothing, half-body or full-body, soft key light, shallow "
+        "depth of field, movie still, centered composition, no landscape, no cityscape, "
+        "no aerial view, no empty scenery. "
+        f"Creative brief: {raw[:500]}"
+    )
 
 
 def _secret(name: str, default: str = "") -> str:
@@ -190,10 +250,14 @@ def _basic_checkpoint_workflow(
     height: int,
     ckpt: str,
     seed: int,
-    steps: int = 20,
-    cfg: float = 7.0,
+    steps: int = 28,
+    cfg: float = 5.5,
 ) -> dict[str, Any]:
-    """API-format workflow that works on stock SD1.5 / SDXL ComfyUI installs."""
+    """API-format workflow that works on stock SD1.5 / SDXL ComfyUI installs.
+
+    Defaults tuned for RealVisXL portraits (lower CFG, more steps) — CFG 7+ on
+    bilingual briefs often melted faces / multi-head artifacts.
+    """
     return {
         "3": {
             "class_type": "KSampler",
@@ -235,6 +299,89 @@ def _basic_checkpoint_workflow(
             "inputs": {"filename_prefix": "openmontage", "images": ["8", 0]},
         },
     }
+
+
+# Partner-node ids that speak Chinese natively (no local SD1.5 CLIP).
+_QWEN_API_MODELS = ("qwen-image-3.0-pro", "qwen-image-3.0")
+
+
+def _has_qwen_image_api(root: str) -> bool:
+    try:
+        data = _http_json("GET", f"{root}/object_info/QwenImageTextToImageApi", timeout=12)
+        return bool(data.get("QwenImageTextToImageApi"))
+    except Exception:
+        return False
+
+
+def _comfy_org_api_key() -> str:
+    """Partner nodes (Qwen Image API) bill via Comfy Org — optional BYOK."""
+    return (
+        _secret("COMFY_API_KEY")
+        or _secret("COMFYUI_API_KEY")
+        or _secret("COMFY_ORG_API_KEY")
+        or ""
+    ).strip()
+
+
+def _qwen_image_api_workflow(
+    *,
+    prompt: str,
+    negative: str,
+    width: int,
+    height: int,
+    seed: int,
+    model: str = "qwen-image-3.0-pro",
+) -> dict[str, Any]:
+    """ComfyUI Partner Node: Qwen Image 3 T2I (Chinese + English prompts).
+
+    DynamicCombo V3 over the HTTP ``/prompt`` API uses dotted sub-keys
+    (``model`` + ``model.prompt`` / ``model.width`` / …). Nested dicts are
+    accepted by validation but never reach ``execute(model=…)``.
+    """
+    mid = model if model in _QWEN_API_MODELS else "qwen-image-3.0-pro"
+    # Dimensions: area must stay within 512²..2560²; step 16.
+    w = max(256, min(2560, (int(width) // 16) * 16))
+    h = max(256, min(2560, (int(height) // 16) * 16))
+    inputs: dict[str, Any] = {
+        "model": mid,
+        "model.prompt": prompt,
+        "model.negative_prompt": negative or "",
+        "model.width": w,
+        "model.height": h,
+        "n": 1,
+        "seed": int(seed) % 2147483647,
+        "prompt_extend": False,
+        "watermark": False,
+    }
+    api_key = _comfy_org_api_key()
+    if api_key:
+        inputs["api_key_comfy_org"] = api_key
+    return {
+        "1": {
+            "class_type": "QwenImageTextToImageApi",
+            "inputs": inputs,
+        },
+        "2": {
+            "class_type": "SaveImage",
+            "inputs": {"filename_prefix": "openmontage_qwen", "images": ["1", 0]},
+        },
+    }
+
+
+def _is_weak_latin_only_ckpt(name: str) -> bool:
+    """SD1.5 / pose weights are a poor default for Chinese short-drama portraits."""
+    lower = (name or "").lower()
+    return any(
+        x in lower
+        for x in (
+            "v1-5",
+            "v1_5",
+            "sd15",
+            "sd-v1",
+            "sdpose",
+            "pruned-emaonly",
+        )
+    )
 
 
 def _qwen_image_workflow(
@@ -313,6 +460,7 @@ def generate_image(
     ratio: str,
     out_path: Path,
     reference_path: Path | None = None,
+    negative_prompt: str | None = None,
     timeout: int = 600,
 ) -> Path:
     """Text-to-image via ComfyUI. reference_path is ignored for now (T2I only)."""
@@ -322,48 +470,152 @@ def generate_image(
         raise ComfyUIError("未配置 COMFYUI_SERVER_URL（智川云租 GPU 后填写 ComfyUI 公网地址）")
 
     width, height = _SIZES.get(ratio) or _SIZES["9:16"]
-    # Keep dimensions multiples of 8
-    width = max(512, (width // 8) * 8)
-    height = max(512, (height // 8) * 8)
+    # SDXL / RealVis prefers ~1MP with sides multiple of 64 (720×1280 is weak).
+    if max(width, height) < 1024:
+        scale = 1024 / float(max(width, height))
+        width, height = int(width * scale), int(height * scale)
+    width = max(512, (width // 64) * 64)
+    height = max(512, (height // 64) * 64)
     seed = random.randint(0, 2**31 - 1)
     negative = (
         "lowres, bad anatomy, bad hands, text, error, missing fingers, "
         "extra digit, fewer digits, cropped, worst quality, low quality, "
         "jpeg artifacts, signature, watermark, username, blurry"
     )
+    if negative_prompt:
+        negative = f"{negative}, {negative_prompt}"
 
+    preferred = (_secret("COMFYUI_CHECKPOINT") or "").strip()
     ckpts = list_checkpoints(root)
-    qwen = None if ckpts else _pick_qwen_stack(root)
+    qwen_local = _pick_qwen_stack(root)
+    qwen_api_ok = _has_qwen_image_api(root)
     model_label = ""
-    if ckpts:
-        preferred = _secret("COMFYUI_CHECKPOINT")
-        ckpt = preferred if preferred in ckpts else ckpts[0]
-        model_label = ckpt
+    use_latin_clip = False
+
+    # 1) Explicit Qwen Image API (Chinese-native partner node; needs Comfy Org login/key)
+    if preferred in _QWEN_API_MODELS or preferred.startswith("qwen-image"):
+        if not qwen_api_ok:
+            raise ComfyUIError(
+                f"已选择 {preferred}，但 ComfyUI 未安装 QwenImageTextToImageApi 节点（需 Comfy 登录/Partner Nodes）。"
+            )
+        if not _comfy_org_api_key():
+            strong = next((c for c in ckpts if not _is_weak_latin_only_ckpt(c)), None)
+            raise ComfyUIError(
+                "已选择 Qwen Image 中文出图，但未配置 COMFY_API_KEY，且租机 ComfyUI 未登录 Partner Nodes。"
+                "请到 https://platform.comfy.org 创建 API Key，在设置里保存为 COMFY_API_KEY；"
+                "或在 ComfyUI 网页登录后再试。"
+                + (f" 临时可在顶部改选本地模型：{strong}。" if strong else "")
+            )
+        model_label = preferred if preferred in _QWEN_API_MODELS else "qwen-image-3.0-pro"
+        model_prompt = prompt
+        workflow = _qwen_image_api_workflow(
+            prompt=model_prompt,
+            negative=negative,
+            width=width,
+            height=height,
+            seed=seed,
+            model=model_label,
+        )
+    # 2) Explicit local checkpoint (RealVis / SDXL / SD1.5 — English CLIP)
+    elif preferred and preferred in ckpts:
+        model_label = preferred
+        use_latin_clip = _uses_latin_clip(model_label)
+        model_prompt = _translate_prompt_for_latin_clip(prompt) if use_latin_clip else prompt
         workflow = _basic_checkpoint_workflow(
-            prompt=prompt,
+            prompt=model_prompt,
+            negative=negative,
+            width=width,
+            height=height,
+            ckpt=preferred,
+            seed=seed,
+        )
+    # 3) Explicit local Qwen UNET name
+    elif preferred and qwen_local and preferred == qwen_local["unet"]:
+        model_label = preferred
+        model_prompt = prompt
+        workflow = _qwen_image_workflow(
+            prompt=model_prompt,
+            negative=negative,
+            width=width,
+            height=height,
+            unet=qwen_local["unet"],
+            clip=qwen_local["clip"],
+            vae=qwen_local["vae"],
+            seed=seed,
+        )
+    # 4) Auto: Qwen API only when keyed; else strong local ckpt / local Qwen stack
+    elif (
+        qwen_api_ok
+        and _comfy_org_api_key()
+        and (not ckpts or all(_is_weak_latin_only_ckpt(c) for c in ckpts))
+    ):
+        model_label = "qwen-image-3.0-pro"
+        model_prompt = prompt
+        workflow = _qwen_image_api_workflow(
+            prompt=model_prompt,
+            negative=negative,
+            width=width,
+            height=height,
+            seed=seed,
+            model=model_label,
+        )
+    elif qwen_local and (not ckpts or all(_is_weak_latin_only_ckpt(c) for c in ckpts)):
+        model_label = qwen_local["unet"]
+        model_prompt = prompt
+        workflow = _qwen_image_workflow(
+            prompt=model_prompt,
+            negative=negative,
+            width=width,
+            height=height,
+            unet=qwen_local["unet"],
+            clip=qwen_local["clip"],
+            vae=qwen_local["vae"],
+            seed=seed,
+        )
+    elif ckpts:
+        # Prefer a non-SD1.5 ckpt when present
+        strong = next((c for c in ckpts if not _is_weak_latin_only_ckpt(c)), None)
+        ckpt = strong or ckpts[0]
+        model_label = ckpt
+        use_latin_clip = _uses_latin_clip(model_label)
+        model_prompt = _translate_prompt_for_latin_clip(prompt) if use_latin_clip else prompt
+        workflow = _basic_checkpoint_workflow(
+            prompt=model_prompt,
             negative=negative,
             width=width,
             height=height,
             ckpt=ckpt,
             seed=seed,
         )
-    elif qwen:
-        model_label = qwen["unet"]
+    elif qwen_local:
+        model_label = qwen_local["unet"]
+        model_prompt = prompt
         workflow = _qwen_image_workflow(
-            prompt=prompt,
+            prompt=model_prompt,
             negative=negative,
             width=width,
             height=height,
-            unet=qwen["unet"],
-            clip=qwen["clip"],
-            vae=qwen["vae"],
+            unet=qwen_local["unet"],
+            clip=qwen_local["clip"],
+            vae=qwen_local["vae"],
             seed=seed,
+        )
+    elif qwen_api_ok and _comfy_org_api_key():
+        model_label = "qwen-image-3.0-pro"
+        model_prompt = prompt
+        workflow = _qwen_image_api_workflow(
+            prompt=model_prompt,
+            negative=negative,
+            width=width,
+            height=height,
+            seed=seed,
+            model=model_label,
         )
     else:
         raise ComfyUIError(
-            "ComfyUI 已连通，但未发现可用出图模型（带 CLIP 的 Checkpoint 或 Qwen-Image）。"
-            "当前常见情况：镜像只有 MiniMax H3 视频模型，不能出角色/场景静帧。"
-            "请安装 SDXL / Flux / Qwen-Image，或换用带出图权重的 ComfyUI 镜像。"
+            "ComfyUI 已连通，但未发现可用中文出图模型。"
+            "当前镜像多为 MiniMax H3 视频权重 + SD1.5，中文角色定妆会漂。"
+            "请安装 SDXL（如 RealVisXL），或配置 COMFY_API_KEY 后选择「Qwen Image 3」。"
         )
 
     client_id = str(uuid.uuid4())
@@ -393,7 +645,19 @@ def generate_image(
         if entry is not None:
             status = entry.get("status") or {}
             if status.get("status_str") == "error":
-                raise ComfyUIError(f"ComfyUI 执行失败: {status.get('messages')}")
+                msgs = status.get("messages") or []
+                err_txt = json.dumps(msgs, ensure_ascii=False)[:800]
+                if model_label in _QWEN_API_MODELS or str(model_label).startswith("qwen-image"):
+                    if any(
+                        x in err_txt.lower()
+                        for x in ("auth", "api_key", "unauthorized", "login", "credit", "402", "401")
+                    ) or "missing 1 required positional argument: 'model'" in err_txt:
+                        raise ComfyUIError(
+                            "Qwen Image 中文出图需要 Comfy Org 登录/API Key（Partner Node 计费）。"
+                            "请在设置里填写 COMFY_API_KEY，或在 ComfyUI 网页登录后重试；"
+                            f"原始错误: {err_txt[:300]}"
+                        )
+                raise ComfyUIError(f"ComfyUI 执行失败: {err_txt}")
             # Wait until outputs land (status may appear before images).
             outs = entry.get("outputs") or {}
             if any((node or {}).get("images") for node in outs.values()) or status.get("completed"):
@@ -421,6 +685,12 @@ def generate_image(
     blob = _http_bytes(f"{root}/view?{qs}", timeout=120)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_bytes(blob)
+    try:
+        from media_qa import assert_media_ok
+
+        assert_media_ok(out_path, kind="image", unlink_on_fail=True)
+    except Exception as exc:
+        raise ComfyUIError(f"ComfyUI 出图文件校验失败: {exc}") from exc
 
     try:
         from usage_store import record_usage
@@ -851,16 +1121,43 @@ def public_status(*, probe: bool = False) -> dict[str, Any]:
             ping_info = ping(url)
             reachable = True
             checkpoints = list_checkpoints(url)[:20]
-            if not checkpoints:
-                qwen = _pick_qwen_stack(url)
-                if qwen:
-                    checkpoints = [qwen["unet"]]
+            qwen = _pick_qwen_stack(url)
+            if qwen and qwen["unet"] not in checkpoints:
+                checkpoints = [qwen["unet"], *checkpoints]
+            if _has_qwen_image_api(url):
+                for mid in _QWEN_API_MODELS:
+                    if mid not in checkpoints:
+                        checkpoints = [mid, *checkpoints]
             h3 = _pick_minimax_h3_stack(url)
             if h3:
                 video_ready = True
                 video_models = [h3["unet"]]
         except Exception as exc:  # noqa: BLE001
             error = str(exc)
+    # Even without live probe, surface Chinese-native Qwen API as a selectable model.
+    if not probe and url and "qwen-image-3.0-pro" not in checkpoints:
+        checkpoints = ["qwen-image-3.0-pro", "qwen-image-3.0", *checkpoints]
+    preferred_ckpt = _secret("COMFYUI_CHECKPOINT") or ""
+    if not preferred_ckpt:
+        # Prefer Qwen API when keyed; otherwise a strong local ckpt (not bare SD1.5).
+        if _comfy_org_api_key():
+            preferred_ckpt = next(
+                (c for c in checkpoints if c in _QWEN_API_MODELS or "qwen" in c.lower()),
+                "",
+            )
+        if not preferred_ckpt:
+            preferred_ckpt = next(
+                (c for c in checkpoints if not _is_weak_latin_only_ckpt(c) and c not in _QWEN_API_MODELS),
+                "",
+            ) or next(
+                (c for c in checkpoints if not _is_weak_latin_only_ckpt(c)),
+                "",
+            ) or (checkpoints[0] if checkpoints else "")
+    preferred_video = (_secret("COMFYUI_VIDEO_MODEL") or "").strip()
+    if preferred_video and preferred_video not in video_models:
+        video_models = [preferred_video, *video_models]
+    elif not preferred_video and video_models:
+        preferred_video = video_models[0]
     return {
         "configured": bool(url),
         "reachable": reachable,
@@ -871,14 +1168,16 @@ def public_status(*, probe: bool = False) -> dict[str, Any]:
         "portsDocs": "https://docs.gpuhome.cc/docs/instance/open-ports.html",
         "market": "https://gpuhome.cc/market",
         "checkpoints": checkpoints,
-        "checkpoint": _secret("COMFYUI_CHECKPOINT") or (checkpoints[0] if checkpoints else ""),
+        "checkpoint": preferred_ckpt,
         "videoModels": video_models,
+        "videoModel": preferred_video,
         "videoReady": video_ready if probe else bool(video_url or url),
         "deviceName": ping_info.get("deviceName") or "",
         "error": error,
         "hint": (
             "在 gpuhome.cc/market 租 GPU → 选 ComfyUI（含 MiniMax H3）镜像 → 开放端口 → 填入地址。"
-            "出片用 H3 即可；出图还需机内有 SDXL / Qwen-Image 等带 CLIP 的模型（仅 H3 不够）。"
+            "出片用 H3；中文定妆请在顶部选择「Qwen Image 3」（支持中英文），勿用 SD1.5。"
+            "Qwen Image API 需 Comfy 账号 Key（设置 COMFY_API_KEY）或本机已登录 Partner Nodes。"
         ),
         "imageReady": bool(checkpoints) if probe else bool(image_url or url),
     }

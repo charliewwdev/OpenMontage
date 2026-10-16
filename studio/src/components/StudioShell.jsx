@@ -7,28 +7,38 @@ import {
   Image as ImageIcon,
   KeyRound,
   Loader2,
-  Mic2,
   RefreshCw,
-  Scissors,
   ScrollText,
   Users,
   Wand2,
 } from "lucide-react";
 import { api } from "../api";
+import { useLocale } from "../lib/i18n";
+import { StudioModelBar } from "./StudioModelBar";
 import { ScriptStep } from "./steps/ScriptStep";
 import { EntityStep } from "./steps/EntityStep";
-import { StoryboardStep } from "./steps/StoryboardStep";
-import { AudioStep } from "./steps/AudioStep";
-import { EditStep } from "./steps/EditStep";
+import { SegmentWorkspace } from "./steps/SegmentWorkspace";
+
+/** Condensed nav: prepare assets once, then live in the segment desk. */
+const NAV_STEPS = [
+  { key: "script", label: "剧本", note: "定稿分集", icon: ScrollText },
+  { key: "character", label: "角色", note: "造型定妆", icon: Users },
+  { key: "scene", label: "场景", note: "空间定妆", icon: ImageIcon },
+  { key: "prop", label: "道具", note: "物件定妆", icon: Box },
+  { key: "workspace", label: "工作台", note: "片段内聚制作", icon: Clapperboard },
+];
+
+const WORKSPACE_KEYS = new Set(["workspace", "storyboard", "audio", "edit"]);
 
 const STEP_ICONS = {
   script: ScrollText,
   character: Users,
   scene: ImageIcon,
   prop: Box,
+  workspace: Clapperboard,
   storyboard: Clapperboard,
-  audio: Mic2,
-  edit: Scissors,
+  audio: Clapperboard,
+  edit: Clapperboard,
 };
 
 function entityHasImage(entity) {
@@ -42,6 +52,24 @@ function shotHasVideo(shot) {
   if (shot.status === "success" && (shot.selectedVideoId || (shot.videos || []).length)) return true;
   if (shot.status === "stale" && (shot.selectedVideoId || (shot.videos || []).length)) return true;
   return false;
+}
+
+/** Avoid「第1集 · 第1集·重逢」when episode.title already embeds the number. */
+function formatEpisodeLabel(n, title) {
+  const num = Number(n) || 0;
+  const raw = String(title || "").trim();
+  if (!raw) return num ? `第${num}集` : "";
+  let stripped = raw;
+  for (let i = 0; i < 4; i += 1) {
+    const next = stripped
+      .replace(new RegExp(`^第\\s*${num || "\\d+"}\\s*集\\s*[·・.\\-:：]*\\s*`, "i"), "")
+      .replace(/^EP\s*\d+\s*[·・.\-:：]*\s*/i, "")
+      .trim();
+    if (next === stripped) break;
+    stripped = next;
+  }
+  if (!stripped) return num ? `第${num}集` : raw;
+  return num ? `第${num}集 · ${stripped}` : stripped;
 }
 
 function entityTouchesEpisode(entity, episode) {
@@ -67,8 +95,12 @@ function stepCounts(bundle, episode = null) {
     const eid = episode.id;
     const shots = shotsAll.filter((s) => s.episodeId === eid);
     const successful = shots.filter(shotHasVideo).length;
+    const refIds = new Set(shots.flatMap((s) => s.referenceEntityIds || []));
     const byKind = (kind) => {
-      const list = ents.filter((e) => e.kind === kind && entityTouchesEpisode(e, episode));
+      // Prefer entities referenced by this episode's beats; fall back to episode-tagged.
+      const referenced = ents.filter((e) => e.kind === kind && refIds.has(e.id));
+      const tagged = ents.filter((e) => e.kind === kind && entityTouchesEpisode(e, episode));
+      const list = referenced.length ? referenced : tagged;
       const ready = list.filter(entityHasImage).length;
       if (!list.length) return "0";
       return `${ready}/${list.length}`;
@@ -142,15 +174,12 @@ function stepDone(bundle, key, episode = null) {
   }
   if (key === "character" || key === "scene" || key === "prop") {
     const list = ents.filter((e) => e.kind === key);
-    // 没有该类实体时不算完成（避免 0 个也打勾）
     return list.length > 0 && list.every(entityHasImage);
   }
   if (key === "storyboard") {
-    // 全部分镜都有可用视频才打勾（2/4 不能算完成）
     return shotsAll.length > 0 && shotsAll.every(shotHasVideo);
   }
   if (key === "audio") {
-    // 每个已定稿集都有对白配音才打勾（BGM 不算）
     return (
       confirmed.length > 0 &&
       confirmed.every((ep) =>
@@ -164,12 +193,34 @@ function stepDone(bundle, key, episode = null) {
   return false;
 }
 
+function episodeShotSummary(bundle, episode) {
+  if (!episode) return { total: 0, ready: 0, durationSec: 0 };
+  const shots = (bundle?.shots || []).filter((s) => s.episodeId === episode.id && !s.deletedAt);
+  const ready = shots.filter(shotHasVideo).length;
+  const durationSec = shots.reduce((sum, s) => {
+    const d = Number(s.selectedVideo?.duration || s.duration || 0);
+    return sum + (Number.isFinite(d) ? d : 0);
+  }, 0);
+  return { total: shots.length, ready, durationSec };
+}
+
+function formatDuration(sec) {
+  const n = Math.round(Number(sec) || 0);
+  if (n <= 0) return "";
+  const m = Math.floor(n / 60);
+  const s = n % 60;
+  if (m <= 0) return `${s}s`;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
 export function StudioShell({
   projectId,
   bundle,
   loading,
   step,
   setStep,
+  focusEpisodeId: focusEpisodeIdProp,
+  onFocusEpisode,
   config,
   busyMsg,
   setBusyMsg,
@@ -177,36 +228,58 @@ export function StudioShell({
   onRefresh,
   onBundle,
   onNeedKeys,
+  onRequireAuth,
+  readOnly = false,
 }) {
+  const { t } = useLocale();
   const project = bundle?.project || {};
   const autoJob = project.autoProduce || null;
   const episodes = useMemo(
     () => [...(bundle?.episodes || [])].sort((a, b) => a.episodeNumber - b.episodeNumber),
     [bundle?.episodes],
   );
-  const [focusEpisodeId, setFocusEpisodeId] = useState("");
+  const [focusEpisodeIdLocal, setFocusEpisodeIdLocal] = useState(focusEpisodeIdProp || "");
+  const focusEpisodeId = focusEpisodeIdProp ?? focusEpisodeIdLocal;
+  const setFocusEpisodeId = onFocusEpisode || setFocusEpisodeIdLocal;
+  const [mobileEpOpen, setMobileEpOpen] = useState(false);
+
+  useEffect(() => {
+    if (focusEpisodeIdProp && focusEpisodeIdProp !== focusEpisodeIdLocal) {
+      setFocusEpisodeIdLocal(focusEpisodeIdProp);
+    }
+  }, [focusEpisodeIdProp, focusEpisodeIdLocal]);
+
   useEffect(() => {
     if (focusEpisodeId && !episodes.some((e) => e.id === focusEpisodeId)) {
       setFocusEpisodeId(episodes[0]?.id || "");
     } else if (!focusEpisodeId && episodes[0]) {
       setFocusEpisodeId(episodes[0].id);
     }
-  }, [episodes, focusEpisodeId]);
+  }, [episodes, focusEpisodeId, setFocusEpisodeId]);
+
   const focusEpisode = useMemo(
     () => episodes.find((e) => e.id === focusEpisodeId) || null,
     [episodes, focusEpisodeId],
   );
   const counts = stepCounts(bundle, focusEpisode);
   const caps = config?.capabilities || {};
-  const steps = (config?.six_steps || []).map((s) => ({
-    key: s.id,
-    label: s.label,
-    note: s.note || "",
-    icon: STEP_ICONS[s.id] || Clapperboard,
+  const steps = NAV_STEPS.map((s) => ({
+    ...s,
+    icon: STEP_ICONS[s.key] || s.icon || Clapperboard,
   }));
-  const activeMeta = steps.find((s) => s.key === step) || steps[0] || { key: step, label: step, note: "", icon: Clapperboard };
+  const navStep = WORKSPACE_KEYS.has(step) ? "workspace" : step;
+  const activeMeta =
+    steps.find((s) => s.key === navStep) || steps[0] || { key: step, label: step, note: "", icon: Clapperboard };
   const keysMissing = !(caps.deepseek && caps.seedream && caps.seedance);
   const pollRef = useRef(null);
+  const stageIndex = Math.max(0, steps.findIndex((s) => s.key === navStep)) + 1;
+
+  // Legacy deep-links (storyboard/audio/edit) land on the unified workspace.
+  useEffect(() => {
+    if (WORKSPACE_KEYS.has(step) && step !== "workspace") {
+      setStep("workspace");
+    }
+  }, [step, setStep]);
 
   useEffect(() => {
     if (!projectId || autoJob?.status !== "running") {
@@ -229,8 +302,9 @@ export function StudioShell({
 
   const startAutoFromWorkshop = async () => {
     if (!projectId) return;
+    if (onRequireAuth && !onRequireAuth()) return;
     try {
-      setBusyMsg?.("正在启动一键全流程…");
+      setBusyMsg?.(t("studio_auto_starting"));
       await api(`/api/projects/${encodeURIComponent(projectId)}/auto-produce`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -260,141 +334,268 @@ export function StudioShell({
     onBundle,
     onRefresh,
     onNeedKeys,
+    onRequireAuth,
+    readOnly,
     focusEpisodeId,
     onFocusEpisode: setFocusEpisodeId,
+    setStep,
   };
 
   if (loading && !bundle) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 text-sm text-[var(--muted)]">
         <div className="inline-flex items-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin" /> 正在开机片场…
+          <Loader2 className="h-4 w-4 animate-spin" /> {t("studio_boot_loading")}
         </div>
         <button type="button" className="btn-secondary !min-h-9" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4" /> 返回主界面
+          <ArrowLeft className="h-4 w-4" /> {t("studio_action_back")}
         </button>
       </div>
     );
   }
 
+  const renderEpisodeButton = (episode) => {
+    const active = episode.id === focusEpisodeId;
+    const summary = episodeShotSummary(bundle, episode);
+    const prepDone = ["script", "character", "scene", "prop"].filter((k) =>
+      k === "script" ? episode.status === "confirmed" : stepDone(bundle, k, episode),
+    );
+    const deskDone = stepDone(bundle, "storyboard", episode) || stepDone(bundle, "edit", episode);
+    const dur = formatDuration(summary.durationSec);
+    const confirmed = episode.status === "confirmed";
+    return (
+      <button
+        key={episode.id}
+        type="button"
+        onClick={() => {
+          setFocusEpisodeId(episode.id);
+          setMobileEpOpen(false);
+          if (confirmed) setStep("workspace");
+        }}
+        className={`w-full rounded-xl border px-3 py-2.5 text-left transition ${
+          active
+            ? "border-[#7c6cff]/55 bg-[#7c6cff]/15 shadow-[0_0_20px_rgba(124,108,255,.2)]"
+            : "border-transparent hover:border-white/10 hover:bg-white/[.04]"
+        }`}
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="timecode text-[10px] text-white/40">
+                {String(episode.episodeNumber).padStart(2, "0")}
+              </span>
+              <span className={`truncate text-sm font-semibold ${active ? "text-white" : "text-white/80"}`}>
+                {formatEpisodeLabel(episode.episodeNumber, episode.title) ||
+                  t("studio_episode_item_title", {
+                    n: episode.episodeNumber,
+                    title: episode.title || t("studio_episode_untitled"),
+                  })}
+              </span>
+            </div>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px]">
+              <span className={confirmed ? "text-[var(--ok)]" : "text-white/40"}>
+                {confirmed ? t("studio_episode_status_confirmed") : t("studio_episode_status_draft")}
+              </span>
+              {summary.total > 0 ? (
+                <span className="text-white/35">
+                  {t("studio_episode_shots", { ready: summary.ready, total: summary.total })}
+                </span>
+              ) : null}
+              {dur ? <span className="text-white/35">{dur}</span> : null}
+            </div>
+          </div>
+          <span className="shrink-0 text-[10px] tabular-nums text-white/35">
+            {prepDone.length + (deskDone ? 1 : 0)}/5
+          </span>
+        </div>
+        <div className="mt-2 flex gap-1">
+          {steps.map((s) => {
+            const done =
+              s.key === "workspace"
+                ? deskDone
+                : s.key === "script"
+                  ? confirmed
+                  : stepDone(bundle, s.key, episode);
+            return (
+              <span
+                key={s.key}
+                title={s.label}
+                className={`h-1.5 flex-1 rounded-full ${done ? "bg-[var(--ok)]" : "bg-white/10"}`}
+              />
+            );
+          })}
+        </div>
+      </button>
+    );
+  };
+
   return (
     <main className="min-h-screen lg:h-screen lg:overflow-hidden">
-      <div className="grid min-h-screen lg:h-screen lg:grid-cols-[92px_1fr]">
-        <aside className="flex border-r border-[var(--line)] bg-[#0a0b10] lg:h-screen lg:flex-col">
-          <div className="border-b border-[var(--line)] p-2 lg:px-2 lg:pt-3 lg:pb-1">
+      <div className="grid min-h-screen lg:h-screen lg:grid-cols-[220px_1fr]">
+        <aside className="hidden border-r border-[var(--line)] bg-[#0a0b10] lg:flex lg:h-screen lg:flex-col">
+          <div className="border-b border-[var(--line)] p-3">
             <button
               type="button"
               onClick={onBack}
               className="btn-secondary flex w-full !min-h-9 items-center justify-center gap-1.5 !px-2 text-xs"
-              aria-label="返回主界面"
-              title="返回影视工坊主界面"
+              aria-label={t("studio_action_back")}
+              title={t("studio_action_back")}
             >
               <ArrowLeft className="h-4 w-4 shrink-0" />
-              <span className="truncate">返回</span>
+              <span className="truncate">{t("studio_action_back")}</span>
             </button>
-          </div>
-          {focusEpisode ? (
-            <div className="hidden border-b border-[var(--line)] px-2 py-2 lg:block">
-              <div className="timecode text-[9px] text-white/35">FOCUS EP</div>
-              <div className="mt-0.5 truncate text-[11px] font-semibold text-white/80">
-                第{focusEpisode.episodeNumber}集
+            <div className="mt-3">
+              <div className="timecode text-[9px] text-white/35">{t("studio_episode_rail_label")}</div>
+              <div className="mt-0.5 text-sm font-semibold text-white/85">
+                {t("studio_episode_rail_count", { count: episodes.length })}
               </div>
-              <div className="truncate text-[10px] text-white/40">{focusEpisode.title || "未命名"}</div>
             </div>
-          ) : null}
-          <div className="flex gap-1 overflow-x-auto p-2 lg:min-h-0 lg:flex-1 lg:flex-col lg:overflow-y-auto lg:py-2">
-            {steps.map((item, index) => {
-              const Icon = item.icon;
-              const active = item.key === step;
-              const done = stepDone(bundle, item.key, focusEpisode);
-              return (
+          </div>
+          <div className="scrollbar-thin min-h-0 flex-1 space-y-1 overflow-y-auto p-2">
+            {episodes.length ? (
+              episodes.map(renderEpisodeButton)
+            ) : (
+              <div className="rounded-xl border border-dashed border-white/10 px-3 py-8 text-center">
+                <p className="text-xs leading-5 text-white/45">{t("studio_episode_empty")}</p>
                 <button
-                  key={item.key}
                   type="button"
-                  onClick={() => setStep(item.key)}
-                  className={`flex min-w-[72px] flex-col items-center gap-2 rounded-2xl px-2 py-3 text-center transition lg:min-w-0 ${
-                    active ? "bg-white/[.06]" : "hover:bg-white/[.03]"
-                  }`}
+                  className="btn-primary mt-3 !min-h-8 !px-3 text-xs"
+                  onClick={() => setStep("script")}
                 >
-                  <span
-                    className={`relative flex h-10 w-10 items-center justify-center rounded-full border text-sm ${
-                      active
-                        ? "border-transparent bg-[var(--gradient)] text-white shadow-[0_0_20px_rgba(124,108,255,.45)]"
-                        : done
-                          ? "border-[var(--ok)]/40 bg-[var(--ok)]/15 text-[var(--ok)]"
-                          : "border-white/10 bg-white/[.03] text-white/45"
-                    }`}
-                  >
-                    {done && !active ? <Check className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
-                    <span className="timecode absolute -right-1 -top-1 rounded-full bg-black/70 px-1 text-[8px] text-white/50">
-                      {index + 1}
-                    </span>
-                  </span>
-                  <span className="min-w-0">
-                    <span className={`block text-xs font-semibold ${active ? "text-white" : "text-white/70"}`}>
-                      {item.label}
-                    </span>
-                    <span className="mt-0.5 block truncate text-[9px] text-white/35">{counts[item.key]}</span>
-                  </span>
+                  {t("studio_episode_empty_cta")}
                 </button>
-              );
-            })}
+              </div>
+            )}
           </div>
         </aside>
 
-        <section className="relative min-w-0 lg:h-screen lg:overflow-hidden">
+        <section className="relative flex min-w-0 flex-col lg:h-screen lg:overflow-hidden">
           {(busyMsg || loading) && (
             <div className="absolute inset-x-0 top-16 z-20 flex items-center justify-center gap-2 bg-[#7c6cff]/90 px-4 py-2 text-sm text-white">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              {busyMsg || "加载中…"}
+              {busyMsg || t("common_state_loading")}
             </div>
           )}
-          <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between gap-3 border-b border-[var(--line)] bg-[#0c0e14]/95 px-4 py-2 backdrop-blur md:px-6">
-            <div className="flex min-w-0 items-center gap-3">
+          {readOnly ? (
+            <div className="flex items-center justify-between gap-3 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-100 md:px-6">
+              <span>浏览模式：可查看项目进度与素材，生成 / 保存需登录</span>
               <button
                 type="button"
-                onClick={onBack}
-                className="btn-secondary !min-h-9 shrink-0 !px-3"
-                aria-label="返回主界面"
-                title="返回影视工坊主界面"
+                className="btn-primary !min-h-7 !px-3 text-[11px]"
+                onClick={() => onRequireAuth?.()}
               >
-                <ArrowLeft className="h-4 w-4" />
-                返回主界面
+                登录后创作
               </button>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="truncate text-lg font-semibold">{project.title || projectId}</h1>
-                  <span className="rounded-full border border-white/10 bg-white/[.04] px-2 py-0.5 text-[10px] text-white/55">
-                    {project.genre || "题材未设"}
-                  </span>
-                  <span className="rounded-full border border-white/10 bg-white/[.04] px-2 py-0.5 text-[10px] text-white/55">
-                    {project.ratio || "9:16"}
-                  </span>
+            </div>
+          ) : null}
+          <header className="sticky top-0 z-30 border-b border-[var(--line)] bg-[#0c0e14]/95 backdrop-blur">
+            <div className="flex min-h-14 items-center justify-between gap-3 px-4 py-2 md:px-6">
+              <div className="flex min-w-0 items-center gap-3">
+                <button
+                  type="button"
+                  onClick={onBack}
+                  className="btn-secondary !min-h-9 shrink-0 !px-3 lg:hidden"
+                  aria-label={t("studio_action_back")}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </button>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1 className="truncate text-lg font-semibold">{project.title || projectId}</h1>
+                    <span className="rounded-full border border-white/10 bg-white/[.04] px-2 py-0.5 text-[10px] text-white/55">
+                      {project.genre || t("studio_meta_genre_unset")}
+                    </span>
+                    <span className="rounded-full border border-white/10 bg-white/[.04] px-2 py-0.5 text-[10px] text-white/55">
+                      {project.ratio || "9:16"}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="hidden text-[10px] text-white/35 sm:block">
-                文本模型 {caps.deepseek || caps.llmReady ? "就绪" : "未配置"}
-                {caps.llmBackend && caps.llmBackend !== "none" ? `（${caps.llmBackend}）` : ""} · Seedream{" "}
-                {caps.seedream ? "✓" : "—"} · Seedance{" "}
-                {caps.seedance ? "✓" : "—"}
-              </div>
-              {keysMissing ? (
-                <button type="button" className="btn-secondary !min-h-9" onClick={() => onNeedKeys?.()}>
-                  <KeyRound className="h-3.5 w-3.5" /> 配置密钥
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="btn-secondary !min-h-9 lg:hidden"
+                  onClick={() => setMobileEpOpen((v) => !v)}
+                >
+                  {focusEpisode
+                    ? t("studio_episode_mobile_current", { n: focusEpisode.episodeNumber })
+                    : t("studio_episode_rail_label")}
                 </button>
-              ) : null}
-              <button type="button" className="btn-secondary !min-h-9" onClick={onRefresh} disabled={loading}>
-                <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> 刷新
-              </button>
+                <StudioModelBar
+                  config={config}
+                  onChanged={() => {
+                    onRefresh?.();
+                  }}
+                />
+                {keysMissing ? (
+                  <button type="button" className="btn-secondary !min-h-9" onClick={() => onNeedKeys?.()}>
+                    <KeyRound className="h-3.5 w-3.5" /> {t("studio_action_keys")}
+                  </button>
+                ) : null}
+                <button type="button" className="btn-secondary !min-h-9" onClick={onRefresh} disabled={loading}>
+                  <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> {t("studio_action_refresh")}
+                </button>
+              </div>
             </div>
+
+            {mobileEpOpen ? (
+              <div className="max-h-64 space-y-1 overflow-y-auto border-t border-[var(--line)] bg-[#0a0b10] p-2 lg:hidden">
+                {episodes.length ? episodes.map(renderEpisodeButton) : (
+                  <p className="px-3 py-4 text-center text-xs text-white/45">{t("studio_episode_empty")}</p>
+                )}
+              </div>
+            ) : null}
+
+            <nav className="scrollbar-thin flex gap-1 overflow-x-auto border-t border-[var(--line)] px-3 py-2 md:px-5">
+              {steps.map((item, index) => {
+                const Icon = item.icon;
+                const active = item.key === navStep;
+                const done =
+                  item.key === "workspace"
+                    ? stepDone(bundle, "storyboard", focusEpisode) || stepDone(bundle, "edit", focusEpisode)
+                    : item.key === "script"
+                      ? focusEpisode?.status === "confirmed"
+                      : stepDone(bundle, item.key, focusEpisode);
+                const countLabel =
+                  item.key === "workspace"
+                    ? counts.storyboard
+                    : counts[item.key];
+                return (
+                  <button
+                    key={item.key}
+                    type="button"
+                    onClick={() => setStep(item.key)}
+                    className={`flex min-w-[7.5rem] shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-left transition ${
+                      active
+                        ? "border-transparent bg-[var(--gradient)] text-white shadow-[0_0_18px_rgba(124,108,255,.35)]"
+                        : done
+                          ? "border-[var(--ok)]/30 bg-[var(--ok)]/10 text-white/85 hover:bg-[var(--ok)]/15"
+                          : "border-white/10 bg-white/[.03] text-white/65 hover:bg-white/[.06] hover:text-white"
+                    }`}
+                  >
+                    <span className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/20">
+                      {done && !active ? <Check className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
+                      <span className="timecode absolute -right-1 -top-1 rounded-full bg-black/70 px-1 text-[8px] text-white/50">
+                        {index + 1}
+                      </span>
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block truncate text-xs font-semibold">{item.label}</span>
+                      <span className={`mt-0.5 block truncate text-[9px] ${active ? "text-white/70" : "text-white/35"}`}>
+                        {countLabel}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </nav>
           </header>
+
           {keysMissing ? (
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#f59e0b]/30 bg-[#f59e0b]/10 px-4 py-2.5 text-xs text-[#fde68a] md:px-6">
-              <span>当前步骤可能需要 API Key。未配置时会报错，可一键跳转配置并立即生效。</span>
+              <span>{t("studio_banner_keys_hint")}</span>
               <button type="button" className="btn-primary !min-h-8 !px-3" onClick={() => onNeedKeys?.()}>
-                <KeyRound className="h-3.5 w-3.5" /> 一键配置
+                <KeyRound className="h-3.5 w-3.5" /> {t("studio_action_keys")}
               </button>
             </div>
           ) : null}
@@ -402,54 +603,73 @@ export function StudioShell({
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#7c6cff]/35 bg-[#7c6cff]/15 px-4 py-2.5 text-xs text-[#ddd6fe] md:px-6">
               <span className="inline-flex items-center gap-2">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                一键全流程进行中：{autoJob.step || "准备"} · 页面会自动刷新进度
+                {t("studio_auto_running", {
+                  step: autoJob.step || t("studio_auto_preparing"),
+                  focus: focusEpisode
+                    ? t("studio_episode_mobile_current", { n: focusEpisode.episodeNumber })
+                    : t("studio_episode_rail_label"),
+                })}
               </span>
-              <span className="text-white/45">完成后可在剪辑台查看成片</span>
+              <span className="text-white/45">{t("studio_auto_running_hint")}</span>
             </div>
           ) : null}
           {autoJob?.status === "success" && autoJob.exportUrl ? (
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--ok)]/30 bg-[var(--ok)]/10 px-4 py-2.5 text-xs text-[var(--ok)] md:px-6">
-              <span>一键全流程已完成</span>
+              <span>{t("studio_auto_success")}</span>
               <a className="btn-secondary !min-h-8 !px-3" href={autoJob.exportUrl} target="_blank" rel="noreferrer">
-                预览成片
+                {t("studio_auto_preview")}
               </a>
             </div>
           ) : null}
           {autoJob?.status === "failed" ? (
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-red-500/30 bg-red-500/10 px-4 py-2.5 text-xs text-red-200 md:px-6">
-              <span>一键全流程失败：{autoJob.error || "未知错误"}</span>
+              <span>{t("studio_auto_failed", { error: autoJob.error || t("common_state_error") })}</span>
               <button type="button" className="btn-secondary !min-h-8 !px-3" onClick={() => void startAutoFromWorkshop()}>
-                <Wand2 className="h-3.5 w-3.5" /> 重试
+                <Wand2 className="h-3.5 w-3.5" /> {t("common_action_retry")}
               </button>
             </div>
           ) : null}
           {!keysMissing && (project.brief || "").trim() && (!autoJob || autoJob.status === "success") ? (
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 bg-white/[.03] px-4 py-2.5 text-xs text-white/60 md:px-6">
-              <span>已有创作需求时，可一键后台跑通到成片（首集、12–30 镜 / 约 3–6 分钟）。</span>
+              <span>{t("studio_auto_cta_hint")}</span>
               <button type="button" className="btn-secondary !min-h-8 !px-3" onClick={() => void startAutoFromWorkshop()}>
-                <Wand2 className="h-3.5 w-3.5" /> 一键全流程
+                <Wand2 className="h-3.5 w-3.5" /> {t("studio_auto_cta")}
               </button>
             </div>
           ) : null}
-          <div className="border-b border-[var(--line)] bg-black/20 px-4 py-2 md:px-6">
-            <div className="label !mb-0">Stage {String(Math.max(0, steps.findIndex((s) => s.key === step)) + 1).padStart(2, "0")}</div>
-            <h2 className="text-base font-semibold">
-              {activeMeta.label}
-              {focusEpisode ? (
-                <span className="ml-2 text-sm font-normal text-white/45">
-                  · 第{focusEpisode.episodeNumber}集{focusEpisode.title ? `「${focusEpisode.title}」` : ""}
-                </span>
-              ) : null}
-            </h2>
-          </div>
-          <div className="scrollbar-thin min-h-[calc(100vh-7.5rem)] overflow-y-auto p-4 md:p-6 lg:h-[calc(100vh-7.5rem)]">
-            {step === "script" && <ScriptStep {...common} />}
-            {step === "character" && <EntityStep {...common} kind="character" />}
-            {step === "scene" && <EntityStep {...common} kind="scene" />}
-            {step === "prop" && <EntityStep {...common} kind="prop" />}
-            {step === "storyboard" && <StoryboardStep {...common} />}
-            {step === "audio" && <AudioStep {...common} />}
-            {step === "edit" && <EditStep {...common} />}
+
+          {/* Workspace owns its own toolbar title — avoid duplicating「工作台 · 第N集」. */}
+          {navStep !== "workspace" ? (
+            <div className="border-b border-[var(--line)] bg-black/20 px-4 py-2 md:px-6">
+              <div className="label !mb-0">
+                {t("studio_stage_label", { n: String(stageIndex).padStart(2, "0") })}
+              </div>
+              <h2 className="text-base font-semibold">
+                {activeMeta.label}
+                {focusEpisode ? (
+                  <span className="ml-2 text-sm font-normal text-white/45">
+                    · {t("studio_stage_focus_episode", {
+                      n: focusEpisode.episodeNumber,
+                      title: focusEpisode.title || t("studio_episode_untitled"),
+                    })}
+                  </span>
+                ) : null}
+              </h2>
+            </div>
+          ) : null}
+
+          <div
+            className={
+              navStep === "workspace"
+                ? "flex min-h-0 flex-1 flex-col overflow-hidden p-3 md:p-4 lg:h-[calc(100vh-8.5rem)]"
+                : "scrollbar-thin min-h-[calc(100vh-11rem)] overflow-y-auto p-4 md:p-6 lg:h-[calc(100vh-11rem)]"
+            }
+          >
+            {navStep === "script" && <ScriptStep {...common} />}
+            {navStep === "character" && <EntityStep {...common} kind="character" />}
+            {navStep === "scene" && <EntityStep {...common} kind="scene" />}
+            {navStep === "prop" && <EntityStep {...common} kind="prop" />}
+            {navStep === "workspace" && <SegmentWorkspace {...common} />}
           </div>
         </section>
       </div>

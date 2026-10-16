@@ -24,13 +24,69 @@ import { HelpPage } from "./components/platform/HelpPage";
 import { CreditsPage } from "./components/platform/CreditsPage";
 import { ReferPage } from "./components/platform/ReferPage";
 
+const STUDIO_STEPS = new Set([
+  "script",
+  "character",
+  "scene",
+  "prop",
+  "workspace",
+  "storyboard",
+  "audio",
+  "edit",
+]);
+
+function normalizeStudioStep(stepRaw) {
+  if (stepRaw === "storyboard" || stepRaw === "audio" || stepRaw === "edit") return "workspace";
+  return STUDIO_STEPS.has(stepRaw) ? stepRaw : "script";
+}
+
+function readAppRoute() {
+  if (typeof window === "undefined") {
+    return { projectId: "", step: "script", episodeId: "", nav: "", screen: "" };
+  }
+  const params = new URLSearchParams(window.location.search);
+  const projectId = (params.get("project") || params.get("p") || "").trim();
+  const stepRaw = (params.get("step") || "").trim();
+  const step = normalizeStudioStep(stepRaw);
+  const episodeId = (params.get("ep") || "").trim();
+  const nav = (params.get("nav") || "").trim();
+  let screen = (params.get("screen") || "").trim();
+  if (projectId) screen = "studio";
+  else if (screen === "create") screen = "create";
+  else if (nav && nav !== "workshop") screen = "platform";
+  else if (!screen) screen = "";
+  return { projectId, step, episodeId, nav, screen };
+}
+
+function writeAppRoute({ projectId = "", step = "", episodeId = "", nav = "", screen = "" } = {}) {
+  if (typeof window === "undefined") return;
+  const params = new URLSearchParams(window.location.search);
+  // Keep unrelated query keys (e.g. ref) intact.
+  for (const key of ["project", "p", "step", "ep", "nav", "screen"]) params.delete(key);
+  if (projectId) {
+    params.set("project", projectId);
+    if (step && STUDIO_STEPS.has(step)) params.set("step", step);
+    if (episodeId) params.set("ep", episodeId);
+  } else if (screen === "create") {
+    params.set("screen", "create");
+  } else if (nav && nav !== "workshop") {
+    params.set("nav", nav);
+  }
+  const qs = params.toString();
+  const next = `${window.location.pathname}${qs ? `?${qs}` : ""}${window.location.hash || ""}`;
+  const cur = `${window.location.pathname}${window.location.search}${window.location.hash || ""}`;
+  if (next !== cur) window.history.replaceState(null, "", next);
+}
+
 export default function App() {
+  const bootRoute = useMemo(() => readAppRoute(), []);
   const [screen, setScreen] = useState("library");
   const [projects, setProjects] = useState([]);
   const [projectId, setProjectId] = useState("");
   const [bundle, setBundle] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState("script");
+  const [step, setStep] = useState(() => bootRoute.step || "script");
+  const [focusEpisodeId, setFocusEpisodeId] = useState(() => bootRoute.episodeId || "");
   const [config, setConfig] = useState(null);
   const [busyMsg, setBusyMsg] = useState("");
   const [nav, setNav] = useState("workshop");
@@ -81,10 +137,11 @@ export default function App() {
     try {
       const d = await api("/api/projects");
       setProjects(d.projects || []);
+      setApiDown(false);
       return d.projects || [];
     } catch {
-      setProjects([]);
-      return [];
+      // Keep last-known list on transient outages (avoid「项目全没了」闪空).
+      return null;
     }
   }, []);
 
@@ -94,6 +151,15 @@ export default function App() {
     toast.info(messages?.zh?.auth_page_need_login || "请先登录后再继续");
     return false;
   }, [authed, messages]);
+
+  useEffect(() => {
+    const onNeedAuth = () => {
+      setShowAuth(true);
+      toast.info(messages?.zh?.auth_page_need_login || "请先登录后再继续");
+    };
+    window.addEventListener("om:need-auth", onNeedAuth);
+    return () => window.removeEventListener("om:need-auth", onNeedAuth);
+  }, [messages]);
 
   const verifySession = useCallback(async (cfg) => {
     const required = cfg?.auth?.required !== false;
@@ -115,14 +181,31 @@ export default function App() {
         userId: profile?.id || profile?.userId,
         username: profile?.username || profile?.nickname || getStoredUser()?.username || "user",
         avatar: profile?.avatar || "",
+        demo: Boolean(profile?.demo || profile?.id === "demo" || profile?.userId === "demo"),
       };
       setUser(nextUser);
       setSession({ token, user: nextUser });
       setAuthed(true);
       setAuthReady(true);
+      setApiDown(false);
       return true;
-    } catch {
-      clearSession();
+    } catch (err) {
+      const status = Number(err?.status || err?.response?.status || 0);
+      // Only drop session on real auth rejection. Network / 5xx must not wipe workshop.
+      if (status === 401 || status === 403) {
+        clearSession();
+        setUser(null);
+        setAuthed(false);
+        setAuthReady(true);
+        return false;
+      }
+      const cached = getStoredUser();
+      if (cached) {
+        setUser(cached);
+        setAuthed(true);
+        setAuthReady(true);
+        return true;
+      }
       setUser(null);
       setAuthed(false);
       setAuthReady(true);
@@ -130,13 +213,21 @@ export default function App() {
     }
   }, []);
 
-  const loadProject = useCallback(async (id, quiet = false, openStep = "script") => {
+  const loadProject = useCallback(async (id, quiet = false, openStep = "script", openEpisodeId = "") => {
     if (!quiet) setLoading(true);
     setProjectId(id);
     try {
       const b = await api(`/api/projects/${encodeURIComponent(id)}`);
       setBundle(b);
-      if (!quiet) setStep(openStep);
+      if (!quiet) {
+        const nextStep = normalizeStudioStep(openStep || "script");
+        setStep(nextStep);
+        if (openEpisodeId) setFocusEpisodeId(openEpisodeId);
+        else {
+          const eps = [...(b?.episodes || [])].sort((a, c) => a.episodeNumber - c.episodeNumber);
+          if (eps[0]?.id) setFocusEpisodeId(eps[0].id);
+        }
+      }
       setScreen("studio");
       setNav("workshop");
     } catch (e) {
@@ -162,18 +253,70 @@ export default function App() {
         return;
       }
       const landing = cfg?.auth?.defaultNav || "workshop";
-      if (!getToken()) {
-        setNav(landing);
-        setScreen(landing === "workshop" ? "library" : "platform");
-      } else {
-        setNav(landing);
-        setScreen(landing === "workshop" ? "library" : "platform");
-      }
+      const route = readAppRoute();
       await verifySession(cfg);
-      // Browse-first: always try to load public/seed projects, even when logged out.
-      refreshProjects().catch(() => {});
+      // Anonymous may browse showcase projects; generate actions open the login modal.
+      await refreshProjects().catch(() => {});
+
+      if (route.projectId) {
+        setNav("workshop");
+        await loadProject(route.projectId, false, route.step || "script", route.episodeId || "");
+        return;
+      }
+      if (route.screen === "create") {
+        setNav("workshop");
+        setScreen("create");
+        return;
+      }
+      if (route.nav && route.nav !== "workshop") {
+        setNav(route.nav);
+        setScreen("platform");
+        return;
+      }
+      setNav(landing);
+      setScreen(landing === "workshop" ? "library" : "platform");
     })();
-  }, [refreshConfig, refreshProjects, verifySession]);
+  }, [refreshConfig, refreshProjects, verifySession, loadProject]);
+
+  // Keep deep-link in the address bar so refresh returns to the same studio page.
+  useEffect(() => {
+    if (!authReady) return;
+    writeAppRoute({
+      projectId: screen === "studio" ? projectId : "",
+      step: screen === "studio" ? step : "",
+      episodeId: screen === "studio" ? focusEpisodeId : "",
+      nav: screen === "studio" ? "workshop" : nav,
+      screen: screen === "create" ? "create" : screen === "studio" ? "studio" : "",
+    });
+  }, [authReady, screen, projectId, step, focusEpisodeId, nav]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const onPop = () => {
+      const route = readAppRoute();
+      if (route.projectId) {
+        void loadProject(route.projectId, true, route.step || step, route.episodeId || focusEpisodeId);
+        setStep(route.step || "script");
+        if (route.episodeId) setFocusEpisodeId(route.episodeId);
+        setScreen("studio");
+        setNav("workshop");
+        return;
+      }
+      if (route.nav && route.nav !== "workshop") {
+        setProjectId("");
+        setBundle(null);
+        setNav(route.nav);
+        setScreen("platform");
+        return;
+      }
+      setProjectId("");
+      setBundle(null);
+      setNav(route.nav || "workshop");
+      setScreen("library");
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [loadProject, step, focusEpisodeId]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -201,8 +344,10 @@ export default function App() {
   const leaveStudio = useCallback(() => {
     setProjectId("");
     setBundle(null);
+    setFocusEpisodeId("");
     setScreen("library");
     setNav("workshop");
+    writeAppRoute({ nav: "workshop" });
     void refreshProjects().catch(() => {});
   }, [refreshProjects]);
 
@@ -212,14 +357,17 @@ export default function App() {
     if (screen === "studio" || screen === "create") {
       setProjectId("");
       setBundle(null);
+      setFocusEpisodeId("");
       setCreateMode(null);
     }
     setNav(id);
     if (id === "workshop") {
       setScreen("library");
+      writeAppRoute({ nav: "workshop" });
       return;
     }
     setScreen("platform");
+    writeAppRoute({ nav: id });
   };
 
   const onKeysUpdated = async (data) => {
@@ -302,6 +450,8 @@ export default function App() {
         loading={loading}
         step={step}
         setStep={setStep}
+        focusEpisodeId={focusEpisodeId}
+        onFocusEpisode={setFocusEpisodeId}
         config={config}
         busyMsg={busyMsg}
         setBusyMsg={setBusyMsg}
@@ -311,6 +461,8 @@ export default function App() {
           if (b) setBundle(b);
         }}
         onNeedKeys={goKeys}
+        onRequireAuth={requireAuth}
+        readOnly={!authed}
       />
     );
   } else if (screen === "platform") {
@@ -417,6 +569,8 @@ export default function App() {
         <Library
           projects={projects}
           config={config}
+          authed={authed}
+          onRequireAuth={requireAuth}
           onOpen={(id) => void loadProject(id)}
           onCreate={(mode, card) => {
             if (!requireAuth()) return;
@@ -440,6 +594,8 @@ export default function App() {
       <Library
         projects={projects}
         config={config}
+        authed={authed}
+        onRequireAuth={requireAuth}
         onOpen={(id) => void loadProject(id)}
         onCreate={(mode, card) => {
           if (!requireAuth()) return;
@@ -480,7 +636,7 @@ export default function App() {
             onNavigate={onNavigate}
             onLogout={onLogout}
             onLogin={() => setShowAuth(true)}
-            immersive={false}
+            immersive={screen === "studio"}
             collapsed={sidebarCollapsed}
             onCollapsedChange={setSidebarCollapsed}
           >

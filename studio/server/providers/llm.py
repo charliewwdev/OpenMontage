@@ -32,6 +32,22 @@ def _repair_json_text(text: str) -> str:
     return s
 
 
+def _close_truncated_json(text: str) -> str:
+    """If the model cut off mid-object, close open braces/brackets when possible."""
+    s = text.rstrip()
+    if not s or s[-1] in "{}]":
+        return s
+    # Drop a trailing incomplete string fragment after the last comma/colon.
+    cut = max(s.rfind(","), s.rfind(":"), s.rfind("{"), s.rfind("["))
+    if cut > 0:
+        s = s[: cut + 1].rstrip(",: \n\t")
+    opens = s.count("{") - s.count("}")
+    opens_b = s.count("[") - s.count("]")
+    if opens < 0 or opens_b < 0 or opens + opens_b > 12:
+        return text
+    return s + ("]" * max(0, opens_b)) + ("}" * max(0, opens))
+
+
 def extract_json(text: str) -> Any:
     trimmed = _strip_json_fences(text)
     candidates: list[str] = [trimmed]
@@ -43,11 +59,13 @@ def extract_json(text: str) -> Any:
     a1 = trimmed.rfind("]")
     if a0 >= 0 and a1 > a0:
         candidates.append(trimmed[a0 : a1 + 1])
+    if start >= 0:
+        candidates.append(_close_truncated_json(trimmed[start:]))
 
     last_err: Exception | None = None
     seen: set[str] = set()
     for raw in candidates:
-        for variant in (raw, _repair_json_text(raw)):
+        for variant in (raw, _repair_json_text(raw), _repair_json_text(_close_truncated_json(raw))):
             if not variant or variant in seen:
                 continue
             seen.add(variant)

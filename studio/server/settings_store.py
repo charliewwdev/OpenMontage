@@ -323,11 +323,168 @@ def _comfyui_public() -> dict[str, Any]:
 
 
 def _image_backend_id(volc_key: str) -> str:
-    if get_secret("COMFYUI_SERVER_URL") or get_secret("COMFYUI_IMAGE_SERVER_URL"):
-        return "comfyui"
+    try:
+        from providers.media import image_backend
+
+        return image_backend()
+    except Exception:
+        pass
     if volc_key:
         return "seedream"
+    if get_secret("COMFYUI_SERVER_URL") or get_secret("COMFYUI_IMAGE_SERVER_URL"):
+        return "comfyui"
     return "none"
+
+
+def _video_backend_id(volc_key: str) -> str:
+    try:
+        from providers.media import video_backend
+
+        return video_backend()
+    except Exception:
+        pass
+    if volc_key:
+        return "seedance"
+    if get_secret("COMFYUI_SERVER_URL") or get_secret("COMFYUI_VIDEO_SERVER_URL"):
+        return "comfyui"
+    return "none"
+
+
+def _studio_image_models(
+    volc_key: str,
+    active_seedream: str,
+    comfy: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    """Concrete image models from Keys settings (Seedream catalog + Comfy checkpoints)."""
+    out: list[dict[str, Any]] = []
+    if volc_key:
+        try:
+            from platform_config import seedream_models
+
+            catalog = seedream_models()
+        except Exception:
+            catalog = []
+        if not catalog and active_seedream:
+            catalog = [{"id": active_seedream, "name": active_seedream}]
+        seen: set[str] = set()
+        for item in catalog:
+            mid = str(item.get("id") or "").strip()
+            if not mid or mid in seen:
+                continue
+            seen.add(mid)
+            out.append(
+                {
+                    "id": f"seedream:{mid}",
+                    "backend": "seedream",
+                    "model": mid,
+                    "label": str(item.get("name") or mid),
+                    "group": "Seedream",
+                }
+            )
+        if active_seedream and active_seedream not in seen:
+            out.append(
+                {
+                    "id": f"seedream:{active_seedream}",
+                    "backend": "seedream",
+                    "model": active_seedream,
+                    "label": active_seedream,
+                    "group": "Seedream",
+                }
+            )
+    comfy = comfy if comfy is not None else _comfyui_public()
+    if comfy.get("configured"):
+        checkpoints = list(comfy.get("checkpoints") or [])
+        preferred = str(comfy.get("checkpoint") or "").strip()
+        if preferred and preferred not in checkpoints:
+            checkpoints = [preferred, *checkpoints]
+        for ckpt in checkpoints:
+            name = str(ckpt or "").strip()
+            if not name:
+                continue
+            lower = name.lower()
+            if name.startswith("qwen-image"):
+                short = f"Qwen Image · {name.replace('qwen-image-', '')}（中文）"
+            elif "qwen" in lower:
+                short = f"{name.rsplit('/', 1)[-1]}（Qwen）"
+            else:
+                short = name.rsplit("/", 1)[-1]
+            out.append(
+                {
+                    "id": f"comfyui:{name}",
+                    "backend": "comfyui",
+                    "model": name,
+                    "label": short,
+                    "group": "ComfyUI",
+                }
+            )
+    return out
+
+
+def _studio_video_models(
+    volc_key: str,
+    active_seedance: str,
+    comfy: dict[str, Any] | None = None,
+) -> list[dict[str, Any]]:
+    """Concrete video models from Keys settings (Seedance catalog + Comfy H3)."""
+    out: list[dict[str, Any]] = []
+    if volc_key:
+        try:
+            from platform_config import seedance_models
+
+            catalog = seedance_models()
+        except Exception:
+            catalog = []
+        if not catalog and active_seedance:
+            catalog = [{"id": active_seedance, "name": active_seedance}]
+        seen: set[str] = set()
+        for item in catalog:
+            mid = str(item.get("id") or "").strip()
+            if not mid or mid in seen:
+                continue
+            seen.add(mid)
+            out.append(
+                {
+                    "id": f"seedance:{mid}",
+                    "backend": "seedance",
+                    "model": mid,
+                    "label": str(item.get("name") or mid),
+                    "group": "Seedance",
+                }
+            )
+        if active_seedance and active_seedance not in seen:
+            out.append(
+                {
+                    "id": f"seedance:{active_seedance}",
+                    "backend": "seedance",
+                    "model": active_seedance,
+                    "label": active_seedance,
+                    "group": "Seedance",
+                }
+            )
+    comfy = comfy if comfy is not None else _comfyui_public()
+    if comfy.get("configured"):
+        video_models = list(comfy.get("videoModels") or [])
+        if not video_models and (comfy.get("videoReady") or comfy.get("videoUrl") or comfy.get("serverUrl")):
+            video_models = ["MiniMax-Hailuo-02 / H3"]
+        for mid in video_models:
+            name = str(mid or "").strip()
+            if not name:
+                continue
+            lower = name.lower()
+            if "h3" in lower or "hailuo" in lower or "minimax" in lower:
+                label = "ComfyUI · MiniMax H3"
+            else:
+                label = name.rsplit("/", 1)[-1].strip() or name
+            out.append(
+                {
+                    "id": f"comfyui:{name}",
+                    "backend": "comfyui",
+                    "model": name,
+                    "label": label,
+                    "group": "ComfyUI",
+                }
+            )
+    return out
 
 
 def public_status() -> dict[str, Any]:
@@ -362,6 +519,7 @@ def public_status() -> dict[str, Any]:
         seedance = get_secret("SEEDANCE_MODEL")
 
     llm_ready = bool(configured)
+    comfy = _comfyui_public()
     return {
         "llmProvider": preferred or (backend if backend != "none" else ""),
         "llmProviders": providers,
@@ -385,13 +543,32 @@ def public_status() -> dict[str, Any]:
             "seedreamModel": seedream,
             "seedanceModel": seedance,
         },
-        "comfyui": _comfyui_public(),
+        "comfyui": comfy,
         "imageBackend": _image_backend_id(volc_key),
-        "videoBackend": (
-            "comfyui"
-            if (get_secret("COMFYUI_SERVER_URL") or get_secret("COMFYUI_VIDEO_SERVER_URL"))
-            else ("seedance" if volc_key else "none")
-        ),
+        "videoBackend": _video_backend_id(volc_key),
+        "imageBackendPref": (get_secret("STUDIO_IMAGE_BACKEND") or "auto").lower() or "auto",
+        "videoBackendPref": (get_secret("STUDIO_VIDEO_BACKEND") or "auto").lower() or "auto",
+        "mediaQa": (get_secret("STUDIO_MEDIA_QA") or "1").strip() not in {"0", "false", "off", "no"},
+        "imageBackendsAvailable": [
+            *(["seedream"] if volc_key else []),
+            *(
+                ["comfyui"]
+                if (get_secret("COMFYUI_SERVER_URL") or get_secret("COMFYUI_IMAGE_SERVER_URL"))
+                else []
+            ),
+        ],
+        "videoBackendsAvailable": [
+            *(["seedance"] if volc_key else []),
+            *(
+                ["comfyui"]
+                if (get_secret("COMFYUI_SERVER_URL") or get_secret("COMFYUI_VIDEO_SERVER_URL"))
+                else []
+            ),
+        ],
+        "seedreamModel": seedream,
+        "seedanceModel": seedance,
+        "imageModels": _studio_image_models(volc_key, seedream, comfy),
+        "videoModels": _studio_video_models(volc_key, seedance, comfy),
         "storage": "postgres" if _pg_enabled() else "disk",
         "ready": llm_ready
         and (

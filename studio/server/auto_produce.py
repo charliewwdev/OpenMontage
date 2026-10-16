@@ -327,8 +327,9 @@ def start_auto_produce(store: ProjectStore, project_id: str, options: dict[str, 
         "episodeCount": max(1, min(10, int((options or {}).get("episodeCount") or 1))),
         # SceneMixer density: 12–30 shots / ep (default 24 ≈ 3–5 min @ 6–12s).
         "maxShots": max(12, min(30, int((options or {}).get("maxShots") or 24))),
-        "maxCharacters": max(1, min(8, int((options or {}).get("maxCharacters") or 6))),
-        "maxScenes": max(1, min(8, int((options or {}).get("maxScenes") or 4))),
+        "maxCharacters": max(1, min(48, int((options or {}).get("maxCharacters") or 24))),
+        "maxScenes": max(1, min(48, int((options or {}).get("maxScenes") or 24))),
+        "maxProps": max(0, min(48, int((options or {}).get("maxProps") or 24))),
         "forceDubbing": bool((options or {}).get("forceDubbing", False)),
         "optimizeBrief": bool((options or {}).get("optimizeBrief", True)),
         "generateEntities": bool((options or {}).get("generateEntities", True)),
@@ -339,6 +340,8 @@ def start_auto_produce(store: ProjectStore, project_id: str, options: dict[str, 
         "model": str((options or {}).get("model") or ""),
         "skipAudio": bool((options or {}).get("skipAudio", False)),
         "skipExport": bool((options or {}).get("skipExport", False)),
+        "requireEntityQa": bool((options or {}).get("requireEntityQa", True)),
+        "requireVideoQa": bool((options or {}).get("requireVideoQa", True)),
     }
 
     # Resume a failed job from the first unfinished step, keeping prior done work.
@@ -367,10 +370,12 @@ def start_auto_produce(store: ProjectStore, project_id: str, options: dict[str, 
 def _run_pipeline(store: ProjectStore, project_id: str, job_id: str) -> None:
     from drama_service import (
         ensure_edit_draft,
+        ensure_segment_video_qa,
         export_edit_mp4,
         generate_entity_image,
         generate_script,
         generate_storyboard,
+        group_shots_by_segment,
         optimize_brief,
         set_episode_status,
         start_shot_video,
@@ -378,6 +383,7 @@ def _run_pipeline(store: ProjectStore, project_id: str, job_id: str) -> None:
     from platform_config import seedance_models
     from script_parse import dialogue_lines_for_episode
     from audio_tts import generate_bgm_mp3, synthesize_dialogue_mp3, synthesize_mp3
+    from providers.media import resolve_video_model
 
     state = store.load(project_id)
     if not state:
@@ -455,19 +461,36 @@ def _run_pipeline(store: ProjectStore, project_id: str, job_id: str) -> None:
             state = store.load(project_id) or {}
             have = len([e for e in (state.get("episodes") or []) if not e.get("deletedAt")])
             while have < want_eps:
-                chunk = min(3, want_eps - have)
+                # After first batch, continue 1 ep at a time — large JSON batches truncate/break often.
+                chunk = 1 if have >= 3 else min(3, want_eps - have)
+                chunk = min(chunk, want_eps - have)
                 _log(job, f"剧本批次：续写第 {have + 1}–{have + chunk} 集…")
                 _set_step(job, "script", "running", f"{have}/{want_eps}")
                 _save_job(store, project_id, job)
                 from drama_service import continue_script as _continue_script
 
-                _continue_script(
-                    store,
-                    project_id,
-                    chunk,
-                    instruction=f"续写第 {have + 1}–{have + chunk} 集，承接已有剧情，共计划 {want_eps} 集。",
-                    as_finale=have + chunk >= want_eps,
-                )
+                last_exc: Exception | None = None
+                for attempt in range(1, 4):
+                    try:
+                        _continue_script(
+                            store,
+                            project_id,
+                            chunk,
+                            instruction=(
+                                f"续写第 {have + 1}–{have + chunk} 集，承接已有剧情，共计划 {want_eps} 集。"
+                                "只输出精简合法 JSON（episodes/entities），每集 content 控制在 800 字内。"
+                            ),
+                            as_finale=have + chunk >= want_eps,
+                        )
+                        last_exc = None
+                        break
+                    except Exception as exc:  # noqa: BLE001
+                        last_exc = exc
+                        _log(job, f"剧本续写失败（尝试 {attempt}/3）：{exc}", ok=False)
+                        _save_job(store, project_id, job)
+                        time.sleep(2 * attempt)
+                if last_exc is not None:
+                    raise last_exc
                 state = store.load(project_id) or {}
                 now = len([e for e in (state.get("episodes") or []) if not e.get("deletedAt")])
                 if now <= have:
@@ -511,11 +534,11 @@ def _run_pipeline(store: ProjectStore, project_id: str, job_id: str) -> None:
             _log(job, f"已定稿 {len(ids)} 集")
             _save_job(store, project_id, job)
 
-        # 4) entity images — series-wide cast / key scenes
+        # 4) entity images — full cast / scenes / props with QA bar
         if not _step_finished(job, "entities"):
             if opts.get("generateEntities"):
                 _set_step(job, "entities", "running")
-                _log(job, "正在生成角色/场景参考图…")
+                _log(job, "正在生成角色/场景/道具参考图（质检不达标将自动强化重试）…")
                 _save_job(store, project_id, job)
                 state = store.load(project_id) or {}
                 entities = [e for e in (state.get("entities") or []) if not e.get("deletedAt")]
@@ -526,116 +549,123 @@ def _run_pipeline(store: ProjectStore, project_id: str, job_id: str) -> None:
                     if not e.get("episodes")
                     or any(int(n) in ep_nums for n in (e.get("episodes") or []))
                 ]
-                chars = [e for e in scoped if e.get("kind") == "character"][: int(opts.get("maxCharacters") or 4)]
-                scenes = [e for e in scoped if e.get("kind") == "scene"][: int(opts.get("maxScenes") or 2)]
-                targets = chars + scenes
+                chars = [e for e in scoped if e.get("kind") == "character"][
+                    : int(opts.get("maxCharacters") or 24)
+                ]
+                scenes = [e for e in scoped if e.get("kind") == "scene"][
+                    : int(opts.get("maxScenes") or 24)
+                ]
+                props = [e for e in scoped if e.get("kind") == "prop"][
+                    : int(opts.get("maxProps") or 24)
+                ]
+                targets = chars + scenes + props
                 total_n = len(targets)
                 _log(
                     job,
-                    f"素材出图共 {total_n} 张（角色 {len(chars)} + 场景 {len(scenes)}），逐张生成，单张通常 30–90 秒",
+                    f"素材出图共 {total_n} 张（角色 {len(chars)} + 场景 {len(scenes)} + 道具 {len(props)}）",
                 )
                 _set_step(job, "entities", "running", f"0/{total_n}")
                 _save_job(store, project_id, job)
-                ok_n = sum(1 for e in targets if e.get("selectedImageId"))
+
+                def _ent_live(eid: str) -> dict[str, Any] | None:
+                    st2 = store.load(project_id) or {}
+                    return next(
+                        (
+                            x
+                            for x in (st2.get("entities") or [])
+                            if x.get("id") == eid and not x.get("deletedAt")
+                        ),
+                        None,
+                    )
+
+                def _ent_qa_ok(ent: dict[str, Any] | None) -> bool:
+                    if not ent or not ent.get("selectedImageId"):
+                        return False
+                    img = next(
+                        (
+                            i
+                            for i in (ent.get("images") or [])
+                            if i.get("id") == ent.get("selectedImageId")
+                        ),
+                        None,
+                    )
+                    if not img:
+                        return False
+                    if img.get("qaPass") is True:
+                        return True
+                    if not opts.get("requireEntityQa", True):
+                        return True
+                    qa = img.get("qa") or {}
+                    if qa.get("skipped"):
+                        return True
+                    return False
+
+                ok_n = sum(1 for e in targets if _ent_qa_ok(_ent_live(str(e.get("id")))))
                 for idx, ent in enumerate(targets, start=1):
-                    name = ent.get("name") or ent.get("id")
-                    kind_label = {"character": "角色", "scene": "场景", "prop": "道具"}.get(ent.get("kind"), "素材")
-                    if ent.get("selectedImageId"):
-                        _log(job, f"素材图已有，跳过 {idx}/{total_n}：{name}")
+                    eid = str(ent.get("id") or "")
+                    name = ent.get("name") or eid
+                    kind_label = {"character": "角色", "scene": "场景", "prop": "道具"}.get(
+                        ent.get("kind"), "素材"
+                    )
+                    live = _ent_live(eid)
+                    if _ent_qa_ok(live):
+                        _log(job, f"素材图已达标，跳过 {idx}/{total_n}：{name}")
                         _set_step(job, "entities", "running", f"{ok_n}/{total_n} · 已有「{name}」")
                         _save_job(store, project_id, job)
                         continue
                     t0 = time.time()
-                    _set_step(job, "entities", "running", f"{idx - 1}/{total_n} · 正在生成{kind_label}「{name}」")
+                    _set_step(
+                        job,
+                        "entities",
+                        "running",
+                        f"{idx - 1}/{total_n} · 正在生成{kind_label}「{name}」",
+                    )
                     _log(job, f"开始出图 {idx}/{total_n}：{kind_label}「{name}」…")
                     _save_job(store, project_id, job)
                     try:
-                        generate_entity_image(
+                        version = generate_entity_image(
                             store,
                             project_id,
-                            ent["id"],
+                            eid,
                             force_illustration=bool(opts.get("forceIllustration")),
                         )
-                        ok_n += 1
                         took = int(time.time() - t0)
-                        _log(job, f"素材图完成 {idx}/{total_n}：{name}（{took}s）")
-                        _set_step(job, "entities", "running", f"{ok_n}/{total_n} · 已完成「{name}」")
+                        qa = (version or {}).get("qa") or {}
+                        if (version or {}).get("qaPass"):
+                            ok_n += 1
+                            _log(
+                                job,
+                                f"素材图达标 {idx}/{total_n}：{name}（{took}s, score={qa.get('score')}, attempts={qa.get('attempts')}）",
+                            )
+                        else:
+                            _log(
+                                job,
+                                f"素材图未达标 {idx}/{total_n}：{name}（{took}s, reason={qa.get('reason')}）",
+                                ok=False,
+                            )
+                        _set_step(job, "entities", "running", f"{ok_n}/{total_n} · 「{name}」")
                         _save_job(store, project_id, job)
                     except Exception as exc:
                         took = int(time.time() - t0)
                         _log(job, f"素材图失败 {idx}/{total_n}（{name}，{took}s）：{exc}", ok=False)
                         _set_step(job, "entities", "running", f"{ok_n}/{total_n} · 「{name}」失败")
                         _save_job(store, project_id, job)
-                # One retry pass for still-missing images (provider flake / IncompleteRead).
-                state = store.load(project_id) or {}
-                missing = [
-                    e
-                    for e in targets
-                    if not next(
-                        (
-                            x.get("selectedImageId")
-                            for x in (state.get("entities") or [])
-                            if x.get("id") == e.get("id")
-                        ),
-                        None,
-                    )
-                ]
-                if missing:
-                    _log(job, f"素材图缺 {len(missing)} 张，自动重试一次…")
-                    _save_job(store, project_id, job)
-                    for ent in missing:
-                        name = ent.get("name") or ent.get("id")
-                        try:
-                            generate_entity_image(
-                                store,
-                                project_id,
-                                ent["id"],
-                                force_illustration=bool(opts.get("forceIllustration")),
-                            )
-                            ok_n += 1
-                            _log(job, f"素材图重试成功：{name}")
-                        except Exception as exc:
-                            _log(job, f"素材图重试仍失败（{name}）：{exc}", ok=False)
-                        _save_job(store, project_id, job)
-                    state = store.load(project_id) or {}
-                    ok_n = sum(
-                        1
-                        for e in targets
-                        if next(
-                            (
-                                x.get("selectedImageId")
-                                for x in (state.get("entities") or [])
-                                if x.get("id") == e.get("id")
-                            ),
-                            None,
-                        )
-                    )
-                char_ok = sum(
-                    1
-                    for e in chars
-                    if next(
-                        (
-                            x.get("selectedImageId")
-                            for x in (state.get("entities") or [])
-                            if x.get("id") == e.get("id")
-                        ),
-                        None,
-                    )
-                )
+
+                ok_n = sum(1 for e in targets if _ent_qa_ok(_ent_live(str(e.get("id")))))
+                char_ok = sum(1 for e in chars if _ent_qa_ok(_ent_live(str(e.get("id")))))
                 if total_n and ok_n < total_n:
-                    # Soft-continue when we have at least one character ref — better than aborting the whole sample.
-                    if char_ok >= 1 and ok_n >= max(1, (total_n + 1) // 2):
-                        _log(
-                            job,
-                            f"素材出图部分成功（{ok_n}/{total_n}，角色 {char_ok}/{len(chars)}），继续分镜；缺图镜头将尽量纯文本生成",
-                            ok=False,
-                        )
-                        _set_step(job, "entities", "done", f"{ok_n}/{total_n} partial")
-                    else:
+                    if opts.get("requireEntityQa", True) and char_ok < 1:
                         _set_step(job, "entities", "failed", f"{ok_n}/{total_n}")
                         raise RuntimeError(
-                            f"素材出图未齐（{ok_n}/{total_n}），场景/角色仍有空图。请到工坊补齐图片后再继续全流程，避免分镜参考不完整。"
+                            f"素材质检未达标（{ok_n}/{total_n}，角色达标 {char_ok}/{len(chars)}）。"
+                            "已阻断出片；请检查 Comfy 出图/视觉 QA 后重试。"
                         )
+                    _log(
+                        job,
+                        f"素材出图部分达标（{ok_n}/{total_n}，角色 {char_ok}/{len(chars)}），继续分镜",
+                        ok=False,
+                    )
+                    _set_step(job, "entities", "done", f"{ok_n}/{total_n} partial")
                 else:
                     _set_step(job, "entities", "done", f"{ok_n}/{total_n}")
             else:
@@ -722,11 +752,16 @@ def _run_pipeline(store: ProjectStore, project_id: str, job_id: str) -> None:
             capped.extend(group[:max_shots])
         shots = capped
 
-        # 6) videos — all shots across episodes
+        # 6) videos — segment leads with prompt-fit QA revise loop
         if not _step_finished(job, "videos"):
             _set_step(job, "videos", "running")
             models = seedance_models() or []
             model = str(opts.get("model") or "").strip()
+            if not model:
+                try:
+                    model = resolve_video_model("")
+                except Exception:
+                    model = ""
             if not model:
                 pro = next(
                     (
@@ -738,110 +773,150 @@ def _run_pipeline(store: ProjectStore, project_id: str, job_id: str) -> None:
                     None,
                 )
                 fast = next((m for m in models if "fast" in str(m.get("id") or "")), None)
-                model = (pro or fast or (models[0] if models else {})).get("id") or "doubao-seedance-2-0-260128"
+                model = (pro or fast or (models[0] if models else {})).get("id") or "MiniMax-Hailuo-02 / H3"
             resolution = str(opts.get("resolution") or "720p")
             text_only = bool(opts.get("textOnlyVideo"))
-            shot_ids = [s["id"] for s in shots]
-            # Series jobs need longer wait (N episodes × shots).
-            wait_s = min(7200, max(1200, 180 * max(1, len(shot_ids))))
+            require_vqa = bool(opts.get("requireVideoQa", True))
+
+            # Prefer segment-level generation (SceneMixer desk); fall back to per-shot.
+            segment_jobs: list[dict[str, Any]] = []
+            for ep in target_eps:
+                eid = str(ep.get("id") or "")
+                if not eid:
+                    continue
+                ep_shots = [
+                    s
+                    for s in shots
+                    if str(s.get("episodeId") or "") == eid and not s.get("deletedAt")
+                ]
+                segs = group_shots_by_segment(ep_shots)
+                if segs:
+                    for seg in segs:
+                        segment_jobs.append(
+                            {
+                                "episodeId": eid,
+                                "episodeNumber": ep.get("episodeNumber"),
+                                "segmentOrder": int(seg.get("segmentOrder") or 0),
+                                "leadId": str((seg.get("lead") or {}).get("id") or ""),
+                            }
+                        )
+                else:
+                    for s in ep_shots:
+                        if s.get("isSegmentLead") or int(s.get("beatIndex") or 0) in {0, 1}:
+                            segment_jobs.append(
+                                {
+                                    "episodeId": eid,
+                                    "episodeNumber": ep.get("episodeNumber"),
+                                    "segmentOrder": int(s.get("segmentOrder") or s.get("shotOrder") or 0),
+                                    "leadId": str(s.get("id") or ""),
+                                    "shotOnly": True,
+                                }
+                            )
+
+            total_segs = len(segment_jobs) or len(shots)
             _log(
                 job,
-                f"开始生成视频：{len(target_eps)} 集 / {len(shot_ids)} 镜（model={model}, {resolution}, textOnly={text_only}）…",
+                f"开始生成视频：{len(target_eps)} 集 / {total_segs} 段"
+                f"（model={model}, {resolution}, QA={'on' if require_vqa else 'off'}）…",
             )
             _save_job(store, project_id, job)
 
-            for shot in shots:
-                status = shot.get("status")
-                if status in {"success", "generating"} and (shot.get("selectedVideoId") or shot.get("providerTaskId")):
-                    _log(job, f"镜头已在进行/完成，跳过提交 {shot.get('shotOrder') or shot['id']}")
-                    continue
-                try:
-                    start_shot_video(
-                        store,
-                        project_id,
-                        shot["id"],
-                        model=model,
-                        resolution=resolution,
-                        skip_refs=text_only,
-                    )
-                    _log(job, f"已提交镜头 第集内#{shot.get('shotOrder') or shot['id']}")
-                except Exception as exc:
-                    _log(job, f"提交镜头失败：{exc}", ok=False)
-                _save_job(store, project_id, job)
-                time.sleep(1.5)
-
-            finished = _wait_shots(store, project_id, shot_ids, timeout_s=wait_s, job=job)
-
-            state = store.load(project_id) or {}
-            stuck = False
-            for s in state.get("shots") or []:
-                if s.get("id") in shot_ids and s.get("status") == "generating":
-                    s["status"] = "failed"
-                    s["error"] = s.get("error") or "生成超时，已标记失败以便重试"
-                    s["providerTaskId"] = None
-                    s["updatedAt"] = _now()
-                    stuck = True
-            if stuck:
-                store.save(state)
-                _log(job, "检测到超时仍生成中的镜头，已标记失败并进入重试", ok=False)
-
-            finished = [
-                s
-                for s in ((store.load(project_id) or {}).get("shots") or [])
-                if s.get("id") in shot_ids and not s.get("deletedAt")
-            ]
-            retries = [
-                sh["id"]
-                for sh in finished
-                if sh.get("status") == "failed"
-                and (
-                    _privacy_error(sh.get("error"))
-                    or "超时" in str(sh.get("error") or "")
-                    or not text_only
-                )
-            ]
-            if retries and not text_only:
-                _log(job, f"{len(retries)} 镜失败，改用纯文本重试…")
-                _save_job(store, project_id, job)
-                for sid in retries:
+            ok_vids = 0
+            fail_vids = 0
+            if segment_jobs and require_vqa:
+                for idx, job_seg in enumerate(segment_jobs, start=1):
+                    so = int(job_seg.get("segmentOrder") or 0)
+                    eid = str(job_seg.get("episodeId") or "")
+                    epn = job_seg.get("episodeNumber")
+                    _set_step(job, "videos", "running", f"{idx - 1}/{total_segs} · 第{epn}集段{so}")
+                    _log(job, f"出片+质检 {idx}/{total_segs}：第{epn}集 · 片段 {so}…")
+                    _save_job(store, project_id, job)
                     try:
-                        state = store.load(project_id) or {}
-                        for s in state.get("shots") or []:
-                            if s.get("id") == sid:
-                                s["status"] = "pending"
-                                s["error"] = None
-                                s["providerTaskId"] = None
-                        store.save(state)
+                        if job_seg.get("shotOnly") and job_seg.get("leadId"):
+                            start_shot_video(
+                                store,
+                                project_id,
+                                str(job_seg["leadId"]),
+                                model=model,
+                                resolution=resolution,
+                                skip_refs=text_only,
+                            )
+                            finished = _wait_shots(
+                                store,
+                                project_id,
+                                [str(job_seg["leadId"])],
+                                timeout_s=1200,
+                                job=job,
+                            )
+                            lead = finished[0] if finished else {}
+                            if lead.get("status") == "success":
+                                ok_vids += 1
+                            else:
+                                fail_vids += 1
+                                _log(
+                                    job,
+                                    f"片段失败 第{epn}集段{so}：{lead.get('error')}",
+                                    ok=False,
+                                )
+                        else:
+                            ensure_segment_video_qa(
+                                store,
+                                project_id,
+                                eid,
+                                so,
+                                model=model,
+                                resolution=resolution,
+                                skip_refs=text_only,
+                            )
+                            ok_vids += 1
+                            _log(job, f"片段达标 {idx}/{total_segs}：第{epn}集 · 片段 {so}")
+                    except Exception as exc:
+                        fail_vids += 1
+                        _log(job, f"片段未达标 {idx}/{total_segs}：第{epn}集段{so} — {exc}", ok=False)
+                    _set_step(job, "videos", "running", f"{ok_vids}/{total_segs}")
+                    _save_job(store, project_id, job)
+            else:
+                # Legacy per-shot path (no segment QA)
+                shot_ids = [s["id"] for s in shots]
+                wait_s = min(7200, max(1200, 180 * max(1, len(shot_ids))))
+                for shot in shots:
+                    status = shot.get("status")
+                    if status in {"success", "generating"} and (
+                        shot.get("selectedVideoId") or shot.get("providerTaskId")
+                    ):
+                        continue
+                    try:
                         start_shot_video(
                             store,
                             project_id,
-                            sid,
+                            shot["id"],
                             model=model,
                             resolution=resolution,
-                            skip_refs=True,
+                            skip_refs=text_only,
                         )
                     except Exception as exc:
-                        _log(job, f"纯文本重试提交失败：{exc}", ok=False)
-                    _save_job(store, project_id, job)
+                        _log(job, f"提交镜头失败：{exc}", ok=False)
                     time.sleep(1.5)
                 finished = _wait_shots(store, project_id, shot_ids, timeout_s=wait_s, job=job)
-
-            ok_vids = sum(1 for s in finished if s.get("status") == "success" and s.get("selectedVideoId"))
-            fail_vids = sum(1 for s in finished if s.get("status") == "failed")
-            total_vids = len(shot_ids)
-            _log(job, f"视频阶段结束：成功 {ok_vids}/{total_vids}，失败 {fail_vids}")
-            if ok_vids <= 0:
-                _set_step(job, "videos", "failed", f"成功 {ok_vids}/{total_vids}")
-                raise RuntimeError(
-                    f"分镜视频全部失败（成功 {ok_vids}/{total_vids}），已停止配音与导出。请到分镜步骤重试后再继续。"
+                ok_vids = sum(
+                    1 for s in finished if s.get("status") == "success" and s.get("selectedVideoId")
                 )
-            if ok_vids < total_vids:
+                fail_vids = sum(1 for s in finished if s.get("status") == "failed")
+                total_segs = len(shot_ids)
+
+            _log(job, f"视频阶段结束：成功 {ok_vids}/{total_segs}，失败 {fail_vids}")
+            if ok_vids <= 0:
+                _set_step(job, "videos", "failed", f"成功 {ok_vids}/{total_segs}")
+                raise RuntimeError(
+                    f"分镜视频全部失败（成功 {ok_vids}/{total_segs}），已停止配音与导出。"
+                )
+            if ok_vids < total_segs:
                 _log(
                     job,
-                    f"部分镜头失败（成功 {ok_vids}/{total_vids}），继续用成功镜头配音/导出",
+                    f"部分片段失败（成功 {ok_vids}/{total_segs}），继续用成功片段配音/导出",
                     ok=False,
                 )
-            _set_step(job, "videos", "done", f"{ok_vids}/{total_vids}")
+            _set_step(job, "videos", "done", f"{ok_vids}/{total_segs}")
             _save_job(store, project_id, job)
 
         # 7) audio — BGM per episode (optional forced TTS dub)

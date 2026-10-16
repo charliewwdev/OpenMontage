@@ -20,6 +20,31 @@ services:
       retries: 6
       start_period: 10s
 
+  drama-redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    # Persist queue so pending / in-flight media jobs survive container restart.
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "yes",
+        "--appendfsync",
+        "everysec",
+        "--dir",
+        "/data",
+        "--save",
+        "60",
+        "1",
+      ]
+    volumes:
+      - drama_redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+
   drama-studio:
     build:
       context: .
@@ -28,6 +53,8 @@ services:
     restart: unless-stopped
     depends_on:
       drama-db:
+        condition: service_healthy
+      drama-redis:
         condition: service_healthy
     ports:
       - "${PORT:-8787}:8787"
@@ -39,6 +66,11 @@ services:
       # Default: same-compose Postgres. Override with Coolify/aaPanel URL if needed.
       DATABASE_URL: ${DATABASE_URL:-postgresql://${POSTGRES_USER:-omstudio}:${POSTGRES_PASSWORD:-omstudio_change_me}@drama-db:5432/${POSTGRES_DB:-omstudio}?sslmode=disable}
       STUDIO_DATABASE_URL: ${STUDIO_DATABASE_URL:-}
+      # Shared media queue (entity stills + video). Entrypoint starts media_worker when set.
+      REDIS_URL: ${REDIS_URL:-redis://drama-redis:6379/0}
+      STUDIO_REDIS_URL: ${STUDIO_REDIS_URL:-${REDIS_URL:-redis://drama-redis:6379/0}}
+      UVICORN_WORKERS: ${UVICORN_WORKERS:-2}
+      STUDIO_MEDIA_WORKERS: ${STUDIO_MEDIA_WORKERS:-2}
       STUDIO_DIST: /app/studio/dist
       STUDIO_PUBLIC_URL: ${STUDIO_PUBLIC_URL:-http://localhost:8787}
       STUDIO_CORS_ORIGINS: ${STUDIO_CORS_ORIGINS:-${STUDIO_PUBLIC_URL:-http://localhost:8787}}
@@ -87,3 +119,4 @@ services:
 volumes:
   drama_projects:
   drama_pg:
+  drama_redis:

@@ -7,8 +7,11 @@ import re
 import shutil
 import time
 import uuid
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
+
+from store_lock import project_lock
 
 
 def _now() -> str:
@@ -145,7 +148,7 @@ class ProjectStore:
         (project / "media" / "videos").mkdir(parents=True, exist_ok=True)
         (project / "media" / "exports").mkdir(parents=True, exist_ok=True)
 
-    def load(self, project_id: str) -> dict[str, Any] | None:
+    def _load_unlocked(self, project_id: str) -> dict[str, Any] | None:
         project = self._dir(project_id)
         path = self._studio_path(project) if project else None
 
@@ -182,7 +185,7 @@ class ProjectStore:
             return self._migrate_legacy(project)
         return None
 
-    def save(self, state: dict[str, Any]) -> dict[str, Any]:
+    def _save_unlocked(self, state: dict[str, Any]) -> dict[str, Any]:
         project_id = state["project"]["id"]
         project = self._dir(project_id)
         if not project:
@@ -198,6 +201,24 @@ class ProjectStore:
         )
         self._mirror_artifacts(project, state)
         return state
+
+    def load(self, project_id: str) -> dict[str, Any] | None:
+        # Shared reads stay unlocked for latency; writers use ``transaction`` / ``save``.
+        return self._load_unlocked(project_id)
+
+    def save(self, state: dict[str, Any]) -> dict[str, Any]:
+        project_id = state["project"]["id"]
+        with project_lock(self.root, project_id):
+            return self._save_unlocked(state)
+
+    @contextmanager
+    def transaction(self, project_id: str) -> Iterator[dict[str, Any] | None]:
+        """Exclusive load → mutate → save for multi-worker RMW safety."""
+        with project_lock(self.root, project_id):
+            state = self._load_unlocked(project_id)
+            yield state
+            if state is not None:
+                self._save_unlocked(state)
 
     def delete(self, project_id: str) -> bool:
         project = self._dir(project_id)

@@ -191,6 +191,14 @@ export function SkillsPage({ config, onUsePrompt }) {
                     </span>
                   ))}
                 </div>
+                {skill.experience?.totalHits > 0 || skill.experience?.learnedCount > 0 ? (
+                  <div className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1.5 text-[10px] text-emerald-100/90">
+                    经验 {skill.experience.patchCount || 0} 条 · 命中 {skill.experience.totalHits || 0} 次
+                    {skill.experience.learnedCount
+                      ? ` · 自动学习 ${skill.experience.learnedCount}`
+                      : ""}
+                  </div>
+                ) : null}
               </button>
               <div className="mt-4 flex items-center justify-between gap-2 border-t border-white/5 pt-3">
                 <span className="text-[11px] text-white/35">平台内置 · 无需安装</span>
@@ -301,6 +309,29 @@ export function SkillsPage({ config, onUsePrompt }) {
                 <X className="h-4 w-4" />
               </button>
             </div>
+            {(active.experience?.topFailures || []).length ? (
+              <div className="border-b border-white/10 bg-black/20 px-5 py-3">
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-white/45">
+                  质检经验（自动累积）
+                </div>
+                <ul className="mt-2 space-y-1.5">
+                  {active.experience.topFailures.slice(0, 5).map((f) => (
+                    <li key={f.id} className="rounded-lg border border-white/8 bg-white/[.03] px-2.5 py-1.5 text-[11px] text-white/70">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-mono text-white/50">{f.id}</span>
+                        <span className="text-emerald-300/80">×{f.hits || 0}</span>
+                      </div>
+                      {f.lastReason ? (
+                        <p className="mt-1 line-clamp-2 text-white/55">{f.lastReason}</p>
+                      ) : null}
+                      {f.promptBoost ? (
+                        <p className="mt-1 line-clamp-2 text-[#c4b5fd]/90">{f.promptBoost}</p>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
             <pre className="max-h-[50vh] overflow-auto whitespace-pre-wrap bg-black/30 p-5 text-xs leading-6 text-white/75">
               {active.content || "暂无内容"}
             </pre>

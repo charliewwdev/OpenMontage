@@ -237,6 +237,18 @@ def all_secret_envs() -> tuple[str, ...]:
             "COMFYUI_IMAGE_SERVER_URL",
             "COMFYUI_VIDEO_SERVER_URL",
             "COMFYUI_CHECKPOINT",
+            "COMFYUI_VIDEO_MODEL",
+            # Comfy Org partner-node billing (Qwen Image 3 API on rented ComfyUI)
+            "COMFY_API_KEY",
+            "COMFYUI_API_KEY",
+            "COMFY_ORG_API_KEY",
+            # Studio generation prefs (not secrets; stored alongside keys for BYOK scope)
+            "STUDIO_IMAGE_BACKEND",  # auto | seedream | comfyui
+            "STUDIO_VIDEO_BACKEND",  # auto | seedance | comfyui
+            "STUDIO_MEDIA_QA",  # 1 | 0 — prompt-fit QA after generate
+            "STUDIO_QA_MIN_SCORE",
+            "STUDIO_ENTITY_QA_MAX_ATTEMPTS",
+            "STUDIO_VIDEO_QA_MAX_ATTEMPTS",
         ]
     )
     return tuple(keys)

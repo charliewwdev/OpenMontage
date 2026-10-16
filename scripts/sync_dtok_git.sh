@@ -82,23 +82,66 @@ EOF
 
 git remote add dtok "$REMOTE"
 
-# main is protected against force-push; temporarily unprotect if needed.
-# Prefer: DTOK_GIT_TOKEN (GitLab PAT with api+write_repository) for unprotect/reprotect.
+# Load GitLab PAT from env or local secrets files (never printed).
+if [[ -z "${DTOK_GIT_TOKEN:-}" ]]; then
+  for cand in \
+    "${ROOT}/studio/.env" \
+    "${ROOT}/.env" \
+    "${HOME}/.config/dtok/gitlab_token" \
+    "${HOME}/.config/dtok/DTOK_GIT_TOKEN"
+  do
+    if [[ -f "$cand" ]]; then
+      if [[ "$(basename "$cand")" == "gitlab_token" || "$(basename "$cand")" == "DTOK_GIT_TOKEN" ]]; then
+        DTOK_GIT_TOKEN="$(tr -d ' \n\r' < "$cand" || true)"
+      else
+        DTOK_GIT_TOKEN="$(
+          TOKEN_FILE="$cand" python3 - <<'PY'
+import os
+from pathlib import Path
+p = Path(os.environ["TOKEN_FILE"])
+for line in p.read_text(errors="ignore").splitlines():
+    line = line.strip()
+    if not line or line.startswith("#") or "=" not in line:
+        continue
+    k, _, v = line.partition("=")
+    if k.strip() in {"DTOK_GIT_TOKEN", "GITLAB_TOKEN", "GITLAB_PAT"}:
+        print(v.strip().strip('"').strip("'"))
+        break
+PY
+        )"
+      fi
+      [[ -n "${DTOK_GIT_TOKEN:-}" ]] && break
+    fi
+  done
+fi
+
+API="https://git.dtok.io/api/v4/projects/dtok-app%2FOpenMontage"
+
+# deploy/main are often protected against force-push; temporarily unprotect when we have a PAT.
 if [[ -n "${DTOK_GIT_TOKEN:-}" ]]; then
-  API="https://git.dtok.io/api/v4/projects/dtok-app%2FOpenMontage"
+  echo "==> Unprotecting ${BRANCH} for force-push (PAT present)"
   curl -fsS -X DELETE -H "PRIVATE-TOKEN: ${DTOK_GIT_TOKEN}" \
     "${API}/protected_branches/${BRANCH}" >/dev/null 2>&1 || true
+else
+  echo "WARN: DTOK_GIT_TOKEN unset — if ${BRANCH} is protected, push will fail."
+  echo "      export DTOK_GIT_TOKEN='glpat-…'  # api + write_repository"
 fi
 
 SLIM_SHA="$(git rev-parse HEAD)"
 
 echo "==> Force-pushing slim tree to ${REMOTE} (${BRANCH})"
-git -c http.postBuffer=524288000 push -f dtok "HEAD:${BRANCH}"
+if ! git -c http.postBuffer=524288000 push -f dtok "HEAD:${BRANCH}"; then
+  echo "ERROR: git push to ${REMOTE} ${BRANCH} failed." >&2
+  if [[ -z "${DTOK_GIT_TOKEN:-}" ]]; then
+    echo "HINT: set DTOK_GIT_TOKEN (GitLab PAT) so this script can unprotect ${BRANCH}." >&2
+  fi
+  exit 1
+fi
 
 if [[ -n "${DTOK_GIT_TOKEN:-}" ]]; then
   curl -fsS -X POST -H "PRIVATE-TOKEN: ${DTOK_GIT_TOKEN}" -H 'Content-Type: application/json' \
     -d "{\"name\":\"${BRANCH}\",\"push_access_level\":40,\"merge_access_level\":40,\"allow_force_push\":false}" \
-    "${API}/protected_branches" >/dev/null || true
+    "${API}/protected_branches" >/dev/null 2>&1 || true
 fi
 
 # Belt-and-suspenders: GitLab project webhook should fire on push to ${BRANCH}.

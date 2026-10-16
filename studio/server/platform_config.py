@@ -108,6 +108,16 @@ def seedance_api_url() -> str:
     )
 
 
+def seedream_models() -> list[dict[str, Any]]:
+    models = load_platform_config().get("seedreamModels") or []
+    out = [m for m in models if isinstance(m, dict) and m.get("id")]
+    if out:
+        return out
+    # Fallback: single entry from defaults when catalog missing
+    mid = seedream_model()
+    return [{"id": mid, "name": mid}] if mid else []
+
+
 def seedance_models() -> list[dict[str, Any]]:
     models = load_platform_config().get("seedanceModels") or []
     return [m for m in models if isinstance(m, dict) and m.get("id")]
@@ -317,6 +327,7 @@ def public_platform_payload() -> dict[str, Any]:
         "skillTags": cfg.get("skillTags") or [],
         "skillCatalog": cfg.get("skillCatalog") or [],
         "toolHub": cfg.get("toolHub") or {},
+        "seedreamModels": seedream_models(),
         "seedanceModels": seedance_models(),
         "auth": auth_payload(),
         "i18n": i18n_payload(),

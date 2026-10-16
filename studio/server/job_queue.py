@@ -22,10 +22,13 @@ from typing import Any, Callable
 log = logging.getLogger("studio.job_queue")
 
 QUEUE_KEY = os.environ.get("STUDIO_REDIS_QUEUE", "om:studio:media:jobs")
+# Stills run before videos: a failed reference image makes the clip fail QA.
+IMAGE_QUEUE_KEY = os.environ.get("STUDIO_REDIS_IMAGE_QUEUE", f"{QUEUE_KEY}:images")
 PROCESSING_KEY = os.environ.get(
     "STUDIO_REDIS_PROCESSING",
     f"{QUEUE_KEY}:processing",
 )
+IMAGE_JOB_KINDS = frozenset({"entity_image", "entity_recheck_qa", "fill_entity_stills"})
 RESULT_PREFIX = os.environ.get("STUDIO_REDIS_RESULT_PREFIX", "om:studio:media:result:")
 
 _redis = None
@@ -86,7 +89,8 @@ def enqueue(kind: str, payload: dict[str, Any], *, priority: int = 0) -> dict[st
     }
     r = get_redis()
     if r is not None:
-        r.rpush(QUEUE_KEY, json.dumps(job, ensure_ascii=False))
+        key = IMAGE_QUEUE_KEY if kind in IMAGE_JOB_KINDS else QUEUE_KEY
+        r.rpush(key, json.dumps(job, ensure_ascii=False))
         return {"jobId": job_id, "queued": True, "async": True, "backend": "redis", "kind": kind}
 
     from job_pool import submit_media
@@ -131,19 +135,61 @@ def reclaim_processing(*, max_items: int = 500) -> int:
     return moved
 
 
+def _move_to_processing(r: Any, source: str, timeout: int) -> str | None:
+    """Pop one job from ``source`` onto the processing list. ``timeout`` 0 is non-blocking."""
+    try:
+        if timeout <= 0:
+            try:
+                return r.lmove(source, PROCESSING_KEY, "RIGHT", "LEFT")
+            except Exception:
+                return r.rpoplpush(source, PROCESSING_KEY)
+        try:
+            return r.blmove(source, PROCESSING_KEY, timeout, "RIGHT", "LEFT")
+        except Exception:
+            return r.brpoplpush(source, PROCESSING_KEY, timeout=timeout)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("reserve from %s failed: %s", source, exc)
+        return None
+
+
+def promote_image_jobs(*, max_items: int = 2000) -> int:
+    """Move still jobs sitting on the video queue onto the image queue."""
+    r = get_redis()
+    if r is None:
+        return 0
+    moved = 0
+    try:
+        items = r.lrange(QUEUE_KEY, 0, max(0, int(max_items) - 1)) or []
+    except Exception as exc:  # noqa: BLE001
+        log.warning("promote_image_jobs list failed: %s", exc)
+        return 0
+    for raw in items:
+        try:
+            job = json.loads(raw)
+        except Exception:
+            continue
+        if str(job.get("kind") or "") not in IMAGE_JOB_KINDS:
+            continue
+        removed = r.lrem(QUEUE_KEY, 1, raw)
+        if removed:
+            r.rpush(IMAGE_QUEUE_KEY, raw)
+            moved += int(removed)
+    if moved:
+        log.info("promoted %s still job(s) ahead of video", moved)
+    return moved
+
+
 def reserve_job(*, timeout: float = 2.0) -> dict[str, Any] | None:
-    """Atomically move one job from queue → processing. Returns job dict or None."""
+    """Take a still job if any are waiting, otherwise a video job."""
     r = get_redis()
     if r is None:
         return None
     timeout = max(1, int(timeout or 2))
     raw = None
     try:
-        # Redis 6.2+: BLMOVE; fall back to BRPOPLPUSH for older servers.
-        try:
-            raw = r.blmove(QUEUE_KEY, PROCESSING_KEY, timeout, "RIGHT", "LEFT")
-        except Exception:
-            raw = r.brpoplpush(QUEUE_KEY, PROCESSING_KEY, timeout=timeout)
+        raw = _move_to_processing(r, IMAGE_QUEUE_KEY, 0)
+        if not raw:
+            raw = _move_to_processing(r, QUEUE_KEY, timeout)
     except Exception as exc:  # noqa: BLE001
         log.warning("reserve_job error: %s", exc)
         return None
@@ -335,9 +381,51 @@ def _handle_entity_image(payload: dict[str, Any]) -> Any:
         raise
 
 
+def _defer_video_for_stills(payload: dict[str, Any]) -> str | None:
+    """Skip GPU video when referenced stills have not passed QA."""
+    from drama_service import EntityQaBlockedError, assert_entity_refs_ready_for_video
+
+    store = _store()
+    project_id = str(payload.get("projectId") or "")
+    shot_id = str(payload.get("shotId") or "")
+    state = store.load(project_id)
+    if not state or not shot_id:
+        return None
+    shot = next((s for s in state.get("shots") or [] if s.get("id") == shot_id), None)
+    if not shot or payload.get("forceEntityQa") or payload.get("skipRefs"):
+        return None
+    try:
+        assert_entity_refs_ready_for_video(state, list(shot.get("referenceEntityIds") or []))
+    except EntityQaBlockedError as exc:
+        reason = "定妆未达标，先出图再出片"
+        now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        seg = shot.get("segmentOrder")
+        episode_id = shot.get("episodeId")
+        for item in state.get("shots") or []:
+            same = item.get("id") == shot_id or (
+                seg
+                and item.get("episodeId") == episode_id
+                and item.get("segmentOrder") == seg
+                and item.get("status") == "generating"
+            )
+            if not same:
+                continue
+            item["status"] = "pending"
+            item["error"] = reason
+            item["providerTaskId"] = None
+            item["updatedAt"] = now
+        store.save(state)
+        return f"{reason}: {exc}"
+    return None
+
+
 def _handle_shot_video(payload: dict[str, Any]) -> Any:
     from drama_service import run_shot_video_job
 
+    deferred = _defer_video_for_stills(payload)
+    if deferred:
+        log.info("defer video shot=%s %s", payload.get("shotId"), deferred[:180])
+        return {"deferred": True, "reason": deferred[:240]}
     return run_shot_video_job(
         _store(),
         str(payload["projectId"]),
@@ -390,7 +478,9 @@ def queue_stats() -> dict[str, Any]:
     r = get_redis()
     if r is not None:
         try:
-            stats["redisPending"] = int(r.llen(QUEUE_KEY))
+            stats["redisPending"] = int(r.llen(QUEUE_KEY)) + int(r.llen(IMAGE_QUEUE_KEY))
+            stats["redisImagePending"] = int(r.llen(IMAGE_QUEUE_KEY))
+            stats["redisVideoPending"] = int(r.llen(QUEUE_KEY))
             stats["redisProcessing"] = int(r.llen(PROCESSING_KEY))
         except Exception as exc:  # noqa: BLE001
             stats["redisError"] = str(exc)[:120]

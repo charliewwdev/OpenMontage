@@ -464,24 +464,6 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <label className="min-w-44">
-            <span className="sr-only">分集</span>
-            <select
-              className="field !py-2 text-sm"
-              value={episodeId}
-              onChange={(e) => {
-                setEpisodeId(e.target.value);
-                onFocusEpisode?.(e.target.value);
-              }}
-            >
-              {!episodes.length && <option value="">无分集</option>}
-              {episodes.map((item) => (
-                <option key={item.id} value={item.id}>
-                  第{item.episodeNumber}集 · {item.title || "未命名"}
-                </option>
-              ))}
-            </select>
-          </label>
           <button type="button" className="btn-secondary" disabled={saving || !episode} onClick={() => void save()}>
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} 保存
           </button>
@@ -503,7 +485,7 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
       </section>
 
       {!episode ? (
-        <div className="panel py-24 text-center text-sm text-[var(--muted)]">请先创建分集。</div>
+        <div className="panel py-24 text-center text-sm text-[var(--muted)]">请在左侧选择分集。</div>
       ) : readyShots.length === 0 ? (
         <div className="panel flex flex-col items-center border-dashed py-24 text-center">
           <Scissors className="mb-4 h-10 w-10 text-[var(--projector)]" />

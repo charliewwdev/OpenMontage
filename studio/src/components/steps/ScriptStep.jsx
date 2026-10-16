@@ -38,6 +38,8 @@ export function ScriptStep({
   onBundle,
   onRefresh,
   onNeedKeys,
+  onRequireAuth,
+  readOnly = false,
   focusEpisodeId,
   onFocusEpisode,
 }) {
@@ -147,11 +149,6 @@ export function ScriptStep({
     }
   }, [briefCollapsed, projectId]);
 
-  const selectEpisode = (id) => {
-    setSelectedId(id);
-    onFocusEpisode?.(id);
-  };
-
   const selected = useMemo(() => episodes.find((e) => e.id === selectedId) || null, [episodes, selectedId]);
   const maxEpisodeNumber = useMemo(() => Math.max(0, ...episodes.map((e) => e.episodeNumber)), [episodes]);
   const draftEpisodes = useMemo(() => episodes.filter((e) => e.status !== "confirmed"), [episodes]);
@@ -206,6 +203,7 @@ export function ScriptStep({
   }, [plannedEpisodes]);
 
   const runGenerate = async () => {
+    if (onRequireAuth && !onRequireAuth()) return;
     if (!requireCapability(caps, "deepseek", onNeedKeys, "文本大模型 Key")) return;
     if (!form.brief.trim()) return toast.error("先填写创作需求或粘贴原始故事");
     if (!form.genre.trim()) return toast.error("请选择题材或填写自定义题材");
@@ -537,93 +535,56 @@ export function ScriptStep({
         ) : null}
       </section>
 
-      <section className="grid min-h-[560px] gap-4 lg:grid-cols-[minmax(240px,300px)_1fr]">
-        <div className="panel flex min-w-0 flex-col p-3">
-          <div className="border-b border-[var(--line)] px-2 pb-3 pt-2">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <div className="label !mb-0">Episodes</div>
-                <strong>{episodes.length} 集</strong>
-              </div>
+      <section className="space-y-4">
+        {episodes.length > 0 ? (
+          <div className="panel flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+            <div>
+              <div className="label !mb-0">Episodes</div>
+              <strong className="text-sm">{episodes.length} 集 · 左侧切换当前集</strong>
             </div>
-            {episodes.length > 0 ? (
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  className="btn-secondary !min-h-9 !justify-center !gap-1 !px-1.5 text-[11px] leading-tight"
-                  disabled={operationBusy || !draftEpisodes.length}
-                  onClick={() => setConfirmBatch(true)}
-                >
-                  {batchConfirming ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <Check className="h-3.5 w-3.5 shrink-0" />}
-                  <span className="truncate">定稿{draftEpisodes.length ? ` ${draftEpisodes.length}` : ""}</span>
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary !min-h-9 !justify-center !gap-1 !px-1.5 text-[11px] leading-tight"
-                  disabled={operationBusy}
-                  onClick={() => void copyAll()}
-                >
-                  <Copy className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate">复制</span>
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary !min-h-9 !justify-center !gap-1 !px-1.5 text-[11px] leading-tight"
-                  disabled={operationBusy}
-                  onClick={() => setShowContinue(true)}
-                >
-                  {continuing ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <Forward className="h-3.5 w-3.5 shrink-0" />}
-                  <span className="truncate">{continuing ? elapsedTime : "续写"}</span>
-                </button>
-                <button
-                  type="button"
-                  className="btn-secondary !min-h-9 !justify-center !gap-1 !px-1.5 text-[11px] leading-tight"
-                  disabled={operationBusy}
-                  onClick={() => {
-                    setRewriteStartEpisode(episodes[0]?.episodeNumber || 1);
-                    setShowRewrite(true);
-                  }}
-                >
-                  {rewriting ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <FilePenLine className="h-3.5 w-3.5 shrink-0" />}
-                  <span className="truncate">{rewriting ? elapsedTime : "重写"}</span>
-                </button>
-              </div>
-            ) : null}
-          </div>
-          <div className="scrollbar-thin mt-2 flex-1 space-y-1 overflow-y-auto">
-            {episodes.map((episode) => (
+            <div className="flex flex-wrap gap-2">
               <button
-                key={episode.id}
                 type="button"
-                onClick={() => selectEpisode(episode.id)}
-                className={`flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left ${
-                  selectedId === episode.id
-                    ? "border-[var(--projector)] bg-[var(--projector)]/10"
-                    : "border-transparent hover:bg-white/[.04]"
-                }`}
+                className="btn-secondary !min-h-9 !justify-center !gap-1 !px-2.5 text-[11px]"
+                disabled={operationBusy || !draftEpisodes.length}
+                onClick={() => setConfirmBatch(true)}
               >
-                <span className="timecode text-xs text-[var(--muted)]">
-                  {String(episode.episodeNumber).padStart(2, "0")}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-semibold">
-                    {episode.title || `第${episode.episodeNumber}集`}
-                  </span>
-                  <span
-                    className={`mt-1 block text-[10px] ${
-                      episode.status === "confirmed" ? "text-[var(--ok)]" : "text-[var(--muted)]"
-                    }`}
-                  >
-                    {episode.status === "confirmed" ? "已定稿" : "草稿"}
-                  </span>
-                </span>
+                {batchConfirming ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <Check className="h-3.5 w-3.5 shrink-0" />}
+                定稿{draftEpisodes.length ? ` ${draftEpisodes.length}` : ""}
               </button>
-            ))}
-            {!episodes.length ? (
-              <div className="px-3 py-16 text-center text-sm text-[var(--muted)]">生成剧本后，分集会出现在这里。</div>
-            ) : null}
+              <button
+                type="button"
+                className="btn-secondary !min-h-9 !justify-center !gap-1 !px-2.5 text-[11px]"
+                disabled={operationBusy}
+                onClick={() => void copyAll()}
+              >
+                <Copy className="h-3.5 w-3.5 shrink-0" />
+                复制
+              </button>
+              <button
+                type="button"
+                className="btn-secondary !min-h-9 !justify-center !gap-1 !px-2.5 text-[11px]"
+                disabled={operationBusy}
+                onClick={() => setShowContinue(true)}
+              >
+                {continuing ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <Forward className="h-3.5 w-3.5 shrink-0" />}
+                {continuing ? elapsedTime : "续写"}
+              </button>
+              <button
+                type="button"
+                className="btn-secondary !min-h-9 !justify-center !gap-1 !px-2.5 text-[11px]"
+                disabled={operationBusy}
+                onClick={() => {
+                  setRewriteStartEpisode(episodes[0]?.episodeNumber || 1);
+                  setShowRewrite(true);
+                }}
+              >
+                {rewriting ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <FilePenLine className="h-3.5 w-3.5 shrink-0" />}
+                {rewriting ? elapsedTime : "重写"}
+              </button>
+            </div>
           </div>
-        </div>
+        ) : null}
 
         {selected ? (
           <EpisodeEditor
@@ -634,7 +595,11 @@ export function ScriptStep({
             onBundle={onBundle}
           />
         ) : (
-          <div className="panel flex items-center justify-center text-sm text-[var(--muted)]">选择一个分集开始编辑。</div>
+          <div className="panel flex min-h-[320px] items-center justify-center px-6 text-center text-sm text-[var(--muted)]">
+            {episodes.length
+              ? "在左侧选择一个分集开始编辑。"
+              : "生成剧本后，分集会出现在左侧导航。"}
+          </div>
         )}
       </section>
 

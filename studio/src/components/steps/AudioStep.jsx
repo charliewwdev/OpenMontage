@@ -12,34 +12,31 @@ export function AudioStep({
   onRefresh,
   onNeedKeys,
   focusEpisodeId,
-  onFocusEpisode,
+  setStep,
 }) {
   const episodes = useMemo(
     () => [...(bundle?.episodes || [])].sort((a, b) => a.episodeNumber - b.episodeNumber),
     [bundle?.episodes],
   );
   const audios = bundle?.audios || [];
-  const [episodeId, setEpisodeId] = useState(focusEpisodeId || episodes[0]?.id || "");
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    if (focusEpisodeId && episodes.some((e) => e.id === focusEpisodeId) && focusEpisodeId !== episodeId) {
-      setEpisodeId(focusEpisodeId);
-    }
-  }, [focusEpisodeId, episodes, episodeId]);
+  const episode = useMemo(
+    () => episodes.find((e) => e.id === focusEpisodeId) || episodes[0] || null,
+    [episodes, focusEpisodeId],
+  );
 
   useEffect(() => {
-    if (episodeId && !episodes.some((e) => e.id === episodeId)) {
-      setEpisodeId(episodes[0]?.id || "");
+    if (focusEpisodeId && !episodes.some((e) => e.id === focusEpisodeId) && episodes[0]) {
+      /* shell will re-focus; keep local render safe */
     }
-  }, [episodes, episodeId]);
+  }, [focusEpisodeId, episodes]);
 
-  const episode = episodes.find((e) => e.id === episodeId) || episodes[0];
   const audio = audios.find(
-    (a) => a.episodeId === (episode?.id || episodeId) && a.kind !== "bgm",
+    (a) => a.episodeId === (episode?.id || "") && a.kind !== "bgm",
   );
   const bgm = audios.find(
-    (a) => a.episodeId === (episode?.id || episodeId) && a.kind === "bgm",
+    (a) => a.episodeId === (episode?.id || "") && a.kind === "bgm",
   );
   const dialogueLines = useMemo(
     () => extractDialogueLines(episode?.content || episode?.script || ""),
@@ -99,88 +96,73 @@ export function AudioStep({
         {!episodes.length ? (
           <div className="mt-6 rounded-xl border border-dashed border-[var(--line)] px-4 py-10 text-center text-sm text-[var(--muted)]">
             还没有分集。请先在「剧本」步生成并确认剧集。
+            {typeof setStep === "function" ? (
+              <div className="mt-3">
+                <button type="button" className="btn-primary !min-h-8 !px-3" onClick={() => setStep("script")}>
+                  去剧本
+                </button>
+              </div>
+            ) : null}
+          </div>
+        ) : !episode ? (
+          <div className="mt-6 rounded-xl border border-dashed border-[var(--line)] px-4 py-10 text-center text-sm text-[var(--muted)]">
+            请在左侧选择一个分集。
           </div>
         ) : (
-          <div className="mt-5 grid gap-4 lg:grid-cols-[240px_1fr]">
-            <div className="space-y-1">
-              {episodes.map((ep) => {
-                const ready = audios.some((a) => a.episodeId === ep.id && a.kind !== "bgm");
-                return (
-                  <button
-                    key={ep.id}
-                    type="button"
-                    className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm ${
-                      (episode?.id || episodeId) === ep.id ? "bg-white/[.08] text-white" : "text-white/70 hover:bg-white/[.04]"
-                    }`}
-                    onClick={() => {
-                      setEpisodeId(ep.id);
-                      onFocusEpisode?.(ep.id);
-                    }}
-                  >
-                    <span>
-                      第 {ep.episodeNumber} 集 {ep.title ? `· ${ep.title}` : ""}
-                    </span>
-                    {ready ? <span className="text-[10px] text-[var(--ok)]">已配音</span> : null}
-                  </button>
-                );
-              })}
+          <div className="mt-5 rounded-2xl border border-[var(--line)] bg-black/20 p-5">
+            <div className="flex items-center gap-2 text-sm font-semibold">
+              <Mic2 className="h-4 w-4 text-[#fb923c]" />
+              第 {episode.episodeNumber} 集{episode.title ? ` · ${episode.title}` : ""} · 识别到的台词
             </div>
 
-            <div className="rounded-2xl border border-[var(--line)] bg-black/20 p-5">
-              <div className="flex items-center gap-2 text-sm font-semibold">
-                <Mic2 className="h-4 w-4 text-[#fb923c]" />
-                第 {episode?.episodeNumber} 集 · 识别到的台词
+            {dialogueLines.length || shotDialogues.length ? (
+              <ul className="mt-3 max-h-56 space-y-2 overflow-auto text-xs leading-6">
+                {dialogueLines.map((line, i) => (
+                  <li key={`d-${i}`} className="rounded-lg bg-white/[.04] px-3 py-2 text-white/80">
+                    <span className="font-semibold text-[#fb923c]">{line.speaker}</span>
+                    <span className="text-white/40"> · </span>
+                    {line.text}
+                  </li>
+                ))}
+                {shotDialogues.map((line) => (
+                  <li key={`s-${line.shotOrder}`} className="rounded-lg bg-white/[.04] px-3 py-2 text-white/70">
+                    <span className="font-semibold text-white/45">镜 {line.shotOrder}</span>
+                    <span className="text-white/40"> · </span>
+                    {line.text}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="mt-3 rounded-xl border border-dashed border-white/15 px-3 py-6 text-xs leading-6 text-white/45">
+                未识别到对白。请在剧本使用「角色名：台词」或中文引号「…」，不要只写场景描写。
               </div>
+            )}
 
-              {dialogueLines.length || shotDialogues.length ? (
-                <ul className="mt-3 max-h-56 space-y-2 overflow-auto text-xs leading-6">
-                  {dialogueLines.map((line, i) => (
-                    <li key={`d-${i}`} className="rounded-lg bg-white/[.04] px-3 py-2 text-white/80">
-                      <span className="font-semibold text-[#fb923c]">{line.speaker}</span>
-                      <span className="text-white/40"> · </span>
-                      {line.text}
-                    </li>
-                  ))}
-                  {shotDialogues.map((line) => (
-                    <li key={`s-${line.shotOrder}`} className="rounded-lg bg-white/[.04] px-3 py-2 text-white/70">
-                      <span className="font-semibold text-white/45">镜 {line.shotOrder}</span>
-                      <span className="text-white/40"> · </span>
-                      {line.text}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div className="mt-3 rounded-xl border border-dashed border-white/15 px-3 py-6 text-xs leading-6 text-white/45">
-                  未识别到对白。请在剧本使用「角色名：台词」或中文引号「…」，不要只写场景描写。
-                </div>
-              )}
-
-              <div className="mt-5 flex flex-wrap items-center gap-2">
-                <button type="button" className="btn-primary" disabled={busy || !episode} onClick={() => void generate()}>
-                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Volume2 className="h-4 w-4" />}
-                  {busy ? "合成中…" : audio ? "重新生成配音" : "生成配音"}
-                </button>
-                {audio?.url ? (
-                  <audio controls className="h-9 max-w-full" src={audio.url} preload="metadata">
-                    <track kind="captions" />
-                  </audio>
-                ) : null}
-              </div>
-              {audio ? (
-                <p className="mt-3 text-[11px] text-[var(--muted)]">
-                  {audio.mode === "dialogue" ? "分角色对白" : "配音"} · {audio.provider || "tts"}
-                  {audio.lines ? ` · ${audio.lines} 句` : ""}
-                  {audio.bytes ? ` · ${(audio.bytes / 1024).toFixed(1)} KB` : ""}
-                  {bgm ? " · 已生成 BGM" : ""}
-                  {" · 导出时自动混音"}
-                </p>
-              ) : null}
-              {bgm?.url ? (
-                <audio controls className="mt-2 h-9 max-w-full" src={bgm.url} preload="metadata">
+            <div className="mt-5 flex flex-wrap items-center gap-2">
+              <button type="button" className="btn-primary" disabled={busy || !episode} onClick={() => void generate()}>
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Volume2 className="h-4 w-4" />}
+                {busy ? "合成中…" : audio ? "重新生成配音" : "生成配音"}
+              </button>
+              {audio?.url ? (
+                <audio controls className="h-9 max-w-full" src={audio.url} preload="metadata">
                   <track kind="captions" />
                 </audio>
               ) : null}
             </div>
+            {audio ? (
+              <p className="mt-3 text-[11px] text-[var(--muted)]">
+                {audio.mode === "dialogue" ? "分角色对白" : "配音"} · {audio.provider || "tts"}
+                {audio.lines ? ` · ${audio.lines} 句` : ""}
+                {audio.bytes ? ` · ${(audio.bytes / 1024).toFixed(1)} KB` : ""}
+                {bgm ? " · 已生成 BGM" : ""}
+                {" · 导出时自动混音"}
+              </p>
+            ) : null}
+            {bgm?.url ? (
+              <audio controls className="mt-2 h-9 max-w-full" src={bgm.url} preload="metadata">
+                <track kind="captions" />
+              </audio>
+            ) : null}
           </div>
         )}
       </section>

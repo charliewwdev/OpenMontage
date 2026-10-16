@@ -16,9 +16,26 @@ export async function api(path, options = {}) {
   if (!res.ok) {
     const msg = (data && (data.error || data.msg || data.message)) || res.statusText || "request failed";
     if (res.status === 401 && /login required/i.test(String(msg))) {
-      throw new Error("请先登录后再调用模型或保存内容");
+      try {
+        window.dispatchEvent(new CustomEvent("om:need-auth", { detail: { path, method: options.method || "GET" } }));
+      } catch {
+        /* ignore */
+      }
+      const err = new Error("请先登录后再调用模型或保存内容");
+      err.status = 401;
+      err.code = "login_required";
+      err.data = data;
+      throw err;
     }
-    throw new Error(msg);
+    const err = new Error(msg);
+    err.status = res.status;
+    err.data = data;
+    if (data && typeof data === "object") {
+      err.code = data.code;
+      err.blockers = data.blockers;
+      err.forceHint = data.forceHint;
+    }
+    throw err;
   }
   return data;
 }

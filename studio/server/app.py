@@ -26,10 +26,14 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from drama_service import (  # noqa: E402
+    EntityQaBlockedError,
     add_shot,
+    bind_episode_refs,
     continue_script,
+    effective_segment_video_prompt,
     ensure_edit_draft,
     export_edit_mp4,
+    fill_entity_stills,
     generate_entity_image,
     generate_script,
     generate_storyboard,
@@ -40,6 +44,9 @@ from drama_service import (  # noqa: E402
     patch_shot,
     patch_take,
     poll_shot,
+    preview_entity_prompt,
+    recheck_entity_qa,
+    recheck_video_qa,
     rewrite_script,
     save_edit,
     select_entity_image,
@@ -48,6 +55,9 @@ from drama_service import (  # noqa: E402
     soft_delete_entity,
     soft_delete_shot,
     cancel_shot_video,
+    migrate_episode_segments,
+    revise_segment,
+    start_segment_video,
     start_shot_video,
     upload_entity_image,
     upsert_entity,
@@ -283,8 +293,29 @@ class AuthContextMiddleware(BaseHTTPMiddleware):
 app.add_middleware(AuthContextMiddleware)
 
 
-def _http_error(status: int, message: str) -> HTTPException:
+def _http_error(status: int, message: str | dict[str, Any]) -> HTTPException:
     return HTTPException(status_code=status, detail=message)
+
+
+def _entity_qa_blocked_http(exc: EntityQaBlockedError) -> HTTPException:
+    return _http_error(
+        409,
+        {
+            "error": str(exc),
+            "code": "entity_qa_blocked",
+            "blockers": exc.blockers,
+            "forceHint": "传入 forceEntityQa=true 可强制出片（仍会使用未过检参考图）",
+        },
+    )
+
+
+def _force_entity_qa(body: dict[str, Any]) -> bool:
+    return bool(
+        body.get("forceEntityQa")
+        or body.get("force")
+        or body.get("forcePass")
+        or body.get("bypassEntityQa")
+    )
 
 
 @app.exception_handler(HTTPException)
@@ -341,6 +372,13 @@ def health() -> dict[str, Any]:
         pg_status = _pg_backend.ping()
     except Exception as exc:
         pg_status = {"enabled": False, "error": str(exc)[:120]}
+    queue: dict[str, Any] = {}
+    try:
+        from job_queue import queue_stats
+
+        queue = queue_stats()
+    except Exception as exc:  # noqa: BLE001
+        queue = {"error": str(exc)[:120]}
     return {
         "ok": True,
         "service": "openmontage-drama-studio",
@@ -353,6 +391,8 @@ def health() -> dict[str, Any]:
         "keys": public_status(),
         "postgres": pg_status,
         "objectStore": _object_store_status(),
+        "mediaQueue": queue,
+        "uvicornWorkers": int(os.environ.get("UVICORN_WORKERS") or "1"),
     }
 
 
@@ -399,6 +439,54 @@ def import_keys_from_env() -> dict[str, Any]:
         "imported": sorted(payload.keys()),
         "keys": status,
         "capabilities": _providers_payload(),
+    }
+
+
+@app.get("/api/ops/stats")
+def ops_stats(request: Request) -> dict[str, Any]:
+    """Ops: user / project / queue counts (requires ops token)."""
+    if not _ops_token_ok(request):
+        raise HTTPException(status_code=403, detail="ops token required")
+    owners: dict[str, int] = {}
+    for p in STORE.list_items():
+        oid = str(p.get("ownerId") or "").strip() or "(none)"
+        owners[oid] = owners.get(oid, 0) + 1
+    kv_users: set[str] = set()
+    kv_keys: list[str] = []
+    try:
+        import pg_backend as _pg
+
+        if _pg.enabled():
+            kv_keys = _pg.list_kv_keys()
+            for key in kv_keys:
+                # secrets:.users/{uid}/secrets.json → ['secrets:.users', '{uid}', 'secrets.json']
+                # credits:user:{uid}
+                if key.startswith("secrets:.users/"):
+                    parts = key.split("/")
+                    if len(parts) >= 2 and parts[1]:
+                        kv_users.add(parts[1])
+                elif key.startswith("credits:user:"):
+                    uid = key.split("credits:user:", 1)[-1].strip()
+                    if uid:
+                        kv_users.add(uid)
+    except Exception as exc:  # noqa: BLE001
+        kv_keys = []
+        kv_err = str(exc)[:120]
+    else:
+        kv_err = None
+    from job_queue import queue_stats
+
+    return {
+        "ok": True,
+        "projects": sum(owners.values()),
+        "owners": owners,
+        "ownerCount": len(owners),
+        "kvUserCount": len(kv_users),
+        "kvUsers": sorted(kv_users),
+        "kvKeyCount": len(kv_keys),
+        "kvError": kv_err,
+        "mediaQueue": queue_stats(),
+        "providers": provider_status(),
     }
 
 
@@ -738,6 +826,15 @@ def _parse_skill_md(text: str, fallback_id: str) -> dict[str, Any]:
     return {"title": title, "summary": summary[:220], "content": text, "meta": meta}
 
 
+def _skill_experience_payload(skill_id: str) -> dict[str, Any]:
+    try:
+        from skill_runtime import experience_summary
+
+        return experience_summary(skill_id, PROJECTS_ROOT)
+    except Exception as exc:  # noqa: BLE001
+        return {"skillId": skill_id, "error": str(exc)[:120], "topFailures": [], "patchCount": 0}
+
+
 @app.get("/api/platform/skills")
 def platform_skills() -> dict[str, Any]:
     cfg = load_platform_config()
@@ -776,6 +873,7 @@ def platform_skills() -> dict[str, Any]:
         content = base.get("content") or (
             f"# {meta.get('title') or sid}\n\n{meta.get('summary') or ''}\n\n{prompt}".strip()
         )
+        exp = _skill_experience_payload(sid) if sid == "drama-entity-still" or (SKILLS_ROOT / sid).is_dir() else {}
         skills.append(
             {
                 **base,
@@ -788,12 +886,19 @@ def platform_skills() -> dict[str, Any]:
                 "prompt": prompt,
                 "content": content,
                 "slash": f"/{sid}",
+                "experience": {
+                    "patchCount": exp.get("patchCount") or 0,
+                    "learnedCount": exp.get("learnedCount") or 0,
+                    "totalHits": exp.get("totalHits") or 0,
+                    "topFailures": exp.get("topFailures") or [],
+                },
             }
         )
         seen.add(sid)
     for sid, item in local.items():
         if sid in seen:
             continue
+        exp = _skill_experience_payload(sid)
         skills.append(
             {
                 **item,
@@ -803,6 +908,12 @@ def platform_skills() -> dict[str, Any]:
                 "accent": "#7c6cff",
                 "prompt": "",
                 "slash": f"/{sid}",
+                "experience": {
+                    "patchCount": exp.get("patchCount") or 0,
+                    "learnedCount": exp.get("learnedCount") or 0,
+                    "totalHits": exp.get("totalHits") or 0,
+                    "topFailures": exp.get("topFailures") or [],
+                },
             }
         )
     # Merge community posts (Postgres + disk cache)
@@ -839,6 +950,14 @@ def platform_skills() -> dict[str, Any]:
         "categories": cfg.get("skillCategories") or [],
         "tags": cfg.get("skillTags") or [],
     }
+
+
+@app.get("/api/platform/skills/{skill_id}/experience")
+def platform_skill_experience(skill_id: str) -> dict[str, Any]:
+    sid = unquote(skill_id).strip()
+    if not sid or "/" in sid or "\\" in sid:
+        raise _http_error(400, "invalid skill id")
+    return {"ok": True, **_skill_experience_payload(sid)}
 
 
 @app.post("/api/platform/skills/community")
@@ -1171,13 +1290,27 @@ def list_projects() -> dict[str, Any]:
     uid = current_user_id()
     if uid:
         return {"projects": items}
-    # Anonymous: seed / explicitly public showcase only.
+    # Anonymous browse: seed + public + demo showcase (read-only; generate needs login).
+    demo_on = True
+    try:
+        from platform_config import load_platform_config
+
+        demo_cfg = ((load_platform_config() or {}).get("auth") or {}).get("demo") or {}
+        demo_on = bool(demo_cfg.get("enabled", True))
+    except Exception:
+        demo_on = True
     public = []
     for p in items:
         pid = str(p.get("id") or "")
         if p.get("hidden") or pid.startswith("_") or pid.startswith("."):
             continue
-        if p.get("public") or p.get("seed") or pid.startswith("welcome"):
+        owner = str(p.get("ownerId") or "").strip()
+        if (
+            p.get("public")
+            or p.get("seed")
+            or pid.startswith("welcome")
+            or (demo_on and owner in {"", "demo"})
+        ):
             public.append(p)
     return {"projects": public}
 
@@ -1301,6 +1434,12 @@ def _assert_project_access(project_id: str, *, write: bool = False) -> dict[str,
     uid = current_user_id()
     owner = str((state.get("project") or {}).get("ownerId") or "").strip()
     is_seed = project_id.startswith("welcome") or bool((state.get("project") or {}).get("seed"))
+    is_public = bool((state.get("project") or {}).get("public")) or is_seed or owner in {"", "demo"}
+    # Anonymous may browse public / demo showcase projects; mutations always need login.
+    if write and not uid:
+        raise _http_error(401, "login required")
+    if not uid and not is_public:
+        raise _http_error(401, "login required")
     if uid and uid != "demo" and owner and owner != uid:
         raise _http_error(403, "forbidden")
     if write and uid and uid != "demo" and is_seed and not owner:
@@ -1423,23 +1562,98 @@ async def entities_post(project_id: str, request: Request) -> dict[str, Any]:
     body = await request.json()
     action = body.get("action")
     if action == "generate":
+        # Default async: enqueue on bounded media pool so HTTP stays responsive.
+        wait = bool(body.get("wait"))
         ver = generate_entity_image(
             STORE,
             pid,
             body.get("entityId") or body.get("id"),
             three_view=bool(body.get("threeView")),
             redraw=bool(body.get("redraw")),
+            wait=wait,
         )
-        return {"image": ver, "bundle": STORE.bundle(pid)}
+        return {"image": ver, "async": not wait, "bundle": STORE.bundle(pid)}
+    if action == "preview-prompt":
+        return preview_entity_prompt(
+            STORE,
+            pid,
+            body.get("entityId") or body.get("id"),
+            three_view=bool(body.get("threeView")),
+        )
+    if action == "recheck-qa":
+        # Vision recheck + optional regen are heavy — enqueue unless wait=true.
+        wait = bool(body.get("wait"))
+        if not wait:
+            from job_queue import enqueue
+
+            stub = enqueue(
+                "entity_recheck_qa",
+                {
+                    "projectId": pid,
+                    "entityIds": body.get("entityIds"),
+                    "clearSoftPass": body.get("clearSoftPass", True) is not False,
+                    "regenerateFailed": bool(body.get("regenerateFailed")),
+                },
+            )
+            return {**stub, "async": True, "bundle": STORE.bundle(pid)}
+        summary = recheck_entity_qa(
+            STORE,
+            pid,
+            entity_ids=body.get("entityIds"),
+            clear_soft_pass=body.get("clearSoftPass", True) is not False,
+            regenerate_failed=bool(body.get("regenerateFailed")),
+        )
+        return {**summary, "bundle": STORE.bundle(pid)}
     if action == "batch":
         ids = body.get("entityIds") or []
+        wait = bool(body.get("wait"))
         results = []
         for eid in ids:
             try:
-                results.append(generate_entity_image(STORE, pid, eid, three_view=bool(body.get("threeView"))))
+                results.append(
+                    generate_entity_image(
+                        STORE,
+                        pid,
+                        eid,
+                        three_view=bool(body.get("threeView")),
+                        wait=wait,
+                    )
+                )
             except Exception as exc:
                 results.append({"entityId": eid, "error": str(exc)})
-        return {"results": results, "bundle": STORE.bundle(pid)}
+        return {"results": results, "async": not wait, "bundle": STORE.bundle(pid)}
+    if action in {"fill-stills", "fill", "补图"}:
+        # Coordinator + Comfy/QA run on the shared media queue (HTTP returns immediately).
+        wait = bool(body.get("wait"))
+        if not wait:
+            from job_queue import enqueue
+
+            stub = enqueue(
+                "fill_entity_stills",
+                {
+                    "projectId": pid,
+                    "episodeId": body.get("episodeId"),
+                    "segmentOrder": body.get("segmentOrder"),
+                    "kinds": body.get("kinds") or ["character", "scene"],
+                    "entityIds": body.get("entityIds"),
+                    "onlyMissing": body.get("onlyMissing", True) is not False,
+                },
+            )
+            return {**stub, "async": True, "bundle": STORE.bundle(pid)}
+        summary = fill_entity_stills(
+            STORE,
+            pid,
+            episode_id=body.get("episodeId"),
+            segment_order=int(body["segmentOrder"]) if body.get("segmentOrder") is not None else None,
+            kinds=body.get("kinds") or ["character", "scene"],
+            entity_ids=body.get("entityIds"),
+            only_missing=body.get("onlyMissing", True) is not False,
+        )
+        return {**summary, "bundle": STORE.bundle(pid)}
+    if action == "job-stats":
+        from job_queue import queue_stats
+
+        return {"queue": queue_stats(), "bundle": STORE.bundle(pid)}
     if action == "select":
         select_entity_image(STORE, pid, body["entityId"], body["imageId"])
         return STORE.bundle(pid)
@@ -1489,6 +1703,26 @@ async def storyboard_actions(project_id: str, request: Request) -> dict[str, Any
     if op == "generate":
         shots = generate_storyboard(STORE, pid, body["episodeId"])
         return {"shots": shots, "bundle": STORE.bundle(pid)}
+    if op == "migrate-segments":
+        shots = migrate_episode_segments(STORE, pid, body["episodeId"])
+        return {"shots": shots, "bundle": STORE.bundle(pid)}
+    if op == "bind-refs":
+        shots = bind_episode_refs(STORE, pid, body["episodeId"])
+        return {"shots": shots, "bundle": STORE.bundle(pid)}
+    if op == "effective-prompt":
+        return effective_segment_video_prompt(
+            STORE,
+            pid,
+            episode_id=body["episodeId"],
+            segment_order=int(body["segmentOrder"]),
+        )
+    if op == "recheck-video-qa":
+        summary = recheck_video_qa(
+            STORE,
+            pid,
+            shot_ids=body.get("shotIds"),
+        )
+        return {**summary, "bundle": STORE.bundle(pid)}
     if op == "add":
         shot = add_shot(STORE, pid, body["episodeId"])
         return {"shot": shot, "bundle": STORE.bundle(pid)}
@@ -1501,19 +1735,99 @@ async def storyboard_actions(project_id: str, request: Request) -> dict[str, Any
     if op == "cancel-video":
         shot = cancel_shot_video(STORE, pid, body["shotId"])
         return {"shot": shot, "bundle": STORE.bundle(pid)}
+    def _storyboard_video_model() -> str:
+        from providers.media import resolve_video_model, video_backend
+
+        backend = video_backend()
+        if backend == "none":
+            raise _http_error(
+                400,
+                "未配置出片后端，或顶部所选后端不可用。请在顶部模型切换选择 ComfyUI / Seedance，并确认 Key 或租机地址。",
+            )
+        return resolve_video_model(str(body.get("model") or ""))
+
+    force_qa = _force_entity_qa(body)
+    skip_refs = bool(body.get("skipRefs") or body.get("textOnly"))
     if op == "video":
-        shot = start_shot_video(
-            STORE,
-            pid,
-            body["shotId"],
-            model=body.get("model") or (SEEDANCE_MODELS[0]["id"] if SEEDANCE_MODELS else ""),
-            resolution=body.get("resolution") or "720p",
-            skip_refs=bool(body.get("skipRefs") or body.get("textOnly")),
-        )
+        try:
+            shot = start_shot_video(
+                STORE,
+                pid,
+                body["shotId"],
+                model=_storyboard_video_model(),
+                resolution=body.get("resolution") or "720p",
+                skip_refs=skip_refs,
+                force_entity_qa=force_qa,
+            )
+        except EntityQaBlockedError as exc:
+            raise _entity_qa_blocked_http(exc) from exc
+        return {"shot": shot, "bundle": STORE.bundle(pid)}
+    if op == "video-segment":
+        try:
+            shot = start_segment_video(
+                STORE,
+                pid,
+                body["episodeId"],
+                int(body["segmentOrder"]),
+                model=_storyboard_video_model(),
+                resolution=body.get("resolution") or "720p",
+                skip_refs=skip_refs,
+                force_entity_qa=force_qa,
+            )
+        except EntityQaBlockedError as exc:
+            raise _entity_qa_blocked_http(exc) from exc
+        return {"shot": shot, "bundle": STORE.bundle(pid)}
+    if op == "revise-segment":
+        try:
+            shot = revise_segment(
+                STORE,
+                pid,
+                body["episodeId"],
+                int(body["segmentOrder"]),
+                instruction=str(body.get("instruction") or body.get("note") or ""),
+                model=_storyboard_video_model(),
+                resolution=body.get("resolution") or "720p",
+                skip_refs=skip_refs,
+                start_video=body.get("startVideo", True) is not False,
+                force_entity_qa=force_qa,
+            )
+        except EntityQaBlockedError as exc:
+            raise _entity_qa_blocked_http(exc) from exc
         return {"shot": shot, "bundle": STORE.bundle(pid)}
     if op == "batch-video":
-        ids = body.get("shotIds") or []
+        # Prefer segment-level generation when segmentOrders are provided.
+        seg_orders = body.get("segmentOrders") or []
+        episode_id = body.get("episodeId")
         started = []
+        vid_model = _storyboard_video_model()
+        if seg_orders and episode_id:
+            for so in seg_orders:
+                try:
+                    started.append(
+                        start_segment_video(
+                            STORE,
+                            pid,
+                            episode_id,
+                            int(so),
+                            model=vid_model,
+                            resolution=body.get("resolution") or "720p",
+                            skip_refs=skip_refs,
+                            force_entity_qa=force_qa,
+                        )
+                    )
+                except EntityQaBlockedError as exc:
+                    started.append(
+                        {
+                            "segmentOrder": so,
+                            "error": str(exc),
+                            "code": "entity_qa_blocked",
+                            "blockers": exc.blockers,
+                        }
+                    )
+                except Exception as exc:
+                    started.append({"segmentOrder": so, "error": str(exc)})
+            return {"started": started, "bundle": STORE.bundle(pid)}
+        ids = body.get("shotIds") or []
         for sid in ids:
             try:
                 started.append(
@@ -1521,10 +1835,20 @@ async def storyboard_actions(project_id: str, request: Request) -> dict[str, Any
                         STORE,
                         pid,
                         sid,
-                        model=body.get("model") or (SEEDANCE_MODELS[0]["id"] if SEEDANCE_MODELS else ""),
+                        model=vid_model,
                         resolution=body.get("resolution") or "720p",
-                        skip_refs=bool(body.get("skipRefs") or body.get("textOnly")),
+                        skip_refs=skip_refs,
+                        force_entity_qa=force_qa,
                     )
+                )
+            except EntityQaBlockedError as exc:
+                started.append(
+                    {
+                        "shotId": sid,
+                        "error": str(exc),
+                        "code": "entity_qa_blocked",
+                        "blockers": exc.blockers,
+                    }
                 )
             except Exception as exc:
                 started.append({"shotId": sid, "error": str(exc)})

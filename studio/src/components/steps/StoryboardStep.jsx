@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Clapperboard, Clock3, Loader2, Plus, Save, Sparkles, Trash2, Video } from "lucide-react";
 import { api } from "../../api";
+import {
+  blockersFromError,
+  formatEntityQaBlockers,
+  isEntityQaBlockedError,
+  listEntityQaBlockers,
+} from "../../lib/entityQaGate";
 import { requireCapability, toastMaybeKeys } from "../../lib/keys";
 import { toast } from "../../lib/toast";
 import { useTimer } from "../../lib/useTimer";
@@ -37,20 +43,21 @@ export function StoryboardStep({
   const [dirtyShotIds, setDirtyShotIds] = useState(() => new Set());
   const [confirmSplit, setConfirmSplit] = useState(false);
   const [confirmBatch, setConfirmBatch] = useState(false);
+  const [forceQaDialog, setForceQaDialog] = useState(null); // { blockers, mode, payload }
   const { elapsed: splitElapsed, formatted: splitElapsedTime } = useTimer(splitting);
 
   useEffect(() => {
-    if (focusEpisodeId && confirmedEpisodes.some((e) => e.id === focusEpisodeId) && focusEpisodeId !== episodeId) {
+    if (focusEpisodeId && focusEpisodeId !== episodeId) {
       setEpisodeId(focusEpisodeId);
       setSelectedShotIds(new Set());
     }
-  }, [focusEpisodeId, confirmedEpisodes, episodeId]);
+  }, [focusEpisodeId, episodeId]);
 
   useEffect(() => {
-    if (!confirmedEpisodes.some((e) => e.id === episodeId)) {
-      setEpisodeId(confirmedEpisodes[0]?.id || "");
+    if (episodeId && !(bundle?.episodes || []).some((e) => e.id === episodeId)) {
+      setEpisodeId(focusEpisodeId || confirmedEpisodes[0]?.id || "");
     }
-  }, [confirmedEpisodes, episodeId]);
+  }, [bundle?.episodes, episodeId, focusEpisodeId, confirmedEpisodes]);
 
   useEffect(() => {
     const resolutions = selectedModel?.resolutions || ["720p"];
@@ -65,6 +72,27 @@ export function StoryboardStep({
         .sort((a, b) => a.shotOrder - b.shotOrder),
     [bundle?.shots, episodeId],
   );
+  const segments = useMemo(() => {
+    const map = new Map();
+    for (const shot of shots) {
+      const so = Number(shot.segmentOrder || shot.shotOrder || 1);
+      if (!map.has(so)) map.set(so, []);
+      map.get(so).push(shot);
+    }
+    return [...map.entries()]
+      .sort((a, b) => a[0] - b[0])
+      .map(([segmentOrder, group]) => {
+        const sorted = [...group].sort(
+          (a, b) => (a.beatIndex || a.shotOrder) - (b.beatIndex || b.shotOrder),
+        );
+        const lead = sorted.find((s) => s.isSegmentLead) || sorted[0];
+        const duration =
+          Number(lead?.segmentDuration || 0) ||
+          sorted.reduce((sum, s) => sum + Number(s.duration || 0), 0);
+        return { segmentOrder, shots: sorted, lead, duration };
+      });
+  }, [shots]);
+  const hasSegmentLayout = segments.some((g) => g.shots.some((s) => Number(s.segmentOrder || 0) > 0));
   const availableEntities = useMemo(
     () =>
       (bundle?.entities || []).filter(
@@ -91,6 +119,29 @@ export function StoryboardStep({
     setSelectedShotIds((prev) => new Set([...prev].filter((id) => currentIds.has(id))));
     setDirtyShotIds((prev) => new Set([...prev].filter((id) => currentIds.has(id))));
   }, [shots]);
+
+  // Legacy boards: auto-assign segmentOrder so SceneMixer 片段 UI appears without full re-split.
+  useEffect(() => {
+    if (!episodeId || !shots.length || workflowBusy || splitting) return;
+    const needsMigrate = shots.some((s) => !Number(s.segmentOrder || 0));
+    if (!needsMigrate) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api(`/api/projects/${encodeURIComponent(projectId)}/storyboard`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "migrate-segments", episodeId }),
+        });
+        if (!cancelled && res?.bundle) onBundle?.(res.bundle);
+      } catch {
+        /* keep flat list if migrate fails */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [episodeId, projectId, shots, workflowBusy, splitting, onBundle]);
 
   const handleDirtyChange = useCallback((shotId, dirty) => {
     setDirtyShotIds((prev) => {
@@ -178,55 +229,316 @@ export function StoryboardStep({
     }
   };
 
-  const generateVideo = async (shotId, silent = false) => {
+  const entitiesById = useMemo(
+    () => new Map((bundle?.entities || []).filter((e) => !e.deletedAt).map((e) => [e.id, e])),
+    [bundle?.entities],
+  );
+
+  const blockersForShot = useCallback(
+    (shot) => {
+      const ents = (shot?.referenceEntityIds || [])
+        .map((id) => entitiesById.get(id))
+        .filter(Boolean);
+      return listEntityQaBlockers(ents);
+    },
+    [entitiesById],
+  );
+
+  const generateVideo = async (shotId, silent = false, { forceEntityQa = false } = {}) => {
     if (!requireCapability(caps, "seedance", onNeedKeys, "出片后端（ComfyUI / Seedance）")) return;
+    const shot = (bundle?.shots || []).find((s) => s.id === shotId);
+    if (!forceEntityQa && shot) {
+      const blockers = blockersForShot(shot);
+      if (blockers.length) {
+        if (!silent) {
+          setForceQaDialog({
+            blockers,
+            mode: "shot",
+            payload: { shotId },
+          });
+        }
+        const err = new Error("素材质检未过，已阻断出片");
+        err.code = "entity_qa_blocked";
+        err.blockers = blockers;
+        throw err;
+      }
+    }
     try {
       const res = await api(`/api/projects/${encodeURIComponent(projectId)}/storyboard`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "video", shotId, model, resolution }),
+        body: JSON.stringify({
+          action: "video",
+          shotId,
+          model,
+          resolution,
+          forceEntityQa: Boolean(forceEntityQa),
+        }),
       });
       if (!silent) {
         apply(res);
-        toast.success("Seedance 任务已提交");
+        toast.success(forceEntityQa ? "已强制出片（未过检素材仍作参考）" : "出片任务已提交");
       }
+      return res;
     } catch (error) {
+      if (!silent && isEntityQaBlockedError(error) && !forceEntityQa) {
+        setForceQaDialog({
+          blockers: blockersFromError(error).length ? blockersFromError(error) : blockersForShot(shot),
+          mode: "shot",
+          payload: { shotId },
+        });
+        toast.error("素材质检未过，已阻断出片");
+        return;
+      }
       if (!silent) toastMaybeKeys(error, onNeedKeys);
       throw error;
+    }
+  };
+
+  const generateSegment = async (segmentOrder, silent = false, { forceEntityQa = false } = {}) => {
+    if (!requireCapability(caps, "seedance", onNeedKeys, "出片后端（ComfyUI / Seedance）")) return;
+    if (!episodeId) return;
+    if (!forceEntityQa) {
+      const segShots = shots.filter((s) => Number(s.segmentOrder || 0) === Number(segmentOrder));
+      const ents = [];
+      const seen = new Set();
+      for (const s of segShots) {
+        for (const id of s.referenceEntityIds || []) {
+          if (seen.has(id)) continue;
+          seen.add(id);
+          const ent = entitiesById.get(id);
+          if (ent) ents.push(ent);
+        }
+      }
+      const blockers = listEntityQaBlockers(ents);
+      if (blockers.length) {
+        if (!silent) {
+          setForceQaDialog({
+            blockers,
+            mode: "segment",
+            payload: { segmentOrder },
+          });
+        }
+        const err = new Error("素材质检未过，已阻断出片");
+        err.code = "entity_qa_blocked";
+        err.blockers = blockers;
+        throw err;
+      }
+    }
+    try {
+      const res = await api(`/api/projects/${encodeURIComponent(projectId)}/storyboard`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "video-segment",
+          episodeId,
+          segmentOrder,
+          model,
+          resolution,
+          forceEntityQa: Boolean(forceEntityQa),
+        }),
+      });
+      if (!silent) {
+        apply(res);
+        toast.success(
+          forceEntityQa
+            ? `片段 ${segmentOrder} 已强制出片`
+            : `片段 ${segmentOrder} 出片已提交（段内多镜合并生成）`,
+        );
+      }
+      return res;
+    } catch (error) {
+      if (!silent && isEntityQaBlockedError(error) && !forceEntityQa) {
+        setForceQaDialog({
+          blockers: blockersFromError(error),
+          mode: "segment",
+          payload: { segmentOrder },
+        });
+        toast.error("素材质检未过，已阻断出片");
+        return;
+      }
+      if (!silent) toastMaybeKeys(error, onNeedKeys);
+      throw error;
+    }
+  };
+
+  const runBatchGenerate = async ({ forceEntityQa = false } = {}) => {
+    const selected = shots.filter((s) => selectedShotIds.has(s.id));
+    setBatching(true);
+
+    if (hasSegmentLayout) {
+      const orders = [
+        ...new Set(
+          selected
+            .filter((s) => s.status !== "generating")
+            .map((s) => Number(s.segmentOrder || 0))
+            .filter((n) => n > 0),
+        ),
+      ].sort((a, b) => a - b);
+      if (!orders.length) {
+        setBatching(false);
+        return toast.info("选中的片段没有可提交任务");
+      }
+      if (!forceEntityQa) {
+        const ents = [];
+        const seen = new Set();
+        for (const so of orders) {
+          for (const s of shots.filter((x) => Number(x.segmentOrder || 0) === so)) {
+            for (const id of s.referenceEntityIds || []) {
+              if (seen.has(id)) continue;
+              seen.add(id);
+              const ent = entitiesById.get(id);
+              if (ent) ents.push(ent);
+            }
+          }
+        }
+        const blockers = listEntityQaBlockers(ents);
+        if (blockers.length) {
+          setBatching(false);
+          setForceQaDialog({ blockers, mode: "batch-segments", payload: { orders } });
+          return;
+        }
+      }
+      setBusyMsg?.(forceEntityQa ? `强制出片 ${orders.length} 段…` : `按片段提交 ${orders.length} 段…`);
+      try {
+        const res = await api(`/api/projects/${encodeURIComponent(projectId)}/storyboard`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "batch-video",
+            episodeId,
+            segmentOrders: orders,
+            model,
+            resolution,
+            forceEntityQa: Boolean(forceEntityQa),
+          }),
+        });
+        apply(res);
+        const started = res?.started || [];
+        const blocked = started.filter((s) => s.code === "entity_qa_blocked");
+        const failed = started.filter((s) => s.error && s.code !== "entity_qa_blocked");
+        const ok = started.length - blocked.length - failed.length;
+        if (blocked.length && !forceEntityQa) {
+          const merged = [];
+          const seen = new Set();
+          for (const row of blocked) {
+            for (const b of row.blockers || []) {
+              if (seen.has(b.entityId)) continue;
+              seen.add(b.entityId);
+              merged.push(b);
+            }
+          }
+          setForceQaDialog({ blockers: merged, mode: "batch-segments", payload: { orders } });
+        }
+        await onRefresh?.();
+        if (ok === orders.length) toast.success(`已提交 ${ok}/${orders.length} 个片段`);
+        else toast.error(`片段提交：${ok} 成功，${blocked.length} 质检阻断，${failed.length} 其他失败`);
+      } catch (error) {
+        toast.error(String(error.message || error));
+      } finally {
+        setBatching(false);
+        setBusyMsg?.("");
+      }
+      return;
+    }
+
+    const pending = selected.filter((s) => s.status !== "generating" && (s.prompt || "").trim());
+    if (!pending.length) {
+      setBatching(false);
+      return toast.info("选中的镜头没有可提交任务");
+    }
+    if (!forceEntityQa) {
+      const ents = [];
+      const seen = new Set();
+      for (const s of pending) {
+        for (const id of s.referenceEntityIds || []) {
+          if (seen.has(id)) continue;
+          seen.add(id);
+          const ent = entitiesById.get(id);
+          if (ent) ents.push(ent);
+        }
+      }
+      const blockers = listEntityQaBlockers(ents);
+      if (blockers.length) {
+        setBatching(false);
+        setForceQaDialog({
+          blockers,
+          mode: "batch-shots",
+          payload: { shotIds: pending.map((s) => s.id) },
+        });
+        return;
+      }
+    }
+    setBusyMsg?.(forceEntityQa ? `强制出片 ${pending.length} 镜…` : `批量提交 ${pending.length} 镜…`);
+    try {
+      const res = await api(`/api/projects/${encodeURIComponent(projectId)}/storyboard`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "batch-video",
+          shotIds: pending.map((s) => s.id),
+          model,
+          resolution,
+          forceEntityQa: Boolean(forceEntityQa),
+        }),
+      });
+      apply(res);
+      const started = res?.started || [];
+      const blocked = started.filter((s) => s.code === "entity_qa_blocked");
+      const failed = started.filter((s) => s.error && s.code !== "entity_qa_blocked");
+      const ok = started.length - blocked.length - failed.length;
+      if (blocked.length && !forceEntityQa) {
+        const merged = [];
+        const seen = new Set();
+        for (const row of blocked) {
+          for (const b of row.blockers || []) {
+            if (seen.has(b.entityId)) continue;
+            seen.add(b.entityId);
+            merged.push(b);
+          }
+        }
+        setForceQaDialog({
+          blockers: merged,
+          mode: "batch-shots",
+          payload: { shotIds: pending.map((s) => s.id) },
+        });
+      }
+      await onRefresh?.();
+      if (ok === pending.length) toast.success(`已提交 ${ok}/${pending.length} 个视频任务`);
+      else toast.error(`批量提交：${ok} 成功，${blocked.length} 质检阻断，${failed.length} 其他失败`);
+    } catch (error) {
+      toast.error(String(error.message || error));
+    } finally {
+      setBatching(false);
+      setBusyMsg?.("");
     }
   };
 
   const batchGenerate = async () => {
     if (splitting) return toast.info("请等待分镜拆分完成后再提交视频任务");
     const selected = shots.filter((s) => selectedShotIds.has(s.id));
-    if (!selected.length) return toast.info("请先勾选要批量生成的镜头");
+    if (!selected.length) return toast.info("请先勾选要生成的镜头 / 片段");
     if (selected.some((s) => dirtyShotIds.has(s.id))) {
-      return toast.error("选中的镜头有未保存修改，请先保存后再批量生成");
+      return toast.error("选中项有未保存修改，请先保存后再批量生成");
     }
-    const pending = selected.filter((s) => s.status !== "generating" && (s.prompt || "").trim());
-    if (!pending.length) return toast.info("选中的镜头没有可提交任务");
     if (!confirmBatch) {
       setConfirmBatch(true);
       return;
     }
     setConfirmBatch(false);
-    setBatching(true);
-    setBusyMsg?.(`批量提交 ${pending.length} 镜…`);
-    try {
-      let succeeded = 0;
-      for (let index = 0; index < pending.length; index += 2) {
-        const group = pending.slice(index, index + 2);
-        const results = await Promise.allSettled(group.map((shot) => generateVideo(shot.id, true)));
-        succeeded += results.filter((r) => r.status === "fulfilled").length;
-      }
-      await onRefresh?.();
-      if (succeeded === pending.length) toast.success(`已提交 ${succeeded}/${pending.length} 个视频任务`);
-      else toast.error(`批量提交完成：${succeeded} 成功，${pending.length - succeeded} 失败`);
-    } catch (error) {
-      toast.error(String(error.message || error));
-    } finally {
-      setBatching(false);
-      setBusyMsg?.("");
+    await runBatchGenerate({ forceEntityQa: false });
+  };
+
+  const confirmForceQa = () => {
+    const dlg = forceQaDialog;
+    setForceQaDialog(null);
+    if (!dlg) return;
+    if (dlg.mode === "shot") {
+      void generateVideo(dlg.payload.shotId, false, { forceEntityQa: true });
+    } else if (dlg.mode === "segment") {
+      void generateSegment(dlg.payload.segmentOrder, false, { forceEntityQa: true });
+    } else if (dlg.mode === "batch-segments" || dlg.mode === "batch-shots") {
+      void runBatchGenerate({ forceEntityQa: true });
     }
   };
 
@@ -241,31 +553,23 @@ export function StoryboardStep({
             <div className="label">Shot planning & generation</div>
             <h3 className="display-type text-2xl font-semibold">分镜导演台</h3>
             <p className="mt-1 text-sm text-[var(--muted)]">
-              DeepSeek 拆镜，Seedance 使用选定角色、场景和道具本地图片作为参考。
+              对齐 SceneMixer：先拆「片段」（约 10–15s），段内 3–4 个分镜节拍；出片按片段合并生成。
             </p>
           </div>
           <div className="grid min-w-0 gap-2 sm:grid-cols-2 md:grid-cols-3 min-[1500px]:grid-cols-[minmax(0,1.1fr)_minmax(0,1.3fr)_minmax(88px,.55fr)_auto_auto]">
-            <label>
-              <span className="label">已定稿分集</span>
-              <select
-                className="field"
-                value={episodeId}
-                disabled={workflowBusy}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  setEpisodeId(next);
-                  setSelectedShotIds(new Set());
-                  onFocusEpisode?.(next);
-                }}
-              >
-                {!confirmedEpisodes.length && <option value="">无定稿分集</option>}
-                {confirmedEpisodes.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    第{item.episodeNumber}集 · {item.title || "未命名"}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div>
+              <span className="label">当前分集</span>
+              <div className="field flex items-center bg-white/[.03] text-sm">
+                {confirmedEpisodes.some((e) => e.id === episodeId) ? (
+                  <span>
+                    第{(confirmedEpisodes.find((e) => e.id === episodeId) || {}).episodeNumber}集 ·{" "}
+                    {(confirmedEpisodes.find((e) => e.id === episodeId) || {}).title || "未命名"}
+                  </span>
+                ) : (
+                  <span className="text-white/45">请在左侧选择已定稿分集</span>
+                )}
+              </div>
+            </div>
             <label>
               <span className="label">视频模型</span>
               <select className="field" value={model} disabled={workflowBusy} onChange={(e) => setModel(e.target.value)}>
@@ -345,8 +649,10 @@ export function StoryboardStep({
         ) : null}
       </section>
 
-      {!episode ? (
-        <div className="panel py-24 text-center text-sm text-[var(--muted)]">请先在剧本步骤创建并定稿分集。</div>
+      {!episode || !confirmedEpisodes.some((e) => e.id === episodeId) ? (
+        <div className="panel py-24 text-center text-sm text-[var(--muted)]">
+          请先在剧本步骤创建并定稿分集，再于左侧选择该集进入分镜。
+        </div>
       ) : shots.length === 0 ? (
         <div className="panel flex flex-col items-center border-dashed py-24 text-center">
           <Clapperboard className="mb-4 h-10 w-10 text-[var(--projector)]" />
@@ -360,7 +666,11 @@ export function StoryboardStep({
       ) : (
         <div className="space-y-4">
           <div className="panel-muted flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-xs text-[var(--muted)]">
-            <span>勾选需要一起提交的镜头；有未保存修改时会阻止批量生成。</span>
+            <span>
+              {hasSegmentLayout
+                ? `本集 ${segments.length} 片段 · ${shots.length} 拍 · 勾选后按片段批量出片`
+                : "勾选需要一起提交的镜头；有未保存修改时会阻止批量生成。"}
+            </span>
             <button
               type="button"
               className="btn-secondary !min-h-8 !py-1.5"
@@ -374,30 +684,124 @@ export function StoryboardStep({
               {selectedShotIds.size === shots.length ? "清空选择" : "全选本集"}
             </button>
           </div>
-          {shots.map((shot) => (
-            <ShotCard
-              key={`${shot.id}-${shot.updatedAt}`}
-              projectId={projectId}
-              shot={shot}
-              entities={availableEntities}
-              models={models}
-              ratio={ratio}
-              selected={selectedShotIds.has(shot.id)}
-              locked={workflowBusy}
-              onToggleSelected={() =>
-                setSelectedShotIds((current) => {
-                  const next = new Set(current);
-                  if (next.has(shot.id)) next.delete(shot.id);
-                  else next.add(shot.id);
-                  return next;
-                })
-              }
-              onDirtyChange={handleDirtyChange}
-              onBundle={onBundle}
-              onRefresh={onRefresh}
-              onGenerate={generateVideo}
-            />
-          ))}
+          {hasSegmentLayout
+            ? segments.map((seg) => {
+                const segGenerating = seg.shots.some((s) => s.status === "generating");
+                const segReady = seg.lead?.status === "success" && seg.lead?.selectedVideoId;
+                return (
+                  <section key={`seg-${seg.segmentOrder}`} className="panel space-y-3 p-4 md:p-5">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <strong className="text-sm">片段 {seg.segmentOrder}</strong>
+                          <span className="timecode rounded-md border border-white/10 px-2 py-0.5 text-[10px] text-white/55">
+                            {seg.duration}s · {seg.shots.length} 镜
+                          </span>
+                          {segReady ? (
+                            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-300">
+                              已完成
+                            </span>
+                          ) : segGenerating ? (
+                            <span className="rounded-full border border-[var(--projector)]/30 bg-[var(--projector)]/10 px-2 py-0.5 text-[10px] text-[var(--projector)]">
+                              生成中
+                            </span>
+                          ) : null}
+                        </div>
+                        <p className="mt-1 text-xs text-white/45">
+                          {[seg.lead?.location || seg.lead?.sceneName, seg.lead?.timeOfDay, seg.lead?.weather]
+                            .filter(Boolean)
+                            .join(" · ") || "未写地点"}
+                        </p>
+                        {seg.lead?.openingState ? (
+                          <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-white/35">
+                            {seg.lead.openingState}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="btn-secondary !min-h-8 !py-1.5 text-xs"
+                          disabled={workflowBusy}
+                          onClick={() =>
+                            setSelectedShotIds((current) => {
+                              const next = new Set(current);
+                              const allOn = seg.shots.every((s) => next.has(s.id));
+                              for (const s of seg.shots) {
+                                if (allOn) next.delete(s.id);
+                                else next.add(s.id);
+                              }
+                              return next;
+                            })
+                          }
+                        >
+                          {seg.shots.every((s) => selectedShotIds.has(s.id)) ? "取消本段" : "勾选本段"}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-primary !min-h-8 !py-1.5 text-xs"
+                          disabled={workflowBusy || segGenerating}
+                          onClick={() => void generateSegment(seg.segmentOrder)}
+                        >
+                          {segGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Video className="h-3.5 w-3.5" />}
+                          生成本段
+                        </button>
+                      </div>
+                    </div>
+                    <div className="space-y-3">
+                      {seg.shots.map((shot) => (
+                        <ShotCard
+                          key={`${shot.id}-${shot.updatedAt}`}
+                          projectId={projectId}
+                          shot={shot}
+                          entities={availableEntities}
+                          models={models}
+                          ratio={ratio}
+                          selected={selectedShotIds.has(shot.id)}
+                          locked={workflowBusy}
+                          compact
+                          onToggleSelected={() =>
+                            setSelectedShotIds((current) => {
+                              const next = new Set(current);
+                              if (next.has(shot.id)) next.delete(shot.id);
+                              else next.add(shot.id);
+                              return next;
+                            })
+                          }
+                          onDirtyChange={handleDirtyChange}
+                          onBundle={onBundle}
+                          onRefresh={onRefresh}
+                          onGenerate={generateVideo}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                );
+              })
+            : shots.map((shot) => (
+                <ShotCard
+                  key={`${shot.id}-${shot.updatedAt}`}
+                  projectId={projectId}
+                  shot={shot}
+                  entities={availableEntities}
+                  models={models}
+                  ratio={ratio}
+                  selected={selectedShotIds.has(shot.id)}
+                  locked={workflowBusy}
+                  onToggleSelected={() =>
+                    setSelectedShotIds((current) => {
+                      const next = new Set(current);
+                      if (next.has(shot.id)) next.delete(shot.id);
+                      else next.add(shot.id);
+                      return next;
+                    })
+                  }
+                  onDirtyChange={handleDirtyChange}
+                  onBundle={onBundle}
+                  onRefresh={onRefresh}
+                  onGenerate={generateVideo}
+                />
+              ))}
           <button
             type="button"
             className="panel flex w-full items-center justify-center border-dashed py-5 text-sm font-semibold text-[var(--muted)] hover:border-[var(--projector)] hover:text-[var(--ink)]"
@@ -419,11 +823,30 @@ export function StoryboardStep({
       />
       <ConfirmDialog
         open={confirmBatch}
-        title={`提交 ${selectedShotIds.size} 个视频任务？`}
-        message="Seedance 任务将按每组 2 个控制并发，提交后可在分镜列表查看进度。"
+        title={hasSegmentLayout ? "按片段提交出片？" : `提交 ${selectedShotIds.size} 个视频任务？`}
+        message={
+          hasSegmentLayout
+            ? "将对勾选镜头所属的片段各提交一次合并出片（段内多镜合成一段视频），每组最多 2 个片段并发。引用素材未过质检时会先阻断。"
+            : "任务将按每组 2 个控制并发，提交后可在分镜列表查看进度。引用素材未过质检时会先阻断。"
+        }
         confirmLabel="确认提交"
         onCancel={() => setConfirmBatch(false)}
         onConfirm={() => void batchGenerate()}
+      />
+      <ConfirmDialog
+        open={Boolean(forceQaDialog)}
+        title="素材质检未过，已阻断出片"
+        message={
+          forceQaDialog
+            ? `${formatEntityQaBlockers(forceQaDialog.blockers)}\n\n建议先重生/复核上述素材。强制出片仍会使用未过检参考图。`
+            : ""
+        }
+        confirmLabel="强制出片"
+        cancelLabel="先去修素材"
+        danger
+        maxWidthClass="max-w-lg"
+        onCancel={() => setForceQaDialog(null)}
+        onConfirm={confirmForceQa}
       />
     </div>
   );
@@ -437,6 +860,7 @@ function ShotCard({
   ratio,
   selected,
   locked,
+  compact = false,
   onToggleSelected,
   onDirtyChange,
   onBundle,
@@ -592,7 +1016,9 @@ function ShotCard({
                 <input type="checkbox" checked={selected} disabled={locked} onChange={onToggleSelected} /> 批量选择
               </label>
               <span className="timecode rounded-md bg-[var(--navy)] px-2.5 py-1 text-xs text-white">
-                SHOT {String(shot.shotOrder).padStart(2, "0")}
+                {compact && shot.segmentOrder
+                  ? `片段${shot.segmentOrder} · 分镜${shot.beatIndex || shot.shotOrder}`
+                  : `SHOT ${String(shot.shotOrder).padStart(2, "0")}`}
               </span>
               <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${statusStyle}`}>
                 {shot.status === "success"
@@ -609,12 +1035,12 @@ function ShotCard({
                 时长
                 <input
                   type="number"
-                  min={4}
+                  min={2}
                   max={15}
                   className="field !w-20 !py-1.5"
                   value={duration}
                   disabled={editLocked}
-                  onChange={(e) => setDuration(Math.max(4, Math.min(15, Number(e.target.value) || 4)))}
+                  onChange={(e) => setDuration(Math.max(2, Math.min(15, Number(e.target.value) || 3)))}
                 />
                 秒
               </label>

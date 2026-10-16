@@ -904,14 +904,14 @@ def generate_entity_image(
     ratio = state["project"].get("ratio") or "9:16"
 
     ref = None
-    if redraw and ent.get("selectedImageId"):
-        img = next((i for i in ent.get("images") or [] if i["id"] == ent["selectedImageId"]), None)
-        if img and img.get("path"):
-            ref = store._dir(project_id) / img["path"]
-    if ref is None:
+    if kind == "character":
+        # Variants lock the QA-passed default still. A failed redraw must not become the reference.
         ref = _character_identity_ref_path(store, project_id, state, ent)
-        if ref is not None and kind == "character":
-            prompt += " Keep the SAME face identity as the reference image; only change wardrobe/injury state as described."
+        if ref is not None:
+            prompt += (
+                " Keep the SAME face identity as the reference image;"
+                " only change wardrobe and injury as described."
+            )
 
     def _gen_once(ptext: str, neg: str | None, img_id: str) -> tuple[str, Path]:
         rel_path = f"media/images/{img_id}.png"

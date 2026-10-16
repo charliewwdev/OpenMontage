@@ -746,47 +746,68 @@ def preview_entity_prompt(
     }
 
 
-def _character_identity_ref_path(
+_DEFAULT_STILL_VARIANTS = {"", "默认形象", "默认造型", "default"}
+_STILL_REF_LOCK = {
+    "character": (
+        " Keep the SAME face identity as the reference image;"
+        " only change wardrobe and injury as described."
+    ),
+    "scene": (
+        " Keep the SAME location and layout as the reference image;"
+        " only adjust set dressing and light as described. No people."
+    ),
+    "prop": (
+        " Keep the SAME object as the reference image;"
+        " only adjust the described material and details. No people."
+    ),
+}
+
+
+def _passed_selected_still(
+    store: ProjectStore,
+    project_id: str,
+    ent: dict[str, Any],
+) -> Path | None:
+    sid = ent.get("selectedImageId")
+    if not sid:
+        return None
+    img = next((i for i in (ent.get("images") or []) if i.get("id") == sid), None)
+    if not img or not img.get("path") or img.get("qaPass") is False:
+        return None
+    path = store._dir(project_id) / img["path"]
+    return path if path.is_file() else None
+
+
+def _entity_still_ref_path(
     store: ProjectStore,
     project_id: str,
     state: dict[str, Any],
     ent: dict[str, Any],
 ) -> Path | None:
-    """Prefer same-name「默认形象」still so variants keep one face."""
-    if (ent.get("kind") or "") != "character":
+    """QA-passed still for this character, scene, or prop. Variants prefer the default."""
+    kind = ent.get("kind") or ""
+    if kind not in _STILL_REF_LOCK:
         return None
     name = (ent.get("name") or "").strip()
-    if not name:
-        return None
     variant = (ent.get("variant") or "").strip()
-    prefer_default = variant and variant not in {"默认形象", "默认造型", "default"}
+    prefer_default = bool(variant) and variant not in _DEFAULT_STILL_VARIANTS
     candidates: list[dict[str, Any]] = []
-    for e in state.get("entities") or []:
-        if e.get("deletedAt") or e.get("kind") != "character":
-            continue
-        if (e.get("name") or "").strip() != name:
-            continue
-        if e.get("id") == ent.get("id"):
-            continue
-        v = (e.get("variant") or "").strip()
-        if prefer_default and v in {"默认形象", "默认造型", "", "default"}:
-            candidates.insert(0, e)
-        else:
-            candidates.append(e)
-    # Also allow current entity's own selected still when redrawing.
-    pool = candidates + [ent]
-    for e in pool:
-        sid = e.get("selectedImageId")
-        if not sid:
-            continue
-        img = next((i for i in (e.get("images") or []) if i.get("id") == sid), None)
-        if not img or not img.get("path"):
-            continue
-        # Only lock face when that still actually passed QA.
-        if img.get("qaPass") is False:
-            continue
-        path = store._dir(project_id) / img["path"]
-        if path.is_file():
+    if prefer_default and name:
+        for other in state.get("entities") or []:
+            if other.get("deletedAt") or other.get("id") == ent.get("id"):
+                continue
+            if (other.get("kind") or "") != kind:
+                continue
+            if (other.get("name") or "").strip() != name:
+                continue
+            other_variant = (other.get("variant") or "").strip()
+            if other_variant in _DEFAULT_STILL_VARIANTS:
+                candidates.insert(0, other)
+            else:
+                candidates.append(other)
+    for other in candidates + [ent]:
+        path = _passed_selected_still(store, project_id, other)
+        if path is not None:
             return path
     return None
 
@@ -904,14 +925,11 @@ def generate_entity_image(
     ratio = state["project"].get("ratio") or "9:16"
 
     ref = None
-    if kind == "character":
-        # Variants lock the QA-passed default still. A failed redraw must not become the reference.
-        ref = _character_identity_ref_path(store, project_id, state, ent)
+    if kind in _STILL_REF_LOCK:
+        # Any type with a passed still is img2img. A failed still must not become the reference.
+        ref = _entity_still_ref_path(store, project_id, state, ent)
         if ref is not None:
-            prompt += (
-                " Keep the SAME face identity as the reference image;"
-                " only change wardrobe and injury as described."
-            )
+            prompt += _STILL_REF_LOCK[kind]
 
     def _gen_once(ptext: str, neg: str | None, img_id: str) -> tuple[str, Path]:
         rel_path = f"media/images/{img_id}.png"

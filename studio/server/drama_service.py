@@ -543,6 +543,34 @@ def _split_character_desc(desc: str) -> tuple[str, str]:
     return raw, ""
 
 
+def _boost_restates_wrong_subject(text: str) -> bool:
+    """Learned QA notes often name the unwanted portrait. Putting that in the prompt redraws it."""
+    low = text.lower()
+    return any(
+        tok in low
+        for tok in ("portrait", "woman", "person", "face", "人物", "人像", "全身", "婚纱")
+    )
+
+
+def _still_retry_clause(kind: str, attempt: int, max_attempts: int) -> str:
+    """Kind-specific retry. Scenes must stay empty plates; a shared「禁止空镜」pushes them into portraits."""
+    tag = f" 【质检重试 {attempt}/{max_attempts}】"
+    if kind == "scene":
+        return (
+            tag
+            + "EMPTY LOCATION PLATE only. No people, no faces, no portraits. "
+            "必须是上述地点的无人空镜。"
+        )
+    if kind == "prop":
+        return (
+            tag
+            + "PRODUCT PHOTO of the single named object. "
+            "No people, no faces, no hands, no portrait, no scenery. "
+            "画面主体只有这一件道具。"
+        )
+    return tag + "ONE character portrait of the named person. 禁止航拍、城市空镜、风景、人群和第二个人物。"
+
+
 def build_entity_image_prompt(
     state: dict[str, Any],
     ent: dict[str, Any],
@@ -637,15 +665,20 @@ def build_entity_image_prompt(
         )
     elif kind == "scene":
         prompt = (
+            "EMPTY location plate, no people, no faces, no portraits, no fashion models. "
             f"短剧场景空镜：{name}。"
             f"{desc or '可拍的竖屏短剧空间'}。"
             "制作设计完整：空间层次、道具陈设、材质与光影氛围，电影级构图，画面中不要出现人物。"
         )
         if style:
             prompt += f"色调气质可参考：{style}。"
-        negative = "close-up portrait, face closeup, character sheet, product packshot"
+        negative = (
+            "close-up portrait, face closeup, character sheet, person, people, woman, man, "
+            "fashion model, full body, crowd"
+        )
     else:
         prompt = (
+            "PRODUCT PHOTO of one object only, no person, no face, no hands, no portrait. "
             f"关键道具特写：{name}。"
             f"只表现物体可见外形与材质：{desc or name}。"
             "产品级质感，材质与反光真实；禁止人物、城市空镜；不要试图画清纸上的长段剧情文字。"
@@ -654,7 +687,10 @@ def build_entity_image_prompt(
             prompt += "多角度产品级展示。"
         if style:
             prompt += f"色调气质可参考：{style}。"
-        negative = "cityscape, aerial view, full body portrait, crowd, people"
+        negative = (
+            "cityscape, aerial view, full body portrait, crowd, people, face, woman, man, "
+            "fashion model, character sheet"
+        )
 
     applied_patches = match_experience_patches(
         skill_id="drama-entity-still",
@@ -663,6 +699,12 @@ def build_entity_image_prompt(
         reason=qa_reason or "",
         projects_root=projects_root,
     )
+    if kind in {"scene", "prop"}:
+        applied_patches = [
+            p
+            for p in applied_patches
+            if not _boost_restates_wrong_subject(str(p.get("promptBoost") or ""))
+        ]
     prompt, negative = apply_experience_to_prompt(prompt, negative, applied_patches)
     return {
         "prompt": prompt,
@@ -912,19 +954,16 @@ def generate_entity_image(
                 reason=last_reason,
                 projects_root=projects_root,
             )
+            if kind in {"scene", "prop"}:
+                retry_patches = [
+                    p
+                    for p in retry_patches
+                    if not _boost_restates_wrong_subject(str(p.get("promptBoost") or ""))
+                ]
             ptext, neg = apply_experience_to_prompt(base_prompt, negative, retry_patches)
-            ptext = (
-                ptext
-                + f" 【质检重试 {attempt}/{max_attempts}】必须严格符合上述主体，"
-                "禁止无关风景/城市航拍/人群/空镜/错误性别。"
-                + f"上次失败原因：{last_reason}。"
-            )
+            ptext += _still_retry_clause(kind, attempt, max_attempts)
         elif attempt > 1:
-            ptext = (
-                base_prompt
-                + f" 【质检重试 {attempt}/{max_attempts}】必须严格符合上述主体，"
-                "禁止无关风景/城市航拍/人群/空镜/错误性别。"
-            )
+            ptext = base_prompt + _still_retry_clause(kind, attempt, max_attempts)
         img_id = new_id("img_")
         try:
             rel, out = _gen_once(ptext, neg, img_id)

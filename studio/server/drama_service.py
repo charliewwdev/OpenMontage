@@ -603,6 +603,20 @@ def build_entity_image_prompt(
             )
             if hint:
                 prompt += f" {hint}"
+            # Front-load injury props — RealVis/SDXL and weak CLIP often drop 绷带/血迹.
+            if any(tok in variant for tok in ("受伤", "绷带", "伤", "bandage", "injury")):
+                prompt = (
+                    "CRITICAL first: thick WHITE medical gauze bandage wrapped on the injured "
+                    "shoulder AND upper chest, blood-stained torn dark coat, pale sweaty face. "
+                    "Bandage must be the most obvious prop in frame. "
+                    + prompt
+                )
+                negative = (
+                    (negative + ", ") if negative else ""
+                ) + (
+                    "clean uninjured clothes, no bandage, pristine coat, healthy complexion, "
+                    "fashion portrait, unbroken skin"
+                )
         if three_view:
             prompt += "同一人物同一服装的三视图设定稿：正面、侧面、背面，纯色背景。"
         else:
@@ -988,11 +1002,21 @@ def generate_entity_image(
     }
     if version.get("path"):
         ent.setdefault("images", []).append(version)
-    # Only promote to selected when QA bar is met (keep prior good image otherwise).
+    # Promote to selected when QA passes. If QA fails but we have a still, still show it
+    # in the rail (avoid perpetual「无图」) and keep qaFailed so the user can redraw.
     if version.get("qaPass") and version.get("path"):
         ent["selectedImageId"] = version["id"]
         ent.pop("qaFailed", None)
         ent.pop("qaFailReason", None)
+    elif version.get("path"):
+        ent["qaFailed"] = True
+        ent["qaFailReason"] = str((version.get("qa") or {}).get("reason") or "qa_failed")
+        prev = next((i for i in (ent.get("images") or []) if i.get("id") == ent.get("selectedImageId")), None)
+        from prompt_qa import is_soft_pass_qa
+
+        prev_ok = bool(prev and prev.get("path") and prev.get("qaPass") is True and not is_soft_pass_qa(prev.get("qa")))
+        if not prev_ok:
+            ent["selectedImageId"] = version["id"]
     elif not ent.get("selectedImageId"):
         ent["qaFailed"] = True
         ent["qaFailReason"] = str((version.get("qa") or {}).get("reason") or "qa_failed")

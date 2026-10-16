@@ -42,7 +42,12 @@ function parseRefNames(prompt = "") {
 }
 
 function entityThumb(ent) {
-  return ent?.selectedImage?.url || "";
+  if (ent?.selectedImage?.url) return ent.selectedImage.url;
+  const imgs = ent?.images || [];
+  for (let i = imgs.length - 1; i >= 0; i -= 1) {
+    if (imgs[i]?.url) return imgs[i].url;
+  }
+  return "";
 }
 
 function collectSegmentEntities(seg, entities) {

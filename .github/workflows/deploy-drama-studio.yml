@@ -3,6 +3,9 @@ name: Deploy Drama Studio (git.dtok.io → Coolify)
 # Preferred path (dtok-app style):
 #   GitHub main → slim sync → git.dtok.io/deploy → GitLab webhook → Coolify
 # Fallback when DTOK sync secrets are missing: direct Coolify API deploy.
+#
+# Note: do NOT gate jobs with `if: secrets.X != ''` — empty secret comparisons
+# skip every job and GitHub marks the run as a workflow-file failure (0s).
 
 on:
   push:
@@ -20,42 +23,47 @@ on:
   workflow_dispatch:
 
 jobs:
-  sync-dtok:
-    if: ${{ secrets.DTOK_GIT_TOKEN != '' || secrets.DTOK_GIT_PASSWORD != '' }}
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Sync slim tree to git.dtok.io (deploy)
+        id: sync
         env:
           DTOK_GIT_TOKEN: ${{ secrets.DTOK_GIT_TOKEN }}
           DTOK_GIT_PASSWORD: ${{ secrets.DTOK_GIT_PASSWORD }}
           DTOK_GIT_USERNAME: ${{ secrets.DTOK_GIT_USERNAME }}
           COOLIFY_GITLAB_WEBHOOK_SECRET: ${{ secrets.COOLIFY_GITLAB_WEBHOOK_SECRET }}
           DTOK_SYNC_BRANCH: deploy
+          GITHUB_MIRROR_SKIP: "1"
         run: |
           set -euo pipefail
           USERNAME="${DTOK_GIT_USERNAME:-oauth2}"
           PASSWORD="${DTOK_GIT_TOKEN:-${DTOK_GIT_PASSWORD:-}}"
           if [[ -z "$PASSWORD" ]]; then
-            echo "Missing DTOK_GIT_TOKEN / DTOK_GIT_PASSWORD"; exit 1
+            echo "skip_sync=1" >> "$GITHUB_OUTPUT"
+            echo "No DTOK_GIT_TOKEN / DTOK_GIT_PASSWORD — will try Coolify API fallback."
+            exit 0
           fi
-          # Prefer credential helper so the sync script remote stays clean.
           git config --global credential.helper store
           printf 'https://%s:%s@git.dtok.io\n' "$USERNAME" "$PASSWORD" > ~/.git-credentials
           chmod 600 ~/.git-credentials
           ./scripts/sync_dtok_git.sh
+          echo "skip_sync=0" >> "$GITHUB_OUTPUT"
 
-  deploy-api-fallback:
-    if: ${{ secrets.COOLIFY_TOKEN != '' && secrets.COOLIFY_DRAMA_STUDIO_UUID != '' && secrets.DTOK_GIT_TOKEN == '' && secrets.DTOK_GIT_PASSWORD == '' }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Trigger Coolify deploy (API fallback)
+      - name: Coolify API fallback
+        if: steps.sync.outputs.skip_sync == '1'
         env:
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
           COOLIFY_URL: ${{ secrets.COOLIFY_URL || 'https://cicd.dtok.io' }}
           COOLIFY_APP_UUID: ${{ secrets.COOLIFY_DRAMA_STUDIO_UUID }}
         run: |
           set -euo pipefail
+          if [[ -z "${COOLIFY_TOKEN:-}" || -z "${COOLIFY_APP_UUID:-}" ]]; then
+            echo "::error::Missing deploy secrets. Set DTOK_GIT_TOKEN (preferred) or COOLIFY_TOKEN + COOLIFY_DRAMA_STUDIO_UUID."
+            exit 1
+          fi
           UA="Mozilla/5.0 OpenMontage-github-actions"
           RESP=$(curl -fsS -X POST \
             "${COOLIFY_URL}/api/v1/deploy?uuid=${COOLIFY_APP_UUID}&force=false" \

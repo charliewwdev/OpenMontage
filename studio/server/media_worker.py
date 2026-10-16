@@ -55,6 +55,7 @@ def main() -> int:
         ack_job,
         dispatch_job,
         get_redis,
+        promote_image_jobs,
         reclaim_processing,
         recover_stale_generating,
         redis_enabled,
@@ -81,11 +82,13 @@ def main() -> int:
 
     # Crash recovery before accepting new work.
     reclaimed = reclaim_processing()
+    promoted = promote_image_jobs()
     try:
         recovered = recover_stale_generating(max_age_sec=int(os.environ.get("STUDIO_STALE_GEN_SEC") or "180"))
         log.info(
-            "startup reclaim=%s stale_regen=%s",
+            "startup reclaim=%s promoted_stills=%s stale_regen=%s",
             reclaimed,
+            promoted,
             len((recovered or {}).get("recovered") or []),
         )
     except Exception as exc:  # noqa: BLE001

@@ -2722,6 +2722,8 @@ def start_segment_video(
     if not seg:
         raise FileNotFoundError(f"片段 {segment_order} 不存在")
     lead = seg["lead"]
+    if _reset_stale_segment_generating(seg["shots"]):
+        store.save(state)
     if any(s.get("status") == "generating" for s in seg["shots"]):
         raise RuntimeError(f"片段 {segment_order} 正在生成")
     # Union reference images from all beats in the segment.
@@ -3179,6 +3181,44 @@ def _wait_shot_terminal(
     return poll_shot(store, project_id, shot_id)
 
 
+def _reset_stale_segment_generating(shots: list[dict[str, Any]], *, max_age_s: float = 20 * 60) -> bool:
+    """Clear generating flags left behind after a worker restart or a timed-out render."""
+    from datetime import datetime, timezone
+
+    now = datetime.now(timezone.utc)
+    changed = False
+    for shot in shots:
+        if shot.get("status") != "generating":
+            continue
+        updated = str(shot.get("updatedAt") or shot.get("createdAt") or "")
+        age_s = max_age_s
+        try:
+            ts = datetime.fromisoformat(updated.replace("Z", "+00:00"))
+            if ts.tzinfo is None:
+                ts = ts.replace(tzinfo=timezone.utc)
+            age_s = (now - ts).total_seconds()
+        except Exception:
+            age_s = max_age_s
+        if age_s < max_age_s:
+            continue
+        shot["status"] = "pending"
+        shot["error"] = "上次生成超时，已自动重置"
+        shot["providerTaskId"] = None
+        shot["updatedAt"] = _now()
+        changed = True
+    return changed
+
+
+def _segment_video_already_passed(lead: dict[str, Any] | None) -> bool:
+    if not lead or lead.get("staleReason") or lead.get("status") != "success":
+        return False
+    selected = next(
+        (v for v in (lead.get("videos") or []) if v.get("id") == lead.get("selectedVideoId")),
+        None,
+    )
+    return bool(selected and selected.get("qaPass") is True and selected.get("path"))
+
+
 def ensure_segment_video_qa(
     store: ProjectStore,
     project_id: str,
@@ -3195,6 +3235,18 @@ def ensure_segment_video_qa(
 
     attempts = max_attempts if max_attempts is not None else video_qa_max_attempts()
     attempts = max(1, min(10, int(attempts)))
+    state = store.load(project_id) or {}
+    ep_shots = [
+        s
+        for s in (state.get("shots") or [])
+        if s.get("episodeId") == episode_id and not s.get("deletedAt")
+    ]
+    seg = next(
+        (g for g in group_shots_by_segment(ep_shots) if int(g["segmentOrder"]) == int(segment_order)),
+        None,
+    )
+    if seg and _segment_video_already_passed(seg.get("lead")):
+        return seg["lead"]
     last_reason = ""
     lead: dict[str, Any] | None = None
     for attempt in range(1, attempts + 1):

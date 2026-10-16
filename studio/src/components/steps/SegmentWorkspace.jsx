@@ -425,6 +425,29 @@ export function SegmentWorkspace({
     else onRefresh?.();
   };
 
+  const checkConsistency = async () => {
+    if (onRequireAuth && !onRequireAuth()) return;
+    if (!episode) return;
+    setBusyMsg?.("正在核对提示词与对白、资产…");
+    try {
+      const res = await api(`/api/projects/${encodeURIComponent(projectId)}/storyboard`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "check-consistency", episodeId: episode.id, repair: true }),
+      });
+      apply(res);
+      const fail = Number(res?.fail || 0);
+      const repaired = (res?.results || []).filter((r) => r.repaired).length;
+      if (!fail && !repaired) toast.success("本集提示词与对白、角色、场景、道具一致");
+      else if (!fail) toast.success(`已按对白修正 ${repaired} 条提示词`);
+      else toast.error(`仍有 ${fail} 条对不齐，已标在分镜上`);
+    } catch (error) {
+      toast.error(String(error.message || error));
+    } finally {
+      setBusyMsg?.("");
+    }
+  };
+
   const split = async () => {
     if (onRequireAuth && !onRequireAuth()) return;
     if (!episode) return;
@@ -1035,6 +1058,9 @@ export function SegmentWorkspace({
           </div>
         ) : null}
         <div className="ml-auto flex flex-wrap items-center gap-2">
+          <button type="button" className="btn-secondary !min-h-9 text-xs" disabled={splitting || generating} onClick={() => void checkConsistency()}>
+            校验提示词
+          </button>
           <button type="button" className="btn-secondary !min-h-9 text-xs" disabled={splitting || generating} onClick={() => void split()}>
             {splitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
             重新拆分
@@ -1362,6 +1388,14 @@ export function SegmentWorkspace({
                         ) : null}
                         {dlg.speaker}
                       </button>
+                    ) : null}
+                    {(shot.promptConsistency?.issues || []).length ? (
+                      <span
+                        className="rounded bg-amber-400/15 px-2 py-0.5 text-[10px] text-amber-200"
+                        title={(shot.promptConsistency.issues || []).map((i) => i.detail).join("；")}
+                      >
+                        提示词不一致
+                      </span>
                     ) : null}
                     <button
                       type="button"

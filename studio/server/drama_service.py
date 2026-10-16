@@ -2234,6 +2234,15 @@ def generate_storyboard(store: ProjectStore, project_id: str, episode_id: str) -
             f"整集需对齐 {_STORYBOARD_SEG_MIN}–{_STORYBOARD_SEG_MAX} 段（每段 3–4 镜，约 10–15s）。请重试拆分。"
         )
 
+    from prompt_consistency import entity_name_set, repair_shot_prompt
+
+    names = entity_name_set(entities)
+    for s in shots:
+        fixed = repair_shot_prompt(s, entity_names=names)
+        if fixed.get("repaired"):
+            s["prompt"] = fixed["prompt"]
+        s["promptConsistency"] = {"ok": bool(fixed.get("ok")), "issues": fixed.get("issues") or []}
+
     state["shots"].extend(shots)
     store.save(state)
     # Name-scan prompts/dialogue so workspace left rail is populated even without @tags.
@@ -2689,6 +2698,21 @@ def start_segment_video(
         force=force_entity_qa,
         skip_refs=skip_refs,
     )
+    # Align each beat's prompt with its dialogue / asset bible before the video call.
+    from prompt_consistency import entity_name_set, repair_shot_prompt
+
+    names = entity_name_set(state.get("entities") or [])
+    consistency: list[dict[str, Any]] = []
+    for s in seg["shots"]:
+        fixed = repair_shot_prompt(s, entity_names=names)
+        if fixed.get("repaired"):
+            s["prompt"] = fixed["prompt"]
+            s["updatedAt"] = _now()
+        s["promptConsistency"] = {"ok": fixed.get("ok"), "issues": fixed.get("issues") or []}
+        if not fixed.get("ok"):
+            consistency.append({"shotId": s.get("id"), "issues": fixed.get("issues")})
+    if consistency:
+        lead["promptConsistency"] = {"ok": False, "shots": consistency}
     combined = build_segment_prompt(seg)
     seg_dur = max(_SEGMENT_DUR_MIN, min(_SEGMENT_DUR_MAX, int(seg.get("duration") or 12)))
     lead["referenceEntityIds"] = ref_ids[:9]

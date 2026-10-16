@@ -1716,6 +1716,51 @@ async def storyboard_actions(project_id: str, request: Request) -> dict[str, Any
             episode_id=body["episodeId"],
             segment_order=int(body["segmentOrder"]),
         )
+    if op == "check-consistency":
+        from drama_service import _now
+        from prompt_consistency import check_shot_prompt, entity_name_set, repair_shot_prompt
+
+        state = STORE.load(pid)
+        if not state:
+            raise _http_error(404, "project not found")
+        names = entity_name_set(state.get("entities") or [])
+        episode_id = body.get("episodeId")
+        rows = []
+        changed = False
+        for s in state.get("shots") or []:
+            if s.get("deletedAt"):
+                continue
+            if episode_id and s.get("episodeId") != episode_id:
+                continue
+            if body.get("repair"):
+                fixed = repair_shot_prompt(s, entity_names=names)
+                if fixed.get("repaired"):
+                    s["prompt"] = fixed["prompt"]
+                    s["updatedAt"] = _now()
+                    changed = True
+                report = fixed
+            else:
+                report = check_shot_prompt(s, entity_names=names)
+            s["promptConsistency"] = {"ok": bool(report.get("ok")), "issues": report.get("issues") or []}
+            if not report.get("ok") or report.get("repaired"):
+                rows.append(
+                    {
+                        "shotId": s.get("id"),
+                        "segmentOrder": s.get("segmentOrder"),
+                        "dialogue": (s.get("dialogue") or "")[:80],
+                        "ok": bool(report.get("ok")),
+                        "issues": report.get("issues"),
+                        "repaired": bool(report.get("repaired")),
+                    }
+                )
+        if changed:
+            STORE.save(state)
+        return {
+            "ok": all(r.get("ok") for r in rows) if rows else True,
+            "fail": sum(1 for r in rows if not r.get("ok")),
+            "results": rows,
+            "bundle": STORE.bundle(pid) if changed else None,
+        }
     if op == "recheck-video-qa":
         summary = recheck_video_qa(
             STORE,

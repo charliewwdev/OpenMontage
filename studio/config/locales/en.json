@@ -106,6 +106,7 @@
   "studio_auto_running_hint": "Open Edit when export is ready",
   "studio_auto_live_steps": "{done}/{total} steps",
   "studio_auto_live_videos": "Video {done}/{total} ready · {gen} rendering · {fail} failed · {pending} waiting",
+  "studio_auto_live_active": "{gen} rendering · {fail} failed",
   "studio_auto_live_images": "Stills {done}/{total} ready · {gen} rendering",
   "studio_auto_live_now": "Now {detail}",
   "studio_auto_success": "One-click pipeline finished",

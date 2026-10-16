@@ -93,7 +93,7 @@ function autoLiveProgress(autoJob, bundle) {
     if (!prev || (shot.isSegmentLead && !prev.isSegmentLead)) segs.set(key, shot);
   }
   const list = [...segs.values()];
-  const videoDone = list.filter((shot) => shot.status === "success" || shotHasVideo(shot)).length;
+  const videoDone = list.filter((shot) => shot.status === "success").length;
   const videoGen = list.filter((shot) => shot.status === "generating").length;
   const videoFail = list.filter((shot) => shot.status === "failed").length;
   const video = {
@@ -678,9 +678,9 @@ export function StudioShell({
                     {t("studio_auto_live_steps", { done: autoLive.doneSteps, total: autoLive.totalSteps })}
                   </span>
                 </span>
-                {autoLive.running?.id === "videos" && autoLive.video.total ? (
+                {autoLive.running?.id === "videos" && (autoLive.video.gen || autoLive.video.fail) ? (
                   <span className="tabular-nums text-white/85">
-                    {t("studio_auto_live_videos", autoLive.video)}
+                    {t("studio_auto_live_active", { gen: autoLive.video.gen, fail: autoLive.video.fail })}
                   </span>
                 ) : null}
                 {autoLive.running?.id === "entities" ? (

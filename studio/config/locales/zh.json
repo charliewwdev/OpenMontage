@@ -106,6 +106,7 @@
   "studio_auto_running_hint": "完成后可在剪辑台查看成片",
   "studio_auto_live_steps": "{done}/{total} 步",
   "studio_auto_live_videos": "视频 {done}/{total} 已出片 · {gen} 生成中 · {fail} 失败 · {pending} 待出片",
+  "studio_auto_live_active": "{gen} 段生成中 · {fail} 失败",
   "studio_auto_live_images": "素材 {done}/{total} 已出图 · {gen} 生成中",
   "studio_auto_live_now": "当前 {detail}",
   "studio_auto_success": "一键全流程已完成",

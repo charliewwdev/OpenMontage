@@ -72,6 +72,58 @@ function formatEpisodeLabel(n, title) {
   return num ? `第${num}集 · ${stripped}` : stripped;
 }
 
+function autoLiveProgress(autoJob, bundle) {
+  const steps = Array.isArray(autoJob?.steps) ? autoJob.steps : [];
+  const running = steps.find((step) => step.status === "running") || null;
+  const doneSteps = steps.filter((step) => step.status === "done" || step.status === "skipped").length;
+  const totalSteps = steps.length;
+  const pct = totalSteps
+    ? Math.min(100, Math.round(((doneSteps + (running ? 0.4 : 0)) / totalSteps) * 100))
+    : 0;
+  const epIds = new Set(
+    [...(autoJob?.episodeIds || []), autoJob?.episodeId].filter(Boolean).map(String),
+  );
+  const shots = (bundle?.shots || []).filter(
+    (shot) => !shot.deletedAt && (!epIds.size || epIds.has(String(shot.episodeId || ""))),
+  );
+  const segs = new Map();
+  for (const shot of shots) {
+    const key = `${shot.episodeId || ""}:${shot.segmentOrder ?? shot.shotOrder ?? shot.id}`;
+    const prev = segs.get(key);
+    if (!prev || (shot.isSegmentLead && !prev.isSegmentLead)) segs.set(key, shot);
+  }
+  const list = [...segs.values()];
+  const videoDone = list.filter((shot) => shot.status === "success" || shotHasVideo(shot)).length;
+  const videoGen = list.filter((shot) => shot.status === "generating").length;
+  const videoFail = list.filter((shot) => shot.status === "failed").length;
+  const video = {
+    total: list.length,
+    done: videoDone,
+    gen: videoGen,
+    fail: videoFail,
+    pending: Math.max(0, list.length - videoDone - videoGen - videoFail),
+  };
+  const ents = (bundle?.entities || []).filter((entity) => !entity.deletedAt);
+  const images = {
+    total: ents.length,
+    done: ents.filter(entityHasImage).length,
+    gen: ents.filter((entity) => entity.imageStatus === "generating").length,
+  };
+  const logs = Array.isArray(autoJob?.logs) ? autoJob.logs : [];
+  const last = logs.length ? logs[logs.length - 1] : null;
+  return {
+    running,
+    doneSteps,
+    totalSteps,
+    pct,
+    video,
+    images,
+    detail: String(running?.detail || "").trim(),
+    lastText: String(last?.text || "").trim(),
+    lastOk: last ? last.ok !== false : true,
+  };
+}
+
 function entityTouchesEpisode(entity, episode) {
   if (!episode) return true;
   const nums = entity?.episodes;
@@ -260,6 +312,10 @@ export function StudioShell({
   const focusEpisode = useMemo(
     () => episodes.find((e) => e.id === focusEpisodeId) || null,
     [episodes, focusEpisodeId],
+  );
+  const autoLive = useMemo(
+    () => (autoJob?.status === "running" ? autoLiveProgress(autoJob, bundle) : null),
+    [autoJob, bundle],
   );
   const counts = stepCounts(bundle, focusEpisode);
   const caps = config?.capabilities || {};
@@ -599,18 +655,50 @@ export function StudioShell({
               </button>
             </div>
           ) : null}
-          {autoJob?.status === "running" ? (
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#7c6cff]/35 bg-[#7c6cff]/15 px-4 py-2.5 text-xs text-[#ddd6fe] md:px-6">
-              <span className="inline-flex items-center gap-2">
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                {t("studio_auto_running", {
-                  step: autoJob.step || t("studio_auto_preparing"),
-                  focus: focusEpisode
-                    ? t("studio_episode_mobile_current", { n: focusEpisode.episodeNumber })
-                    : t("studio_episode_rail_label"),
-                })}
-              </span>
-              <span className="text-white/45">{t("studio_auto_running_hint")}</span>
+          {autoJob?.status === "running" && autoLive ? (
+            <div className="border-b border-[#7c6cff]/35 bg-[#7c6cff]/15 px-4 py-2.5 text-xs text-[#ddd6fe] md:px-6">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                <span className="inline-flex items-center gap-2 font-medium">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  {autoLive.running?.label || autoJob.step || t("studio_auto_preparing")}
+                  <span className="font-normal text-white/55">
+                    {focusEpisode
+                      ? t("studio_episode_mobile_current", { n: focusEpisode.episodeNumber })
+                      : t("studio_episode_rail_label")}
+                  </span>
+                </span>
+                <span className="inline-flex items-center gap-2 text-white/70">
+                  <span className="h-1.5 w-28 overflow-hidden rounded-full bg-black/30">
+                    <span
+                      className="block h-full rounded-full bg-[#c4b5fd]"
+                      style={{ width: `${autoLive.pct}%` }}
+                    />
+                  </span>
+                  <span className="tabular-nums">
+                    {t("studio_auto_live_steps", { done: autoLive.doneSteps, total: autoLive.totalSteps })}
+                  </span>
+                </span>
+                {autoLive.running?.id === "videos" && autoLive.video.total ? (
+                  <span className="tabular-nums text-white/85">
+                    {t("studio_auto_live_videos", autoLive.video)}
+                  </span>
+                ) : null}
+                {autoLive.running?.id === "entities" ? (
+                  <span className="tabular-nums text-white/85">
+                    {t("studio_auto_live_images", autoLive.images)}
+                  </span>
+                ) : null}
+                {autoLive.detail ? (
+                  <span className="text-white/80">{t("studio_auto_live_now", { detail: autoLive.detail })}</span>
+                ) : null}
+              </div>
+              {autoLive.lastText && autoLive.lastText !== autoLive.detail ? (
+                <p className={`mt-1 truncate text-[11px] ${autoLive.lastOk ? "text-white/45" : "text-red-200"}`}>
+                  {autoLive.lastText}
+                </p>
+              ) : (
+                <p className="mt-1 text-[11px] text-white/40">{t("studio_auto_running_hint")}</p>
+              )}
             </div>
           ) : null}
           {autoJob?.status === "success" && autoJob.exportUrl ? (

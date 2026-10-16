@@ -242,6 +242,39 @@ _SIZES = {
 }
 
 
+# Variant stills: keep the passed face, allow wardrobe and injury to change.
+_IDENTITY_DENOISE = 0.62
+
+
+def _reference_latent_nodes(
+    *,
+    image_name: str,
+    width: int,
+    height: int,
+    vae: list[str],
+    load_id: str,
+    scale_id: str,
+    encode_id: str,
+) -> dict[str, Any]:
+    return {
+        load_id: {"class_type": "LoadImage", "inputs": {"image": image_name}},
+        scale_id: {
+            "class_type": "ImageScale",
+            "inputs": {
+                "upscale_method": "lanczos",
+                "width": width,
+                "height": height,
+                "crop": "center",
+                "image": [load_id, 0],
+            },
+        },
+        encode_id: {
+            "class_type": "VAEEncode",
+            "inputs": {"pixels": [scale_id, 0], "vae": vae},
+        },
+    }
+
+
 def _basic_checkpoint_workflow(
     *,
     prompt: str,
@@ -252,13 +285,15 @@ def _basic_checkpoint_workflow(
     seed: int,
     steps: int = 28,
     cfg: float = 5.5,
+    image_name: str | None = None,
+    denoise: float = 1,
 ) -> dict[str, Any]:
     """API-format workflow that works on stock SD1.5 / SDXL ComfyUI installs.
 
     Defaults tuned for RealVisXL portraits (lower CFG, more steps) — CFG 7+ on
     bilingual briefs often melted faces / multi-head artifacts.
     """
-    return {
+    wf = {
         "3": {
             "class_type": "KSampler",
             "inputs": {
@@ -267,11 +302,11 @@ def _basic_checkpoint_workflow(
                 "cfg": cfg,
                 "sampler_name": "euler",
                 "scheduler": "normal",
-                "denoise": 1,
+                "denoise": denoise,
                 "model": ["4", 0],
                 "positive": ["6", 0],
                 "negative": ["7", 0],
-                "latent_image": ["5", 0],
+                "latent_image": ["22", 0] if image_name else ["5", 0],
             },
         },
         "4": {
@@ -299,6 +334,19 @@ def _basic_checkpoint_workflow(
             "inputs": {"filename_prefix": "openmontage", "images": ["8", 0]},
         },
     }
+    if image_name:
+        wf.update(
+            _reference_latent_nodes(
+                image_name=image_name,
+                width=width,
+                height=height,
+                vae=["4", 2],
+                load_id="20",
+                scale_id="21",
+                encode_id="22",
+            )
+        )
+    return wf
 
 
 # Partner-node ids that speak Chinese natively (no local SD1.5 CLIP).
@@ -396,9 +444,11 @@ def _qwen_image_workflow(
     seed: int,
     steps: int = 8,
     cfg: float = 2.5,
+    image_name: str | None = None,
+    denoise: float = 1,
 ) -> dict[str, Any]:
     """API workflow for gpuhome ComfyUI: Qwen-Image-2.1 (UNET + TextEncodeQwenImage21)."""
-    return {
+    wf = {
         "10": {
             "class_type": "UNETLoader",
             "inputs": {"unet_name": unet, "weight_dtype": "default"},
@@ -436,11 +486,11 @@ def _qwen_image_workflow(
                 "cfg": cfg,
                 "sampler_name": "euler",
                 "scheduler": "simple",
-                "denoise": 1,
+                "denoise": denoise,
                 "model": ["11", 0],
                 "positive": ["14", 0],
                 "negative": ["14", 1],
-                "latent_image": ["15", 0],
+                "latent_image": ["32", 0] if image_name else ["15", 0],
             },
         },
         "17": {
@@ -452,6 +502,19 @@ def _qwen_image_workflow(
             "inputs": {"filename_prefix": "openmontage", "images": ["17", 0]},
         },
     }
+    if image_name:
+        wf.update(
+            _reference_latent_nodes(
+                image_name=image_name,
+                width=width,
+                height=height,
+                vae=["13", 0],
+                load_id="30",
+                scale_id="31",
+                encode_id="32",
+            )
+        )
+    return wf
 
 
 def generate_image(
@@ -463,8 +526,7 @@ def generate_image(
     negative_prompt: str | None = None,
     timeout: int = 600,
 ) -> Path:
-    """Text-to-image via ComfyUI. reference_path is ignored for now (T2I only)."""
-    del reference_path  # i2i needs LoadImage + different graph; Seedream still handles redraw.
+    """Text-to-image, or img2img when a passed character still is supplied."""
     root = server_url(capability="image") or server_url()
     if not root:
         raise ComfyUIError("未配置 COMFYUI_SERVER_URL（智川云租 GPU 后填写 ComfyUI 公网地址）")
@@ -485,6 +547,12 @@ def generate_image(
     if negative_prompt:
         negative = f"{negative}, {negative_prompt}"
 
+    image_name = None
+    denoise = 1.0
+    if reference_path and Path(reference_path).is_file():
+        image_name = _upload_image(root, Path(reference_path))
+        denoise = _IDENTITY_DENOISE
+
     preferred = (_secret("COMFYUI_CHECKPOINT") or "").strip()
     ckpts = list_checkpoints(root)
     qwen_local = _pick_qwen_stack(root)
@@ -492,8 +560,8 @@ def generate_image(
     model_label = ""
     use_latin_clip = False
 
-    # 1) Explicit Qwen Image API (Chinese-native partner node; needs Comfy Org login/key)
-    if preferred in _QWEN_API_MODELS or preferred.startswith("qwen-image"):
+    # 1) Explicit Qwen Image API. A character reference needs a local img2img graph.
+    if not image_name and (preferred in _QWEN_API_MODELS or preferred.startswith("qwen-image")):
         if not qwen_api_ok:
             raise ComfyUIError(
                 f"已选择 {preferred}，但 ComfyUI 未安装 QwenImageTextToImageApi 节点（需 Comfy 登录/Partner Nodes）。"
@@ -528,6 +596,8 @@ def generate_image(
             height=height,
             ckpt=preferred,
             seed=seed,
+            image_name=image_name,
+            denoise=denoise,
         )
     # 3) Explicit local Qwen UNET name
     elif preferred and qwen_local and preferred == qwen_local["unet"]:
@@ -542,10 +612,13 @@ def generate_image(
             clip=qwen_local["clip"],
             vae=qwen_local["vae"],
             seed=seed,
+            image_name=image_name,
+            denoise=denoise,
         )
     # 4) Auto: Qwen API only when keyed; else strong local ckpt / local Qwen stack
     elif (
-        qwen_api_ok
+        not image_name
+        and qwen_api_ok
         and _comfy_org_api_key()
         and (not ckpts or all(_is_weak_latin_only_ckpt(c) for c in ckpts))
     ):
@@ -571,6 +644,8 @@ def generate_image(
             clip=qwen_local["clip"],
             vae=qwen_local["vae"],
             seed=seed,
+            image_name=image_name,
+            denoise=denoise,
         )
     elif ckpts:
         # Prefer a non-SD1.5 ckpt when present
@@ -586,6 +661,8 @@ def generate_image(
             height=height,
             ckpt=ckpt,
             seed=seed,
+            image_name=image_name,
+            denoise=denoise,
         )
     elif qwen_local:
         model_label = qwen_local["unet"]
@@ -599,6 +676,8 @@ def generate_image(
             clip=qwen_local["clip"],
             vae=qwen_local["vae"],
             seed=seed,
+            image_name=image_name,
+            denoise=denoise,
         )
     elif qwen_api_ok and _comfy_org_api_key():
         model_label = "qwen-image-3.0-pro"

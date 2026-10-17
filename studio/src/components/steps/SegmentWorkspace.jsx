@@ -19,6 +19,7 @@ import {
 import { api } from "../../api";
 import {
   blockersFromError,
+  entityStillPasses,
   formatEntityQaBlockers,
   isEntityQaBlockedError,
   listEntityQaBlockers,
@@ -51,8 +52,7 @@ function entityThumb(ent) {
 }
 
 function stillLooksReady(ent) {
-  const img = ent?.selectedImage || (ent?.images || []).find((i) => i.id === ent?.selectedImageId);
-  return Boolean(img && (img.path || img.url) && img.qaPass === true && !ent?.qaFailed);
+  return entityStillPasses(ent);
 }
 
 function isDefaultVariant(ent) {
@@ -1187,7 +1187,7 @@ export function SegmentWorkspace({
                           ) : null}
                           {ent.imageStatus === "generating" ? (
                             <span className="block text-[9px] font-normal text-[#a78bfa]">生成中…</span>
-                          ) : ent.imageStatus === "failed" || ent.qaFailed ? (
+                          ) : !entityStillPasses(ent) && (ent.imageStatus === "failed" || ent.qaFailed || ent.selectedImage?.qaPass === false) ? (
                             <span className="block text-[9px] font-normal text-amber-300/80">质检未过</span>
                           ) : null}
                         </div>

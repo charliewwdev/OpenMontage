@@ -105,6 +105,7 @@
   "studio_auto_preparing": "Preparing",
   "studio_auto_running": "Pipeline running: {step} · focus {focus}",
   "studio_auto_running_hint": "Open Edit when export is ready",
+  "studio_auto_live_scope": "{n} eps",
   "studio_auto_live_steps": "{done}/{total} steps",
   "studio_auto_live_videos": "Video {done}/{total} ready · {gen} rendering · {fail} failed · {pending} waiting",
   "studio_auto_live_active": "{gen} rendering · {fail} failed",

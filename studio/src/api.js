@@ -10,16 +10,24 @@ export async function api(path, options = {}) {
   } catch {
     data = { error: text };
   }
-  if (res.status === 401 && getToken() && !String(path).includes("/api/auth/")) {
+  const hadSession = Boolean(getToken());
+  if (res.status === 401 && hadSession && !String(path).includes("/api/auth/")) {
     clearSession();
   }
   if (!res.ok) {
     const msg = (data && (data.error || data.msg || data.message)) || res.statusText || "request failed";
     if (res.status === 401 && /login required/i.test(String(msg))) {
-      try {
-        window.dispatchEvent(new CustomEvent("om:need-auth", { detail: { path, method: options.method || "GET" } }));
-      } catch {
-        /* ignore */
+      // Only reopen login when a session just expired. Anonymous browse must not
+      // get a forced modal from background POSTs (bind-refs / ensure edit / …).
+      // Explicit create/generate actions already call requireAuth() first.
+      if (hadSession) {
+        try {
+          window.dispatchEvent(
+            new CustomEvent("om:need-auth", { detail: { path, method: options.method || "GET" } }),
+          );
+        } catch {
+          /* ignore */
+        }
       }
       const err = new Error("请先登录后再调用模型或保存内容");
       err.status = 401;

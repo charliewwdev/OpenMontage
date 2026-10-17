@@ -120,6 +120,7 @@ def generate_image(
     out_path: Path,
     reference_path: Path | None = None,
     negative_prompt: str | None = None,
+    denoise: float | None = None,
 ) -> Path:
     """Generate stills via the active image backend.
 
@@ -176,13 +177,23 @@ def generate_image(
                 out_path=out_path,
                 reference_path=reference_path,
                 negative_prompt=negative_prompt,
+                denoise=denoise,
             )
         except TypeError:
-            # Older signature without negative_prompt
+            # Older signature without negative_prompt / denoise
             try:
-                return comfy_generate(prompt=prompt, ratio=ratio, out_path=out_path)
-            except ComfyUIError as exc:
-                raise RuntimeError(f"{exc}。当前严格使用顶部所选 ComfyUI 出图。") from exc
+                return comfy_generate(
+                    prompt=prompt,
+                    ratio=ratio,
+                    out_path=out_path,
+                    reference_path=reference_path,
+                    negative_prompt=negative_prompt,
+                )
+            except TypeError:
+                try:
+                    return comfy_generate(prompt=prompt, ratio=ratio, out_path=out_path)
+                except ComfyUIError as exc:
+                    raise RuntimeError(f"{exc}。当前严格使用顶部所选 ComfyUI 出图。") from exc
         except ComfyUIError as exc:
             raise RuntimeError(f"{exc}。当前严格使用顶部所选 ComfyUI 出图。") from exc
     raise RuntimeError(

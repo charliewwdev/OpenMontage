@@ -244,6 +244,8 @@ _SIZES = {
 
 # Variant stills: keep the passed face, allow wardrobe and injury to change.
 _IDENTITY_DENOISE = 0.62
+# Injury/wardrobe edits need more room than a soft face lock — 0.62 keeps the clean coat.
+_IDENTITY_EDIT_DENOISE = 0.82
 
 
 def _reference_latent_nodes(
@@ -524,6 +526,7 @@ def generate_image(
     out_path: Path,
     reference_path: Path | None = None,
     negative_prompt: str | None = None,
+    denoise: float | None = None,
     timeout: int = 600,
 ) -> Path:
     """Text-to-image, or img2img when a passed character still is supplied."""
@@ -548,10 +551,15 @@ def generate_image(
         negative = f"{negative}, {negative_prompt}"
 
     image_name = None
-    denoise = 1.0
+    strength = 1.0
     if reference_path and Path(reference_path).is_file():
         image_name = _upload_image(root, Path(reference_path))
-        denoise = _IDENTITY_DENOISE
+        if denoise is None:
+            strength = _IDENTITY_DENOISE
+        else:
+            strength = max(0.35, min(0.95, float(denoise)))
+    elif denoise is not None:
+        strength = max(0.35, min(1.0, float(denoise)))
 
     preferred = (_secret("COMFYUI_CHECKPOINT") or "").strip()
     ckpts = list_checkpoints(root)
@@ -597,7 +605,7 @@ def generate_image(
             ckpt=preferred,
             seed=seed,
             image_name=image_name,
-            denoise=denoise,
+            denoise=strength,
         )
     # 3) Explicit local Qwen UNET name
     elif preferred and qwen_local and preferred == qwen_local["unet"]:
@@ -613,7 +621,7 @@ def generate_image(
             vae=qwen_local["vae"],
             seed=seed,
             image_name=image_name,
-            denoise=denoise,
+            denoise=strength,
         )
     # 4) Auto: Qwen API only when keyed; else strong local ckpt / local Qwen stack
     elif (
@@ -645,7 +653,7 @@ def generate_image(
             vae=qwen_local["vae"],
             seed=seed,
             image_name=image_name,
-            denoise=denoise,
+            denoise=strength,
         )
     elif ckpts:
         # Prefer a non-SD1.5 ckpt when present
@@ -662,7 +670,7 @@ def generate_image(
             ckpt=ckpt,
             seed=seed,
             image_name=image_name,
-            denoise=denoise,
+            denoise=strength,
         )
     elif qwen_local:
         model_label = qwen_local["unet"]
@@ -677,7 +685,7 @@ def generate_image(
             vae=qwen_local["vae"],
             seed=seed,
             image_name=image_name,
-            denoise=denoise,
+            denoise=strength,
         )
     elif qwen_api_ok and _comfy_org_api_key():
         model_label = "qwen-image-3.0-pro"

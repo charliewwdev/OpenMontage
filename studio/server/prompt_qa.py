@@ -467,9 +467,19 @@ def judge_image_against_prompt(
     )
     name_line = f"Entity name: {entity_name}\n" if entity_name else ""
     desc_line = f"Entity bible (truncated):\n{(entity_description or '')[:600]}\n" if entity_description else ""
+    injury_hint = ""
+    blob = f"{entity_description}\n{prompt}\n{entity_name}".lower()
+    if any(tok in blob for tok in ("bandage", "gauze", "绷带", "纱布", "受伤", "injury")):
+        injury_hint = (
+            "Injury still rubric: PASS if a white medical gauze/cotton wrap is clearly visible "
+            "on the shoulder or upper chest (medium/chest-up framing OK). "
+            "Do NOT require the bandage to dominate the whole frame. "
+            "FAIL if injury is only facial cuts, or if wrap is blue plastic / towel / rain poncho. "
+            "Torn or blood-stained dark coat is a plus, not mandatory if gauze is clear.\n"
+        )
     user_text = (
         f"Asset kind: {kind_id}\n"
-        f"{name_line}{desc_line}"
+        f"{name_line}{desc_line}{injury_hint}"
         f"Generation prompt (truncated):\n{(prompt or '')[:1200]}\n\n"
         "Does the attached image match this prompt, bible, and kind rules?"
     )

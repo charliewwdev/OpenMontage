@@ -15,11 +15,12 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import unquote
 
-from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile
+from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.websockets import WebSocketState
 
 ROOT = Path(os.environ.get("OPENMONTAGE_ROOT", Path(__file__).resolve().parents[2])).resolve()
 sys.path.insert(0, str(ROOT))
@@ -627,8 +628,49 @@ def get_usage(
     )
 
 
-@app.get("/api/settings/jobs")
-def get_jobs() -> dict[str, Any]:
+def _parse_out_fraction(detail: str) -> tuple[int, int] | None:
+    """Parse『出片 10/64』style counters from step detail."""
+    import re
+
+    m = re.search(r"(\d+)\s*/\s*(\d+)", str(detail or ""))
+    if not m:
+        return None
+    done, total = int(m.group(1)), int(m.group(2))
+    if total <= 0:
+        return None
+    return done, total
+
+
+def _jobs_progress(shots: dict[str, Any], steps: list[dict[str, Any]], detail: str) -> dict[str, Any]:
+    total_shots = int(shots.get("total") or 0)
+    done_shots = int(shots.get("completed") or 0)
+    frac = _parse_out_fraction(detail)
+    if frac:
+        done_shots = max(done_shots, frac[0])
+        total_shots = max(total_shots, frac[1])
+    shot_pct = round(100.0 * done_shots / total_shots, 1) if total_shots else 0.0
+    step_done = sum(1 for s in steps if s.get("status") in {"done", "skipped"})
+    step_total = len(steps) or 1
+    step_pct = round(100.0 * step_done / step_total, 1)
+    # Blend: pipeline stage weight + in-stage shot progress when on videos.
+    on_videos = any(s.get("id") == "videos" and s.get("status") == "running" for s in steps)
+    overall = step_pct
+    if on_videos and total_shots:
+        # videos is one of N steps; fill that slice with shot progress.
+        slice_w = 100.0 / step_total
+        overall = round(step_done * slice_w + (shot_pct / 100.0) * slice_w, 1)
+    return {
+        "shotDone": done_shots,
+        "shotTotal": total_shots,
+        "shotPct": min(100.0, shot_pct),
+        "stepDone": step_done,
+        "stepTotal": step_total,
+        "stepPct": min(100.0, step_pct),
+        "overallPct": min(100.0, overall),
+    }
+
+
+def _build_jobs_payload() -> dict[str, Any]:
     """Background media queue + per-project auto-produce jobs (no cron; event-driven)."""
     from job_queue import queue_stats
 
@@ -643,9 +685,9 @@ def get_jobs() -> dict[str, Any]:
             status = str(job.get("status") or "")
             if status not in active_statuses and status != "done":
                 continue
-            steps = job.get("steps") or []
+            steps_raw = job.get("steps") or []
             step_detail = ""
-            for step in steps:
+            for step in steps_raw:
                 if step.get("id") == job.get("step"):
                     step_detail = str(step.get("detail") or "")
                     break
@@ -654,6 +696,17 @@ def get_jobs() -> dict[str, Any]:
             if logs:
                 last = logs[-1] if isinstance(logs[-1], dict) else {}
                 last_log = str(last.get("text") or "")[:160]
+            steps = [
+                {
+                    "id": s.get("id"),
+                    "label": s.get("label"),
+                    "status": s.get("status"),
+                    "detail": s.get("detail") or "",
+                }
+                for s in steps_raw
+            ]
+            shots = (item.get("progress") or {}).get("shots") or {}
+            detail = step_detail or str(job.get("detail") or "")
             auto_jobs.append(
                 {
                     "projectId": item.get("id"),
@@ -661,21 +714,14 @@ def get_jobs() -> dict[str, Any]:
                     "jobId": job.get("id"),
                     "status": status,
                     "step": job.get("step") or "",
-                    "detail": step_detail or job.get("detail") or "",
+                    "detail": detail,
                     "error": job.get("error"),
                     "updatedAt": job.get("updatedAt") or item.get("updatedAt"),
                     "startedAt": job.get("startedAt"),
                     "lastLog": last_log,
-                    "steps": [
-                        {
-                            "id": s.get("id"),
-                            "label": s.get("label"),
-                            "status": s.get("status"),
-                            "detail": s.get("detail") or "",
-                        }
-                        for s in steps
-                    ],
-                    "shotProgress": (item.get("progress") or {}).get("shots") or {},
+                    "steps": steps,
+                    "shotProgress": shots,
+                    "progress": _jobs_progress(shots, steps, detail),
                 }
             )
     except Exception as exc:  # noqa: BLE001
@@ -685,14 +731,13 @@ def get_jobs() -> dict[str, Any]:
             "mediaQueue": queue,
             "autoProduce": [],
             "note": "无独立 cron；媒体队列 + 一键全流程为后台任务源。",
+            "polledAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
-    # Active first, then recently updated.
     rank = {"running": 0, "queued": 1, "paused": 2, "failed": 3, "done": 4}
     auto_jobs.sort(
         key=lambda j: (rank.get(str(j.get("status")), 9), str(j.get("updatedAt") or "")),
         reverse=False,
     )
-    # Keep done jobs only if updated recently enough — cap list.
     trimmed: list[dict[str, Any]] = []
     done_kept = 0
     for j in auto_jobs:
@@ -701,13 +746,87 @@ def get_jobs() -> dict[str, Any]:
                 continue
             done_kept += 1
         trimmed.append(j)
+    pending = int(queue.get("redisPending") or (queue.get("pool") or {}).get("pending") or 0)
+    processing = int(queue.get("redisProcessing") or 0)
+    queue_cap = max(pending + processing, 1)
     return {
         "ok": True,
-        "mediaQueue": queue,
+        "mediaQueue": {
+            **queue,
+            "progress": {
+                "pending": pending,
+                "processing": processing,
+                "loadPct": min(100.0, round(100.0 * (pending + processing) / max(queue_cap, 8), 1)),
+            },
+        },
         "autoProduce": trimmed,
         "note": "无独立 cron / 定时表；后台任务来自 Redis 媒体队列与项目一键全流程。",
         "polledAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
+
+
+@app.get("/api/settings/jobs")
+def get_jobs() -> dict[str, Any]:
+    return _build_jobs_payload()
+
+
+@app.websocket("/api/settings/jobs/ws")
+async def jobs_websocket(websocket: WebSocket) -> None:
+    """Push jobs snapshots over WebSocket (~2s). Auth via ?token= (browser WS can't set Bearer)."""
+    import asyncio
+
+    token = (websocket.query_params.get("token") or "").strip()
+    if not token:
+        auth = websocket.headers.get("authorization") or websocket.headers.get("Authorization") or ""
+        if auth.lower().startswith("bearer "):
+            token = auth[7:].strip()
+    user = _resolve_user(token) if token else None
+    auth_required = os.environ.get("STUDIO_AUTH_REQUIRED", "true").strip().lower() not in (
+        "0",
+        "false",
+        "no",
+        "off",
+    )
+    if auth_required and not user:
+        await websocket.close(code=4401, reason="login required")
+        return
+
+    await websocket.accept()
+    interval = max(1.0, min(10.0, float(os.environ.get("STUDIO_JOBS_WS_INTERVAL") or "2")))
+    set_current_user(user)
+    try:
+        payload = _build_jobs_payload()
+        await websocket.send_json({"type": "snapshot", "data": payload})
+        while True:
+            try:
+                msg = await asyncio.wait_for(websocket.receive_text(), timeout=interval)
+            except asyncio.TimeoutError:
+                msg = ""
+            if websocket.client_state != WebSocketState.CONNECTED:
+                break
+            if msg:
+                try:
+                    body = json.loads(msg)
+                except Exception:
+                    body = {}
+                if isinstance(body, dict) and body.get("type") == "ping":
+                    await websocket.send_json({"type": "pong", "at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")})
+                    continue
+                if isinstance(body, dict) and body.get("type") == "refresh":
+                    pass  # fall through to snapshot
+            set_current_user(user)
+            payload = _build_jobs_payload()
+            await websocket.send_json({"type": "snapshot", "data": payload})
+    except WebSocketDisconnect:
+        return
+    except Exception:
+        try:
+            if websocket.client_state == WebSocketState.CONNECTED:
+                await websocket.close(code=1011)
+        except Exception:
+            pass
+    finally:
+        set_current_user(None)
 
 
 @app.get("/api/platform/assets")

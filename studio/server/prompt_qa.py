@@ -184,6 +184,79 @@ def _injury_near_miss_promote(qa: dict[str, Any] | None) -> dict[str, Any]:
     return q
 
 
+def frame_sharpness(path: Path | str, *, crop_frac: float = 0.55) -> dict[str, float]:
+    """Cheap high-pass variance on the upper-center crop (face / subject zone).
+
+    Ignores the bottom subtitle band. Higher ``hpVar`` = sharper. Empirically:
+    soft/mushy AI frames ≈ 2–3; usable portraits ≈ 5–15+.
+    """
+    from PIL import Image, ImageChops, ImageFilter, ImageStat
+
+    p = Path(path)
+    im = Image.open(p).convert("L")
+    w, h = im.size
+    cw = max(32, int(w * crop_frac))
+    ch = max(32, int(h * crop_frac * 0.7))
+    left = max(0, (w - cw) // 2)
+    top = max(0, int(h * 0.10))
+    if top + ch > h:
+        top = max(0, h - ch)
+    crop = im.crop((left, top, left + cw, top + ch))
+    blur = crop.filter(ImageFilter.GaussianBlur(radius=1.2))
+    hp = ImageChops.difference(crop, blur)
+    hp_var = float(ImageStat.Stat(hp).var[0])
+    edge_var = float(ImageStat.Stat(crop.filter(ImageFilter.FIND_EDGES)).var[0])
+    return {"hpVar": hp_var, "edgeVar": edge_var, "width": float(w), "height": float(h)}
+
+
+def sharpness_min_hp_var() -> float:
+    """Fail frames below this high-pass variance (default 4.0)."""
+    try:
+        from settings_store import get_secret
+
+        raw = (get_secret("STUDIO_QA_MIN_SHARPNESS") or "").strip()
+    except Exception:
+        raw = (os.environ.get("STUDIO_QA_MIN_SHARPNESS") or "").strip()
+    try:
+        return max(0.5, min(30.0, float(raw or 4.0)))
+    except Exception:
+        return 4.0
+
+
+def _apply_sharpness_gate(
+    qa: dict[str, Any],
+    paths: list[Path],
+    *,
+    min_hp: float | None = None,
+) -> dict[str, Any]:
+    """Fail closed when subject-zone frames are soft/mushy."""
+    if not paths or qa.get("skipped"):
+        return qa
+    bar = sharpness_min_hp_var() if min_hp is None else float(min_hp)
+    scores: list[float] = []
+    for p in paths:
+        try:
+            scores.append(float(frame_sharpness(p)["hpVar"]))
+        except Exception:
+            continue
+    if not scores:
+        return qa
+    # Use median so one sharp subtitle-heavy frame cannot mask a soft face.
+    ordered = sorted(scores)
+    mid = ordered[len(ordered) // 2]
+    qa = dict(qa)
+    qa["sharpness"] = {"hpVars": [round(s, 2) for s in scores], "medianHpVar": round(mid, 2), "minHpVar": bar}
+    if mid < bar:
+        qa["pass"] = False
+        qa["score"] = min(float(qa.get("score") or 0), 0.25)
+        prev = str(qa.get("reason") or "").strip()
+        qa["reason"] = (
+            f"sharpness_gate: subject zone too soft (medianHpVar={mid:.2f} < {bar:.2f})"
+            + (f"; {prev}" if prev else "")
+        )[:400]
+    return qa
+
+
 def _mime_for(path: Path) -> str:
     suf = path.suffix.lower()
     if suf in {".jpg", ".jpeg"}:
@@ -275,7 +348,9 @@ def _kind_rules(kind: str, *, gender: str | None = None) -> str:
             "PASS only if the frame could plausibly come from the described short-drama shot "
             "(people / setting / props roughly match the brief and cast list). "
             "FAIL for blank/black frames, pure noise, totally unrelated scenery, "
-            "wrong gender for named characters, missing required cast, or obvious subject mismatch."
+            "wrong gender for named characters, missing required cast, or obvious subject mismatch. "
+            "CRITICAL sharpness: FAIL if the main subject face/body is soft, mushy, out of focus, "
+            "motion-blurred, or low-detail (cinematic background bokeh is OK; a blurry protagonist is not)."
         )
     return "PASS only if the image subject matches the prompt intent."
 
@@ -564,6 +639,9 @@ def judge_image_against_prompt(
     qa = _apply_hard_gates(kind_id, qa, gender=gender, prompt=prompt)
     if injury_mode:
         qa = _injury_near_miss_promote(qa)
+    # Character / scene / prop stills: catch mushy soft gens vision often forgives.
+    if kind_id in {"character", "scene", "prop"} and not qa.get("skipped"):
+        qa = _apply_sharpness_gate(qa, [p], min_hp=sharpness_min_hp_var())
     return qa
 
 
@@ -677,13 +755,15 @@ def judge_video_against_prompt(
             + _kind_rules(kind_id)
             + " Multiple frames from the SAME clip are attached — judge the clip as a whole. "
             "People on screen MUST match named cast gender/appearance when cast is listed. "
-            "Setting must match scene brief; key props should appear when the prompt requires them."
+            "Setting must match scene brief; key props should appear when the prompt requires them. "
+            "FAIL if the protagonist face/body looks soft, blurry, mushy, or out of focus."
         )
         user_text = (
             f"Asset kind: {kind_id}\n"
             f"Shot / segment prompt (truncated):\n{(prompt or '')[:1600]}\n\n"
             f"Cast / scene / prop bible for this shot:\n{ctx or '(none provided)'}\n\n"
-            "Do these frames match the prompt AND the listed cast/scene/props?"
+            "Do these frames match the prompt AND the listed cast/scene/props? "
+            "Also check whether the main subject is sharp enough for short-drama delivery."
         )
         qa = _call_vision_judge(
             data_urls=[_qa_image_data_url(f) for f in frames],
@@ -703,6 +783,9 @@ def judge_video_against_prompt(
                     qa["score"] = min(float(qa.get("score") or 0), 0.25)
                     qa["reason"] = f"cast_gender_gate:{reason}"[:400]
                     break
+        # Deterministic sharpness gate — vision often ignores soft AI faces when cast matches.
+        if not qa.get("skipped"):
+            qa = _apply_sharpness_gate(qa, frames)
         return qa
     finally:
         for fr in frames:

@@ -1198,36 +1198,49 @@ def generate_entity_image(
     if version.get("path"):
         ent.setdefault("images", []).append(version)
     # Promote to selected when QA passes. If QA fails but we have a still, still show it
-    # in the rail (avoid perpetual「无图」) and keep qaFailed so the user can redraw.
+    # in the rail (avoid perpetual「无图」). Never sticky-fail when the kept selection still passes.
+    from prompt_qa import is_soft_pass_qa
+
+    def _still_ok(img: dict[str, Any] | None) -> bool:
+        return bool(
+            img
+            and img.get("path")
+            and img.get("qaPass") is True
+            and not is_soft_pass_qa(img.get("qa"))
+        )
+
     if version.get("qaPass") and version.get("path"):
         ent["selectedImageId"] = version["id"]
         ent.pop("qaFailed", None)
         ent.pop("qaFailReason", None)
+        ent.pop("imageError", None)
     elif version.get("path"):
-        # Stop infinite redraw: keep the best attempt visible, mark failed once.
-        if not ent.get("selectedImageId"):
-            ent["selectedImageId"] = version["id"]
-        ent["qaFailed"] = True
-        ent["qaFailReason"] = str((version.get("qa") or {}).get("reason") or "qa_failed")
-        if injury_edit:
-            qa_meta = version.setdefault("qa", {})
-            qa_meta["ladderExhausted"] = True
-            qa_meta["strategy"] = "injury_img2img_then_t2i"
         prev = next((i for i in (ent.get("images") or []) if i.get("id") == ent.get("selectedImageId")), None)
-        from prompt_qa import is_soft_pass_qa
-
-        prev_ok = bool(prev and prev.get("path") and prev.get("qaPass") is True and not is_soft_pass_qa(prev.get("qa")))
-        if not prev_ok:
+        if _still_ok(prev):
+            # Redraw failed, but the previously selected still is still good — keep it and do not
+            # flip entity.qaFailed (that caused「外层未过 / 内层描述已过」).
+            if injury_edit:
+                qa_meta = version.setdefault("qa", {})
+                qa_meta["ladderExhausted"] = True
+                qa_meta["strategy"] = "injury_img2img_then_t2i"
+        else:
             ent["selectedImageId"] = version["id"]
+            ent["qaFailed"] = True
+            ent["qaFailReason"] = str((version.get("qa") or {}).get("reason") or "qa_failed")
+            if injury_edit:
+                qa_meta = version.setdefault("qa", {})
+                qa_meta["ladderExhausted"] = True
+                qa_meta["strategy"] = "injury_img2img_then_t2i"
     elif not ent.get("selectedImageId"):
         ent["qaFailed"] = True
         ent["qaFailReason"] = str((version.get("qa") or {}).get("reason") or "qa_failed")
     else:
         # Keep old selection only if it still looks like a real pass.
         prev = next((i for i in (ent.get("images") or []) if i.get("id") == ent.get("selectedImageId")), None)
-        from prompt_qa import is_soft_pass_qa
-
-        if prev and (prev.get("qaPass") is False or is_soft_pass_qa(prev.get("qa"))):
+        if _still_ok(prev):
+            ent.pop("qaFailed", None)
+            ent.pop("qaFailReason", None)
+        else:
             ent["qaFailed"] = True
             ent["qaFailReason"] = str((version.get("qa") or {}).get("reason") or "qa_failed")
     if not version.get("qaPass"):
@@ -1662,6 +1675,39 @@ def recheck_video_qa(
     }
 
 
+def sync_entity_qa_flags(ent: dict[str, Any]) -> bool:
+    """Clear sticky qaFailed when the selected still currently passes. Returns True if changed."""
+    from prompt_qa import is_soft_pass_qa, qa_meets_bar
+
+    imgs = ent.get("images") or []
+    sid = ent.get("selectedImageId")
+    sel = next((i for i in imgs if i.get("id") == sid), None)
+    if not sel or not sel.get("path"):
+        return False
+    qa = sel.get("qa") or {}
+    ok = bool(sel.get("qaPass") is True) and qa_meets_bar(qa) and not is_soft_pass_qa(qa)
+    if not ok or not ent.get("qaFailed"):
+        return False
+    ent.pop("qaFailed", None)
+    ent.pop("qaFailReason", None)
+    ent.pop("imageError", None)
+    if ent.get("imageStatus") == "failed":
+        ent["imageStatus"] = "done"
+    ent["updatedAt"] = _now()
+    return True
+
+
+def heal_entity_qa_flags(state: dict[str, Any]) -> int:
+    """Repair entities whose selected still passed but qaFailed stuck from a later failed redraw."""
+    n = 0
+    for ent in state.get("entities") or []:
+        if ent.get("deletedAt"):
+            continue
+        if sync_entity_qa_flags(ent):
+            n += 1
+    return n
+
+
 def select_entity_image(store: ProjectStore, project_id: str, entity_id: str, image_id: str) -> dict:
     state = store.load(project_id)
     if not state:
@@ -1673,6 +1719,7 @@ def select_entity_image(store: ProjectStore, project_id: str, entity_id: str, im
             e["selectedImageId"] = image_id
             e["updatedAt"] = _now()
             hit = next((i for i in (e.get("images") or []) if i.get("id") == image_id), None)
+            sync_entity_qa_flags(e)
             if hit and hit.get("path") and (e.get("kind") == "character" or not (state.get("project") or {}).get("coverPath")):
                 state.setdefault("project", {})["coverPath"] = hit["path"]
                 state["project"]["updatedAt"] = _now()

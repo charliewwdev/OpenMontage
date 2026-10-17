@@ -42,19 +42,21 @@ export function listEntityQaBlockers(entities = []) {
       continue;
     }
     const qa = img.qa || {};
-    const reason = String(qa.reason || ent.qaFailReason || "");
+    const reason = String(qa.reason || "");
     const soft =
       (qa.skipped && reason !== "qa_disabled") ||
       /qa_error|qa_exception|软通过|vision_/i.test(reason);
-    if (img.qaPass === true && !soft && !ent.qaFailed) continue;
+    // Trust the selected still. Sticky entity.qaFailed from a later failed redraw must not
+    // override a currently passing selection (matches server entity_ref_qa_blockers).
+    if (img.qaPass === true && !soft) continue;
     let issue = "qa_pending";
-    let detail = reason || "尚未通过质检";
+    let detail = reason || String(ent.qaFailReason || "") || "尚未通过质检";
     if (soft) {
       issue = "soft_pass";
       detail = reason || "质检无效（软通过/跳过）";
-    } else if (img.qaPass === false || ent.qaFailed) {
+    } else if (img.qaPass === false) {
       issue = "qa_fail";
-      detail = reason || "质检未达标";
+      detail = reason || String(ent.qaFailReason || "") || "质检未达标";
     }
     blockers.push({
       entityId: eid,
@@ -67,6 +69,19 @@ export function listEntityQaBlockers(entities = []) {
     });
   }
   return blockers;
+}
+
+/** Selected still currently passes hard QA (ignore sticky entity.qaFailed). */
+export function entityStillPasses(ent) {
+  const img = selectedImage(ent);
+  if (!img?.path && !img?.url) return false;
+  if (img.qaPass !== true) return false;
+  const qa = img.qa || {};
+  const reason = String(qa.reason || "");
+  const soft =
+    (qa.skipped && reason !== "qa_disabled") ||
+    /qa_error|qa_exception|软通过|vision_/i.test(reason);
+  return !soft;
 }
 
 export function formatEntityQaBlockers(blockers = [], { max = 8 } = {}) {

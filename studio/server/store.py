@@ -395,6 +395,15 @@ class ProjectStore:
         state = self.load(project_id)
         if not state:
             return None
+        # Repair sticky qaFailed when selected still already passes (failed redraw leftover).
+        try:
+            from drama_service import heal_entity_qa_flags
+
+            if heal_entity_qa_flags(state):
+                self.save(state)
+                state = self.load(project_id) or state
+        except Exception:
+            pass
         # attach media urls
         for ent in state.get("entities") or []:
             for img in ent.get("images") or []:

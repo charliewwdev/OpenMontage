@@ -497,7 +497,12 @@ function EntityCard({ entity, accent, working, onGenerate, onUpload, onSelect, o
   const previewAlt = `${entity.name}${entity.variant ? ` / ${entity.variant}` : ""}`;
   const locked = working;
   const sel = entity.selectedImage;
-  const qaFail = Boolean(entity.qaFailed) || sel?.qaPass === false;
+  const qaSoft =
+    sel?.qa?.skipped && String(sel?.qa?.reason || "") !== "qa_disabled"
+      ? true
+      : /qa_error|qa_exception|软通过|vision_/i.test(String(sel?.qa?.reason || ""));
+  // Prefer selected still verdict over sticky entity.qaFailed from a later failed redraw.
+  const qaFail = sel ? sel.qaPass !== true || qaSoft : Boolean(entity.qaFailed);
 
   const switchToPrompt = async () => {
     setCardTab("prompt");

@@ -210,7 +210,11 @@ def frame_sharpness(path: Path | str, *, crop_frac: float = 0.55) -> dict[str, f
 
 
 def sharpness_min_hp_var() -> float:
-    """Fail frames below this high-pass variance (default 4.0)."""
+    """Fail frames below this high-pass variance (default 8.0).
+
+    Soft/mushy or heavily compressed short-drama frames often land around 3–7;
+    usable clips are typically ≥8–10. Override with STUDIO_QA_MIN_SHARPNESS.
+    """
     try:
         from settings_store import get_secret
 
@@ -218,9 +222,9 @@ def sharpness_min_hp_var() -> float:
     except Exception:
         raw = (os.environ.get("STUDIO_QA_MIN_SHARPNESS") or "").strip()
     try:
-        return max(0.5, min(30.0, float(raw or 4.0)))
+        return max(0.5, min(30.0, float(raw or 8.0)))
     except Exception:
-        return 4.0
+        return 8.0
 
 
 def _apply_sharpness_gate(

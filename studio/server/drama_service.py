@@ -540,6 +540,11 @@ def _split_character_desc(desc: str) -> tuple[str, str]:
             rest = raw[len(head) :].lstrip("，,、 ")
             if rest:
                 return rest, head
+    # Trailing light/place clauses ("血色月光…") make T2I draw scenery instead of the person.
+    parts = [p.strip() for p in raw.replace(";", "；").split("；") if p.strip()]
+    light_keys = ("月光", "逆光", "晨光", "灯光", "血月", "山壁", "林间", "空镜")
+    if len(parts) > 1 and any(k in parts[-1] for k in light_keys):
+        return "；".join(parts[:-1]), parts[-1]
     return raw, ""
 
 
@@ -608,20 +613,21 @@ def build_entity_image_prompt(
         look, atmosphere = _split_character_desc(desc)
         who = f"{name}{(' · ' + variant) if variant else ''}"
         prompt = (
-            f"Photorealistic short-drama character portrait of ONE East Asian person "
-            f"named 「{who}」, clear face, identifiable hair and wardrobe, half-body or "
-            f"full-body, cinematic still, centered, shallow depth of field. "
-            f"华语竖屏短剧角色定妆肖像：画面中央只有一个人，就是「{who}」。"
-            f"必须画出可辨认的五官、发型与服装：{look or '短剧主角，五官清晰，服装完整'}。"
+            "CHARACTER SHEET on a plain seamless dark studio backdrop. "
+            "NO landscape, NO mountains, NO forest, NO moon, NO empty plain. "
+            f"ONE East Asian person 「{who}」, sharp face, half-body, centered. "
+            f"华语竖屏短剧定妆：画面中央只有一个人，就是「{who}」。"
+            f"发型与服装必须按原文画出，不要换成泛泛古装长袍："
+            f"{look or '短剧主角，五官清晰，服装完整'}。"
         )
         if atmosphere:
             prompt += (
-                f"光线与环境仅作氛围参考（{atmosphere}），"
-                "禁止变成无人街景、城市空镜或自然风景空镜。"
+                f"光线只作肤色与轮廓参考（{atmosphere}），"
+                "背景必须是纯色棚拍，禁止画成山景、林间或空镜。"
             )
         prompt += (
-            "禁止航拍城市、街景空镜、人群市集、山景风景大远景、岩石植被空镜、"
-            "第二个人物。No landscape, no mountain, no cityscape, no empty scenery."
+            "禁止航拍、街景、市集、山景大远景、岩石植被空镜、第二个人物。"
+            "No landscape, no mountain, no cityscape, no empty scenery."
         )
         if variant and variant not in {"默认形象", "默认造型", "default"}:
             hint = str(runtime.get("variant_prompt_hint") or "").strip()

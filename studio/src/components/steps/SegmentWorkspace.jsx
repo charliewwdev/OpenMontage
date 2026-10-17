@@ -321,7 +321,7 @@ export function SegmentWorkspace({
 
   // Legacy boards: auto-assign segmentOrder
   useEffect(() => {
-    if (!episodeId || !shots.length || splitting) return;
+    if (readOnly || !episodeId || !shots.length || splitting) return;
     const needsMigrate = shots.some((s) => !Number(s.segmentOrder || 0));
     if (!needsMigrate) return;
     let cancelled = false;
@@ -340,11 +340,11 @@ export function SegmentWorkspace({
     return () => {
       cancelled = true;
     };
-  }, [episodeId, projectId, shots, splitting, onBundle]);
+  }, [readOnly, episodeId, projectId, shots, splitting, onBundle]);
 
   // Bind cast/prop/scene names into referenceEntityIds once per episode load.
   useEffect(() => {
-    if (!episodeId || !shots.length || splitting) return;
+    if (readOnly || !episodeId || !shots.length || splitting) return;
     const needsBind = shots.some((s) => !(s.referenceEntityIds || []).length);
     const key = `${episodeId}:${shots.length}:${needsBind ? "need" : "ok"}`;
     if (!needsBind || boundRefsRef.current === key) return;
@@ -367,7 +367,7 @@ export function SegmentWorkspace({
     return () => {
       cancelled = true;
     };
-  }, [episodeId, projectId, shots, splitting, onBundle]);
+  }, [readOnly, episodeId, projectId, shots, splitting, onBundle]);
 
   const segAssets = useMemo(
     () => collectSegmentEntities(activeSeg, allEntities),
@@ -764,7 +764,7 @@ export function SegmentWorkspace({
       try {
         const existing = (bundle?.edits || []).find((e) => e.episodeId === episodeId);
         let edit = existing;
-        if (!edit || !(edit.clips || []).length) {
+        if ((!edit || !(edit.clips || []).length) && !readOnly) {
           const res = await api(`/api/projects/${encodeURIComponent(projectId)}/edits`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -796,6 +796,7 @@ export function SegmentWorkspace({
       cancelled = true;
     };
   }, [
+    readOnly,
     episodeId,
     projectId,
     activeSeg?.lead?.id,

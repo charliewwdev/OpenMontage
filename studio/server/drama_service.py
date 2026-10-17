@@ -631,18 +631,22 @@ def build_entity_image_prompt(
             )
             if hint:
                 prompt += f" {hint}"
-            # Front-load injury props — RealVis/SDXL and weak CLIP often drop 绷带/血迹.
+            # Injury props: RealVis/SDXL often maps「绷带」→ face wound / blue plastic.
+            # Ask for gauze wrap + medium shot; never "dominate the frame" (unachievable bar).
             if any(tok in variant for tok in ("受伤", "绷带", "伤", "bandage", "injury")):
                 prompt = (
-                    "CRITICAL first: thick WHITE medical gauze bandage wrapped on the injured "
-                    "shoulder AND upper chest, blood-stained torn dark coat, pale sweaty face. "
-                    "Bandage must be the most obvious prop in frame. "
+                    "MEDIUM SHOT chest-up (not face-only close-up). "
+                    "LEFT shoulder and upper chest have a thick WHITE medical gauze wrap "
+                    "(rolled surgical gauze, cotton dressing — not plastic sheet, not towel). "
+                    "Dark coat torn or blood-stained. Pale sweaty face. "
                     + prompt
                 )
                 negative = (
                     (negative + ", ") if negative else ""
                 ) + (
-                    "clean uninjured clothes, no bandage, pristine coat, healthy complexion, "
+                    "clean uninjured clothes, pristine high collar, forehead wound only, "
+                    "cheek cut only, facial laceration as sole injury, blue plastic sheet, "
+                    "rain poncho, towel around neck, head-and-shoulders crop hiding shoulders, "
                     "fashion portrait, unbroken skin"
                 )
         if three_view:
@@ -761,6 +765,40 @@ _STILL_REF_LOCK = {
         " only adjust the described material and details. No people."
     ),
 }
+
+# Vision QA used to require「绷带占满画面」— RealVis never hits that, so retries loop forever.
+_INJURY_ACHIEVABLE_BIBLE = (
+    "East Asian man, chest-up medium shot. "
+    "White medical gauze wrap (cotton dressing) visible on the left shoulder or upper chest. "
+    "Dark coat may be torn or blood-stained. Face may look pale/sweaty. "
+    "Pass if shoulder/chest gauze is clearly visible — face cuts alone are not enough; "
+    "blue plastic sheet or towel around the neck does not count as gauze."
+)
+
+
+def _is_injury_variant(variant: str) -> bool:
+    return any(tok in str(variant or "") for tok in ("受伤", "绷带", "伤", "bandage", "injury"))
+
+
+def _soften_injury_entity_bible(ent: dict[str, Any]) -> str:
+    """Replace impossible bible wording so judge + prompt stay aligned."""
+    raw = str(ent.get("description") or "").strip()
+    if not _is_injury_variant(str(ent.get("variant") or "")):
+        return raw
+    low = raw.lower()
+    if any(
+        tok in raw or tok in low
+        for tok in ("dominate", "最醒目", "largest white", "must be the first", "占满")
+    ):
+        softened = _INJURY_ACHIEVABLE_BIBLE
+        if raw and softened not in raw:
+            ent["description"] = softened
+            ent["descriptionHardened"] = raw[:500]
+        return softened
+    if not raw:
+        ent["description"] = _INJURY_ACHIEVABLE_BIBLE
+        return _INJURY_ACHIEVABLE_BIBLE
+    return raw
 
 
 def _passed_selected_still(
@@ -927,34 +965,15 @@ def generate_entity_image(
     ref = None
     denoise: float | None = None
     variant = str(ent.get("variant") or "")
-    injury_edit = kind == "character" and any(
-        tok in variant for tok in ("受伤", "绷带", "伤", "bandage", "injury")
-    )
-    identity_lock = ""
-    if kind in _STILL_REF_LOCK:
-        # Any type with a passed still is img2img. A failed still must not become the reference.
+    injury_edit = kind == "character" and _is_injury_variant(variant)
+    injury_bible = _soften_injury_entity_bible(ent) if injury_edit else ""
+    if kind in _STILL_REF_LOCK and not injury_edit:
+        # Default / non-injury: img2img from a passed still.
+        # Injury MUST NOT start from a clean headshot — that locks the Intact high collar
+        # and forces the model into face-wounds / blue plastic instead of shoulder gauze.
         ref = _entity_still_ref_path(store, project_id, state, ent)
         if ref is not None:
-            identity_lock = _STILL_REF_LOCK[kind]
-            prompt += identity_lock
-            if injury_edit:
-                # Default portrait is a clean close-up coat; soft denoise locks that into face-only wounds.
-                denoise = 0.88
-                prompt = (
-                    "MEDIUM SHOT from chest up of the SAME man. "
-                    "LEFT shoulder and upper chest wrapped in thick WHITE medical gauze bandage — "
-                    "the bandage is the largest white mass in frame. "
-                    "Blood-stained torn black short coat over a half-wet shirt. "
-                    "Do NOT put the injury only on the face. "
-                    + prompt
-                )
-                negative = (
-                    (negative + ", ") if negative else ""
-                ) + (
-                    "clean intact coat, pristine high collar, forehead wound only, "
-                    "cheek cut only, facial laceration as sole injury, towel around neck, "
-                    "no shoulder bandage, head-and-shoulders crop hiding chest"
-                )
+            prompt += _STILL_REF_LOCK[kind]
 
     def _gen_once(
         ptext: str,
@@ -980,48 +999,63 @@ def generate_entity_image(
     from prompt_qa import entity_qa_max_attempts, judge_image_against_prompt, qa_meets_bar, qa_min_score
 
     max_attempts = entity_qa_max_attempts()
-    # Injury variants: climb a short ladder instead of repeating the same locked img2img.
+    # Injury: short strategy ladder (T2I → T2I paraphrase → optional loose img2img), not same prompt ×5.
     if injury_edit:
         max_attempts = min(max_attempts, 4)
     min_score = qa_min_score()
-    # Achievable bar for injury wardrobe change — identity+bandage is harder than default stills.
     pass_bar = 0.55 if injury_edit else min_score
+    who = f"{ent.get('name') or ''}{(' · ' + variant) if variant else ''}"
+    if injury_edit:
+        # Primary path is text-to-image medium shot — gauze needs shoulder room the default
+        # close-up never has.
+        prompt = (
+            f"Photorealistic short-drama MEDIUM SHOT (chest-up) of ONE East Asian man 「{who}」. "
+            "Thick WHITE rolled medical gauze wrapped around the LEFT shoulder and upper chest — "
+            "cotton gauze texture clearly visible. Blood-stained or torn black short coat over a shirt. "
+            "Hard jawline, short black hair, pale sweaty face, cinematic still, vertical 9:16. "
+            "华语竖屏短剧半身定妆：左肩与上胸白色医用纱布卷清晰可见，黑色短大衣破损带血迹，不是脸部刀伤特写。"
+        )
+        negative = (
+            "forehead wound only, cheek laceration only, face cut as sole injury, "
+            "blue plastic sheet, rain poncho, PE apron, towel around neck, "
+            "clean intact high collar, head-and-shoulders crop hiding shoulders, "
+            "landscape, cityscape, multiple people, fashion beauty shot"
+        )
+        denoise = None
+        ref = None
     base_prompt = prompt
     best: dict[str, Any] | None = None
     last_reason = ""
-    who = f"{ent.get('name') or ''}{(' · ' + variant) if variant else ''}"
 
     for attempt in range(1, max_attempts + 1):
         ptext = base_prompt
         neg = negative
         attempt_ref = ref
         attempt_denoise = denoise
-        judge_desc = str(ent.get("description") or "")
+        judge_desc = injury_bible if injury_edit else str(ent.get("description") or "")
         if injury_edit:
-            if attempt <= 2 and ref is not None:
-                attempt_denoise = 0.88 if attempt == 1 else 0.92
-            else:
-                # Face-lock was blocking wardrobe change — switch to text-led injury still.
-                attempt_ref = None
-                attempt_denoise = None
+            if attempt == 2:
+                # Paraphrase — cotton dressing synonyms help CLIP more than repeating「绷带」.
                 ptext = (
-                    f"Photorealistic short-drama half-body portrait of ONE East Asian man 「{who}」. "
-                    "Chest-up framing. Thick WHITE medical gauze bandage wrapped on the LEFT shoulder "
-                    "and upper chest — bandage clearly visible. Blood-stained torn black short coat, "
-                    "pale sweaty face, hard jawline, short black hair. Cinematic still, no second person. "
-                    "华语竖屏短剧：左肩白色纱布绷带清晰可见，黑色短大衣带血迹撕破。"
+                    f"Cinematic half-body portrait of injured East Asian man 「{who}」. "
+                    "Surgical white cotton gauze dressing taped/wrapped on left deltoid and clavicle. "
+                    "Torn dark coat with dried blood. Sweaty pale skin. Medium shot shows both shoulders. "
+                    "左肩锁骨处白色医用纱布包扎清晰，破损黑大衣，半身构图。"
                 )
-                neg = (
-                    "clean intact coat, forehead wound only, cheek cut only, blue plastic sheet, "
-                    "towel around neck, landscape, cityscape, multiple people"
-                )
-                # QA bible must match the achievable look, not the impossible 「dominate the frame」 bar.
-                judge_desc = (
-                    "East Asian man half-body portrait with white medical gauze bandage visible on "
-                    "the left shoulder/upper chest and a blood-stained or torn dark coat."
-                )
-        if attempt > 1 and last_reason and not (injury_edit and attempt > 2):
-            # Skill 经验：按上次 QA reason 叠加补丁，并写入经验库。
+            elif attempt >= 3 and ref is None:
+                # Last resort: loose img2img from default face ONLY if we can find it —
+                # denoise near 1 so wardrobe can rebuild.
+                face_ref = _entity_still_ref_path(store, project_id, state, ent)
+                if face_ref is not None:
+                    attempt_ref = face_ref
+                    attempt_denoise = 0.94
+                    ptext = (
+                        base_prompt
+                        + " Keep a similar East Asian male face; rebuild wardrobe and shoulder gauze."
+                    )
+            judge_desc = _INJURY_ACHIEVABLE_BIBLE
+        if attempt > 1 and last_reason and not injury_edit:
+            # Skill 经验：非受伤变体按上次 QA reason 叠加补丁。
             record_qa_failure(
                 skill_id="drama-entity-still",
                 kind=kind,
@@ -1037,7 +1071,7 @@ def generate_entity_image(
                 reason=last_reason,
                 projects_root=projects_root,
             )
-            if kind in {"scene", "prop"} or injury_edit:
+            if kind in {"scene", "prop"}:
                 retry_patches = [
                     p
                     for p in retry_patches
@@ -1045,8 +1079,18 @@ def generate_entity_image(
                 ]
             ptext, neg = apply_experience_to_prompt(ptext, neg, retry_patches)
             ptext += _still_retry_clause(kind, attempt, max_attempts)
-        elif attempt > 1:
+        elif attempt > 1 and not injury_edit:
             ptext = ptext + _still_retry_clause(kind, attempt, max_attempts)
+        elif injury_edit and attempt > 1 and last_reason:
+            # Log failure for skill page, but do NOT stack CRITICAL dominate-frame boosts.
+            record_qa_failure(
+                skill_id="drama-entity-still",
+                kind=kind,
+                variant=str(ent.get("variant") or ""),
+                reason=last_reason,
+                entity_name=str(ent.get("name") or ""),
+                projects_root=projects_root,
+            )
         img_id = new_id("img_")
         try:
             rel, out = _gen_once(

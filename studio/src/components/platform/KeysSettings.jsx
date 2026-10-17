@@ -417,15 +417,11 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-[15px] font-semibold">火山方舟</h3>
             <span className="text-xs text-[var(--muted)]">Seedream 出图 · Seedance 出片</span>
-            {status?.volcengine?.configured ? (
-              <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">
-                已配置 {status.volcengine.masked}
-              </span>
-            ) : (
+            {!status?.volcengine?.configured ? (
               <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] text-[var(--muted)]">
                 未配置
               </span>
-            )}
+            ) : null}
           </div>
           <div className="mt-3">
             <VolcCard status={status} onUpdated={onUpdated} />
@@ -495,12 +491,19 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
 function VolcCard({ status, onUpdated }) {
   const [key, setKey] = useState("");
   const [saving, setSaving] = useState(false);
+  const [editing, setEditing] = useState(false);
   const configured = status?.volcengine?.configured;
+  const masked = status?.volcengine?.masked || "";
   const canSave = Boolean(key.trim());
+
+  useEffect(() => {
+    if (!configured) setEditing(true);
+    else setEditing(false);
+  }, [configured]);
 
   const save = async () => {
     if (!key.trim()) {
-      toast.error(configured ? "已保存。若要更换，请粘贴新 Key 后再保存" : "请填写火山 API Key");
+      toast.error(configured ? "请粘贴新 Key 后再保存" : "请填写火山 API Key");
       return;
     }
     setSaving(true);
@@ -511,6 +514,7 @@ function VolcCard({ status, onUpdated }) {
         body: JSON.stringify({ VOLCENGINE_API_KEY: key.trim() }),
       });
       setKey("");
+      setEditing(false);
       onUpdated?.(data);
       toast.success(configured ? "火山 Key 已更新" : "火山 Key 已保存");
     } catch (e) {
@@ -520,31 +524,76 @@ function VolcCard({ status, onUpdated }) {
     }
   };
 
+  if (configured && !editing) {
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
+          已配置 {masked || "Key"}
+        </span>
+        <button
+          type="button"
+          className="provider-icon-btn"
+          title="编辑 Key"
+          aria-label="编辑 Key"
+          onClick={() => {
+            setKey("");
+            setEditing(true);
+          }}
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
       <input
         className="field sm:flex-1"
         type="password"
         autoComplete="off"
-        placeholder={configured ? "已保存，仅更换时粘贴新 Key" : "粘贴火山方舟 API Key"}
+        placeholder={configured ? "粘贴新 Key 以更换" : "粘贴火山方舟 API Key"}
         value={key}
         onChange={(e) => setKey(e.target.value)}
       />
-      {canSave || !configured ? (
+      <button
+        type="button"
+        className="provider-icon-btn provider-icon-btn-primary !min-h-[38px] !px-3"
+        disabled={saving || !canSave}
+        onClick={() => void save()}
+      >
+        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+        {configured ? "更新 Key" : "保存"}
+      </button>
+      {configured ? (
         <button
           type="button"
-          className="provider-icon-btn provider-icon-btn-primary !min-h-[38px] !px-3"
-          disabled={saving || !canSave}
-          onClick={() => void save()}
+          className="btn-secondary !min-h-[38px] !px-3 text-xs"
+          disabled={saving}
+          onClick={() => {
+            setKey("");
+            setEditing(false);
+          }}
         >
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          {configured ? "更新 Key" : "保存"}
+          取消
         </button>
-      ) : (
-        <span className="inline-flex min-h-[38px] items-center px-1 text-xs text-emerald-300/90">Key 已保存</span>
-      )}
+      ) : null}
     </div>
   );
+}
+
+function shortenUrl(url) {
+  const raw = String(url || "").trim();
+  if (!raw) return "";
+  try {
+    const u = new URL(raw);
+    const host = u.host || raw;
+    if (host.length <= 42) return host;
+    return `${host.slice(0, 18)}…${host.slice(-14)}`;
+  } catch {
+    if (raw.length <= 42) return raw;
+    return `${raw.slice(0, 18)}…${raw.slice(-14)}`;
+  }
 }
 
 function ComfyCard({ status, onUpdated }) {
@@ -553,11 +602,13 @@ function ComfyCard({ status, onUpdated }) {
   const [checkpoint, setCheckpoint] = useState(comfy.checkpoint || "");
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [editing, setEditing] = useState(!comfy.configured);
 
   useEffect(() => {
     setServerUrl(comfy.serverUrl || "");
     setCheckpoint(comfy.checkpoint || "");
-  }, [comfy.serverUrl, comfy.checkpoint]);
+    setEditing(!comfy.configured);
+  }, [comfy.serverUrl, comfy.checkpoint, comfy.configured]);
 
   const savedUrl = (comfy.serverUrl || "").replace(/\/$/, "");
   const draftUrl = serverUrl.trim().replace(/\/$/, "");
@@ -577,6 +628,7 @@ function ComfyCard({ status, onUpdated }) {
         body: JSON.stringify(payload),
       });
       onUpdated?.(data);
+      if (url) setEditing(false);
       toast.success(url ? "ComfyUI 已保存" : "已清空 ComfyUI 地址");
       return data;
     } catch (e) {
@@ -590,7 +642,7 @@ function ComfyCard({ status, onUpdated }) {
   const test = async () => {
     setTesting(true);
     try {
-      if (serverUrl.trim() && serverUrl.trim().replace(/\/$/, "") !== (comfy.serverUrl || "")) {
+      if (editing && serverUrl.trim() && serverUrl.trim().replace(/\/$/, "") !== (comfy.serverUrl || "")) {
         await save();
       }
       const data = await api("/api/settings/keys/test", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
@@ -614,19 +666,50 @@ function ComfyCard({ status, onUpdated }) {
   };
 
   const checkpoints = comfy.checkpoints || [];
+  const hasUrl = Boolean(savedUrl || draftUrl);
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <input
-          className="field sm:flex-1"
-          type="url"
-          autoComplete="off"
-          placeholder="粘贴智川云「自定义服务」地址，如 https://xxx.gpuhome.cc"
-          value={serverUrl}
-          onChange={(e) => setServerUrl(e.target.value)}
-        />
-        {canSave || !comfy.configured ? (
+      {comfy.configured && !editing ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <span
+            className="max-w-full truncate rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200"
+            title={savedUrl}
+          >
+            已配置 {shortenUrl(savedUrl)}
+          </span>
+          <button
+            type="button"
+            className="provider-icon-btn"
+            title="编辑地址"
+            aria-label="编辑地址"
+            onClick={() => {
+              setServerUrl(savedUrl);
+              setEditing(true);
+            }}
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+          <button type="button" className="btn-secondary !min-h-[38px] !px-3 text-xs" disabled={testing || !hasUrl} onClick={() => void test()}>
+            {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+            检测连通
+          </button>
+          {comfy.docs ? (
+            <a className="btn-secondary !min-h-[38px] !px-3 text-xs" href={comfy.docs} target="_blank" rel="noreferrer">
+              ComfyUI 文档
+            </a>
+          ) : null}
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <input
+            className="field sm:flex-1"
+            type="url"
+            autoComplete="off"
+            placeholder="粘贴智川云「自定义服务」地址，如 https://xxx.gpuhome.cc"
+            value={serverUrl}
+            onChange={(e) => setServerUrl(e.target.value)}
+          />
           <button
             type="button"
             className="provider-icon-btn provider-icon-btn-primary !min-h-[38px] !px-3"
@@ -636,19 +719,30 @@ function ComfyCard({ status, onUpdated }) {
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {comfy.configured ? "更新地址" : "保存"}
           </button>
-        ) : (
-          <span className="inline-flex min-h-[38px] items-center px-1 text-xs text-emerald-300/90">地址已保存</span>
-        )}
-        <button type="button" className="btn-secondary !min-h-[38px] !px-3 text-xs" disabled={testing || !serverUrl.trim()} onClick={() => void test()}>
-          {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
-          检测连通
-        </button>
-        {comfy.docs ? (
-          <a className="btn-secondary !min-h-[38px] !px-3 text-xs" href={comfy.docs} target="_blank" rel="noreferrer">
-            ComfyUI 文档
-          </a>
-        ) : null}
-      </div>
+          {comfy.configured ? (
+            <button
+              type="button"
+              className="btn-secondary !min-h-[38px] !px-3 text-xs"
+              disabled={saving}
+              onClick={() => {
+                setServerUrl(savedUrl);
+                setEditing(false);
+              }}
+            >
+              取消
+            </button>
+          ) : null}
+          <button type="button" className="btn-secondary !min-h-[38px] !px-3 text-xs" disabled={testing || !draftUrl} onClick={() => void test()}>
+            {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+            检测连通
+          </button>
+          {comfy.docs ? (
+            <a className="btn-secondary !min-h-[38px] !px-3 text-xs" href={comfy.docs} target="_blank" rel="noreferrer">
+              ComfyUI 文档
+            </a>
+          ) : null}
+        </div>
+      )}
       {checkpoints.length ? (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[11px] text-white/35">Checkpoint</span>

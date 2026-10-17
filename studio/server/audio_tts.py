@@ -74,13 +74,21 @@ def _edge_tts_cli(text: str, out_path: Path, voice: str = "zh-CN-XiaoxiaoNeural"
         return False
 
 
-def _openai_compatible_speech(text: str, out_path: Path, *, voice: str | None = None) -> dict | None:
+def _openai_compatible_speech(
+    text: str,
+    out_path: Path,
+    *,
+    voice: str | None = None,
+    model: str | None = None,
+) -> dict | None:
     """Call /audio/speech on any OpenAI-compatible base (not only api.openai.com)."""
     api_key = get_secret("OPENAI_API_KEY") or get_secret("OPENAI_TTS_API_KEY")
     if not api_key:
         return None
     base = (get_secret("OPENAI_TTS_BASE_URL") or get_secret("OPENAI_BASE_URL") or "https://api.openai.com/v1").rstrip("/")
-    model = get_secret("OPENAI_TTS_MODEL") or "gpt-4o-mini-tts"
+    model = model or get_secret("STUDIO_TTS_MODEL") or get_secret("OPENAI_TTS_MODEL") or "gpt-4o-mini-tts"
+    if model in {"multi", "auto"}:
+        model = get_secret("OPENAI_TTS_MODEL") or "gpt-4o-mini-tts"
     speech_voice = voice or get_secret("OPENAI_TTS_VOICE") or "alloy"
     import json
     import urllib.error
@@ -106,29 +114,123 @@ def _openai_compatible_speech(text: str, out_path: Path, *, voice: str | None = 
     return None
 
 
+def tts_preference() -> tuple[str, str]:
+    """Sticky header choice: (backend, model). auto → edge multi-voice."""
+    backend = (get_secret("STUDIO_TTS_BACKEND") or "auto").strip().lower() or "auto"
+    model = (get_secret("STUDIO_TTS_MODEL") or "").strip()
+    if backend in {"", "auto"}:
+        return "edge", model or "multi"
+    return backend, model
+
+
+def _edge_speech(text: str, out_path: Path, voice_id: str) -> dict | None:
+    try:
+        asyncio.run(_edge_tts_save(text, out_path, voice=voice_id))
+        if out_path.is_file() and out_path.stat().st_size > 0:
+            return {"provider": "edge-tts", "path": str(out_path), "bytes": out_path.stat().st_size, "voice": voice_id}
+    except Exception as exc:
+        logger.warning("edge-tts python failed: %s", exc)
+    if _edge_tts_cli(text, out_path, voice=voice_id):
+        return {"provider": "edge-tts-cli", "path": str(out_path), "bytes": out_path.stat().st_size, "voice": voice_id}
+    return None
+
+
+def _indextts_speech(text: str, out_path: Path, *, speaker: str | None = None) -> dict:
+    """IndexTTS2 HTTP. Prefers OpenAI-compatible /v1/audio/speech, then /tts."""
+    import json
+    import urllib.error
+    import urllib.request
+
+    base = (get_secret("INDEXTTS_BASE_URL") or "").rstrip("/")
+    if not base:
+        raise RuntimeError(
+            "已选择 IndexTTS2，但未配置 INDEXTTS_BASE_URL。"
+            "在模型配置里填写 IndexTTS2 服务地址后再配音。"
+        )
+    model = get_secret("STUDIO_TTS_MODEL") or "IndexTTS2"
+    key = get_secret("INDEXTTS_API_KEY") or ""
+    headers = {"Content-Type": "application/json"}
+    if key:
+        headers["Authorization"] = f"Bearer {key}"
+    payloads = [
+        (
+            f"{base}/v1/audio/speech",
+            {"model": model or "IndexTTS2", "voice": speaker or "default", "input": text[:4000]},
+        ),
+        (
+            f"{base}/tts",
+            {"text": text[:4000], "speaker": speaker or "default", "model": model or "IndexTTS2"},
+        ),
+    ]
+    last = "IndexTTS2 无响应"
+    for url, body in payloads:
+        req = urllib.request.Request(url, data=json.dumps(body).encode("utf-8"), headers=headers, method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=180) as resp:
+                raw = resp.read()
+                ctype = (resp.headers.get("Content-Type") or "").lower()
+            if raw[:1] in (b"{", b"["):
+                data = json.loads(raw.decode("utf-8", errors="replace"))
+                audio_url = str(data.get("url") or data.get("audio_url") or data.get("audio") or "")
+                if audio_url.startswith("http"):
+                    with urllib.request.urlopen(audio_url, timeout=180) as audio_resp:
+                        raw = audio_resp.read()
+                else:
+                    last = str(data.get("error") or data.get("message") or "IndexTTS2 未返回音频")[:200]
+                    continue
+            if raw and len(raw) > 64:
+                out_path.write_bytes(raw)
+                return {
+                    "provider": "indextts",
+                    "path": str(out_path),
+                    "bytes": out_path.stat().st_size,
+                    "model": model or "IndexTTS2",
+                    "url": url,
+                }
+        except urllib.error.HTTPError as exc:
+            last = f"IndexTTS2 HTTP {exc.code}: {exc.read().decode('utf-8', errors='replace')[:180]}"
+            logger.warning(last)
+        except Exception as exc:
+            last = str(exc)[:200]
+            logger.warning("IndexTTS2 failed: %s", exc)
+    raise RuntimeError(last)
+
+
 def synthesize_mp3(text: str, out_path: Path, *, voice: str | None = None) -> dict:
-    """Single-voice TTS (legacy / narrator). Prefer synthesize_dialogue_mp3 for short drama."""
+    """Single-voice TTS. Backend follows the header switcher (sticky)."""
     out_path.parent.mkdir(parents=True, exist_ok=True)
     cleaned = (text or "").strip()
     if not cleaned:
         raise RuntimeError("没有可合成的文本")
 
+    backend, model = tts_preference()
     voice_id = voice or get_secret("EDGE_TTS_VOICE") or "zh-CN-XiaoxiaoNeural"
+    if backend == "edge" and model and model not in {"multi", "auto"}:
+        voice_id = voice or model
 
-    try:
-        asyncio.run(_edge_tts_save(cleaned, out_path, voice=voice_id))
-        if out_path.is_file() and out_path.stat().st_size > 0:
-            return {"provider": "edge-tts", "path": str(out_path), "bytes": out_path.stat().st_size, "voice": voice_id}
-    except Exception as exc:
-        logger.warning("edge-tts python failed: %s", exc)
+    if backend == "indextts":
+        return _indextts_speech(cleaned, out_path, speaker=voice or model or "default")
 
-    if _edge_tts_cli(cleaned, out_path, voice=voice_id):
-        return {"provider": "edge-tts-cli", "path": str(out_path), "bytes": out_path.stat().st_size, "voice": voice_id}
+    if backend == "openai":
+        speech = _openai_compatible_speech(cleaned, out_path, voice=voice, model=model or None)
+        if speech:
+            speech["model"] = model or get_secret("OPENAI_TTS_MODEL") or "gpt-4o-mini-tts"
+            return speech
+        raise RuntimeError("已选择 OpenAI 配音，但 /audio/speech 未成功。请检查 OPENAI_API_KEY 与 OPENAI_TTS_MODEL。")
 
+    edge = _edge_speech(cleaned, out_path, voice_id)
+    if edge:
+        return edge
+    # auto only: fall through when Edge is down
+    if backend in {"", "auto", "edge"} and backend != "edge":
+        speech = _openai_compatible_speech(cleaned, out_path)
+        if speech:
+            return speech
+    if backend == "edge":
+        raise RuntimeError(f"Edge 配音失败（音色 {voice_id}）。")
     speech = _openai_compatible_speech(cleaned, out_path)
     if speech:
         return speech
-
     raise RuntimeError(
         "配音失败：edge-tts 不可用，且 OpenAI 兼容 TTS 未成功。"
         "可配置 OPENAI_API_KEY + OPENAI_BASE_URL（需支持 /audio/speech），或跳过配音。"
@@ -237,24 +339,35 @@ def synthesize_dialogue_mp3(lines: list[dict[str, Any]], out_path: Path) -> dict
         tmp_path = Path(tmp)
         parts: list[Path] = []
         voices_used: list[str] = []
+        backend, model = tts_preference()
         for i, line in enumerate(cleaned):
-            voice = pick_voice_for_speaker(line["speaker"], known=voice_map)
+            if backend == "edge" and model not in {"", "multi", "auto"}:
+                voice = model
+            elif backend == "indextts":
+                voice = line["speaker"]
+            elif backend == "openai":
+                voice = get_secret("OPENAI_TTS_VOICE") or "alloy"
+            else:
+                voice = pick_voice_for_speaker(line["speaker"], known=voice_map)
             voices_used.append(f"{line['speaker']}={voice}")
             part = tmp_path / f"{i:03d}.mp3"
             # Speak the line only — never prefix with "角色说：" (that becomes narration).
-            synthesize_mp3(line["text"], part, voice=voice)
+            meta = synthesize_mp3(line["text"], part, voice=voice)
             parts.append(part)
+        provider = (meta or {}).get("provider") or backend
         if len(parts) == 1:
             out_path.write_bytes(parts[0].read_bytes())
         else:
             _ffmpeg_concat_mp3(parts, out_path, gap_ms=320)
     return {
-        "provider": "edge-tts-dialogue",
+        "provider": provider,
         "path": str(out_path),
         "bytes": out_path.stat().st_size if out_path.is_file() else 0,
         "lines": len(cleaned),
         "voices": voices_used[:12],
         "mode": "dialogue",
+        "ttsBackend": backend,
+        "ttsModel": model,
     }
 
 

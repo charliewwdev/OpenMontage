@@ -487,6 +487,78 @@ def _studio_video_models(
     return out
 
 
+def _studio_audio_models() -> list[dict[str, Any]]:
+    """Dubbing models for the studio header switcher."""
+    out: list[dict[str, Any]] = [
+        {
+            "id": "edge:multi",
+            "backend": "edge",
+            "model": "multi",
+            "label": "Edge · 按角色分音色",
+            "group": "Edge TTS",
+        },
+        {
+            "id": "edge:zh-CN-XiaoxiaoNeural",
+            "backend": "edge",
+            "model": "zh-CN-XiaoxiaoNeural",
+            "label": "Edge · 晓晓",
+            "group": "Edge TTS",
+        },
+        {
+            "id": "edge:zh-CN-YunxiNeural",
+            "backend": "edge",
+            "model": "zh-CN-YunxiNeural",
+            "label": "Edge · 云希",
+            "group": "Edge TTS",
+        },
+        {
+            "id": "edge:zh-CN-YunjianNeural",
+            "backend": "edge",
+            "model": "zh-CN-YunjianNeural",
+            "label": "Edge · 云健",
+            "group": "Edge TTS",
+        },
+        {
+            "id": "edge:zh-CN-XiaoyiNeural",
+            "backend": "edge",
+            "model": "zh-CN-XiaoyiNeural",
+            "label": "Edge · 晓伊",
+            "group": "Edge TTS",
+        },
+    ]
+    if get_secret("OPENAI_API_KEY") or get_secret("OPENAI_TTS_API_KEY"):
+        active = get_secret("OPENAI_TTS_MODEL") or "gpt-4o-mini-tts"
+        seen: set[str] = set()
+        for mid, label in (
+            (active, f"OpenAI · {active}"),
+            ("gpt-4o-mini-tts", "OpenAI · gpt-4o-mini-tts"),
+            ("tts-1-hd", "OpenAI · tts-1-hd"),
+            ("tts-1", "OpenAI · tts-1"),
+        ):
+            if not mid or mid in seen:
+                continue
+            seen.add(mid)
+            out.append(
+                {
+                    "id": f"openai:{mid}",
+                    "backend": "openai",
+                    "model": mid,
+                    "label": label,
+                    "group": "OpenAI TTS",
+                }
+            )
+    out.append(
+        {
+            "id": "indextts:IndexTTS2",
+            "backend": "indextts",
+            "model": "IndexTTS2",
+            "label": "IndexTTS2",
+            "group": "IndexTTS",
+        }
+    )
+    return out
+
+
 def public_status() -> dict[str, Any]:
     providers = [_provider_public(item) for item in LLM_PROVIDERS]
     configured = [p for p in providers if p["configured"]]
@@ -548,6 +620,12 @@ def public_status() -> dict[str, Any]:
         "videoBackend": _video_backend_id(volc_key),
         "imageBackendPref": (get_secret("STUDIO_IMAGE_BACKEND") or "auto").lower() or "auto",
         "videoBackendPref": (get_secret("STUDIO_VIDEO_BACKEND") or "auto").lower() or "auto",
+        "ttsBackendPref": (get_secret("STUDIO_TTS_BACKEND") or "auto").lower() or "auto",
+        "ttsModel": get_secret("STUDIO_TTS_MODEL") or "",
+        "indextts": {
+            "configured": bool(get_secret("INDEXTTS_BASE_URL")),
+            "baseUrl": get_secret("INDEXTTS_BASE_URL") or "",
+        },
         "mediaQa": (get_secret("STUDIO_MEDIA_QA") or "1").strip() not in {"0", "false", "off", "no"},
         "imageBackendsAvailable": [
             *(["seedream"] if volc_key else []),
@@ -569,6 +647,7 @@ def public_status() -> dict[str, Any]:
         "seedanceModel": seedance,
         "imageModels": _studio_image_models(volc_key, seedream, comfy),
         "videoModels": _studio_video_models(volc_key, seedance, comfy),
+        "audioModels": _studio_audio_models(),
         "storage": "postgres" if _pg_enabled() else "disk",
         "ready": llm_ready
         and (

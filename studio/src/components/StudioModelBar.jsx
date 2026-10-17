@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, ChevronDown, Image as ImageIcon, ShieldCheck, Video } from "lucide-react";
+import { Check, ChevronDown, Image as ImageIcon, Mic2, ShieldCheck, Video } from "lucide-react";
 import { api } from "../api";
 import { toast } from "../lib/toast";
 import { useLocale } from "../lib/i18n";
@@ -46,6 +46,16 @@ function resolveVideoValue(keys) {
       "MiniMax-Hailuo-02 / H3";
     return `comfyui:${mid}`;
   }
+  return pref;
+}
+
+function resolveAudioValue(keys) {
+  const pref = (keys?.ttsBackendPref || "auto").toLowerCase();
+  const model = keys?.ttsModel || "";
+  if (pref === "auto" || !pref) return "auto";
+  if (pref === "edge") return model && model !== "multi" ? `edge:${model}` : "edge:multi";
+  if (pref === "openai") return model ? `openai:${model}` : "openai:gpt-4o-mini-tts";
+  if (pref === "indextts") return model ? `indextts:${model}` : "indextts:IndexTTS2";
   return pref;
 }
 
@@ -114,15 +124,19 @@ export function StudioModelBar({ config, onChanged }) {
     return list;
   }, [keys, config?.seedanceModels]);
 
+  const audioModels = keys?.audioModels || [];
   const imageGroups = useMemo(() => groupModels(imageModels), [imageModels]);
   const videoGroups = useMemo(() => groupModels(videoModels), [videoModels]);
+  const audioGroups = useMemo(() => groupModels(audioModels), [audioModels]);
 
   const imageValue = resolveImageValue(keys);
   const videoValue = resolveVideoValue(keys);
+  const audioValue = resolveAudioValue(keys);
   const mediaQa = keys?.mediaQa !== false;
 
   const imageTrigger = labelFor(imageModels, imageValue === "auto" ? "" : imageValue, t("studio_model_auto"));
   const videoTrigger = labelFor(videoModels, videoValue === "auto" ? "" : videoValue, t("studio_model_auto"));
+  const audioTrigger = labelFor(audioModels, audioValue === "auto" ? "" : audioValue, t("studio_model_auto"));
 
   const save = async (payload) => {
     setBusy(true);
@@ -201,6 +215,20 @@ export function StudioModelBar({ config, onChanged }) {
     }
   };
 
+  const onPickAudio = (raw) => {
+    if (raw === "auto") {
+      void save({ STUDIO_TTS_BACKEND: "auto", STUDIO_TTS_MODEL: "multi" });
+      return;
+    }
+    const idx = raw.indexOf(":");
+    const backend = idx >= 0 ? raw.slice(0, idx) : raw;
+    const model = idx >= 0 ? raw.slice(idx + 1) : "";
+    void save({
+      STUDIO_TTS_BACKEND: backend,
+      ...(model ? { STUDIO_TTS_MODEL: model } : {}),
+    });
+  };
+
   const activeImageLabel =
     imageValue === "auto"
       ? `${t("studio_model_auto")} · ${keys?.imageBackend || caps.imageBackend || "—"}`
@@ -209,12 +237,16 @@ export function StudioModelBar({ config, onChanged }) {
     videoValue === "auto"
       ? `${t("studio_model_auto")} · ${keys?.videoBackend || caps.videoBackend || "—"}`
       : labelFor(videoModels, videoValue, keys?.videoBackend || "—");
+  const activeAudioLabel =
+    audioValue === "auto"
+      ? `${t("studio_model_auto")} · Edge`
+      : labelFor(audioModels, audioValue, keys?.ttsBackendPref || "—");
 
   return (
     <div className="relative">
       <button
         type="button"
-        className="btn-secondary !min-h-9 max-w-[240px] gap-1.5 !px-2.5 text-[11px]"
+        className="btn-secondary !min-h-9 max-w-[340px] gap-1.5 !px-2.5 text-[11px]"
         onClick={() => setOpen((v) => !v)}
         title={t("studio_model_switcher_title")}
       >
@@ -223,13 +255,16 @@ export function StudioModelBar({ config, onChanged }) {
         <span className="text-white/25">/</span>
         <Video className="h-3.5 w-3.5 shrink-0 opacity-70" />
         <span className="truncate">{videoValue === "auto" ? t("studio_model_auto") : videoTrigger}</span>
+        <span className="text-white/25">/</span>
+        <Mic2 className="h-3.5 w-3.5 shrink-0 opacity-70" />
+        <span className="truncate">{audioValue === "auto" ? t("studio_model_auto") : audioTrigger}</span>
         <ChevronDown className="h-3 w-3 shrink-0 opacity-50" />
       </button>
 
       {open ? (
         <>
           <button type="button" className="fixed inset-0 z-40 cursor-default" aria-label="close" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full z-50 mt-2 w-[320px] rounded-2xl border border-white/10 bg-[#12141c] p-3 shadow-[0_20px_60px_rgba(0,0,0,.55)]">
+          <div className="absolute right-0 top-full z-50 mt-2 w-[340px] rounded-2xl border border-white/10 bg-[#12141c] p-3 shadow-[0_20px_60px_rgba(0,0,0,.55)]">
             <div className="mb-2 text-[11px] font-semibold text-white/80">{t("studio_model_switcher_title")}</div>
             <p className="mb-3 text-[10px] leading-4 text-white/40">{t("studio_model_switcher_hint")}</p>
 
@@ -278,6 +313,33 @@ export function StudioModelBar({ config, onChanged }) {
               </select>
               <span className="mt-1 block text-[10px] text-white/35">
                 {t("studio_model_active")}: {activeVideoLabel}
+              </span>
+            </label>
+
+            <label className="mb-3 block">
+              <span className="label !mb-1">{t("studio_model_audio_label")}</span>
+              <select
+                className="field !py-2 text-sm"
+                disabled={busy}
+                value={audioModels.some((m) => m.id === audioValue) || audioValue === "auto" ? audioValue : "auto"}
+                onChange={(e) => onPickAudio(e.target.value)}
+              >
+                <option value="auto">{t("studio_model_auto")}</option>
+                {audioGroups.map((g) => (
+                  <optgroup key={g.name} label={g.name}>
+                    {g.items.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              <span className="mt-1 block text-[10px] text-white/35">
+                {t("studio_model_active")}: {activeAudioLabel}
+                {audioValue.startsWith("indextts:") && keys?.indextts && !keys.indextts.configured
+                  ? ` · ${t("studio_model_indextts_need_url")}`
+                  : ""}
               </span>
             </label>
 

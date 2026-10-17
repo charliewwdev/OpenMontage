@@ -245,6 +245,10 @@ def all_secret_envs() -> tuple[str, ...]:
             # Studio generation prefs (not secrets; stored alongside keys for BYOK scope)
             "STUDIO_IMAGE_BACKEND",  # auto | seedream | comfyui
             "STUDIO_VIDEO_BACKEND",  # auto | seedance | comfyui
+            "STUDIO_TTS_BACKEND",  # auto | edge | openai | indextts
+            "STUDIO_TTS_MODEL",
+            "INDEXTTS_BASE_URL",
+            "INDEXTTS_API_KEY",
             "STUDIO_MEDIA_QA",  # 1 | 0 — prompt-fit QA after generate
             "STUDIO_QA_MIN_SCORE",
             "STUDIO_ENTITY_QA_MAX_ATTEMPTS",

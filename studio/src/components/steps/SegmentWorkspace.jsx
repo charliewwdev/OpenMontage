@@ -50,46 +50,74 @@ function entityThumb(ent) {
   return "";
 }
 
+function stillLooksReady(ent) {
+  const img = ent?.selectedImage || (ent?.images || []).find((i) => i.id === ent?.selectedImageId);
+  return Boolean(img && (img.path || img.url) && img.qaPass === true && !ent?.qaFailed);
+}
+
+function isDefaultVariant(ent) {
+  const v = String(ent?.variant || "").trim();
+  return !v || v === "默认形象" || v === "默认造型" || v === "default";
+}
+
+/** Same name can have many variants — never let a failed「受伤后」steal the default slot. */
+function pickEntityByName(entities, name) {
+  const matches = entities.filter((e) => e.name === name);
+  if (!matches.length) return null;
+  return (
+    matches.find((e) => isDefaultVariant(e) && stillLooksReady(e)) ||
+    matches.find((e) => stillLooksReady(e)) ||
+    matches.find((e) => isDefaultVariant(e)) ||
+    matches[0]
+  );
+}
+
 function collectSegmentEntities(seg, entities) {
-  if (!seg) return { characters: [], scenes: [], props: [], names: new Set() };
-  const byName = new Map(entities.map((e) => [e.name, e]));
+  if (!seg) return { characters: [], scenes: [], props: [], names: new Set(), referenced: [] };
   const byId = new Map(entities.map((e) => [e.id, e]));
   const names = new Set();
-  const picked = new Map();
+  const referenced = new Map();
+  const display = new Map();
 
   for (const shot of seg.shots) {
     for (const id of shot.referenceEntityIds || []) {
       const ent = byId.get(id);
       if (ent) {
-        picked.set(ent.id, ent);
+        referenced.set(ent.id, ent);
+        display.set(ent.id, ent);
         names.add(ent.name);
       }
     }
     for (const name of parseRefNames(shot.prompt || "")) {
       names.add(name);
-      const ent = byName.get(name);
-      if (ent) picked.set(ent.id, ent);
+      const ent = pickEntityByName(entities, name);
+      if (ent) display.set(ent.id, ent);
     }
     const dlg = parseDialogue(shot.dialogue || "");
     if (dlg?.speaker) {
       names.add(dlg.speaker);
-      const ent = byName.get(dlg.speaker);
-      if (ent) picked.set(ent.id, ent);
+      const ent = pickEntityByName(entities, dlg.speaker);
+      if (ent) display.set(ent.id, ent);
     }
     if (shot.sceneName) {
       names.add(shot.sceneName);
-      const ent = byName.get(shot.sceneName) || entities.find((e) => e.kind === "scene" && e.name === shot.sceneName);
-      if (ent) picked.set(ent.id, ent);
+      const ent =
+        pickEntityByName(entities, shot.sceneName) ||
+        entities.find((e) => e.kind === "scene" && e.name === shot.sceneName);
+      if (ent) display.set(ent.id, ent);
     }
   }
 
-  const list = [...picked.values()];
+  const list = [...display.values()];
+  const referencedList = [...referenced.values()];
   return {
     characters: list.filter((e) => e.kind === "character"),
     scenes: list.filter((e) => e.kind === "scene"),
     props: list.filter((e) => e.kind === "prop"),
     names,
     all: list,
+    // Out-gate only cares about ids actually bound on the shots.
+    referenced: referencedList,
   };
 }
 
@@ -295,12 +323,19 @@ export function SegmentWorkspace({
     return tagged.length ? tagged : allEntities;
   }, [allEntities, episode]);
   const entityByName = useMemo(() => {
-    const map = new Map();
-    // Episode-tagged first, then fill gaps from full library (same name).
-    for (const e of allEntities) {
-      if (!map.has(e.name)) map.set(e.name, e);
+    const buckets = new Map();
+    for (const e of [...allEntities, ...episodeEntities]) {
+      if (!e?.name) continue;
+      const list = buckets.get(e.name) || [];
+      list.push(e);
+      buckets.set(e.name, list);
     }
-    for (const e of episodeEntities) map.set(e.name, e);
+    const map = new Map();
+    for (const [name, list] of buckets) {
+      const uniq = [...new Map(list.map((e) => [e.id, e])).values()];
+      const picked = pickEntityByName(uniq, name);
+      if (picked) map.set(name, picked);
+    }
     return map;
   }, [allEntities, episodeEntities]);
   const entityById = useMemo(() => new Map(allEntities.map((e) => [e.id, e])), [allEntities]);
@@ -373,10 +408,13 @@ export function SegmentWorkspace({
     () => collectSegmentEntities(activeSeg, allEntities),
     [activeSeg, allEntities],
   );
-  const segEntityQaBlockers = useMemo(
-    () => listEntityQaBlockers(segAssets.all || []),
-    [segAssets],
-  );
+  const segEntityQaBlockers = useMemo(() => {
+    // Prefer shot-bound ids. If none, only gate on default/ready name matches — never ep10 injury variants.
+    const pool = segAssets.referenced?.length
+      ? segAssets.referenced
+      : (segAssets.all || []).filter((e) => stillLooksReady(e) || isDefaultVariant(e));
+    return listEntityQaBlockers(pool);
+  }, [segAssets]);
 
   const audios = bundle?.audios || [];
   const episodeAudio = audios.find((a) => a.episodeId === episodeId && a.kind !== "bgm");

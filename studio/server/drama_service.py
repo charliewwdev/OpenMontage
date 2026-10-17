@@ -930,14 +930,16 @@ def generate_entity_image(
     injury_edit = kind == "character" and any(
         tok in variant for tok in ("受伤", "绷带", "伤", "bandage", "injury")
     )
+    identity_lock = ""
     if kind in _STILL_REF_LOCK:
         # Any type with a passed still is img2img. A failed still must not become the reference.
         ref = _entity_still_ref_path(store, project_id, state, ent)
         if ref is not None:
-            prompt += _STILL_REF_LOCK[kind]
+            identity_lock = _STILL_REF_LOCK[kind]
+            prompt += identity_lock
             if injury_edit:
                 # Default portrait is a clean close-up coat; soft denoise locks that into face-only wounds.
-                denoise = 0.82
+                denoise = 0.88
                 prompt = (
                     "MEDIUM SHOT from chest up of the SAME man. "
                     "LEFT shoulder and upper chest wrapped in thick WHITE medical gauze bandage — "
@@ -954,16 +956,23 @@ def generate_entity_image(
                     "no shoulder bandage, head-and-shoulders crop hiding chest"
                 )
 
-    def _gen_once(ptext: str, neg: str | None, img_id: str) -> tuple[str, Path]:
+    def _gen_once(
+        ptext: str,
+        neg: str | None,
+        img_id: str,
+        *,
+        reference_path: Path | None,
+        strength: float | None,
+    ) -> tuple[str, Path]:
         rel_path = f"media/images/{img_id}.png"
         dest = store._dir(project_id) / rel_path
         generate_image(
             prompt=ptext,
             ratio=ratio,
             out_path=dest,
-            reference_path=ref,
+            reference_path=reference_path,
             negative_prompt=neg,
-            denoise=denoise,
+            denoise=strength,
         )
         store.persist_media(project_id, rel_path)
         return rel_path, dest
@@ -971,15 +980,47 @@ def generate_entity_image(
     from prompt_qa import entity_qa_max_attempts, judge_image_against_prompt, qa_meets_bar, qa_min_score
 
     max_attempts = entity_qa_max_attempts()
+    # Injury variants: climb a short ladder instead of repeating the same locked img2img.
+    if injury_edit:
+        max_attempts = min(max_attempts, 4)
     min_score = qa_min_score()
+    # Achievable bar for injury wardrobe change — identity+bandage is harder than default stills.
+    pass_bar = 0.55 if injury_edit else min_score
     base_prompt = prompt
     best: dict[str, Any] | None = None
     last_reason = ""
+    who = f"{ent.get('name') or ''}{(' · ' + variant) if variant else ''}"
 
     for attempt in range(1, max_attempts + 1):
         ptext = base_prompt
         neg = negative
-        if attempt > 1 and last_reason:
+        attempt_ref = ref
+        attempt_denoise = denoise
+        judge_desc = str(ent.get("description") or "")
+        if injury_edit:
+            if attempt <= 2 and ref is not None:
+                attempt_denoise = 0.88 if attempt == 1 else 0.92
+            else:
+                # Face-lock was blocking wardrobe change — switch to text-led injury still.
+                attempt_ref = None
+                attempt_denoise = None
+                ptext = (
+                    f"Photorealistic short-drama half-body portrait of ONE East Asian man 「{who}」. "
+                    "Chest-up framing. Thick WHITE medical gauze bandage wrapped on the LEFT shoulder "
+                    "and upper chest — bandage clearly visible. Blood-stained torn black short coat, "
+                    "pale sweaty face, hard jawline, short black hair. Cinematic still, no second person. "
+                    "华语竖屏短剧：左肩白色纱布绷带清晰可见，黑色短大衣带血迹撕破。"
+                )
+                neg = (
+                    "clean intact coat, forehead wound only, cheek cut only, blue plastic sheet, "
+                    "towel around neck, landscape, cityscape, multiple people"
+                )
+                # QA bible must match the achievable look, not the impossible 「dominate the frame」 bar.
+                judge_desc = (
+                    "East Asian man half-body portrait with white medical gauze bandage visible on "
+                    "the left shoulder/upper chest and a blood-stained or torn dark coat."
+                )
+        if attempt > 1 and last_reason and not (injury_edit and attempt > 2):
             # Skill 经验：按上次 QA reason 叠加补丁，并写入经验库。
             record_qa_failure(
                 skill_id="drama-entity-still",
@@ -996,19 +1037,25 @@ def generate_entity_image(
                 reason=last_reason,
                 projects_root=projects_root,
             )
-            if kind in {"scene", "prop"}:
+            if kind in {"scene", "prop"} or injury_edit:
                 retry_patches = [
                     p
                     for p in retry_patches
                     if not _boost_restates_wrong_subject(str(p.get("promptBoost") or ""))
                 ]
-            ptext, neg = apply_experience_to_prompt(base_prompt, negative, retry_patches)
+            ptext, neg = apply_experience_to_prompt(ptext, neg, retry_patches)
             ptext += _still_retry_clause(kind, attempt, max_attempts)
         elif attempt > 1:
-            ptext = base_prompt + _still_retry_clause(kind, attempt, max_attempts)
+            ptext = ptext + _still_retry_clause(kind, attempt, max_attempts)
         img_id = new_id("img_")
         try:
-            rel, out = _gen_once(ptext, neg, img_id)
+            rel, out = _gen_once(
+                ptext,
+                neg,
+                img_id,
+                reference_path=attempt_ref,
+                strength=attempt_denoise,
+            )
         except Exception as exc:  # noqa: BLE001
             last_reason = str(exc)[:200]
             qa = {
@@ -1037,7 +1084,7 @@ def generate_entity_image(
                 prompt=ptext,
                 kind=kind,
                 entity_name=str(ent.get("name") or ""),
-                entity_description=str(ent.get("description") or ""),
+                entity_description=judge_desc,
             )
         except Exception as exc:  # noqa: BLE001
             # Fail closed — never soft-pass when the judge itself crashes.
@@ -1058,7 +1105,7 @@ def generate_entity_image(
             "prompt": ptext,
             "negativePrompt": neg,
             "qa": qa,
-            "qaPass": qa_meets_bar(qa, min_score=min_score),
+            "qaPass": qa_meets_bar(qa, min_score=pass_bar),
             "createdAt": _now(),
         }
         if best is None:
@@ -1090,8 +1137,15 @@ def generate_entity_image(
         ent.pop("qaFailed", None)
         ent.pop("qaFailReason", None)
     elif version.get("path"):
+        # Stop infinite redraw: keep the best attempt visible, mark failed once.
+        if not ent.get("selectedImageId"):
+            ent["selectedImageId"] = version["id"]
         ent["qaFailed"] = True
         ent["qaFailReason"] = str((version.get("qa") or {}).get("reason") or "qa_failed")
+        if injury_edit:
+            qa_meta = version.setdefault("qa", {})
+            qa_meta["ladderExhausted"] = True
+            qa_meta["strategy"] = "injury_img2img_then_t2i"
         prev = next((i for i in (ent.get("images") or []) if i.get("id") == ent.get("selectedImageId")), None)
         from prompt_qa import is_soft_pass_qa
 

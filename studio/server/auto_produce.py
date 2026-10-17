@@ -221,6 +221,33 @@ def ensure_auto_produce_worker(store: ProjectStore, project_id: str) -> dict[str
     return get_job(store, project_id)
 
 
+def cancel_auto_produce(
+    store: ProjectStore,
+    project_id: str,
+    *,
+    reason: str = "已暂停：先修好剧本/分镜/定妆再出片",
+) -> dict[str, Any]:
+    """Stop idle resume loops so entity fixes can run without the video worker thrashing."""
+    job = get_job(store, project_id)
+    if not job:
+        raise FileNotFoundError("no auto-produce job")
+    if job.get("status") not in {"running", "queued"}:
+        return job
+    job["status"] = "paused"
+    job["error"] = reason
+    _set_step(job, str(job.get("step") or "videos"), "pending", reason)
+    _log(job, reason, ok=False)
+    _save_job(store, project_id, job)
+    return job
+
+
+def _job_cancelled(store: ProjectStore, project_id: str, job_id: str) -> bool:
+    fresh = get_job(store, project_id) or {}
+    if str(fresh.get("id") or "") != str(job_id or ""):
+        return True
+    return fresh.get("status") in {"paused", "cancelled", "failed"}
+
+
 def _save_job(store: ProjectStore, project_id: str, job: dict[str, Any]) -> dict[str, Any]:
     state = store.load(project_id)
     if not state:
@@ -344,17 +371,21 @@ def start_auto_produce(store: ProjectStore, project_id: str, options: dict[str, 
         "requireVideoQa": bool((options or {}).get("requireVideoQa", True)),
     }
 
-    # Resume a failed job from the first unfinished step, keeping prior done work.
-    if (options or {}).get("resume") and existing.get("status") == "failed" and existing.get("steps"):
+    # Resume a failed/paused job from the first unfinished step, keeping prior done work.
+    if (options or {}).get("resume") and existing.get("status") in {"failed", "paused"} and existing.get("steps"):
         job = dict(existing)
         job["options"] = {**(existing.get("options") or {}), **opts}
         job["status"] = "running"
         job["error"] = None
         for step in job.get("steps") or []:
+            if step.get("status") in {"failed", "pending"} and step.get("id") == (existing.get("step") or step.get("id")):
+                step["status"] = "pending"
+                if "暂停" in str(step.get("detail") or "") or "先修" in str(step.get("detail") or ""):
+                    step["detail"] = ""
             if step.get("status") == "failed":
                 step["status"] = "pending"
                 step["detail"] = ""
-        _log(job, "从失败步骤续跑全流程…")
+        _log(job, "从暂停/失败步骤续跑全流程…")
         _save_job(store, project_id, job)
         _spawn_worker(store, project_id, str(job.get("id") or ""))
         return job
@@ -851,6 +882,9 @@ def _run_pipeline(store: ProjectStore, project_id: str, job_id: str) -> None:
                 remaining = list(segment_jobs)
                 cycles = 0
                 while remaining:
+                    if _job_cancelled(store, project_id, job_id):
+                        _log(job, "全流程已暂停，停止出片循环")
+                        return
                     cycles += 1
                     deferred: list[dict[str, Any]] = []
                     state = store.load(project_id) or {}
@@ -858,6 +892,9 @@ def _run_pipeline(store: ProjectStore, project_id: str, job_id: str) -> None:
                         e["id"]: e for e in (state.get("entities") or []) if not e.get("deletedAt")
                     }
                     for job_seg in remaining:
+                        if _job_cancelled(store, project_id, job_id):
+                            _log(job, "全流程已暂停，停止出片循环")
+                            return
                         so = int(job_seg.get("segmentOrder") or 0)
                         eid = str(job_seg.get("episodeId") or "")
                         epn = job_seg.get("episodeNumber")

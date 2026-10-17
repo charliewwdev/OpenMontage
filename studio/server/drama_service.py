@@ -682,18 +682,21 @@ def build_entity_image_prompt(
         )
     else:
         prompt = (
-            "PRODUCT PHOTO of one object only, no person, no face, no hands, no portrait. "
-            f"关键道具特写：{name}。"
-            f"只表现物体可见外形与材质：{desc or name}。"
-            "产品级质感，材质与反光真实；禁止人物、城市空镜；不要试图画清纸上的长段剧情文字。"
+            "ISOLATED PRODUCT PHOTO on a plain seamless studio backdrop, one object only. "
+            "No person, no face, no hands, no fingers, no portrait, no character sheet, no fashion. "
+            f"关键道具产品特写：{name}。"
+            f"只拍这一件物体的外形与材质：{desc or name}。"
+            "居中 macro / tabletop 静物，浅景深，材质反光真实；"
+            "禁止任何人物、半身像、城市空镜；不要试图画清纸上的长段剧情文字。"
         )
         if three_view:
             prompt += "多角度产品级展示。"
         if style:
-            prompt += f"色调气质可参考：{style}。"
+            prompt += f"色调气质可参考：{style}（不可盖过物体主体）。"
         negative = (
-            "cityscape, aerial view, full body portrait, crowd, people, face, woman, man, "
-            "fashion model, character sheet"
+            "cityscape, aerial view, full body portrait, half-body portrait, headshot, "
+            "crowd, people, person, human, face, woman, man, girl, boy, "
+            "fashion model, character sheet, cosplay, selfie, hands holding, fingers"
         )
 
     applied_patches = match_experience_patches(
@@ -1003,6 +1006,9 @@ def generate_entity_image(
     # Injury: always run the full short ladder (env max=1 used to abort after one T2I).
     if injury_edit:
         max_attempts = 4
+    # Props often stick to character portraits on the first Comfy pass — give them a short ladder.
+    if kind == "prop":
+        max_attempts = max(max_attempts, 3)
     min_score = qa_min_score()
     pass_bar = 0.55 if injury_edit else min_score
     who = f"{ent.get('name') or ''}{(' · ' + variant) if variant else ''}"
@@ -1082,6 +1088,20 @@ def generate_entity_image(
                 ]
             ptext, neg = apply_experience_to_prompt(ptext, neg, retry_patches)
             ptext += _still_retry_clause(kind, attempt, max_attempts)
+            # Portrait leak on props: drop any residual person cues and force tabletop product.
+            if kind == "prop" and any(
+                tok in last_reason.lower()
+                for tok in ("portrait", "person", "woman", "man", "character", "face", "人物", "肖像", "半身")
+            ):
+                ptext = (
+                    "STRICT PRODUCT MACRO, plain white/gray seamless backdrop, ONE object only. "
+                    f"Object: {ent.get('name') or 'prop'}. "
+                    f"Details: {_clean_desc(ent.get('description') or '') or (ent.get('name') or '')}. "
+                    "No humans anywhere in frame."
+                )
+                neg = (
+                    (neg + ", ") if neg else ""
+                ) + "person, people, face, woman, man, portrait, hands, fingers, character sheet"
         elif attempt > 1 and not injury_edit:
             ptext = ptext + _still_retry_clause(kind, attempt, max_attempts)
         elif injury_edit and attempt > 1 and last_reason:

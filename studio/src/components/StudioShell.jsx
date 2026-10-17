@@ -661,10 +661,18 @@ export function StudioShell({
                 <span className="inline-flex items-center gap-2 font-medium">
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   {autoLive.running?.label || autoJob.step || t("studio_auto_preparing")}
+                  {/* Show pipeline scope (how many eps this job covers), NOT the episode
+                      currently focused in the workshop rail — that looked like fake progress. */}
                   <span className="font-normal text-white/55">
-                    {focusEpisode
-                      ? t("studio_episode_mobile_current", { n: focusEpisode.episodeNumber })
-                      : t("studio_episode_rail_label")}
+                    {t("studio_auto_live_scope", {
+                      n: Math.max(
+                        1,
+                        (autoJob.episodeIds || []).length ||
+                          (bundle?.episodes || []).length ||
+                          Number(project.plannedEpisodes) ||
+                          1,
+                      ),
+                    })}
                   </span>
                 </span>
                 <span className="inline-flex items-center gap-2 text-white/70">

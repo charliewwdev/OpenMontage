@@ -105,6 +105,7 @@
   "studio_auto_preparing": "准备",
   "studio_auto_running": "一键全流程进行中：{step} · 聚焦 {focus}",
   "studio_auto_running_hint": "完成后可在剪辑台查看成片",
+  "studio_auto_live_scope": "共 {n} 集",
   "studio_auto_live_steps": "{done}/{total} 步",
   "studio_auto_live_videos": "视频 {done}/{total} 已出片 · {gen} 生成中 · {fail} 失败 · {pending} 待出片",
   "studio_auto_live_active": "{gen} 段生成中 · {fail} 失败",

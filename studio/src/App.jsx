@@ -20,6 +20,7 @@ import { TvPage } from "./components/platform/TvPage";
 import { ChallengePage } from "./components/platform/ChallengePage";
 import { ResourcesPage } from "./components/platform/ResourcesPage";
 import { KeysSettings, UsageSettings } from "./components/platform/KeysSettings";
+import { JobsPage } from "./components/platform/JobsPage";
 import { HelpPage } from "./components/platform/HelpPage";
 import { CreditsPage } from "./components/platform/CreditsPage";
 import { ReferPage } from "./components/platform/ReferPage";
@@ -558,6 +559,15 @@ export default function App() {
       body = <KeysSettings config={config} onUpdated={(data) => void onKeysUpdated(data)} />;
     } else if (nav === "usage") {
       body = <UsageSettings />;
+    } else if (nav === "jobs") {
+      body = (
+        <JobsPage
+          onOpenProject={(id) => {
+            if (!id) return;
+            void loadProject(id, false, "workspace");
+          }}
+        />
+      );
     } else if (nav === "help") {
       body = <HelpPage config={config} onNeedKeys={goKeys} onNavigate={onNavigate} />;
     } else if (nav === "credits") {

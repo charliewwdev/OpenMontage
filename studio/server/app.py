@@ -10,7 +10,7 @@ import os
 import sys
 import time
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import unquote
@@ -625,6 +625,89 @@ def get_usage(
         status=status,
         log_limit=log_limit,
     )
+
+
+@app.get("/api/settings/jobs")
+def get_jobs() -> dict[str, Any]:
+    """Background media queue + per-project auto-produce jobs (no cron; event-driven)."""
+    from job_queue import queue_stats
+
+    queue = queue_stats()
+    active_statuses = {"running", "queued", "paused", "failed"}
+    auto_jobs: list[dict[str, Any]] = []
+    try:
+        for item in STORE.list_items():
+            job = item.get("autoProduce")
+            if not isinstance(job, dict) or not job.get("id"):
+                continue
+            status = str(job.get("status") or "")
+            if status not in active_statuses and status != "done":
+                continue
+            steps = job.get("steps") or []
+            step_detail = ""
+            for step in steps:
+                if step.get("id") == job.get("step"):
+                    step_detail = str(step.get("detail") or "")
+                    break
+            logs = job.get("logs") or []
+            last_log = ""
+            if logs:
+                last = logs[-1] if isinstance(logs[-1], dict) else {}
+                last_log = str(last.get("text") or "")[:160]
+            auto_jobs.append(
+                {
+                    "projectId": item.get("id"),
+                    "title": item.get("title") or item.get("id"),
+                    "jobId": job.get("id"),
+                    "status": status,
+                    "step": job.get("step") or "",
+                    "detail": step_detail or job.get("detail") or "",
+                    "error": job.get("error"),
+                    "updatedAt": job.get("updatedAt") or item.get("updatedAt"),
+                    "startedAt": job.get("startedAt"),
+                    "lastLog": last_log,
+                    "steps": [
+                        {
+                            "id": s.get("id"),
+                            "label": s.get("label"),
+                            "status": s.get("status"),
+                            "detail": s.get("detail") or "",
+                        }
+                        for s in steps
+                    ],
+                    "shotProgress": (item.get("progress") or {}).get("shots") or {},
+                }
+            )
+    except Exception as exc:  # noqa: BLE001
+        return {
+            "ok": False,
+            "error": str(exc)[:160],
+            "mediaQueue": queue,
+            "autoProduce": [],
+            "note": "无独立 cron；媒体队列 + 一键全流程为后台任务源。",
+        }
+    # Active first, then recently updated.
+    rank = {"running": 0, "queued": 1, "paused": 2, "failed": 3, "done": 4}
+    auto_jobs.sort(
+        key=lambda j: (rank.get(str(j.get("status")), 9), str(j.get("updatedAt") or "")),
+        reverse=False,
+    )
+    # Keep done jobs only if updated recently enough — cap list.
+    trimmed: list[dict[str, Any]] = []
+    done_kept = 0
+    for j in auto_jobs:
+        if j.get("status") == "done":
+            if done_kept >= 8:
+                continue
+            done_kept += 1
+        trimmed.append(j)
+    return {
+        "ok": True,
+        "mediaQueue": queue,
+        "autoProduce": trimmed,
+        "note": "无独立 cron / 定时表；后台任务来自 Redis 媒体队列与项目一键全流程。",
+        "polledAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
 
 
 @app.get("/api/platform/assets")

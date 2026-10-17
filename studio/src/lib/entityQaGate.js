@@ -21,7 +21,12 @@ export function listEntityQaBlockers(entities = []) {
     const eid = ent?.id;
     if (!eid || seen.has(eid)) continue;
     seen.add(eid);
-    const name = (ent.name || eid).trim() || eid;
+    const variant = String(ent.variant || "").trim();
+    const baseName = (ent.name || eid).trim() || eid;
+    const name =
+      variant && variant !== "默认形象" && variant !== "默认造型" && variant !== "default"
+        ? `${baseName}·${variant}`
+        : baseName;
     const kind = ent.kind || "unknown";
     const kindLabel = KIND_LABEL[kind] || "素材";
     const img = selectedImage(ent);

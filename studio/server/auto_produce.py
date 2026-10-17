@@ -613,6 +613,28 @@ def _run_pipeline(store: ProjectStore, project_id: str, job_id: str) -> None:
                         _set_step(job, "entities", "running", f"{ok_n}/{total_n} · 已有「{name}」")
                         _save_job(store, project_id, job)
                         continue
+                    # Injury ladder already exhausted — do not burn more attempts on re-runs.
+                    live_img = None
+                    if live and live.get("selectedImageId"):
+                        live_img = next(
+                            (
+                                i
+                                for i in (live.get("images") or [])
+                                if i.get("id") == live.get("selectedImageId")
+                            ),
+                            None,
+                        )
+                    if live and live.get("qaFailed") and ((live_img or {}).get("qa") or {}).get(
+                        "ladderExhausted"
+                    ):
+                        _log(
+                            job,
+                            f"素材策略梯已用尽，跳过重试 {idx}/{total_n}：{name}",
+                            ok=False,
+                        )
+                        _set_step(job, "entities", "running", f"{ok_n}/{total_n} · 「{name}」已用尽")
+                        _save_job(store, project_id, job)
+                        continue
                     t0 = time.time()
                     _set_step(
                         job,

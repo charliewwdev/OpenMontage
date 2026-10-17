@@ -25,13 +25,13 @@ _DEFAULT_EXPERIENCE: list[dict[str, Any]] = [
         "matchReason": ["bandage", "绷带", "white bandage", "injury", "受伤", "blood stain", "血迹"],
         "matchVariant": ["受伤", "绷带", "伤"],
         "promptBoost": (
-            "CRITICAL visible injury props: thick WHITE gauze bandage wrapped around left shoulder "
-            "AND upper chest, blood-stained torn coat, pale sweaty face, cold blue rim light. "
-            "Bandage must be the first thing the eye notices. Keep the EXACT same face as reference."
+            "Show thick WHITE medical gauze bandage on the LEFT shoulder/upper chest, "
+            "and a blood-stained or torn dark coat. Half-body framing so the bandage is visible. "
+            "Keep the same East Asian male face when a reference is used."
         ),
         "negativeBoost": (
-            "clean uninjured clothes, no bandage, pristine coat, healthy complexion, "
-            "fashion portrait, unbroken skin, studio beauty shot"
+            "clean uninjured clothes, no bandage, pristine coat, forehead wound only, "
+            "cheek cut only, blue plastic sheet, towel around neck"
         ),
         "source": "seed",
         "hits": 0,

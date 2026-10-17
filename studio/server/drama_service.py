@@ -769,10 +769,11 @@ _STILL_REF_LOCK = {
 # Vision QA used to require「绷带占满画面」— RealVis never hits that, so retries loop forever.
 _INJURY_ACHIEVABLE_BIBLE = (
     "East Asian man, chest-up medium shot. "
-    "White medical gauze wrap (cotton dressing) visible on the left shoulder or upper chest. "
-    "Dark coat may be torn or blood-stained. Face may look pale/sweaty. "
-    "Pass if shoulder/chest gauze is clearly visible — face cuts alone are not enough; "
-    "blue plastic sheet or towel around the neck does not count as gauze."
+    "White cotton/gauze medical wrap visible on the upper body "
+    "(shoulder, clavicle, upper chest, or upper arm near the shoulder — a gauze-like sling counts). "
+    "Dark coat optional. Face may look pale/sweaty. "
+    "Pass whenever white medical wrap is clearly visible on the upper body; "
+    "fail only for blue plastic / towel-only / face-cuts-only with clean shoulders."
 )
 
 
@@ -999,9 +1000,9 @@ def generate_entity_image(
     from prompt_qa import entity_qa_max_attempts, judge_image_against_prompt, qa_meets_bar, qa_min_score
 
     max_attempts = entity_qa_max_attempts()
-    # Injury: short strategy ladder (T2I → T2I paraphrase → optional loose img2img), not same prompt ×5.
+    # Injury: always run the full short ladder (env max=1 used to abort after one T2I).
     if injury_edit:
-        max_attempts = min(max_attempts, 4)
+        max_attempts = 4
     min_score = qa_min_score()
     pass_bar = 0.55 if injury_edit else min_score
     who = f"{ent.get('name') or ''}{(' · ' + variant) if variant else ''}"
@@ -1010,15 +1011,17 @@ def generate_entity_image(
         # close-up never has.
         prompt = (
             f"Photorealistic short-drama MEDIUM SHOT (chest-up) of ONE East Asian man 「{who}」. "
-            "Thick WHITE rolled medical gauze wrapped around the LEFT shoulder and upper chest — "
-            "cotton gauze texture clearly visible. Blood-stained or torn black short coat over a shirt. "
+            "LEFT shoulder AND upper arm wrapped in thick WHITE rolled surgical gauze "
+            "(cotton mesh texture, multiple layers), covering deltoid and clavicle. "
+            "Open black short coat over a dark shirt, coat may show blood stains. "
             "Hard jawline, short black hair, pale sweaty face, cinematic still, vertical 9:16. "
-            "华语竖屏短剧半身定妆：左肩与上胸白色医用纱布卷清晰可见，黑色短大衣破损带血迹，不是脸部刀伤特写。"
+            "华语竖屏短剧半身定妆：左肩与上臂多层白色医用纱布包扎清晰，黑色短大衣敞开，不是脸部刀伤特写。"
         )
         negative = (
             "forehead wound only, cheek laceration only, face cut as sole injury, "
             "blue plastic sheet, rain poncho, PE apron, towel around neck, "
             "clean intact high collar, head-and-shoulders crop hiding shoulders, "
+            "triangular arm sling strap only, bare clean shoulders, "
             "landscape, cityscape, multiple people, fashion beauty shot"
         )
         denoise = None

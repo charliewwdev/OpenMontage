@@ -254,6 +254,9 @@ nav:
   - id: usage
     label: 用量统计
     icon: Activity
+  - id: jobs
+    label: 任务队列
+    icon: ListTodo
   - id: help
     label: 帮助中心
     icon: HelpCircle
@@ -363,6 +366,12 @@ tools:
     icon: Activity
     group: workflow
     nav: usage
+  - id: jobs
+    title: 任务队列
+    desc: 媒体后台队列与一键全流程进度
+    icon: ListTodo
+    group: workflow
+    nav: jobs
 
 inspirePrompts:
   - tag: 都市爽剧

@@ -37,12 +37,12 @@ const STUDIO_STEPS = new Set([
 
 function normalizeStudioStep(stepRaw) {
   if (stepRaw === "storyboard" || stepRaw === "audio" || stepRaw === "edit") return "workspace";
-  return STUDIO_STEPS.has(stepRaw) ? stepRaw : "script";
+  return STUDIO_STEPS.has(stepRaw) ? stepRaw : "workspace";
 }
 
 function readAppRoute() {
   if (typeof window === "undefined") {
-    return { projectId: "", step: "script", episodeId: "", nav: "", screen: "" };
+    return { projectId: "", step: "workspace", episodeId: "", nav: "", screen: "" };
   }
   const params = new URLSearchParams(window.location.search);
   const projectId = (params.get("project") || params.get("p") || "").trim();
@@ -85,7 +85,7 @@ export default function App() {
   const [projectId, setProjectId] = useState("");
   const [bundle, setBundle] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState(() => bootRoute.step || "script");
+  const [step, setStep] = useState(() => bootRoute.step || "workspace");
   const [focusEpisodeId, setFocusEpisodeId] = useState(() => bootRoute.episodeId || "");
   const [config, setConfig] = useState(null);
   const [busyMsg, setBusyMsg] = useState("");
@@ -213,14 +213,14 @@ export default function App() {
     }
   }, []);
 
-  const loadProject = useCallback(async (id, quiet = false, openStep = "script", openEpisodeId = "") => {
+  const loadProject = useCallback(async (id, quiet = false, openStep = "workspace", openEpisodeId = "") => {
     if (!quiet) setLoading(true);
     setProjectId(id);
     try {
       const b = await api(`/api/projects/${encodeURIComponent(id)}`);
       setBundle(b);
       if (!quiet) {
-        const nextStep = normalizeStudioStep(openStep || "script");
+        const nextStep = normalizeStudioStep(openStep || "workspace");
         setStep(nextStep);
         if (openEpisodeId) setFocusEpisodeId(openEpisodeId);
         else {
@@ -260,7 +260,7 @@ export default function App() {
 
       if (route.projectId) {
         setNav("workshop");
-        await loadProject(route.projectId, false, route.step || "script", route.episodeId || "");
+        await loadProject(route.projectId, false, route.step || "workspace", route.episodeId || "");
         return;
       }
       if (route.screen === "create") {
@@ -296,7 +296,7 @@ export default function App() {
       const route = readAppRoute();
       if (route.projectId) {
         void loadProject(route.projectId, true, route.step || step, route.episodeId || focusEpisodeId);
-        setStep(route.step || "script");
+        setStep(route.step || "workspace");
         if (route.episodeId) setFocusEpisodeId(route.episodeId);
         setScreen("studio");
         setNav("workshop");
@@ -526,7 +526,7 @@ export default function App() {
         <CanvasPage
           config={config}
           projects={projects}
-          onOpenProject={(id, openStep) => void loadProject(id, false, openStep || "script")}
+          onOpenProject={(id, openStep) => void loadProject(id, false, openStep || "workspace")}
         />
       );
     } else if (nav === "inspire") {

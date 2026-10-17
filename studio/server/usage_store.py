@@ -284,6 +284,7 @@ def query_usage(
     kind: str = "all",
     status: str = "all",
     log_limit: int = 100,
+    log_offset: int = 0,
 ) -> dict[str, Any]:
     start, end = _parse_range(range_key, date_from, date_to)
     events = _load_events(
@@ -394,6 +395,14 @@ def query_usage(
         models.append(row)
     models.sort(key=lambda r: r["requests"], reverse=True)
 
+    limit = max(1, min(int(log_limit or 100), 500))
+    offset = max(0, int(log_offset or 0))
+    if offset >= total and total > 0:
+        offset = (max(0, (total - 1) // limit)) * limit
+    page = (offset // limit) + 1 if total else 1
+    page_count = max(1, (total + limit - 1) // limit) if total else 1
+    logs_slice = events[offset : offset + limit]
+
     return {
         "range": {"from": start.isoformat(), "to": end.isoformat(), "key": range_key or "7d"},
         "hero": {
@@ -408,7 +417,16 @@ def query_usage(
             "success_rate": round((ok_n / total) if total else 0.0, 4),
         },
         "trend": trend,
-        "logs": events[: max(1, min(log_limit, 500))],
+        "logs": logs_slice,
+        "logsMeta": {
+            "total": total,
+            "offset": offset,
+            "limit": limit,
+            "page": page,
+            "pageCount": page_count,
+            "hasPrev": offset > 0,
+            "hasNext": offset + limit < total,
+        },
         "byProvider": providers,
         "byModel": models,
         "filters": {

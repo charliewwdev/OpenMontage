@@ -2,6 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   Loader2,
   Plus,
   ShieldCheck,
@@ -670,6 +674,125 @@ function ComfyCard({ status, onUpdated }) {
   );
 }
 
+function buildPageItems(page, pageCount) {
+  if (pageCount <= 7) {
+    return Array.from({ length: pageCount }, (_, i) => i + 1);
+  }
+  const items = new Set([1, pageCount, page, page - 1, page + 1, page - 2, page + 2]);
+  const sorted = [...items].filter((n) => n >= 1 && n <= pageCount).sort((a, b) => a - b);
+  const out = [];
+  for (let i = 0; i < sorted.length; i += 1) {
+    if (i > 0 && sorted[i] - sorted[i - 1] > 1) out.push("…");
+    out.push(sorted[i]);
+  }
+  return out;
+}
+
+function LogsPager({ meta, pageSize, onPageChange, onPageSizeChange, loading }) {
+  const page = meta?.page || 1;
+  const pageCount = meta?.pageCount || 1;
+  const total = meta?.total || 0;
+  const limit = meta?.limit || pageSize;
+  const offset = meta?.offset || 0;
+  const from = total ? offset + 1 : 0;
+  const to = Math.min(offset + limit, total);
+  const items = buildPageItems(page, pageCount);
+
+  return (
+    <div className="flex flex-col gap-3 border-t border-[var(--line)] px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="text-xs text-[var(--muted)]">
+        {total ? (
+          <>
+            显示 <span className="tabular-nums text-white/80">{from}</span>–
+            <span className="tabular-nums text-white/80">{to}</span> / 共{" "}
+            <span className="tabular-nums text-white/80">{fmtNum(total)}</span> 条
+          </>
+        ) : (
+          "暂无记录"
+        )}
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-1.5 text-xs text-[var(--muted)]">
+          每页
+          <select
+            className="field !w-auto !py-1 !text-xs"
+            value={pageSize}
+            disabled={loading}
+            onChange={(e) => onPageSizeChange?.(Number(e.target.value) || 20)}
+          >
+            {[10, 20, 50, 100].map((n) => (
+              <option key={n} value={n}>
+                {n}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            className="btn-secondary !px-2 !py-1"
+            disabled={loading || page <= 1}
+            onClick={() => onPageChange?.(1)}
+            title="首页"
+            aria-label="首页"
+          >
+            <ChevronsLeft className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            className="btn-secondary !px-2 !py-1"
+            disabled={loading || page <= 1}
+            onClick={() => onPageChange?.(page - 1)}
+            title="上一页"
+            aria-label="上一页"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </button>
+          {items.map((item, idx) =>
+            item === "…" ? (
+              <span key={`e-${idx}`} className="px-1 text-xs text-[var(--muted)]">
+                …
+              </span>
+            ) : (
+              <button
+                key={item}
+                type="button"
+                className={`min-w-[2rem] rounded-md px-2 py-1 text-xs tabular-nums ${
+                  item === page ? "bg-white/15 text-white" : "text-[var(--muted)] hover:bg-white/8 hover:text-white"
+                }`}
+                disabled={loading || item === page}
+                onClick={() => onPageChange?.(item)}
+              >
+                {item}
+              </button>
+            ),
+          )}
+          <button
+            type="button"
+            className="btn-secondary !px-2 !py-1"
+            disabled={loading || page >= pageCount}
+            onClick={() => onPageChange?.(page + 1)}
+            title="下一页"
+            aria-label="下一页"
+          >
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            className="btn-secondary !px-2 !py-1"
+            disabled={loading || page >= pageCount}
+            onClick={() => onPageChange?.(pageCount)}
+            title="末页"
+            aria-label="末页"
+          >
+            <ChevronsRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function UsageSettings() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
@@ -678,19 +801,27 @@ export function UsageSettings() {
   const [kind, setKind] = useState("all");
   const [provider, setProvider] = useState("");
   const [model, setModel] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   const load = async () => {
     setLoading(true);
     try {
+      const offset = Math.max(0, (page - 1) * pageSize);
       const qs = new URLSearchParams({
         range,
         kind,
         provider,
         model,
-        log_limit: "120",
+        log_limit: String(pageSize),
+        log_offset: String(offset),
       });
       const res = await api(`/api/settings/usage?${qs}`);
       setData(res);
+      const meta = res?.logsMeta;
+      if (meta?.page && meta.page !== page) {
+        setPage(meta.page);
+      }
     } catch (e) {
       toast.error(String(e.message || e));
     } finally {
@@ -699,11 +830,16 @@ export function UsageSettings() {
   };
 
   useEffect(() => {
+    setPage(1);
+  }, [range, kind, provider, model, pageSize]);
+
+  useEffect(() => {
     void load();
-  }, [range, kind, provider, model]);
+  }, [range, kind, provider, model, page, pageSize]);
 
   const hero = data?.hero || {};
   const trend = data?.trend || { buckets: [], requests: [], tokens_in: [], tokens_out: [], cost_usd: [] };
+  const logsMeta = data?.logsMeta || { total: 0, page: 1, pageCount: 1, offset: 0, limit: pageSize };
 
   return (
     <PageShell eyebrow="Settings" title="用量统计" description="查看调用次数、Token、费用与请求日志。">
@@ -815,49 +951,61 @@ export function UsageSettings() {
           </div>
 
           {subTab === "logs" ? (
-            <div className="panel overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="text-xs text-[var(--muted)]">
-                  <tr>
-                    {["时间", "供应商", "模型", "类型", "Token", "费用", "耗时", "状态"].map((h) => (
-                      <th key={h} className="px-3 py-2 font-medium">
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {(data?.logs || []).map((row, idx) => (
-                    <tr key={`${row.ts}-${idx}`} className="border-t border-[var(--line)]">
-                      <td className="px-3 py-2 whitespace-nowrap text-xs">{String(row.ts || "").replace("T", " ").slice(0, 19)}</td>
-                      <td className="px-3 py-2">{row.provider}</td>
-                      <td className="px-3 py-2">{row.model}</td>
-                      <td className="px-3 py-2">{row.kind}</td>
-                      <td className="px-3 py-2 text-xs">
-                        {fmtNum(row.tokens_in)}→{fmtNum(row.tokens_out)}
-                      </td>
-                      <td className="px-3 py-2">{fmtUsd(row.cost_usd)}</td>
-                      <td className="px-3 py-2">{latencyBadge(row.latency_ms)}</td>
-                      <td className="px-3 py-2">
-                        {row.ok ? (
-                          <span className="inline-flex items-center gap-1 text-[var(--ok)]">
-                            <CheckCircle2 className="h-3.5 w-3.5" /> {row.status}
-                          </span>
-                        ) : (
-                          <span className="text-red-400">{row.status}</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                  {!data?.logs?.length ? (
+            <div className="panel overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="text-xs text-[var(--muted)]">
                     <tr>
-                      <td colSpan={8} className="px-3 py-8 text-center text-[var(--muted)]">
-                        暂无请求记录
-                      </td>
+                      {["时间", "供应商", "模型", "类型", "Token", "费用", "耗时", "状态"].map((h) => (
+                        <th key={h} className="px-3 py-2 font-medium">
+                          {h}
+                        </th>
+                      ))}
                     </tr>
-                  ) : null}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {(data?.logs || []).map((row, idx) => (
+                      <tr key={`${row.ts}-${idx}`} className="border-t border-[var(--line)]">
+                        <td className="px-3 py-2 whitespace-nowrap text-xs">{String(row.ts || "").replace("T", " ").slice(0, 19)}</td>
+                        <td className="px-3 py-2">{row.provider}</td>
+                        <td className="px-3 py-2">{row.model}</td>
+                        <td className="px-3 py-2">{row.kind}</td>
+                        <td className="px-3 py-2 text-xs">
+                          {fmtNum(row.tokens_in)}→{fmtNum(row.tokens_out)}
+                        </td>
+                        <td className="px-3 py-2">{fmtUsd(row.cost_usd)}</td>
+                        <td className="px-3 py-2">{latencyBadge(row.latency_ms)}</td>
+                        <td className="px-3 py-2">
+                          {row.ok ? (
+                            <span className="inline-flex items-center gap-1 text-[var(--ok)]">
+                              <CheckCircle2 className="h-3.5 w-3.5" /> {row.status}
+                            </span>
+                          ) : (
+                            <span className="text-red-400">{row.status}</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                    {!data?.logs?.length ? (
+                      <tr>
+                        <td colSpan={8} className="px-3 py-8 text-center text-[var(--muted)]">
+                          暂无请求记录
+                        </td>
+                      </tr>
+                    ) : null}
+                  </tbody>
+                </table>
+              </div>
+              <LogsPager
+                meta={logsMeta}
+                pageSize={pageSize}
+                loading={loading}
+                onPageChange={(next) => setPage(Math.max(1, next))}
+                onPageSizeChange={(size) => {
+                  setPageSize(size);
+                  setPage(1);
+                }}
+              />
             </div>
           ) : null}
 

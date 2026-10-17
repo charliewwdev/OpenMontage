@@ -614,7 +614,8 @@ def get_usage(
     status: str = Query("all"),
     date_from: str = Query(""),
     date_to: str = Query(""),
-    log_limit: int = Query(100, ge=1, le=500),
+    log_limit: int = Query(20, ge=1, le=500),
+    log_offset: int = Query(0, ge=0),
 ) -> dict[str, Any]:
     return query_usage(
         range_key=range,
@@ -625,6 +626,7 @@ def get_usage(
         kind=kind,
         status=status,
         log_limit=log_limit,
+        log_offset=log_offset,
     )
 
 

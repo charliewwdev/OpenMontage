@@ -89,6 +89,7 @@ from script_parse import dialogue_from_episode, dialogue_lines_for_episode, extr
 from audio_tts import generate_bgm_mp3, synthesize_dialogue_mp3, synthesize_mp3  # noqa: E402
 from auth_context import current_user_id, set_current_user  # noqa: E402
 from auto_produce import (  # noqa: E402
+    cancel_auto_produce,
     ensure_auto_produce_worker,
     get_job as get_auto_produce_job,
     start_auto_produce,
@@ -2002,6 +2003,17 @@ async def auto_produce_start(project_id: str, request: Request) -> dict[str, Any
         body = {}
     if not isinstance(body, dict):
         body = {}
+    action = str(body.get("action") or "").strip().lower()
+    if action in {"cancel", "pause", "stop"}:
+        try:
+            job = cancel_auto_produce(
+                STORE,
+                pid,
+                reason=str(body.get("reason") or "已暂停：先修好定妆再出片"),
+            )
+        except FileNotFoundError as exc:
+            raise _http_error(404, str(exc)) from exc
+        return {"projectId": pid, "job": job, "bundle": STORE.bundle(pid)}
     # Allow updating brief/title before run
     patch: dict[str, Any] = {}
     if body.get("brief") or body.get("prompt") or body.get("script"):

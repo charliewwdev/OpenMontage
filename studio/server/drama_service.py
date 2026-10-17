@@ -925,11 +925,34 @@ def generate_entity_image(
     ratio = state["project"].get("ratio") or "9:16"
 
     ref = None
+    denoise: float | None = None
+    variant = str(ent.get("variant") or "")
+    injury_edit = kind == "character" and any(
+        tok in variant for tok in ("受伤", "绷带", "伤", "bandage", "injury")
+    )
     if kind in _STILL_REF_LOCK:
         # Any type with a passed still is img2img. A failed still must not become the reference.
         ref = _entity_still_ref_path(store, project_id, state, ent)
         if ref is not None:
             prompt += _STILL_REF_LOCK[kind]
+            if injury_edit:
+                # Default portrait is a clean close-up coat; soft denoise locks that into face-only wounds.
+                denoise = 0.82
+                prompt = (
+                    "MEDIUM SHOT from chest up of the SAME man. "
+                    "LEFT shoulder and upper chest wrapped in thick WHITE medical gauze bandage — "
+                    "the bandage is the largest white mass in frame. "
+                    "Blood-stained torn black short coat over a half-wet shirt. "
+                    "Do NOT put the injury only on the face. "
+                    + prompt
+                )
+                negative = (
+                    (negative + ", ") if negative else ""
+                ) + (
+                    "clean intact coat, pristine high collar, forehead wound only, "
+                    "cheek cut only, facial laceration as sole injury, towel around neck, "
+                    "no shoulder bandage, head-and-shoulders crop hiding chest"
+                )
 
     def _gen_once(ptext: str, neg: str | None, img_id: str) -> tuple[str, Path]:
         rel_path = f"media/images/{img_id}.png"
@@ -940,6 +963,7 @@ def generate_entity_image(
             out_path=dest,
             reference_path=ref,
             negative_prompt=neg,
+            denoise=denoise,
         )
         store.persist_media(project_id, rel_path)
         return rel_path, dest

@@ -509,23 +509,44 @@ def _apply_hard_gates(kind_id: str, qa: dict[str, Any], *, gender: str | None, p
     prompt_l = (prompt or "").lower()
 
     if kind_id == "character" and passed:
-        if any(
+        # Only kill true empty plates. Do NOT trip on "no other people in background".
+        empty_plate = any(
             x in low
             for x in (
                 "landscape",
                 "cityscape",
-                "no person",
-                "no people",
-                "empty",
                 "scenery",
                 "mountain",
                 "aerial",
-                "无人",
-                "风景",
-                "街景",
-                "空镜",
+                "无人空镜",
+                "风景空镜",
+                "街景空镜",
+                "empty location",
+                "empty street",
+                "no person visible",
+                "no people visible",
+                "without any person",
+                "without a person",
             )
-        ):
+        )
+        has_subject = any(
+            x in low
+            for x in (
+                "portrait",
+                "character",
+                "male",
+                "female",
+                "man",
+                "woman",
+                "person",
+                "face",
+                "半身",
+                "肖像",
+                "男性",
+                "女性",
+            )
+        )
+        if empty_plate and not has_subject:
             passed = False
             score = min(score, 0.2)
             reason = f"character_gate:{reason}"
@@ -545,28 +566,43 @@ def _apply_hard_gates(kind_id: str, qa: dict[str, Any], *, gender: str | None, p
                 reason = f"gender_gate_female_expected:{reason}"
 
     if kind_id == "prop" and passed:
-        if any(
+        # Trip only on "this IS a person/portrait". Negations like "no person" must pass.
+        is_person_shot = any(
             x in low
             for x in (
-                "portrait",
-                "woman",
-                "man",
-                "person",
-                "face",
-                "neck",
-                "character",
+                "character portrait",
+                "full character",
+                "half-body portrait",
+                "full-body portrait",
+                "portrait of a",
+                "portrait of the",
+                "shows a woman",
+                "shows a man",
+                "shows a person",
+                "image of a woman",
+                "image of a man",
                 "人像",
-                "女性",
-                "男性",
-                "半身",
-                "肖像",
+                "半身像",
+                "角色定妆",
             )
-        ) and not any(x in prompt_l for x in ("person", "people", "人物")):
-            # Prop shots must not be people unless bible asks for it.
-            if any(x in low for x in ("portrait", "woman", "man", "face", "neck", "人像", "女性", "男性", "半身")):
-                passed = False
-                score = min(score, 0.2)
-                reason = f"prop_gate_no_person:{reason}"
+        ) and not any(
+            x in low
+            for x in (
+                "not a person",
+                "no person",
+                "no people",
+                "without person",
+                "without people",
+                "product",
+                "object only",
+                "道具",
+                "产品",
+            )
+        )
+        if is_person_shot and not any(x in prompt_l for x in ("person", "people", "人物")):
+            passed = False
+            score = min(score, 0.2)
+            reason = f"prop_gate_no_person:{reason}"
 
     qa["pass"] = passed
     qa["score"] = score

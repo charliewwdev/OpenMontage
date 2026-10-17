@@ -1676,29 +1676,44 @@ def recheck_video_qa(
 
 
 def sync_entity_qa_flags(ent: dict[str, Any]) -> bool:
-    """Clear sticky qaFailed when the selected still currently passes. Returns True if changed."""
+    """Clear sticky qaFailed / restore selection when a still currently passes. Returns True if changed."""
     from prompt_qa import is_soft_pass_qa, qa_meets_bar
 
-    imgs = ent.get("images") or []
+    def _ok(img: dict[str, Any] | None) -> bool:
+        if not img or not img.get("path"):
+            return False
+        qa = img.get("qa") or {}
+        return bool(img.get("qaPass") is True) and qa_meets_bar(qa) and not is_soft_pass_qa(qa)
+
+    imgs = [i for i in (ent.get("images") or []) if i.get("path")]
     sid = ent.get("selectedImageId")
     sel = next((i for i in imgs if i.get("id") == sid), None)
-    if not sel or not sel.get("path"):
-        return False
-    qa = sel.get("qa") or {}
-    ok = bool(sel.get("qaPass") is True) and qa_meets_bar(qa) and not is_soft_pass_qa(qa)
-    if not ok or not ent.get("qaFailed"):
-        return False
-    ent.pop("qaFailed", None)
-    ent.pop("qaFailReason", None)
-    ent.pop("imageError", None)
-    if ent.get("imageStatus") == "failed":
-        ent["imageStatus"] = "done"
-    ent["updatedAt"] = _now()
-    return True
+    changed = False
+    if not _ok(sel):
+        # Prefer newest passing still when selection is empty or currently failing.
+        for img in reversed(imgs):
+            if _ok(img):
+                if ent.get("selectedImageId") != img.get("id"):
+                    ent["selectedImageId"] = img.get("id")
+                    changed = True
+                sel = img
+                break
+    if not _ok(sel):
+        return changed
+    if ent.get("qaFailed") or ent.get("qaFailReason") or ent.get("imageError") or ent.get("imageStatus") == "failed":
+        ent.pop("qaFailed", None)
+        ent.pop("qaFailReason", None)
+        ent.pop("imageError", None)
+        if ent.get("imageStatus") == "failed":
+            ent["imageStatus"] = "done"
+        changed = True
+    if changed:
+        ent["updatedAt"] = _now()
+    return changed
 
 
 def heal_entity_qa_flags(state: dict[str, Any]) -> int:
-    """Repair entities whose selected still passed but qaFailed stuck from a later failed redraw."""
+    """Repair sticky qaFailed and orphaned passing stills left by failed redraws / soft demotions."""
     n = 0
     for ent in state.get("entities") or []:
         if ent.get("deletedAt"):

@@ -673,11 +673,7 @@ function EntityCard({ entity, accent, working, onGenerate, onUpload, onSelect, o
                       <img
                         src={image.url}
                         alt={`版本 ${index + 1}`}
-                        className={
-                          entity.kind === "character"
-                            ? "h-full w-full object-contain object-center bg-black/50"
-                            : "h-full w-full object-cover"
-                        }
+                        className="h-full w-full object-contain object-center bg-black/50"
                       />
                     </button>
                   ))}

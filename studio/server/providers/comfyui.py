@@ -41,75 +41,10 @@ def _uses_latin_clip(model_label: str) -> bool:
 
 
 def clip_identity_prefix(raw: str) -> str:
-    """English locks RealVis/SDXL must see first. Chinese CLIP drops gender, age, and spirit form."""
-    text = raw or ""
-    try:
-        from entity_prompts.types import SPIRIT_MARKERS, is_spirit
-    except Exception:
-        SPIRIT_MARKERS = ("无实体", "灵光聚", "珠影", "淡紫色灵光")  # type: ignore[misc]
+    """Delegate to entity_prompts identity locks (single source of truth)."""
+    from entity_prompts.identity_locks import clip_identity_prefix as _lock
 
-        def is_spirit(*, name: str = "", desc: str = "") -> bool:  # type: ignore[misc]
-            return any(k in f"{name}{desc}" for k in SPIRIT_MARKERS)
-
-    if is_spirit(name="", desc=text) or any(k in text for k in SPIRIT_MARKERS):
-        return (
-            "NOT a human, NOT a portrait, NOT a woman, NO face, NO body, NO clothes. "
-            "A small translucent lavender glowing orb with faint star-pattern shimmer, "
-            "spirit light floating on a plain dark studio backdrop."
-        )
-    bits: list[str] = []
-    age_m = re.search(r"(\d{1,2})\s*岁", text)
-    age = age_m.group(1) if age_m else ""
-    if "男孩" in text:
-        bits.append(
-            f"ONE East Asian BOY age {age or '8'}, male child, not an adult, not a woman, not a girl."
-        )
-    elif any(k in text for k in ("男性", "农夫", "男人")):
-        bits.append(
-            f"ONE East Asian MAN age {age or 'adult'}, male, masculine face, not a woman, not a girl."
-        )
-    elif any(k in text for k in ("少女", "村妇", "女子")):
-        bits.append(f"ONE East Asian FEMALE age {age or 'adult'}, not a man.")
-    if any(k in text for k in ("灰袍", "灰衣", "兜帽")):
-        bits.append(
-            "Gray hooded robe, hood shadowing the face, pale jaw only, "
-            "not a white collared shirt, not modern fashion."
-        )
-    if any(k in text for k in ("双丫髻", "枯黄乱发", "粗布短褐")):
-        bits.append(
-            "Withered yellow messy hair in two side buns tied with straw rope, "
-            "coarse blue-gray short jacket, torn linen vest, straw-rope belt, open-toe cloth shoes. "
-            "Not a silk robe."
-        )
-    if "围裙" in text or "村妇" in text:
-        bits.append(
-            "Stout village woman, high cheekbones, hair bun with a wooden pin, "
-            "gray-blue coarse cross-collar shirt, stained apron. Not a young model."
-        )
-    if "农夫" in text or ("草鞋" in text and "微驼" in text):
-        bits.append(
-            "Slightly hunched farmer, deep eye wrinkles, dark brown coarse short jacket, "
-            "rolled trouser cuffs, straw sandals. Male."
-        )
-    if "雀斑" in text or "靛蓝布" in text:
-        bits.append(
-            "Freckles on the nose, indigo cloth jacket with short sleeves, old cloth shoes, child proportions."
-        )
-    low = text.lower()
-    if "white collared" in low or "white shirt" in low:
-        bits.append("No white collared shirt.")
-    if "physical human" in low:
-        bits.append("No solid living human body.")
-    if "young woman" in low or "young east asian female" in low:
-        bits.append("Do not draw a young woman.")
-    # Preserve order, drop duplicates.
-    seen: set[str] = set()
-    out: list[str] = []
-    for bit in bits:
-        if bit not in seen:
-            seen.add(bit)
-            out.append(bit)
-    return " ".join(out)
+    return _lock(raw)
 
 
 def _translate_prompt_for_latin_clip(prompt: str) -> str:
@@ -1041,8 +976,14 @@ def generate_video(
     reference_path: Path | None = None,
     resolution: str = "720p",
     timeout: int = 1200,
-) -> Path:
-    """Image/text-to-video via ComfyUI (MiniMax H3 FL2VA preferred)."""
+    preferred_model: str = "",
+) -> tuple[Path, str]:
+    """Image/text-to-video via ComfyUI registry (MiniMax H3 first).
+
+    Returns (out_path, strategy_or_weight_label).
+    """
+    from .comfy_video_models import ComfyVideoContext, build_comfy_video_workflow
+
     root = server_url(capability="video") or server_url()
     if not root:
         raise ComfyUIError("未配置 COMFYUI_SERVER_URL（智川云租 GPU 后填写 ComfyUI 公网地址）")
@@ -1056,35 +997,22 @@ def generate_video(
     length = _h3_frame_length(duration)
     seed = random.randint(0, 2**31 - 1)
 
-    stack = _pick_minimax_h3_stack(root)
-    if not stack:
-        raise ComfyUIError(
-            "ComfyUI 已连通，但未发现 MiniMax H3 出片模型（需 fl2va UNET + Qwen3-VL + video/audio VAE）。"
-            "请使用 MiniMax-H3 / 含 H3 权重的 ComfyUI 镜像。"
-        )
-
     image_name = None
     if reference_path and Path(reference_path).is_file():
         image_name = _upload_image(root, Path(reference_path))
 
-    use_low_vram = _node_exists(root, "MiniMaxLowVRAMAttention") and _node_exists(
-        root, "MiniMaxChunkFeedForward"
-    )
-    # Turbo LoRA node optional
-    if stack.get("turbo") and not _node_exists(root, "MiniMaxH3TurboLoRA"):
-        stack = {k: v for k, v in stack.items() if k != "turbo"}
-    if not _node_exists(root, "MiniMaxH3SigmaShift"):
-        raise ComfyUIError("ComfyUI 缺少 MiniMaxH3SigmaShift 节点，请升级含 MiniMax H3 的镜像。")
-
-    workflow, save_node = _minimax_h3_workflow(
-        prompt=prompt,
-        width=width,
-        height=height,
-        length=length,
-        seed=seed,
-        stack=stack,
-        image_name=image_name,
-        use_low_vram=use_low_vram,
+    preferred = (preferred_model or _secret("COMFYUI_VIDEO_MODEL") or "").strip()
+    model_label, workflow, save_node = build_comfy_video_workflow(
+        ComfyVideoContext(
+            prompt=prompt,
+            width=width,
+            height=height,
+            length=length,
+            seed=seed,
+            image_name=image_name,
+            root=root,
+            preferred=preferred,
+        )
     )
 
     t0 = time.time()
@@ -1118,7 +1046,7 @@ def generate_video(
 
         record_usage(
             provider="comfyui",
-            model=stack.get("unet") or "minimax-h3",
+            model=model_label or "minimax-h3",
             kind="video",
             ok=True,
             status=200,
@@ -1126,18 +1054,20 @@ def generate_video(
         )
     except Exception:
         pass
-    return out_path
+    return out_path, model_label or "minimax-h3"
 
 
 def video_capable(*, probe: bool = False) -> bool:
-    """True when a video URL is set; optionally verify H3 stack is installed."""
+    """True when a video URL is set; optionally verify a registered stack is installed."""
     root = server_url(capability="video") or server_url()
     if not root:
         return False
     if not probe:
         return True
     try:
-        return _pick_minimax_h3_stack(root) is not None
+        from .comfy_video_models import list_ready_video_models
+
+        return bool(list_ready_video_models(root))
     except Exception:
         return False
 
@@ -1169,10 +1099,16 @@ def public_status(*, probe: bool = False) -> dict[str, Any]:
                 for mid in _QWEN_API_MODELS:
                     if mid not in checkpoints:
                         checkpoints = [mid, *checkpoints]
-            h3 = _pick_minimax_h3_stack(url)
-            if h3:
+            from .comfy_video_models import list_ready_video_models
+
+            ready = list_ready_video_models(url)
+            if ready:
                 video_ready = True
-                video_models = [h3["unet"]]
+                h3 = _pick_minimax_h3_stack(url)
+                video_models = [h3["unet"]] if h3 else list(ready)
+                for mid in ready:
+                    if mid not in video_models:
+                        video_models.append(mid)
         except Exception as exc:  # noqa: BLE001
             error = str(exc)
     # Even without live probe, surface Chinese-native Qwen API as a selectable model.

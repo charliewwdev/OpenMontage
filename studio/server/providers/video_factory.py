@@ -71,7 +71,7 @@ class ComfyVideoBackend:
         """Sync render. Does not re-read STUDIO_VIDEO_BACKEND (a flaky probe must not swap providers)."""
         from .comfyui import generate_video as comfy_generate
 
-        path = comfy_generate(
+        path, model_label = comfy_generate(
             prompt=prompt,
             ratio=ratio,
             duration=duration,
@@ -83,7 +83,7 @@ class ComfyVideoBackend:
             "backend": self.id,
             "path": path,
             "providerTaskId": None,
-            "model": "minimax-h3",
+            "model": model_label or "minimax-h3",
             "duration": float(duration),
             "resolution": resolution,
         }

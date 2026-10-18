@@ -42,8 +42,10 @@ def resolve_style_prompt(visual_style: str) -> str:
 
 def optimize_brief(store: ProjectStore, payload: dict) -> dict:
     from providers.deepseek import chat_json
+    from skill_runtime import get_skill_runtime
 
     skill = load_skill("script-brief")
+    runtime = get_skill_runtime("script-brief").get("runtime") or {}
     user = json.dumps(
         {
             "title": payload.get("title") or "",
@@ -57,7 +59,8 @@ def optimize_brief(store: ProjectStore, payload: dict) -> dict:
     data = chat_json(
         system=skill + "\n\n只输出 JSON：brief, genreDetected, tips。",
         user=user,
-        temperature=0.6,
+        temperature=float(runtime.get("temperature") or 0.6),
+        max_tokens=int(runtime.get("max_tokens") or 4096),
     )
     brief = (data.get("brief") or "").strip()
     if not brief:
@@ -226,12 +229,14 @@ def generate_script(store: ProjectStore, project_id: str, episode_count: int, pl
     from a single huge LLM response.
     """
     from providers.deepseek import chat_json
+    from skill_runtime import get_skill_runtime
 
     state = store.load(project_id)
     if not state:
         raise FileNotFoundError("project not found")
     count = max(1, min(10, int(episode_count)))
     skill = load_skill("drama-script")
+    runtime = get_skill_runtime("drama-script").get("runtime") or {}
     p = state["project"]
     batch = 3 if count > 3 else count
     user = json.dumps(
@@ -253,9 +258,9 @@ def generate_script(store: ProjectStore, project_id: str, episode_count: int, pl
     data = chat_json(
         system=skill + "\n\n只输出一个完整 JSON 对象，禁止 Markdown/注释/尾随逗号。",
         user=user,
-        temperature=0.45,
-        max_tokens=16000,
-        retries=4,
+        temperature=float(runtime.get("temperature") or 0.45),
+        max_tokens=int(runtime.get("max_tokens") or 16000),
+        retries=int(runtime.get("retries") or 4),
     )
     state = _apply_generated_script(state, data, replace_episodes=True)
     if planned or count:
@@ -926,7 +931,7 @@ def generate_entity_image(
     if kind == "prop":
         max_attempts = max(max_attempts, 3)
     min_score = qa_min_score()
-    pass_bar = 0.55 if injury_edit else min_score
+    pass_bar = min_score
     if injury_edit:
         # Stay on the injury strategy prompt — never hard-swap to a fixed “East Asian man” template.
         denoise = None
@@ -941,6 +946,7 @@ def generate_entity_image(
             attempt=attempt,
             base_prompt=base_prompt,
             base_negative=negative,
+            last_reason=last_reason,
         )
         attempt_ref = ref
         attempt_denoise = denoise
@@ -977,19 +983,6 @@ def generate_entity_image(
                 ]
             ptext, neg = apply_experience_to_prompt(ptext, neg, retry_patches)
             ptext += prompt_strategy.retry_clause(prompt_ctx, attempt=attempt, max_attempts=max_attempts)
-            if kind == "prop" and any(
-                tok in last_reason.lower()
-                for tok in ("portrait", "person", "woman", "man", "character", "face", "人物", "肖像", "半身")
-            ):
-                ptext = (
-                    "STRICT PRODUCT MACRO, plain white/gray seamless backdrop, ONE object only. "
-                    f"Object: {ent.get('name') or 'prop'}. "
-                    f"Details: {_clean_desc(ent.get('description') or '') or (ent.get('name') or '')}. "
-                    "No humans anywhere in frame."
-                )
-                neg = (
-                    (neg + ", ") if neg else ""
-                ) + "person, people, face, woman, man, portrait, hands, fingers, character sheet"
         elif attempt > 1 and not injury_edit:
             ptext = ptext + prompt_strategy.retry_clause(prompt_ctx, attempt=attempt, max_attempts=max_attempts)
         elif injury_edit and attempt > 1 and last_reason:
@@ -2219,7 +2212,18 @@ def generate_storyboard(store: ProjectStore, project_id: str, episode_id: str) -
         for e in entities
         if not e.get("episodes") or ep["episodeNumber"] in (e.get("episodes") or [])
     ]
+    from skill_runtime import get_skill_runtime
+
     skill = load_skill("drama-shot-prompt")
+    runtime = get_skill_runtime("drama-shot-prompt").get("runtime") or {}
+    seg_min = int(runtime.get("segment_count_min") or _STORYBOARD_SEG_MIN)
+    seg_max = int(runtime.get("segment_count_max") or _STORYBOARD_SEG_MAX)
+    seg_target = int(runtime.get("segment_count_target") or 12)
+    dur_min = int(runtime.get("episode_duration_sec_min") or _STORYBOARD_DUR_MIN)
+    dur_max = int(runtime.get("episode_duration_sec_max") or _STORYBOARD_DUR_MAX)
+    dur_target = int(runtime.get("episode_duration_sec_target") or 162)
+    beats = str(runtime.get("beats_per_segment") or "3-4")
+    seg_dur = str(runtime.get("segment_duration_sec") or "10-15")
     p = state["project"]
     style_hint = resolve_style_prompt(p.get("visualStyle") or "")
     assets = [
@@ -2240,16 +2244,16 @@ def generate_storyboard(store: ProjectStore, project_id: str, episode_id: str) -
         "visualStyle": p.get("visualStyle"),
         "visualStylePrompt": style_hint,
         "assets": assets,
-        "segmentCountMin": _STORYBOARD_SEG_MIN,
-        "segmentCountMax": _STORYBOARD_SEG_MAX,
-        "segmentCountTarget": 12,
-        "beatsPerSegment": "3-4",
-        "segmentDurationSec": "10-15",
-        "episodeDurationSecMin": _STORYBOARD_DUR_MIN,
-        "episodeDurationSecMax": _STORYBOARD_DUR_MAX,
-        "episodeDurationSecTarget": 162,
+        "segmentCountMin": seg_min,
+        "segmentCountMax": seg_max,
+        "segmentCountTarget": seg_target,
+        "beatsPerSegment": beats,
+        "segmentDurationSec": seg_dur,
+        "episodeDurationSecMin": dur_min,
+        "episodeDurationSecMax": dur_max,
+        "episodeDurationSecTarget": dur_target,
         "note": (
-            "必须输出 segments 数组：10–14 个片段，每段 3–4 个 beats，每段 duration 10–15 秒。"
+            f"必须输出 segments 数组：{seg_min}–{seg_max} 个片段，每段 {beats} 个 beats，每段 duration {seg_dur} 秒。"
             "对齐 SceneMixer《染血玉令》：一段一次出片；一镜一节拍；对白与反应拆镜；写清机位/承接/闭唇/光源。"
         ),
     }
@@ -2260,8 +2264,8 @@ def generate_storyboard(store: ProjectStore, project_id: str, episode_id: str) -
     data = chat_json(
         system=system,
         user=json.dumps({**base_ctx, "action": "generate"}, ensure_ascii=False),
-        temperature=0.35,
-        max_tokens=28000,
+        temperature=float(runtime.get("temperature") or 0.35),
+        max_tokens=int(runtime.get("max_tokens") or 28000),
         retries=4,
     )
     if data.get("segments"):
@@ -2288,9 +2292,9 @@ def generate_storyboard(store: ProjectStore, project_id: str, episode_id: str) -
     while guard < 3:
         segments = group_shots_by_segment(shots)
         total_dur = sum(int(s.get("duration") or 0) for s in shots)
-        if len(segments) >= _STORYBOARD_SEG_MIN and total_dur >= _STORYBOARD_DUR_MIN:
+        if len(segments) >= seg_min and total_dur >= dur_min:
             break
-        need_seg = min(4, _STORYBOARD_SEG_MAX - len(segments))
+        need_seg = min(4, seg_max - len(segments))
         if need_seg <= 0:
             break
         guard += 1
@@ -2302,7 +2306,7 @@ def generate_storyboard(store: ProjectStore, project_id: str, episode_id: str) -
             "haveSegmentCount": len(segments),
             "haveBeatCount": len(shots),
             "haveDurationSec": total_dur,
-            "remainingDurationSecMin": max(0, _STORYBOARD_DUR_MIN - total_dur),
+            "remainingDurationSecMin": max(0, dur_min - total_dur),
             "previousSegments": [
                 {
                     "segmentOrder": g["segmentOrder"],
@@ -2315,14 +2319,14 @@ def generate_storyboard(store: ProjectStore, project_id: str, episode_id: str) -
             ],
             "note": (
                 f"已有 {len(segments)} 段 / {len(shots)} 拍 / {total_dur}s，"
-                f"请续写接下来约 {need_seg} 个 segments（每段 3–4 beats），"
-                f"补足至至少 {_STORYBOARD_SEG_MIN} 段且总时长≥{_STORYBOARD_DUR_MIN}s。"
+                f"请续写接下来约 {need_seg} 个 segments（每段 {beats} beats），"
+                f"补足至至少 {seg_min} 段且总时长≥{dur_min}s。"
             ),
         }
         more_data = chat_json(
             system=system + "\n续写后续片段，不要重复已有 segmentOrder。",
             user=json.dumps(cont_user, ensure_ascii=False),
-            temperature=0.35,
+            temperature=float(runtime.get("temperature") or 0.35),
             max_tokens=20000,
             retries=3,
         )
@@ -2357,13 +2361,13 @@ def generate_storyboard(store: ProjectStore, project_id: str, episode_id: str) -
 
     # Cap by segment count first
     segments = group_shots_by_segment(shots)
-    if len(segments) > _STORYBOARD_SEG_MAX:
-        keep_orders = {g["segmentOrder"] for g in segments[:_STORYBOARD_SEG_MAX]}
+    if len(segments) > seg_max:
+        keep_orders = {g["segmentOrder"] for g in segments[:seg_max]}
         shots = [s for s in shots if int(s.get("segmentOrder") or 0) in keep_orders]
 
     total_dur = sum(int(s.get("duration") or 0) for s in shots)
-    if total_dur < _STORYBOARD_DUR_MIN:
-        _top_up_shot_durations(shots, _STORYBOARD_DUR_MIN - total_dur)
+    if total_dur < dur_min:
+        _top_up_shot_durations(shots, dur_min - total_dur)
         # refresh segmentDuration
         for g in group_shots_by_segment(shots):
             d = sum(int(x.get("duration") or 0) for x in g["shots"])
@@ -2373,16 +2377,16 @@ def generate_storyboard(store: ProjectStore, project_id: str, episode_id: str) -
     while True:
         segments = group_shots_by_segment(shots)
         total_dur = sum(int(s.get("duration") or 0) for s in shots)
-        if len(segments) <= _STORYBOARD_SEG_MIN or total_dur <= _STORYBOARD_DUR_MAX:
+        if len(segments) <= seg_min or total_dur <= dur_max:
             break
         drop = segments[-1]["segmentOrder"]
         shots = [s for s in shots if int(s.get("segmentOrder") or 0) != drop]
 
     segments = group_shots_by_segment(shots)
-    if len(segments) < _STORYBOARD_SEG_MIN:
+    if len(segments) < seg_min:
         raise RuntimeError(
             f"片段过少（{len(segments)} 段 / {len(shots)} 拍），"
-            f"整集需对齐 {_STORYBOARD_SEG_MIN}–{_STORYBOARD_SEG_MAX} 段（每段 3–4 镜，约 10–15s）。请重试拆分。"
+            f"整集需对齐 {seg_min}–{seg_max} 段（每段 {beats} 镜，约 {seg_dur}s）。请重试拆分。"
         )
 
     from prompt_consistency import entity_name_set, repair_shot_prompt

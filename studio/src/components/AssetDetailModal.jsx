@@ -342,11 +342,7 @@ export function AssetDetailModal({
                           <img
                             src={image.url}
                             alt={`版本 ${index + 1}`}
-                            className={
-                              live.kind === "character"
-                                ? "h-full w-full object-contain object-center bg-black/50"
-                                : "h-full w-full object-cover"
-                            }
+                            className="h-full w-full object-contain object-center bg-black/50"
                           />
                           {image.qaPass === false ? (
                             <span className="absolute inset-x-0 bottom-0 bg-rose-600/80 text-center text-[8px] text-white">未过</span>

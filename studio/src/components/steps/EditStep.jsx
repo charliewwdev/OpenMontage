@@ -105,7 +105,11 @@ function DialogueCard({ dialogue, entityByName }) {
     <div className="mt-3 flex gap-2.5 rounded-xl border border-[var(--line)] bg-white/[.04] p-3">
       <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-black/30">
         {ent?.selectedImage?.url ? (
-          <img src={ent.selectedImage.url} alt="" className="h-full w-full object-cover" />
+          <img
+            src={ent.selectedImage.url}
+            alt=""
+            className="h-full w-full object-contain object-center bg-black/40"
+          />
         ) : (
           <div className="flex h-full items-center justify-center text-[10px] text-[var(--muted)]">
             {(parsed.speaker || "?").slice(0, 1)}
@@ -523,16 +527,20 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
                                 : "border-[var(--line)] opacity-80"
                             }`}
                           >
-                            <div className={`bg-black/50 ${block.kind === "character" ? "aspect-[3/4]" : "aspect-video"}`}>
+                            <div
+                              className={`flex items-center justify-center bg-[#11131a] ${
+                                block.kind === "character"
+                                  ? "aspect-[3/4]"
+                                  : block.kind === "prop"
+                                    ? "aspect-square"
+                                    : "aspect-video"
+                              }`}
+                            >
                               {ent.selectedImage?.url ? (
                                 <img
                                   src={ent.selectedImage.url}
                                   alt=""
-                                  className={
-                                    block.kind === "character"
-                                      ? "h-full w-full object-contain object-center"
-                                      : "h-full w-full object-cover"
-                                  }
+                                  className="max-h-full max-w-full object-contain object-center"
                                 />
                               ) : null}
                             </div>
@@ -947,8 +955,17 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
                       active ? "border-[var(--projector)] ring-1 ring-[var(--projector)]" : "border-[var(--line)]"
                     }`}
                   >
-                    <div className={`bg-black ${ratio === "9:16" ? "aspect-[9/16] max-h-40" : "aspect-video"}`}>
-                      <video src={shot.selectedVideo.url} muted preload="metadata" className="h-full w-full object-cover" />
+                    <div
+                      className={`flex items-center justify-center bg-black ${
+                        ratio === "9:16" ? "aspect-[9/16] max-h-40" : "aspect-video"
+                      }`}
+                    >
+                      <video
+                        src={shot.selectedVideo.url}
+                        muted
+                        preload="metadata"
+                        className="max-h-full max-w-full object-contain object-center"
+                      />
                     </div>
                     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-1.5 pb-1.5 pt-5">
                       <div className="timecode text-[9px] text-white">

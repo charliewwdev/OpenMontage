@@ -190,7 +190,7 @@ function DialogueCard({ dialogue, entityByName, onOpenEntity }) {
         title={ent ? `查看 ${ent.name}` : undefined}
       >
         {entityThumb(ent) ? (
-          <img src={entityThumb(ent)} alt="" className="h-full w-full object-cover" />
+          <img src={entityThumb(ent)} alt="" className="h-full w-full object-contain object-center bg-black/60" />
         ) : (
           <div className="flex h-full items-center justify-center text-[10px] text-white/40">
             {(parsed.speaker || "?").slice(0, 1)}
@@ -1175,16 +1175,16 @@ export function SegmentWorkspace({
                           inSeg ? "border-[#7c6cff] shadow-[0_0_0_1px_rgba(124,108,255,.4)]" : "border-white/10 opacity-55 hover:opacity-90"
                         }`}
                       >
-                        <div className={`bg-black/50 ${block.kind === "character" ? "aspect-[3/4]" : "aspect-video"}`}>
+                        <div
+                          className={`flex items-center justify-center bg-[#11131a] ${
+                            block.kind === "character" ? "aspect-[3/4]" : block.kind === "prop" ? "aspect-square" : "aspect-video"
+                          }`}
+                        >
                           {entityThumb(ent) ? (
                             <img
                               src={entityThumb(ent)}
                               alt=""
-                              className={
-                                block.kind === "character"
-                                  ? "h-full w-full object-contain object-center"
-                                  : "h-full w-full object-cover"
-                              }
+                              className="max-h-full max-w-full object-contain object-center"
                             />
                           ) : (
                             <div className="flex h-full items-center justify-center text-[10px] text-white/30">无图</div>
@@ -1800,13 +1800,22 @@ export function SegmentWorkspace({
                   setSegmentOrder(seg.segmentOrder);
                   setPlaying(false);
                 }}
-                className={`w-[104px] shrink-0 overflow-hidden rounded-lg border text-left transition ${
+                className={`w-[88px] shrink-0 overflow-hidden rounded-lg border text-left transition ${
                   active ? "border-[#7c6cff] ring-1 ring-[#7c6cff]/50" : "border-white/10 hover:border-white/25"
                 }`}
               >
-                <div className="relative aspect-video bg-black/50">
+                <div
+                  className={`relative flex items-center justify-center bg-black ${
+                    ratio === "9:16" ? "aspect-[9/16]" : "aspect-video"
+                  }`}
+                >
                   {ready ? (
-                    <video src={seg.video.url} muted preload="metadata" className="h-full w-full object-cover" />
+                    <video
+                      src={seg.video.url}
+                      muted
+                      preload="metadata"
+                      className="max-h-full max-w-full object-contain object-center"
+                    />
                   ) : (
                     <div className="flex h-full items-center justify-center text-[10px] text-white/30">
                       {seg.shots.some((s) => s.status === "generating") ? "生成中" : "待出片"}

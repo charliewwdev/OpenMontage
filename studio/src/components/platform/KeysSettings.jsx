@@ -225,6 +225,10 @@ function ProviderEditor({ open, catalog, initial, onClose, onSave }) {
   );
 }
 
+function SectionLabel({ children }) {
+  return <p className="mb-2 mt-1 text-[11px] uppercase tracking-[0.08em] text-white/35">{children}</p>;
+}
+
 function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
   const providers = status?.llmProviders || catalog || [];
   const active = status?.llmBackend || status?.llmProvider || "";
@@ -287,12 +291,177 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
 
   const configuredProviders = providers.filter((p) => p.configured);
   const otherProviders = providers.filter((p) => !p.configured);
+  const volcConfigured = Boolean(status?.volcengine?.configured);
+  const comfyConfigured = Boolean(status?.comfyui?.configured);
+  const hasConfigured = configuredProviders.length > 0 || volcConfigured || comfyConfigured;
+
+  const renderLlmCard = (p) => {
+    const isActive = active === p.id;
+    const initials = String(p.label || p.id || "?")
+      .replace(/[^A-Za-z0-9\u4e00-\u9fa5]/g, "")
+      .slice(0, 2)
+      .toUpperCase();
+    return (
+      <article key={p.id} className={`provider-card group ${isActive ? "provider-card-active" : ""}`}>
+        <div className="provider-card-icon">{initials || "AI"}</div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="truncate text-[15px] font-semibold tracking-tight">{p.label}</h3>
+            {isActive ? <span className="provider-badge-active">使用中</span> : null}
+            {!p.configured ? (
+              <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] text-[var(--muted)]">
+                未配置
+              </span>
+            ) : null}
+          </div>
+          <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[var(--muted)]">
+            {p.docs ? (
+              <a
+                href={p.docs}
+                target="_blank"
+                rel="noreferrer"
+                className="truncate hover:text-[var(--ink)]"
+                title={p.baseUrl || p.docs}
+              >
+                {p.baseUrl || p.docs}
+              </a>
+            ) : (
+              <span className="truncate">{p.baseUrl || "未配置接口地址"}</span>
+            )}
+            <span>·</span>
+            <span>{p.model || "—"}</span>
+            {p.configured ? (
+              <>
+                <span>·</span>
+                <span>Key {p.masked}</span>
+              </>
+            ) : null}
+          </div>
+          {p.hint ? <p className="mt-1 text-[11px] leading-4 text-white/40">{p.hint}</p> : null}
+          {p.configured && (p.models || []).length ? (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <span className="text-[11px] text-white/35">切换模型</span>
+              <select
+                className="field !min-h-[30px] !w-auto !max-w-[min(100%,280px)] !py-1 !text-xs"
+                value={p.model || ""}
+                disabled={busyId === p.id}
+                onChange={(e) => void switchModel(p, e.target.value)}
+              >
+                {(p.models || []).map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label || m.id}
+                  </option>
+                ))}
+                {p.model && !(p.models || []).some((m) => m.id === p.model) ? (
+                  <option value={p.model}>{p.model}（当前）</option>
+                ) : null}
+              </select>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="provider-card-actions">
+          <button
+            type="button"
+            className={`provider-icon-btn ${isActive ? "provider-icon-btn-done" : "provider-icon-btn-primary"}`}
+            disabled={busyId === p.id || isActive}
+            onClick={() => void enable(p)}
+            title={isActive ? "当前启用" : "启用"}
+          >
+            {busyId === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
+            <span className="hidden sm:inline">{isActive ? "已启用" : "启用"}</span>
+          </button>
+          <button type="button" className="provider-icon-btn" onClick={() => setEditor(p)} title="编辑">
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+          {p.docs ? (
+            <a href={p.docs} target="_blank" rel="noreferrer" className="provider-icon-btn" title="文档">
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          ) : null}
+          <button
+            type="button"
+            className="provider-icon-btn"
+            disabled={busyId === p.id || !p.configured || isActive}
+            onClick={() => void clearKey(p)}
+            title={isActive ? "请先切换到其他供应商再清空" : "清空 Key"}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </article>
+    );
+  };
+
+  const volcSection = (
+    <section className="provider-card !items-stretch !flex-col gap-3 sm:!flex-row sm:!items-center">
+      <div className="provider-card-icon">火</div>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-[15px] font-semibold">火山方舟</h3>
+          <span className="text-xs text-[var(--muted)]">Seedream 出图 · Seedance 出片</span>
+          {volcConfigured ? (
+            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">
+              已配置
+            </span>
+          ) : (
+            <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] text-[var(--muted)]">
+              未配置
+            </span>
+          )}
+          {status?.imageBackend === "seedream" ? <span className="provider-badge-active">出图使用中</span> : null}
+          {status?.videoBackend === "seedance" ? <span className="provider-badge-active">出片使用中</span> : null}
+        </div>
+        <div className="mt-3">
+          <VolcCard status={status} onUpdated={onUpdated} />
+        </div>
+      </div>
+    </section>
+  );
+
+  const comfySection = (
+    <section className="provider-card !items-stretch !flex-col gap-3 sm:!flex-row sm:!items-start">
+      <div className="provider-card-icon">C</div>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-[15px] font-semibold">ComfyUI</h3>
+          <span className="text-xs text-[var(--muted)]">本机 / 局域网 / 智川云租机 · 出图 + 出片</span>
+          {status?.comfyui?.reachable ? (
+            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">
+              已连通{status.comfyui.deviceName ? ` · ${status.comfyui.deviceName}` : ""}
+            </span>
+          ) : comfyConfigured ? (
+            <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] text-amber-300">
+              已配置未连通
+            </span>
+          ) : (
+            <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] text-[var(--muted)]">
+              未配置
+            </span>
+          )}
+          {status?.imageBackend === "comfyui" ? <span className="provider-badge-active">出图使用中</span> : null}
+          {status?.videoBackend === "comfyui" ? <span className="provider-badge-active">出片使用中</span> : null}
+        </div>
+        <p className="mt-1 text-[11px] leading-4 text-white/40">
+          本机填 <code className="text-white/55">http://127.0.0.1:8188</code>
+          ；云端 Studio 需把本机 Comfy 暴露为可访问地址（隧道 / 公网）。也可在{" "}
+          <a className="text-[#a5b4fc] hover:underline" href="https://gpuhome.cc/market" target="_blank" rel="noreferrer">
+            算力市场
+          </a>{" "}
+          租 ComfyUI 镜像后填「自定义服务」地址。下方可选出图 Checkpoint、出片模型与 Comfy Org API Key。
+        </p>
+        <div className="mt-3">
+          <ComfyCard status={status} onUpdated={onUpdated} />
+        </div>
+      </div>
+    </section>
+  );
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-[var(--muted)]">
-          文本模型在下方卡片（铅笔=改 Key）；火山 / ComfyUI 单独成块。已保存的 Key 仍在服务端，不会因页面改版丢失。
+          已配置项置顶；火山与 ComfyUI 归入「媒体」分组。已保存的 Key 仍在服务端，不会因页面改版丢失。
         </p>
         <div className="flex gap-2">
           <button type="button" className="btn-secondary" disabled={testing} onClick={onTest}>
@@ -305,177 +474,36 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
         </div>
       </div>
 
-      <div className="space-y-2.5">
-        {[...configuredProviders, ...otherProviders].map((p, idx) => {
-          const isActive = active === p.id;
-          const showUnconfiguredLabel = idx === configuredProviders.length && otherProviders.length > 0;
-          const initials = String(p.label || p.id || "?")
-            .replace(/[^A-Za-z0-9\u4e00-\u9fa5]/g, "")
-            .slice(0, 2)
-            .toUpperCase();
-          return (
-            <div key={p.id}>
-            {showUnconfiguredLabel ? (
-              <p className="mb-2 mt-3 text-[11px] uppercase tracking-[0.08em] text-white/35">未配置</p>
-            ) : null}
-            <article className={`provider-card group ${isActive ? "provider-card-active" : ""}`}>
-              <div className="provider-card-icon">{initials || "AI"}</div>
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="truncate text-[15px] font-semibold tracking-tight">{p.label}</h3>
-                  {isActive ? <span className="provider-badge-active">使用中</span> : null}
-                  {!p.configured ? (
-                    <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] text-[var(--muted)]">
-                      未配置
-                    </span>
-                  ) : null}
-                </div>
-                <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[var(--muted)]">
-                  {p.docs ? (
-                    <a
-                      href={p.docs}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="truncate hover:text-[var(--ink)]"
-                      title={p.baseUrl || p.docs}
-                    >
-                      {p.baseUrl || p.docs}
-                    </a>
-                  ) : (
-                    <span className="truncate">{p.baseUrl || "未配置接口地址"}</span>
-                  )}
-                  <span>·</span>
-                  <span>{p.model || "—"}</span>
-                  {p.configured ? (
-                    <>
-                      <span>·</span>
-                      <span>Key {p.masked}</span>
-                    </>
-                  ) : null}
-                </div>
-                {p.hint ? <p className="mt-1 text-[11px] leading-4 text-white/40">{p.hint}</p> : null}
-                {p.configured && (p.models || []).length ? (
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span className="text-[11px] text-white/35">切换模型</span>
-                    <select
-                      className="field !min-h-[30px] !w-auto !max-w-[min(100%,280px)] !py-1 !text-xs"
-                      value={p.model || ""}
-                      disabled={busyId === p.id}
-                      onChange={(e) => void switchModel(p, e.target.value)}
-                    >
-                      {(p.models || []).map((m) => (
-                        <option key={m.id} value={m.id}>
-                          {m.label || m.id}
-                        </option>
-                      ))}
-                      {p.model && !(p.models || []).some((m) => m.id === p.model) ? (
-                        <option value={p.model}>{p.model}（当前）</option>
-                      ) : null}
-                    </select>
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="provider-card-actions">
-                <button
-                  type="button"
-                  className={`provider-icon-btn ${isActive ? "provider-icon-btn-done" : "provider-icon-btn-primary"}`}
-                  disabled={busyId === p.id || isActive}
-                  onClick={() => void enable(p)}
-                  title={isActive ? "当前启用" : "启用"}
-                >
-                  {busyId === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
-                  <span className="hidden sm:inline">{isActive ? "已启用" : "启用"}</span>
-                </button>
-                <button type="button" className="provider-icon-btn" onClick={() => setEditor(p)} title="编辑">
-                  <Pencil className="h-3.5 w-3.5" />
-                </button>
-                {p.docs ? (
-                  <a href={p.docs} target="_blank" rel="noreferrer" className="provider-icon-btn" title="文档">
-                    <ExternalLink className="h-3.5 w-3.5" />
-                  </a>
-                ) : null}
-                <button
-                  type="button"
-                  className="provider-icon-btn"
-                  disabled={busyId === p.id || !p.configured || isActive}
-                  onClick={() => void clearKey(p)}
-                  title={isActive ? "请先切换到其他供应商再清空" : "清空 Key"}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </article>
+      {hasConfigured ? (
+        <div className="space-y-3">
+          <SectionLabel>已配置</SectionLabel>
+          {configuredProviders.length ? (
+            <div className="space-y-2.5">{configuredProviders.map(renderLlmCard)}</div>
+          ) : null}
+          {volcConfigured || comfyConfigured ? (
+            <div className="space-y-2.5">
+              <SectionLabel>媒体 · 出图 / 出片</SectionLabel>
+              {volcConfigured ? volcSection : null}
+              {comfyConfigured ? comfySection : null}
             </div>
-          );
-        })}
-      </div>
-
-      <section className="provider-card !items-stretch !flex-col gap-3 sm:!flex-row sm:!items-center">
-        <div className="provider-card-icon">火</div>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-[15px] font-semibold">火山方舟</h3>
-            <span className="text-xs text-[var(--muted)]">Seedream 出图 · Seedance 出片</span>
-            {!status?.volcengine?.configured ? (
-              <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] text-[var(--muted)]">
-                未配置
-              </span>
-            ) : null}
-          </div>
-          <div className="mt-3">
-            <VolcCard status={status} onUpdated={onUpdated} />
-          </div>
+          ) : null}
         </div>
-      </section>
+      ) : null}
 
-      <section className="provider-card !items-stretch !flex-col gap-3 sm:!flex-row sm:!items-center">
-        <div className="provider-card-icon">川</div>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-[15px] font-semibold">智川云 GPU · ComfyUI</h3>
-            <span className="text-xs text-[var(--muted)]">出图 + 出片（MiniMax H3；优先于火山 Seedream / Seedance）</span>
-            {status?.comfyui?.reachable ? (
-              <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">
-                已连通{status.comfyui.deviceName ? ` · ${status.comfyui.deviceName}` : ""}
-              </span>
-            ) : status?.comfyui?.configured ? (
-              <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] text-amber-300">
-                已配置未连通
-              </span>
-            ) : (
-              <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] text-[var(--muted)]">
-                未配置
-              </span>
-            )}
-            {status?.imageBackend === "comfyui" ? (
-              <span className="provider-badge-active">出图使用中</span>
-            ) : null}
-            {status?.videoBackend === "comfyui" ? (
-              <span className="provider-badge-active">出片使用中</span>
-            ) : null}
-          </div>
-          <p className="mt-1 text-[11px] leading-4 text-white/40">
-            ①{" "}
-            <a className="text-[#a5b4fc] hover:underline" href="https://gpuhome.cc/market" target="_blank" rel="noreferrer">
-              算力市场
-            </a>{" "}
-            租 GPU（建议 3090/4090）→ ② 镜像选 ComfyUI → ③{" "}
-            <a
-              className="text-[#a5b4fc] hover:underline"
-              href={status?.comfyui?.portsDocs || "https://docs.gpuhome.cc/docs/instance/open-ports.html"}
-              target="_blank"
-              rel="noreferrer"
-            >
-              开放端口
-            </a>{" "}
-            （勿用 22/8888/8188，用平台给的「自定义服务」地址）→ ④ 填到下方并检测连通。文本模型仍用上方「智川云 Token」。
-          </p>
-          <div className="mt-3">
-            <ComfyCard status={status} onUpdated={onUpdated} />
-          </div>
+      {otherProviders.length ? (
+        <div className="space-y-2.5">
+          <SectionLabel>文本模型 · 未配置</SectionLabel>
+          {otherProviders.map(renderLlmCard)}
         </div>
-      </section>
+      ) : null}
+
+      {!volcConfigured || !comfyConfigured ? (
+        <div className="space-y-2.5">
+          <SectionLabel>媒体 · 未配置</SectionLabel>
+          {!volcConfigured ? volcSection : null}
+          {!comfyConfigured ? comfySection : null}
+        </div>
+      ) : null}
 
       <ProviderEditor
         open={Boolean(editor)}
@@ -596,32 +624,67 @@ function shortenUrl(url) {
   }
 }
 
+const COMFY_LOCAL_PRESETS = [
+  { label: "本机 8188", url: "http://127.0.0.1:8188" },
+  { label: "localhost", url: "http://localhost:8188" },
+];
+
 function ComfyCard({ status, onUpdated }) {
   const comfy = status?.comfyui || {};
   const [serverUrl, setServerUrl] = useState(comfy.serverUrl || "");
+  const [imageUrl, setImageUrl] = useState(comfy.imageUrl || "");
+  const [videoUrl, setVideoUrl] = useState(comfy.videoUrl || "");
   const [checkpoint, setCheckpoint] = useState(comfy.checkpoint || "");
+  const [videoModel, setVideoModel] = useState(comfy.videoModel || "");
+  const [apiKey, setApiKey] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
   const [editing, setEditing] = useState(!comfy.configured);
 
   useEffect(() => {
     setServerUrl(comfy.serverUrl || "");
+    setImageUrl(comfy.imageUrl || "");
+    setVideoUrl(comfy.videoUrl || "");
     setCheckpoint(comfy.checkpoint || "");
+    setVideoModel(comfy.videoModel || "");
     setEditing(!comfy.configured);
-  }, [comfy.serverUrl, comfy.checkpoint, comfy.configured]);
+  }, [comfy.serverUrl, comfy.imageUrl, comfy.videoUrl, comfy.checkpoint, comfy.videoModel, comfy.configured]);
 
   const savedUrl = (comfy.serverUrl || "").replace(/\/$/, "");
   const draftUrl = serverUrl.trim().replace(/\/$/, "");
-  const dirty = draftUrl !== savedUrl;
-  const canSave = dirty; // allow clear (empty) when previously configured
+  const dirty =
+    draftUrl !== savedUrl ||
+    imageUrl.trim().replace(/\/$/, "") !== (comfy.imageUrl || "").replace(/\/$/, "") ||
+    videoUrl.trim().replace(/\/$/, "") !== (comfy.videoUrl || "").replace(/\/$/, "") ||
+    Boolean(apiKey.trim());
+  const canSave = dirty;
 
   const save = async (extra = {}) => {
-    const url = (extra.serverUrl ?? serverUrl).trim().replace(/\/$/, "");
+    const url = String((extra.serverUrl ?? serverUrl) || comfy.serverUrl || "")
+      .trim()
+      .replace(/\/$/, "");
     const ckpt = (extra.checkpoint ?? checkpoint).trim();
+    const vmodel = (extra.videoModel ?? videoModel).trim();
+    const img = String((extra.imageUrl ?? imageUrl) || comfy.imageUrl || "")
+      .trim()
+      .replace(/\/$/, "");
+    const vid = String((extra.videoUrl ?? videoUrl) || comfy.videoUrl || "")
+      .trim()
+      .replace(/\/$/, "");
     setSaving(true);
     try {
-      const payload = { COMFYUI_SERVER_URL: url };
-      if (ckpt) payload.COMFYUI_CHECKPOINT = ckpt;
+      const payload = {
+        COMFYUI_SERVER_URL: url,
+        COMFYUI_IMAGE_SERVER_URL: img,
+        COMFYUI_VIDEO_SERVER_URL: vid,
+      };
+      if ("checkpoint" in extra || ckpt) payload.COMFYUI_CHECKPOINT = ckpt;
+      if ("videoModel" in extra || vmodel) payload.COMFYUI_VIDEO_MODEL = vmodel;
+      if (apiKey.trim()) {
+        payload.COMFY_API_KEY = apiKey.trim();
+        setApiKey("");
+      }
       const data = await api("/api/settings/keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -642,18 +705,22 @@ function ComfyCard({ status, onUpdated }) {
   const test = async () => {
     setTesting(true);
     try {
-      if (editing && serverUrl.trim() && serverUrl.trim().replace(/\/$/, "") !== (comfy.serverUrl || "")) {
+      if (editing && dirty) {
         await save();
       }
-      const data = await api("/api/settings/keys/test", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" });
+      const data = await api("/api/settings/keys/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: "{}",
+      });
       onUpdated?.(data);
       const r = data?.results?.comfyui;
       if (r?.ok) {
         const vid = (r.videoModels || []).length;
         toast.success(
           vid
-            ? `ComfyUI 连通 · 出图 ${r.checkpointCount || 0} · 出片 H3 就绪`
-            : `ComfyUI 连通 · 出图模型 ${r.checkpointCount || 0} 个（未检测到 MiniMax H3 出片权重）`,
+            ? `ComfyUI 连通 · 出图 ${r.checkpointCount || 0} · 出片模型 ${vid}`
+            : `ComfyUI 连通 · 出图模型 ${r.checkpointCount || 0} 个（未检测到出片权重）`,
         );
       } else {
         toast.error(r?.error || "ComfyUI 连通失败");
@@ -666,10 +733,15 @@ function ComfyCard({ status, onUpdated }) {
   };
 
   const checkpoints = comfy.checkpoints || [];
+  const videoModels = comfy.videoModels || [];
   const hasUrl = Boolean(savedUrl || draftUrl);
+  const isLocal =
+    /^(https?:\/\/)?(127\.0\.0\.1|localhost)(:\d+)?\/?$/i.test(savedUrl || draftUrl) ||
+    (savedUrl || draftUrl).includes("127.0.0.1") ||
+    (savedUrl || draftUrl).includes("localhost");
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {comfy.configured && !editing ? (
         <div className="flex flex-wrap items-center gap-2">
           <span
@@ -677,20 +749,27 @@ function ComfyCard({ status, onUpdated }) {
             title={savedUrl}
           >
             已配置 {shortenUrl(savedUrl)}
+            {isLocal ? " · 本机" : ""}
           </span>
           <button
             type="button"
             className="provider-icon-btn"
-            title="编辑地址"
-            aria-label="编辑地址"
+            title="编辑地址与模型"
+            aria-label="编辑地址与模型"
             onClick={() => {
               setServerUrl(savedUrl);
               setEditing(true);
+              setShowAdvanced(Boolean(comfy.imageUrl || comfy.videoUrl));
             }}
           >
             <Pencil className="h-3.5 w-3.5" />
           </button>
-          <button type="button" className="btn-secondary !min-h-[38px] !px-3 text-xs" disabled={testing || !hasUrl} onClick={() => void test()}>
+          <button
+            type="button"
+            className="btn-secondary !min-h-[38px] !px-3 text-xs"
+            disabled={testing || !hasUrl}
+            onClick={() => void test()}
+          >
             {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
             检测连通
           </button>
@@ -701,51 +780,72 @@ function ComfyCard({ status, onUpdated }) {
           ) : null}
         </div>
       ) : (
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <input
-            className="field sm:flex-1"
-            type="url"
-            autoComplete="off"
-            placeholder="粘贴智川云「自定义服务」地址，如 https://xxx.gpuhome.cc"
-            value={serverUrl}
-            onChange={(e) => setServerUrl(e.target.value)}
-          />
-          <button
-            type="button"
-            className="provider-icon-btn provider-icon-btn-primary !min-h-[38px] !px-3"
-            disabled={saving || !canSave}
-            onClick={() => void save()}
-          >
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {comfy.configured ? "更新地址" : "保存"}
-          </button>
-          {comfy.configured ? (
+        <div className="space-y-2">
+          <div className="flex flex-wrap gap-1.5">
+            {COMFY_LOCAL_PRESETS.map((preset) => (
+              <button
+                key={preset.url}
+                type="button"
+                className="rounded-full border border-white/15 bg-white/[0.04] px-2.5 py-1 text-[11px] text-white/70 transition hover:border-[#7c6cff]/50 hover:text-white"
+                onClick={() => {
+                  setServerUrl(preset.url);
+                  setEditing(true);
+                }}
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <input
+              className="field sm:flex-1"
+              type="url"
+              autoComplete="off"
+              placeholder="本机 http://127.0.0.1:8188，或智川云自定义服务地址"
+              value={serverUrl}
+              onChange={(e) => setServerUrl(e.target.value)}
+            />
+            <button
+              type="button"
+              className="provider-icon-btn provider-icon-btn-primary !min-h-[38px] !px-3"
+              disabled={saving || !canSave}
+              onClick={() => void save()}
+            >
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {comfy.configured ? "更新" : "保存"}
+            </button>
+            {comfy.configured ? (
+              <button
+                type="button"
+                className="btn-secondary !min-h-[38px] !px-3 text-xs"
+                disabled={saving}
+                onClick={() => {
+                  setServerUrl(savedUrl);
+                  setImageUrl(comfy.imageUrl || "");
+                  setVideoUrl(comfy.videoUrl || "");
+                  setApiKey("");
+                  setEditing(false);
+                }}
+              >
+                取消
+              </button>
+            ) : null}
             <button
               type="button"
               className="btn-secondary !min-h-[38px] !px-3 text-xs"
-              disabled={saving}
-              onClick={() => {
-                setServerUrl(savedUrl);
-                setEditing(false);
-              }}
+              disabled={testing || !draftUrl}
+              onClick={() => void test()}
             >
-              取消
+              {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
+              检测连通
             </button>
-          ) : null}
-          <button type="button" className="btn-secondary !min-h-[38px] !px-3 text-xs" disabled={testing || !draftUrl} onClick={() => void test()}>
-            {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
-            检测连通
-          </button>
-          {comfy.docs ? (
-            <a className="btn-secondary !min-h-[38px] !px-3 text-xs" href={comfy.docs} target="_blank" rel="noreferrer">
-              ComfyUI 文档
-            </a>
-          ) : null}
+          </div>
         </div>
       )}
-      {checkpoints.length ? (
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[11px] text-white/35">Checkpoint</span>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[11px] text-white/35">出图模型</span>
+        {checkpoints.length ? (
           <select
             className="field !min-h-[30px] !w-auto !max-w-[min(100%,320px)] !py-1 !text-xs"
             value={checkpoint || checkpoints[0]}
@@ -761,8 +861,127 @@ function ComfyCard({ status, onUpdated }) {
               </option>
             ))}
           </select>
+        ) : (
+          <input
+            className="field !min-h-[30px] !max-w-[min(100%,320px)] !py-1 !text-xs"
+            placeholder="如 RealVisXL / qwen-image-3.0-pro"
+            value={checkpoint}
+            disabled={saving}
+            onChange={(e) => setCheckpoint(e.target.value)}
+            onBlur={() => {
+              if (checkpoint.trim() && checkpoint.trim() !== (comfy.checkpoint || "")) {
+                void save({ checkpoint: checkpoint.trim() });
+              }
+            }}
+          />
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[11px] text-white/35">出片模型</span>
+        {videoModels.length ? (
+          <select
+            className="field !min-h-[30px] !w-auto !max-w-[min(100%,320px)] !py-1 !text-xs"
+            value={videoModel || videoModels[0]}
+            disabled={saving}
+            onChange={(e) => {
+              setVideoModel(e.target.value);
+              void save({ videoModel: e.target.value });
+            }}
+          >
+            {videoModels.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <input
+            className="field !min-h-[30px] !max-w-[min(100%,320px)] !py-1 !text-xs"
+            placeholder="如 MiniMax-Hailuo-02 / H3（检测连通后可自动发现）"
+            value={videoModel}
+            disabled={saving}
+            onChange={(e) => setVideoModel(e.target.value)}
+            onBlur={() => {
+              if (videoModel.trim() && videoModel.trim() !== (comfy.videoModel || "")) {
+                void save({ videoModel: videoModel.trim() });
+              }
+            }}
+          />
+        )}
+      </div>
+
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <span className="shrink-0 text-[11px] text-white/35">Comfy Org API Key</span>
+        {comfy.apiKeyConfigured && !apiKey ? (
+          <span className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1.5 text-xs text-emerald-200">
+            已配置 {comfy.apiKeyMasked || "Key"}
+          </span>
+        ) : null}
+        <input
+          className="field sm:flex-1 !min-h-[34px] !py-1 !text-xs"
+          type="password"
+          autoComplete="off"
+          placeholder={comfy.apiKeyConfigured ? "粘贴新 Key 以更换（Qwen Image API）" : "可选 · platform.comfy.org API Key"}
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
+        />
+        {apiKey.trim() ? (
+          <button
+            type="button"
+            className="provider-icon-btn provider-icon-btn-primary !min-h-[34px] !px-3 text-xs"
+            disabled={saving}
+            onClick={() => void save()}
+          >
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+            保存 Key
+          </button>
+        ) : null}
+      </div>
+
+      <button
+        type="button"
+        className="text-[11px] text-white/40 underline-offset-2 hover:text-white/70 hover:underline"
+        onClick={() => setShowAdvanced((v) => !v)}
+      >
+        {showAdvanced ? "收起高级" : "高级：分设出图 / 出片地址"}
+      </button>
+      {showAdvanced ? (
+        <div className="grid gap-2 sm:grid-cols-2">
+          <label className="space-y-1">
+            <span className="text-[11px] text-white/35">出图地址（可选）</span>
+            <input
+              className="field !min-h-[34px] !py-1 !text-xs"
+              type="url"
+              placeholder="默认与主地址相同"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+            />
+          </label>
+          <label className="space-y-1">
+            <span className="text-[11px] text-white/35">出片地址（可选）</span>
+            <input
+              className="field !min-h-[34px] !py-1 !text-xs"
+              type="url"
+              placeholder="默认与主地址相同"
+              value={videoUrl}
+              onChange={(e) => setVideoUrl(e.target.value)}
+            />
+          </label>
+          {editing || dirty ? (
+            <button
+              type="button"
+              className="provider-icon-btn provider-icon-btn-primary !min-h-[34px] !px-3 text-xs sm:col-span-2 sm:w-fit"
+              disabled={saving || !canSave}
+              onClick={() => void save()}
+            >
+              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+              保存高级地址
+            </button>
+          ) : null}
         </div>
       ) : null}
+
       {comfy.error ? <p className="text-[11px] text-amber-300/90">{comfy.error}</p> : null}
     </div>
   );

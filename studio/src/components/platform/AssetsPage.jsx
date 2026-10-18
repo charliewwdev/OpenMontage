@@ -321,7 +321,6 @@ export function AssetsPage({ onUsePrompt }) {
 
   return (
     <PageShell
-      wide
       eyebrow="Library"
       title="个人资产"
       description="管理上传素材、AI 生成结果与个人提示词库，可筛选、批量删除并一键带入创作。"

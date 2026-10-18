@@ -116,8 +116,8 @@ export function Library({
   const target = (projects || []).find((p) => p.id === confirmId);
 
   return (
-    <main className="min-h-screen p-3 md:p-5 lg:p-6">
-      <div className="yc-frame mx-auto min-h-[calc(100vh-2.5rem)] max-w-[1480px] overflow-hidden p-4 md:p-6">
+    <main className="min-h-screen p-2 md:p-3">
+      <div className="yc-frame mx-0 min-h-[calc(100vh-2.5rem)] w-full max-w-none overflow-hidden p-3 md:p-4">
         <header className="relative overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(135deg,#15182a_0%,#1a1240_45%,#0d1b3a_100%)] px-4 py-3 md:px-6 md:py-4">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(124,108,255,.28),transparent_40%)]" />
           <div className="relative flex flex-wrap items-end justify-between gap-2">

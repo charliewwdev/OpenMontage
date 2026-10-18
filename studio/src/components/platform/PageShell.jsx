@@ -1,13 +1,7 @@
-export function PageShell({ eyebrow, title, description, actions, children, wide = false }) {
+export function PageShell({ eyebrow, title, description, actions, children }) {
   return (
-    <main className={`min-h-screen ${wide ? "p-2 md:p-3" : "p-3 md:p-5 lg:p-6"}`}>
-      <div
-        className={`yc-frame min-h-[calc(100vh-2.5rem)] overflow-hidden ${
-          wide
-            ? "mx-0 w-full max-w-none p-3 md:p-4"
-            : "mx-auto max-w-[1480px] p-4 md:p-7"
-        }`}
-      >
+    <main className="min-h-screen p-2 md:p-3">
+      <div className="yc-frame mx-0 min-h-[calc(100vh-2.5rem)] w-full max-w-none overflow-hidden p-3 md:p-4">
         <header className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
             {eyebrow ? <div className="label !mb-1">{eyebrow}</div> : null}

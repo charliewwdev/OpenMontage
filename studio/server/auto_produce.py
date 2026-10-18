@@ -23,7 +23,46 @@ _STEP_DEFS = [
 # project_id → live worker thread (process-local; lost on container restart)
 _WORKERS: dict[str, threading.Thread] = {}
 _WORKERS_LOCK = threading.Lock()
-_STALE_RESUME_SECONDS = 75
+_STALE_RESUME_SECONDS = 20
+_AUTO_RESUME_MAX = 8
+# Shared across uvicorn workers so a status poll on the other process
+# does not start a second pipeline while Comfy is still drawing.
+_LOCK_TTL_SECONDS = 120
+# Process boot time — deploy/restart resumes running jobs without waiting for stale age.
+_PROCESS_BOOT_AT = time.time()
+_BOOT_RESUME_WINDOW_SECONDS = 90
+
+
+def _studio_build_id() -> str:
+    import os
+
+    return (
+        (os.environ.get("STUDIO_BUILD_ID") or "").strip()
+        or (os.environ.get("DEPLOY_ID") or "").strip()
+        or (os.environ.get("COOLIFY_BUILD_ID") or "").strip()
+        or f"boot-{int(_PROCESS_BOOT_AT)}"
+    )
+
+
+def _in_boot_resume_window() -> bool:
+    return (time.time() - _PROCESS_BOOT_AT) < _BOOT_RESUME_WINDOW_SECONDS
+
+
+def stamp_job_checkpoint(job: dict[str, Any], *, detail: str = "") -> None:
+    """Persist resume cursor so version updates can continue from the same step."""
+    step_id = str(job.get("step") or "")
+    step_detail = detail
+    if not step_detail:
+        for s in job.get("steps") or []:
+            if s.get("id") == step_id:
+                step_detail = str(s.get("detail") or "")
+                break
+    job["checkpoint"] = {
+        "step": step_id,
+        "detail": step_detail,
+        "buildId": _studio_build_id(),
+        "at": _now(),
+    }
 
 
 def _empty_job(options: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -192,16 +231,175 @@ def _worker_alive(project_id: str) -> bool:
         return bool(thread and thread.is_alive())
 
 
+def _bind_project_owner(store: ProjectStore, project_id: str) -> None:
+    """Background threads have no request user, so they must read that account's keys."""
+    try:
+        state = store.load(project_id) or {}
+        owner = str((state.get("project") or {}).get("ownerId") or "").strip()
+        if not owner:
+            return
+        from auth_context import set_current_user
+
+        set_current_user({"userId": owner})
+    except Exception:
+        return
+
+
+def _auto_lock_key(project_id: str) -> str:
+    return f"om:auto-produce-lock:{project_id}"
+
+
+def _lock_redis():
+    try:
+        from job_queue import get_redis
+
+        return get_redis()
+    except Exception:
+        return None
+
+
+def _lock_value(raw: Any) -> str:
+    if raw is None:
+        return ""
+    if isinstance(raw, bytes):
+        return raw.decode(errors="ignore")
+    return str(raw)
+
+
+def _claim_auto_lock(project_id: str, job_id: str) -> bool:
+    redis = _lock_redis()
+    if redis is None:
+        return True
+    try:
+        return bool(redis.set(_auto_lock_key(project_id), job_id, nx=True, ex=_LOCK_TTL_SECONDS))
+    except Exception:
+        return True
+
+
+def _refresh_auto_lock(project_id: str, job_id: str) -> None:
+    redis = _lock_redis()
+    if redis is None:
+        return
+    try:
+        key = _auto_lock_key(project_id)
+        current = _lock_value(redis.get(key))
+        if not current or current == job_id:
+            redis.set(key, job_id, ex=_LOCK_TTL_SECONDS)
+    except Exception:
+        return
+
+
+def _release_auto_lock(project_id: str, job_id: str) -> None:
+    redis = _lock_redis()
+    if redis is None:
+        return
+    try:
+        key = _auto_lock_key(project_id)
+        if _lock_value(redis.get(key)) == job_id:
+            redis.delete(key)
+    except Exception:
+        return
+
+
+def _auto_lock_held(project_id: str) -> bool:
+    redis = _lock_redis()
+    if redis is None:
+        return False
+    try:
+        return bool(redis.get(_auto_lock_key(project_id)))
+    except Exception:
+        return False
+
+
 def _spawn_worker(store: ProjectStore, project_id: str, job_id: str) -> None:
+    def _target() -> None:
+        stop = threading.Event()
+
+        def _beat() -> None:
+            while not stop.wait(20):
+                _refresh_auto_lock(project_id, job_id)
+
+        beater = threading.Thread(target=_beat, name=f"auto-produce-beat-{project_id}", daemon=True)
+        beater.start()
+        try:
+            _refresh_auto_lock(project_id, job_id)
+            _bind_project_owner(store, project_id)
+            _run_pipeline(store, project_id, job_id)
+        finally:
+            stop.set()
+            _release_auto_lock(project_id, job_id)
+
     thread = threading.Thread(
-        target=_run_pipeline,
-        args=(store, project_id, job_id),
+        target=_target,
         name=f"auto-produce-{project_id}",
         daemon=True,
     )
     with _WORKERS_LOCK:
         _WORKERS[project_id] = thread
     thread.start()
+
+
+def _failure_can_resume(job: dict[str, Any]) -> bool:
+    if str(job.get("status") or "") == "paused":
+        return False
+    err = str(job.get("error") or "")
+    if not any(s in err for s in ("素材质检未达标", "分镜视频全部失败", "导出失败")):
+        return False
+    return int(job.get("autoResumeCount") or 0) < _AUTO_RESUME_MAX
+
+
+def resume_after_boot(store: ProjectStore) -> int:
+    """Immediately re-attach running jobs after deploy/restart (before stale timer)."""
+    n = 0
+    try:
+        items = store.list_items(owner_id="")
+    except Exception:
+        return 0
+    for item in items:
+        pid = str(item.get("id") or "")
+        job = item.get("autoProduce") if isinstance(item.get("autoProduce"), dict) else None
+        if not pid or not job or not job.get("id"):
+            continue
+        if str(job.get("status") or "") != "running":
+            continue
+        try:
+            before = _worker_alive(pid)
+            ensure_auto_produce_worker(store, pid)
+            if not before and _worker_alive(pid):
+                n += 1
+        except Exception:
+            continue
+    return n
+
+
+def sweep_auto_produce(store: ProjectStore) -> None:
+    """One process resumes interrupted full-drama jobs. User pause stays paused."""
+    redis = _lock_redis()
+    if redis is not None:
+        try:
+            if not redis.set("om:auto-produce-sweeper", "1", nx=True, ex=55):
+                return
+        except Exception:
+            pass
+    try:
+        items = store.list_items(owner_id="")
+    except Exception:
+        return
+    for item in items:
+        pid = str(item.get("id") or "")
+        job = item.get("autoProduce") if isinstance(item.get("autoProduce"), dict) else None
+        if not pid or not job or not job.get("id"):
+            continue
+        status = str(job.get("status") or "")
+        if status == "paused":
+            continue
+        try:
+            if status == "failed" and _failure_can_resume(job):
+                start_auto_produce(store, pid, {"resume": True})
+            elif status == "running":
+                ensure_auto_produce_worker(store, pid)
+        except Exception:
+            continue
 
 
 def ensure_auto_produce_worker(store: ProjectStore, project_id: str) -> dict[str, Any] | None:
@@ -211,13 +409,26 @@ def ensure_auto_produce_worker(store: ProjectStore, project_id: str) -> dict[str
         return job
     if _worker_alive(project_id):
         return job
+    if _auto_lock_held(project_id):
+        return job
     updated = _parse_ts(job.get("updatedAt")) or 0
     age = time.time() - updated
-    if age < _STALE_RESUME_SECONDS:
+    # After version deploy / process restart, resume immediately — do not wait for stale age.
+    prev_build = str(((job.get("checkpoint") or {}) if isinstance(job.get("checkpoint"), dict) else {}).get("buildId") or "")
+    build_changed = bool(prev_build) and prev_build != _studio_build_id()
+    boot_resume = _in_boot_resume_window() or build_changed
+    if not boot_resume and age < _STALE_RESUME_SECONDS:
         return job
-    _log(job, f"检测到任务中断（约 {int(age)}s 无进度），正在从「{job.get('step') or '当前步骤'}」续跑…")
+    job_id = str(job.get("id") or "")
+    if not _claim_auto_lock(project_id, job_id):
+        return job
+    reason = "版本更新后断点续跑" if boot_resume else f"约 {int(age)}s 无进度"
+    ck = job.get("checkpoint") if isinstance(job.get("checkpoint"), dict) else {}
+    step_label = (ck or {}).get("step") or job.get("step") or "当前步骤"
+    _log(job, f"检测到任务中断（{reason}），正在从「{step_label}」续跑…")
+    stamp_job_checkpoint(job)
     _save_job(store, project_id, job)
-    _spawn_worker(store, project_id, str(job.get("id") or ""))
+    _spawn_worker(store, project_id, job_id)
     return get_job(store, project_id)
 
 
@@ -253,6 +464,8 @@ def _save_job(store: ProjectStore, project_id: str, job: dict[str, Any]) -> dict
     if not state:
         raise FileNotFoundError("project not found")
     job["updatedAt"] = _now()
+    if job.get("status") == "running":
+        stamp_job_checkpoint(job)
     state.setdefault("project", {})["autoProduce"] = job
     state["project"]["updatedAt"] = job["updatedAt"]
     store.save(state)
@@ -1210,11 +1423,26 @@ def _run_pipeline(store: ProjectStore, project_id: str, job_id: str) -> None:
         _log(job, f"全流程完成：{n_done} 集短剧" + (f"；连续播放 {job.get('seriesUrl')}" if job.get("seriesUrl") else ""))
         _save_job(store, project_id, job)
     except Exception as exc:
-        job["status"] = "failed"
-        job["error"] = str(exc)
-        if job.get("step"):
-            _set_step(job, str(job["step"]), "failed", str(exc)[:160])
-        _log(job, f"全流程失败：{exc}", ok=False)
+        text = str(exc)
+        resumes = int(job.get("autoResumeCount") or 0)
+        retryable = any(s in text for s in ("素材质检未达标", "分镜视频全部失败", "导出失败"))
+        if retryable and resumes < _AUTO_RESUME_MAX:
+            job["autoResumeCount"] = resumes + 1
+            job["status"] = "running"
+            job["error"] = text
+            step_id = str(job.get("step") or "entities")
+            _set_step(job, step_id, "pending", f"断点续跑 {resumes + 1}/{_AUTO_RESUME_MAX}")
+            _log(
+                job,
+                f"未完成，将从「{step_id}」自动断点续跑（{resumes + 1}/{_AUTO_RESUME_MAX}）：{text}",
+                ok=False,
+            )
+        else:
+            job["status"] = "failed"
+            job["error"] = text
+            if job.get("step"):
+                _set_step(job, str(job["step"]), "failed", text[:160])
+            _log(job, f"全流程失败：{text}", ok=False)
         try:
             _save_job(store, project_id, job)
         except Exception:

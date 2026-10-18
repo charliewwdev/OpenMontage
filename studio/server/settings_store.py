@@ -133,6 +133,11 @@ def _read_merged_secrets() -> dict[str, str]:
     if _projects_root is None:
         return {}
     path = secrets_path(_projects_root)
+    # Postgres is shared by every uvicorn worker, but this cache is per process.
+    # A UI save only clears the worker that handled the request; the other worker
+    # kept serving the previous checkpoint to background jobs.
+    if _pg_enabled():
+        _invalidate_cache()
     cache_key = f"pg:{_pg_enabled()}:{path}"
     if _cache is not None and _cache_key == cache_key:
         return _cache

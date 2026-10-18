@@ -92,6 +92,22 @@ experience_seeds:
     matchVariant: []
     promptBoost: Empty location only — no human figures or silhouettes.
     negativeBoost: person, people, face, portrait, crowd
+expert_review:
+  - id: character-no-empty-plate
+    kinds: [character]
+    fail_if_reason_contains: [landscape, cityscape, aerial, empty location, 无人空镜, 风景空镜]
+  - id: spirit-no-human
+    kinds: [spirit]
+    strategies: [spirit]
+    fail_if_reason_contains: [person, portrait, human, woman, man, face, 人像, physical human]
+    except_if_reason_contains: [spirit, orb, bead, 灵光, 珠影, not a person, no person]
+  - id: scene-no-people
+    kinds: [scene]
+    fail_if_reason_contains: [portrait, character sheet, close-up face, fashion model, 人像]
+  - id: prop-no-person
+    kinds: [prop]
+    fail_if_reason_contains: [character portrait, full character, portrait of a, shows a person, 人像, 角色定妆]
+    except_if_reason_contains: [no person, product, object only, 道具]
 ```
 
 ## 与 Skill 专家页的关系

@@ -13,7 +13,7 @@ const KIND_LABEL = {
 };
 
 /**
- * SceneMixer-style asset inspector: open from the workspace rail to view /
+ * Asset inspector: open from the workspace rail to view /
  * regenerate / upload without leaving the segment desk.
  */
 export function AssetDetailModal({

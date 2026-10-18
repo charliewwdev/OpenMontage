@@ -219,7 +219,7 @@ function DialogueCard({ dialogue, entityByName, onOpenEntity }) {
 }
 
 /**
- * SceneMixer-style episode desk: left assets · center segment · right preview · bottom strip.
+ * Episode desk: left assets · center segment · right preview · bottom strip.
  * Characters / props / dialogue / dubbing live inside the active segment — not separate wizard steps.
  */
 export function SegmentWorkspace({
@@ -1024,7 +1024,7 @@ export function SegmentWorkspace({
         <Clapperboard className="mb-4 h-10 w-10 text-[#7c6cff]" />
         <strong className="text-lg">本集还没有片段</strong>
         <p className="mt-2 max-w-md text-sm text-white/50">
-          按 SceneMixer 方式拆成约 10–15 秒的片段，每段含 3–4 个分镜节拍；角色、道具、台词都挂在段上。
+          将本集拆成约 10–15 秒的片段，每段含 3–4 个分镜节拍；角色、道具、台词都挂在段上。
         </p>
         <button type="button" className="btn-primary mt-5" disabled={splitting} onClick={() => void split()}>
           {splitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
@@ -1120,16 +1120,16 @@ export function SegmentWorkspace({
       </div>
 
       {/* Main 3-column desk — scrolls; filmstrip stays pinned below */}
-      <div className="grid min-h-0 flex-1 gap-3 overflow-hidden xl:grid-cols-[200px_minmax(0,1fr)_minmax(300px,360px)]">
-        {/* Left: assets — highlight those belonging to this segment */}
-        <aside className="scrollbar-thin min-h-0 overflow-y-auto rounded-xl border border-white/10 bg-[#0c0e14] p-3 xl:h-full">
-          <div className="mb-3 flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-white">本段资产</h4>
+      <div className="grid min-h-0 flex-1 gap-2 overflow-hidden xl:grid-cols-[220px_minmax(0,1fr)_minmax(280px,340px)]">
+        {/* Left: compact asset library — dense grid/list like production desks */}
+        <aside className="scrollbar-thin min-h-0 overflow-y-auto rounded-xl border border-white/10 bg-[#0c0e14] p-2.5 xl:h-full">
+          <div className="mb-2 flex items-center justify-between px-0.5">
+            <h4 className="text-[13px] font-semibold text-white">资产库</h4>
             <button
               type="button"
               className="inline-flex items-center gap-1 text-[10px] text-[#a78bfa] hover:underline disabled:opacity-40"
               disabled={fillingStills || generating || splitting}
-              title="补齐无图；本段角色强制按半身胸上构图重出定妆（避免特写/全身比例不一）"
+              title="补齐无图；本段角色强制按半身胸上构图重出定妆"
               onClick={() => void fillSegmentStills()}
             >
               {fillingStills ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
@@ -1142,69 +1142,91 @@ export function SegmentWorkspace({
               label: "角色",
               list: segAssets.characters.length
                 ? segAssets.characters
-                : episodeEntities.filter((e) => e.kind === "character").slice(0, 6),
+                : episodeEntities.filter((e) => e.kind === "character").slice(0, 9),
             },
             {
               kind: "scene",
               label: "场景",
               list: segAssets.scenes.length
                 ? segAssets.scenes
-                : episodeEntities.filter((e) => e.kind === "scene").slice(0, 4),
+                : episodeEntities.filter((e) => e.kind === "scene").slice(0, 6),
             },
             {
               kind: "prop",
               label: "道具",
               list: segAssets.props.length
                 ? segAssets.props
-                : episodeEntities.filter((e) => e.kind === "prop").slice(0, 4),
+                : episodeEntities.filter((e) => e.kind === "prop").slice(0, 8),
             },
           ].map((block) =>
             block.list.length ? (
-              <div key={block.kind} className="mb-4">
-                <div className="mb-2 text-[11px] font-medium text-white/45">{block.label}</div>
-                <div className="grid grid-cols-2 gap-2">
-                  {block.list.map((ent) => {
-                    const inSeg = segAssets.all.some((x) => x.id === ent.id) || segAssets.names.has(ent.name);
-                    return (
-                      <button
-                        key={ent.id}
-                        type="button"
-                        onClick={() => openEntity(ent)}
-                        title={`查看${block.label}详情`}
-                        className={`overflow-hidden rounded-xl border text-left transition hover:brightness-110 ${
-                          inSeg ? "border-[#7c6cff] shadow-[0_0_0_1px_rgba(124,108,255,.4)]" : "border-white/10 opacity-55 hover:opacity-90"
-                        }`}
-                      >
-                        <div
-                          className={`flex items-center justify-center bg-[#11131a] ${
-                            block.kind === "character" ? "aspect-[3/4]" : block.kind === "prop" ? "aspect-square" : "aspect-video"
+              <div key={block.kind} className="mb-2.5">
+                <div className="mb-1 text-[10px] font-medium text-white/45">{block.label}</div>
+                {block.kind === "character" ? (
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {block.list.map((ent) => {
+                      const inSeg = segAssets.all.some((x) => x.id === ent.id) || segAssets.names.has(ent.name);
+                      return (
+                        <button
+                          key={ent.id}
+                          type="button"
+                          onClick={() => openEntity(ent)}
+                          title={ent.name}
+                          className={`overflow-hidden rounded-lg border text-left transition hover:brightness-110 ${
+                            inSeg ? "border-[#7c6cff]" : "border-white/10 opacity-60 hover:opacity-100"
                           }`}
                         >
-                          {entityThumb(ent) ? (
-                            <img
-                              src={entityThumb(ent)}
-                              alt=""
-                              className="max-h-full max-w-full object-contain object-center"
-                            />
-                          ) : (
-                            <div className="flex h-full items-center justify-center text-[10px] text-white/30">无图</div>
-                          )}
-                        </div>
-                        <div className="truncate px-1.5 py-1 text-center text-[11px] font-medium text-white/80">
-                          {ent.name}
-                          {ent.variant && ent.variant !== "默认形象" && ent.variant !== "默认造型" ? (
-                            <span className="block truncate text-[9px] font-normal text-white/40">{ent.variant}</span>
-                          ) : null}
-                          {ent.imageStatus === "generating" ? (
-                            <span className="block text-[9px] font-normal text-[#a78bfa]">生成中…</span>
-                          ) : !entityStillPasses(ent) && (ent.imageStatus === "failed" || ent.qaFailed || ent.selectedImage?.qaPass === false) ? (
-                            <span className="block text-[9px] font-normal text-amber-300/80">质检未过</span>
-                          ) : null}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+                          <div className="flex aspect-[3/4] items-center justify-center bg-[#11131a]">
+                            {entityThumb(ent) ? (
+                              <img
+                                src={entityThumb(ent)}
+                                alt=""
+                                className="max-h-full max-w-full object-contain object-center"
+                              />
+                            ) : (
+                              <span className="text-[9px] text-white/25">无图</span>
+                            )}
+                          </div>
+                          <div className="truncate px-0.5 py-0.5 text-center text-[9px] text-white/75">{ent.name}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-1">
+                    {block.list.map((ent) => {
+                      const inSeg = segAssets.all.some((x) => x.id === ent.id) || segAssets.names.has(ent.name);
+                      return (
+                        <button
+                          key={ent.id}
+                          type="button"
+                          onClick={() => openEntity(ent)}
+                          title={ent.name}
+                          className={`flex items-center gap-2 rounded-lg border px-1 py-1 text-left transition hover:brightness-110 ${
+                            inSeg ? "border-[#7c6cff]/70 bg-[#7c6cff]/5" : "border-white/10 opacity-70 hover:opacity-100"
+                          }`}
+                        >
+                          <div
+                            className={`flex shrink-0 items-center justify-center overflow-hidden rounded-md bg-[#11131a] ${
+                              block.kind === "prop" ? "h-9 w-9" : "h-9 w-14"
+                            }`}
+                          >
+                            {entityThumb(ent) ? (
+                              <img
+                                src={entityThumb(ent)}
+                                alt=""
+                                className="max-h-full max-w-full object-contain object-center"
+                              />
+                            ) : (
+                              <span className="text-[8px] text-white/25">—</span>
+                            )}
+                          </div>
+                          <span className="min-w-0 flex-1 truncate text-[11px] text-white/80">{ent.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             ) : null,
           )}
@@ -1782,13 +1804,13 @@ export function SegmentWorkspace({
         </aside>
       </div>
 
-      {/* Bottom filmstrip — pinned; does not scroll away with the desk */}
-      <div className="z-20 shrink-0 rounded-xl border border-white/10 bg-[#0c0e14] px-3 py-2.5 shadow-[0_-8px_24px_rgba(0,0,0,.35)]">
-        <div className="mb-2 flex items-center justify-between text-[11px] text-white/45">
+      {/* Bottom filmstrip — short landscape thumbs (full frame via contain, no tall empty pillars) */}
+      <div className="z-20 shrink-0 rounded-xl border border-white/10 bg-[#0c0e14] px-2.5 py-2 shadow-[0_-8px_24px_rgba(0,0,0,.35)]">
+        <div className="mb-1.5 flex items-center justify-between text-[10px] text-white/45">
           <span>全集时间轴 · {segments.length} 片段 · {Math.round(totalDur)}s</span>
           <span>{hasSegmentLayout ? "按片段出片" : "迁移中…"}</span>
         </div>
-        <div className="scrollbar-thin flex gap-2 overflow-x-auto pb-1">
+        <div className="scrollbar-thin flex gap-1.5 overflow-x-auto pb-0.5">
           {segments.map((seg) => {
             const active = seg.segmentOrder === activeSeg?.segmentOrder;
             const ready = Boolean(seg.video?.url);
@@ -1800,15 +1822,11 @@ export function SegmentWorkspace({
                   setSegmentOrder(seg.segmentOrder);
                   setPlaying(false);
                 }}
-                className={`w-[88px] shrink-0 overflow-hidden rounded-lg border text-left transition ${
+                className={`w-[100px] shrink-0 overflow-hidden rounded-md border text-left transition ${
                   active ? "border-[#7c6cff] ring-1 ring-[#7c6cff]/50" : "border-white/10 hover:border-white/25"
                 }`}
               >
-                <div
-                  className={`relative flex items-center justify-center bg-black ${
-                    ratio === "9:16" ? "aspect-[9/16]" : "aspect-video"
-                  }`}
-                >
+                <div className="relative flex aspect-video items-center justify-center bg-black">
                   {ready ? (
                     <video
                       src={seg.video.url}
@@ -1817,15 +1835,15 @@ export function SegmentWorkspace({
                       className="max-h-full max-w-full object-contain object-center"
                     />
                   ) : (
-                    <div className="flex h-full items-center justify-center text-[10px] text-white/30">
+                    <div className="flex h-full items-center justify-center text-[9px] text-white/30">
                       {seg.shots.some((s) => s.status === "generating") ? "生成中" : "待出片"}
                     </div>
                   )}
-                  <span className="absolute left-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                  <span className="absolute left-1 top-1 rounded bg-black/70 px-1 py-0.5 text-[9px] font-semibold text-white">
                     {seg.segmentOrder}
                   </span>
                 </div>
-                <div className="px-1.5 py-1 text-[10px] text-white/55">
+                <div className="px-1 py-0.5 text-[9px] text-white/55">
                   {seg.duration}s · {seg.shots.length}镜
                 </div>
               </button>

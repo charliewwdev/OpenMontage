@@ -120,7 +120,7 @@ export function StoryboardStep({
     setDirtyShotIds((prev) => new Set([...prev].filter((id) => currentIds.has(id))));
   }, [shots]);
 
-  // Legacy boards: auto-assign segmentOrder so SceneMixer 片段 UI appears without full re-split.
+  // Legacy boards: auto-assign segmentOrder so 片段 UI appears without full re-split.
   useEffect(() => {
     if (!episodeId || !shots.length || workflowBusy || splitting) return;
     const needsMigrate = shots.some((s) => !Number(s.segmentOrder || 0));
@@ -553,7 +553,7 @@ export function StoryboardStep({
             <div className="label">Shot planning & generation</div>
             <h3 className="display-type text-2xl font-semibold">分镜导演台</h3>
             <p className="mt-1 text-sm text-[var(--muted)]">
-              对齐 SceneMixer：先拆「片段」（约 10–15s），段内 3–4 个分镜节拍；出片按片段合并生成。
+              先拆「片段」（约 10–15s），段内 3–4 个分镜节拍；出片按片段合并生成。
             </p>
           </div>
           <div className="grid min-w-0 gap-2 sm:grid-cols-2 md:grid-cols-3 min-[1500px]:grid-cols-[minmax(0,1.1fr)_minmax(0,1.3fr)_minmax(88px,.55fr)_auto_auto]">

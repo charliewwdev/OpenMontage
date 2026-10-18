@@ -459,7 +459,7 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
     <div className="mx-auto max-w-[1680px] space-y-3">
       <section className="panel flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between md:p-4">
         <div className="min-w-0">
-          <div className="label">SceneMixer-style episode desk</div>
+          <div className="label">Episode desk</div>
           <h3 className="display-type truncate text-xl font-semibold md:text-2xl">
             第{episode?.episodeNumber || "—"}集 {episode?.title || "成片编辑"}
           </h3>
@@ -800,7 +800,7 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
                 </div>
               </div>
 
-              {/* Trim / edit tools — SceneMixer 剪一刀 */}
+              {/* Trim / edit tools */}
               <div className="panel space-y-3 p-3">
                 <div className="flex flex-wrap gap-1.5">
                   {[

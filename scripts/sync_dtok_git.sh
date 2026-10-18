@@ -252,6 +252,28 @@ fi
 # Disk under drama_projects is a cache; avoid Coolify "Remove volumes" on drama_pg.
 echo "NOTE: Projects + media + secrets/credits persist in Postgres (drama_pg). Disk is cache."
 STUDIO_URL="${STUDIO_URL:-https://openmontage.dtok.io}"
+
+# Edge proxy (宝塔): branded standby instead of white nginx 502 during Coolify swaps.
+if [[ -f "$ROOT/studio/.env" ]]; then
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%$'\r'}"
+    case "$line" in
+      \#*|"") continue ;;
+      BT_PANEL_URL=*|BT_PANEL_USER=*|BT_PANEL_PASS=*|SITE_NAME=*|MAINTENANCE_UPSTREAM=*)
+        key="${line%%=*}"
+        val="${line#*=}"
+        val="${val%\"}"; val="${val#\"}"
+        val="${val%\'}"; val="${val#\'}"
+        export "${key}=${val}"
+        ;;
+    esac
+  done < "$ROOT/studio/.env"
+fi
+if [[ -n "${BT_PANEL_URL:-}" && -n "${BT_PANEL_USER:-}" && -n "${BT_PANEL_PASS:-}" ]]; then
+  echo "==> Installing edge maintenance page on ${SITE_NAME:-openmontage.dtok.io}"
+  "$ROOT/scripts/baota_set_maintenance.sh" || echo "WARN baota maintenance install failed"
+fi
+
 if [[ -f "$ROOT/studio/.env" && -f "$ROOT/scripts/restore_studio_keys.sh" ]]; then
   echo "==> Waiting for ${STUDIO_URL}/api/health then restoring keys from studio/.env"
   ok=0

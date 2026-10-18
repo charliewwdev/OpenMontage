@@ -2260,7 +2260,7 @@ def generate_storyboard(store: ProjectStore, project_id: str, episode_id: str) -
         "episodeDurationSecTarget": dur_target,
         "note": (
             f"必须输出 segments 数组：{seg_min}–{seg_max} 个片段，每段 {beats} 个 beats，每段 duration {seg_dur} 秒。"
-            "对齐 SceneMixer《染血玉令》：一段一次出片；一镜一节拍；对白与反应拆镜；写清机位/承接/闭唇/光源。"
+            "对齐《染血玉令》密度：一段一次出片；一镜一节拍；对白与反应拆镜；写清机位/承接/闭唇/光源。"
         ),
     }
     system = (

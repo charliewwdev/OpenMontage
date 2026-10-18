@@ -1,11 +1,11 @@
 ---
 name: drama-shot-prompt
-description: Split a confirmed episode into SceneMixer-style segments (片段) with short beats for 3–6 min episodes.
+description: Split a confirmed episode into segments (片段) with short beats for 3–6 min episodes.
 ---
 
-# 竖屏短剧分镜（对齐 SceneMixer · 片段 → 段内分镜）
+# 竖屏短剧分镜（片段 → 段内分镜）
 
-参考样片《染血玉令》与教程 [一镜怎么写](https://scenemixer.cn/guides/yi-jing-zenme-xie/)：
+参考样片《染血玉令》与竖屏分镜写法：
 
 - **资产库先锁**：角色 / 场景 / 道具设定图；脸靠图，不靠提示词反复描五官
 - **两层结构（必须）**：

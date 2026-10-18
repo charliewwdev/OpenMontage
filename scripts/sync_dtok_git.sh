@@ -12,9 +12,12 @@
 # Usage (from repo root):
 #   ./scripts/sync_dtok_git.sh
 #   DTOK_GIT_REMOTE=https://git.dtok.io/dtok-app/OpenMontage.git ./scripts/sync_dtok_git.sh
-#   GITHUB_MIRROR_SKIP=1 ./scripts/sync_dtok_git.sh          # Coolify only
-#   GITHUB_MIRROR_FORCE=1 ./scripts/sync_dtok_git.sh         # force-push main
+#   ./scripts/sync_dtok_git.sh                               # dtok + GitHub (default)
+#   GITHUB_MIRROR_SKIP=1 ./scripts/sync_dtok_git.sh          # Coolify/dtok only (CI on main)
+#   GITHUB_MIRROR_FORCE=1 ./scripts/sync_dtok_git.sh         # force-push GitHub main
 #   GITHUB_MIRROR_REQUIRED=1 ./scripts/sync_dtok_git.sh      # fail if GitHub push fails
+#
+# Agents: do NOT set GITHUB_MIRROR_SKIP=1 for routine deploys — GitHub main must stay in sync.
 #
 # After dtok push, GitLab webhook → Coolify auto-deploys (same pattern as dtok-app).
 
@@ -185,11 +188,36 @@ echo "OK synced ${SHA} → ${REMOTE} ${BRANCH}"
 echo "Coolify auto-deploys via GitLab webhook on push to ${BRANCH}."
 
 # --- GitHub mirror (full local HEAD → main; never the slim Coolify pack) ---
+# Default: ALWAYS mirror. Only skip when explicitly GITHUB_MIRROR_SKIP=1
+# (e.g. GitHub Actions already runs on main and only needs the slim dtok push).
+load_github_token_from_env() {
+  if [[ -n "${GITHUB_TOKEN:-}" || -n "${GH_TOKEN:-}" ]]; then
+    GITHUB_TOKEN="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
+    return 0
+  fi
+  [[ -f "$ROOT/studio/.env" ]] || return 0
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%$'\r'}"
+    case "$line" in
+      \#*|"") continue ;;
+      GITHUB_TOKEN=*|GH_TOKEN=*|GITHUB_PAT=*)
+        val="${line#*=}"
+        val="${val%\"}"; val="${val#\"}"
+        val="${val%\'}"; val="${val#\'}"
+        export GITHUB_TOKEN="$val"
+        return 0
+        ;;
+    esac
+  done < "$ROOT/studio/.env"
+}
+
 mirror_github() {
   if [[ "${GITHUB_MIRROR_SKIP}" == "1" ]]; then
     echo "==> GitHub mirror skipped (GITHUB_MIRROR_SKIP=1)"
     return 0
   fi
+
+  load_github_token_from_env
 
   local gh_remote="${GITHUB_MIRROR_REMOTE}"
   if [[ -z "${gh_remote}" ]]; then
@@ -207,7 +235,7 @@ mirror_github() {
     fi
   fi
 
-  # Optional HTTPS PAT: GITHUB_TOKEN → https://x-access-token:…@github.com/...
+  # Prefer HTTPS + PAT when available (CI / machines without SSH to GitHub).
   if [[ -n "${GITHUB_TOKEN:-}" && "${gh_remote}" == git@github.com:* ]]; then
     local path="${gh_remote#git@github.com:}"
     path="${path%.git}.git"
@@ -219,7 +247,6 @@ mirror_github() {
 
   local full_sha
   full_sha="$(git -C "$ROOT" rev-parse --short HEAD)"
-  # Hide token in logs if present
   local push_url="${gh_remote}"
   if [[ "${push_url}" == https://x-access-token:*@github.com/* ]]; then
     push_url="https://github.com/${push_url#*@github.com/}"
@@ -227,6 +254,8 @@ mirror_github() {
   echo "==> Mirroring full repo ${full_sha} → ${push_url} (${GITHUB_MIRROR_BRANCH})"
 
   local -a push_args=(-C "$ROOT" push)
+  # Fast-forward when possible; allow force when explicitly requested OR when
+  # remote main diverged from a prior SKIP-only deploy streak.
   if [[ "${GITHUB_MIRROR_FORCE}" == "1" ]]; then
     push_args+=(-f)
   fi
@@ -237,7 +266,19 @@ mirror_github() {
     echo "NOTE: GitHub gets committed HEAD only; uncommitted WIP still ships on dtok slim deploy."
     return 0
   fi
+
+  # Non-fast-forward after SKIP-only deploys: retry once with --force-with-lease
+  # unless the operator forbade force.
+  if [[ "${GITHUB_MIRROR_FORCE}" != "1" ]]; then
+    echo "==> Fast-forward failed; retrying with --force-with-lease"
+    if git -C "$ROOT" push --force-with-lease "${gh_remote}" "HEAD:${GITHUB_MIRROR_BRANCH}"; then
+      echo "OK mirrored ${full_sha} → GitHub ${GITHUB_MIRROR_BRANCH} (force-with-lease)"
+      return 0
+    fi
+  fi
   echo "WARN GitHub mirror failed (Coolify deploy already pushed to dtok)."
+  echo "HINT: ensure SSH key or GITHUB_TOKEN can push to charliewwdev/OpenMontage;"
+  echo "      or set GITHUB_MIRROR_FORCE=1 after reviewing remote history."
   return 1
 }
 

@@ -602,7 +602,7 @@ export function StudioShell({
               </div>
             ) : null}
 
-            <nav className="scrollbar-thin flex gap-1 overflow-x-auto border-t border-[var(--line)] px-3 py-2 md:px-5">
+            <nav className="scrollbar-thin flex gap-1 overflow-x-auto border-t border-[var(--line)] px-2 py-1.5 md:px-3">
               {steps.map((item, index) => {
                 const Icon = item.icon;
                 const active = item.key === navStep;
@@ -621,23 +621,23 @@ export function StudioShell({
                     key={item.key}
                     type="button"
                     onClick={() => setStep(item.key)}
-                    className={`flex min-w-[7.5rem] shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-left transition ${
+                    className={`flex min-w-[5.75rem] shrink-0 items-center gap-1.5 rounded-lg border px-2 py-1 text-left transition ${
                       active
-                        ? "border-transparent bg-[var(--gradient)] text-white shadow-[0_0_18px_rgba(124,108,255,.35)]"
+                        ? "border-transparent bg-[var(--gradient)] text-white shadow-[0_0_14px_rgba(124,108,255,.3)]"
                         : done
                           ? "border-[var(--ok)]/30 bg-[var(--ok)]/10 text-white/85 hover:bg-[var(--ok)]/15"
                           : "border-white/10 bg-white/[.03] text-white/65 hover:bg-white/[.06] hover:text-white"
                     }`}
                   >
-                    <span className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black/20">
-                      {done && !active ? <Check className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
-                      <span className="timecode absolute -right-1 -top-1 rounded-full bg-black/70 px-1 text-[8px] text-white/50">
+                    <span className="relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-black/20">
+                      {done && !active ? <Check className="h-3 w-3" /> : <Icon className="h-3 w-3" />}
+                      <span className="timecode absolute -right-1 -top-1 rounded-full bg-black/70 px-0.5 text-[7px] text-white/50">
                         {index + 1}
                       </span>
                     </span>
                     <span className="min-w-0">
-                      <span className="block truncate text-xs font-semibold">{item.label}</span>
-                      <span className={`mt-0.5 block truncate text-[9px] ${active ? "text-white/70" : "text-white/35"}`}>
+                      <span className="block truncate text-[11px] font-semibold leading-tight">{item.label}</span>
+                      <span className={`block truncate text-[9px] leading-tight ${active ? "text-white/70" : "text-white/35"}`}>
                         {countLabel}
                       </span>
                     </span>
@@ -757,8 +757,8 @@ export function StudioShell({
           <div
             className={
               navStep === "workspace"
-                ? "flex min-h-0 flex-1 flex-col overflow-hidden p-3 md:p-4 lg:h-[calc(100vh-8.5rem)]"
-                : "scrollbar-thin min-h-[calc(100vh-11rem)] overflow-y-auto p-4 md:p-6 lg:h-[calc(100vh-11rem)]"
+                ? "flex min-h-0 flex-1 flex-col overflow-hidden p-2 md:p-2.5 lg:h-[calc(100vh-6.75rem)]"
+                : "scrollbar-thin min-h-[calc(100vh-9rem)] overflow-y-auto p-3 md:p-4 lg:h-[calc(100vh-9rem)]"
             }
           >
             {navStep === "script" && <ScriptStep {...common} />}

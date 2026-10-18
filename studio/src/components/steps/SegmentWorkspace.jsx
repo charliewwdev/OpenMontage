@@ -149,7 +149,7 @@ function buildSegments(shots) {
 function PromptWithChips({ prompt, entityByName, activeNames, onOpenEntity }) {
   const parts = String(prompt || "").split(/(@[^\s@,，。；;（）()]+)/g);
   return (
-    <p className="text-[13px] leading-6 text-white/85">
+    <p className="text-[11px] leading-snug text-white/85">
       {parts.map((part, i) => {
         if (!part.startsWith("@")) return <span key={i}>{part}</span>;
         const name = part.slice(1).split("-")[0];
@@ -212,7 +212,7 @@ function DialogueCard({ dialogue, entityByName, onOpenEntity }) {
           )}
           <span>台词</span>
         </div>
-        <p className="text-sm font-medium leading-6 text-white/90">「{parsed.line.replace(/^「|」$/g, "")}」</p>
+        <p className="text-[12px] font-medium leading-snug text-white/90">「{parsed.line.replace(/^「|」$/g, "")}」</p>
       </div>
     </div>
   );
@@ -1043,31 +1043,31 @@ export function SegmentWorkspace({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3">
-      {/* Single toolbar: title + segment pager + actions (model switch lives in shell bar). */}
-      <div className="flex shrink-0 flex-wrap items-center gap-3 rounded-xl border border-white/10 bg-[#0c0e14] px-3 py-2.5">
+    <div className="flex h-full min-h-0 flex-col gap-1.5 text-[12px] leading-snug">
+      {/* Compact toolbar — SceneMixer-like density */}
+      <div className="flex shrink-0 flex-wrap items-center gap-2 rounded-lg border border-white/10 bg-[#0c0e14] px-2 py-1.5">
         <div className="min-w-0 shrink">
-          <h2 className="truncate text-base font-semibold text-white">
+          <h2 className="truncate text-[13px] font-semibold text-white">
             工作台
-            <span className="ml-2 text-sm font-normal text-white/45">
+            <span className="ml-1.5 text-[11px] font-normal text-white/45">
               · 第{episode.episodeNumber}集「{episode.title || "未命名"}」
             </span>
           </h2>
-          <p className="mt-0.5 text-[11px] text-white/45">
+          <p className="text-[10px] text-white/40">
             {segments.length} 片段 · {readyCount}/{segments.length} 已出片 · 约 {Math.round(totalDur)}s
           </p>
         </div>
         {segments.length ? (
-          <div className="flex min-w-0 items-center gap-1" aria-label="片段导航">
+          <div className="flex min-w-0 items-center gap-0.5" aria-label="片段导航">
             <button
               type="button"
-              className="btn-quiet !min-h-8 !px-2"
+              className="btn-quiet !min-h-7 !px-1.5"
               disabled={segments[0]?.segmentOrder === activeSeg?.segmentOrder}
               onClick={() => goSeg(-1)}
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-3.5 w-3.5" />
             </button>
-            <div className="scrollbar-thin flex max-w-[min(100%,28rem)] gap-1.5 overflow-x-auto py-0.5">
+            <div className="scrollbar-thin flex max-w-[min(100%,22rem)] gap-1 overflow-x-auto py-0.5">
               {segments.map((seg) => {
                 const active = seg.segmentOrder === activeSeg?.segmentOrder;
                 return (
@@ -1078,7 +1078,7 @@ export function SegmentWorkspace({
                       setSegmentOrder(seg.segmentOrder);
                       setPlaying(false);
                     }}
-                    className={`flex h-8 min-w-8 items-center justify-center rounded-full px-2.5 text-xs font-semibold transition ${
+                    className={`flex h-6 min-w-6 items-center justify-center rounded-full px-2 text-[11px] font-semibold transition ${
                       active ? "bg-[#7c6cff] text-white" : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white"
                     }`}
                     title={`片段 ${seg.segmentOrder}`}
@@ -1090,41 +1090,41 @@ export function SegmentWorkspace({
             </div>
             <button
               type="button"
-              className="btn-quiet !min-h-8 !px-2"
+              className="btn-quiet !min-h-7 !px-1.5"
               disabled={segments[segments.length - 1]?.segmentOrder === activeSeg?.segmentOrder}
               onClick={() => goSeg(1)}
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-3.5 w-3.5" />
             </button>
           </div>
         ) : null}
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          <button type="button" className="btn-secondary !min-h-9 text-xs" disabled={splitting || generating} onClick={() => void checkConsistency()}>
+        <div className="ml-auto flex flex-wrap items-center gap-1.5">
+          <button type="button" className="btn-secondary !min-h-7 text-[11px]" disabled={splitting || generating} onClick={() => void checkConsistency()}>
             校验提示词
           </button>
-          <button type="button" className="btn-secondary !min-h-9 text-xs" disabled={splitting || generating} onClick={() => void split()}>
-            {splitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+          <button type="button" className="btn-secondary !min-h-7 text-[11px]" disabled={splitting || generating} onClick={() => void split()}>
+            {splitting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
             重新拆分
           </button>
           {editDraft?.outputUrl ? (
-            <a href={editDraft.outputUrl} className="btn-secondary !min-h-9 text-xs" target="_blank" rel="noreferrer">
-              <Film className="h-3.5 w-3.5" /> 查看成片
+            <a href={editDraft.outputUrl} className="btn-secondary !min-h-7 text-[11px]" target="_blank" rel="noreferrer">
+              <Film className="h-3 w-3" /> 查看成片
             </a>
           ) : (
-            <button type="button" className="btn-secondary !min-h-9 text-xs" disabled={exporting || !readyCount} onClick={() => void exportEpisode()}>
-              {exporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Film className="h-3.5 w-3.5" />}
+            <button type="button" className="btn-secondary !min-h-7 text-[11px]" disabled={exporting || !readyCount} onClick={() => void exportEpisode()}>
+              {exporting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Film className="h-3 w-3" />}
               导出成片
             </button>
           )}
         </div>
       </div>
 
-      {/* Main 3-column desk — scrolls; filmstrip stays pinned below */}
-      <div className="grid min-h-0 flex-1 gap-2 overflow-hidden xl:grid-cols-[220px_minmax(0,1fr)_minmax(280px,340px)]">
+      {/* Main 3-column desk — denser columns */}
+      <div className="grid min-h-0 flex-1 gap-1.5 overflow-hidden xl:grid-cols-[188px_minmax(0,1fr)_minmax(220px,280px)]">
         {/* Left: compact asset library — dense grid/list like production desks */}
-        <aside className="scrollbar-thin min-h-0 overflow-y-auto rounded-xl border border-white/10 bg-[#0c0e14] p-2.5 xl:h-full">
-          <div className="mb-2 flex items-center justify-between px-0.5">
-            <h4 className="text-[13px] font-semibold text-white">资产库</h4>
+        <aside className="scrollbar-thin min-h-0 overflow-y-auto rounded-lg border border-white/10 bg-[#0c0e14] p-1.5 xl:h-full">
+          <div className="mb-1.5 flex items-center justify-between px-0.5">
+            <h4 className="text-[12px] font-semibold text-white">资产库</h4>
             <button
               type="button"
               className="inline-flex items-center gap-1 text-[10px] text-[#a78bfa] hover:underline disabled:opacity-40"
@@ -1260,25 +1260,25 @@ export function SegmentWorkspace({
 
         {/* Center: focused segment + beats */}
         <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-white/10 bg-[#0c0e14] xl:h-full">
-          <div className="flex flex-wrap items-center gap-2 border-b border-white/10 px-3 py-2.5">
-            <div className="flex items-center gap-1 rounded-lg bg-white/5 p-0.5">
+          <div className="flex flex-wrap items-center gap-1.5 border-b border-white/10 px-2 py-1.5">
+            <div className="flex items-center gap-0.5 rounded-md bg-white/5 p-0.5">
               <button
                 type="button"
-                className={`rounded-md px-2.5 py-1 text-xs ${scriptTab === "lens" ? "bg-white/10 font-semibold text-white" : "text-white/45"}`}
+                className={`rounded px-2 py-0.5 text-[11px] ${scriptTab === "lens" ? "bg-white/10 font-semibold text-white" : "text-white/45"}`}
                 onClick={() => setScriptTab("lens")}
               >
                 镜头
               </button>
               <button
                 type="button"
-                className={`rounded-md px-2.5 py-1 text-xs ${scriptTab === "line" ? "bg-white/10 font-semibold text-white" : "text-white/45"}`}
+                className={`rounded px-2 py-0.5 text-[11px] ${scriptTab === "line" ? "bg-white/10 font-semibold text-white" : "text-white/45"}`}
                 onClick={() => setScriptTab("line")}
               >
                 台词
               </button>
               <button
                 type="button"
-                className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs ${
+                className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] ${
                   scriptTab === "prompt" ? "bg-white/10 font-semibold text-white" : "text-white/45"
                 }`}
                 onClick={() => void openModelPromptTab()}
@@ -1289,9 +1289,9 @@ export function SegmentWorkspace({
             </div>
           </div>
 
-          <div className="border-b border-white/10 px-4 py-3">
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="rounded-md bg-black/60 px-2 py-0.5 font-medium text-white">
+          <div className="border-b border-white/10 px-2.5 py-2">
+            <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+              <span className="rounded bg-black/60 px-1.5 py-0.5 font-medium text-white">
                 片段 {activeSeg?.segmentOrder ?? "—"}
               </span>
               <span className="text-white/45">{activeSeg?.duration || 0}s · {activeSeg?.shots?.length || 0} 镜</span>
@@ -1313,16 +1313,16 @@ export function SegmentWorkspace({
               )}
               <button
                 type="button"
-                className="btn-primary ml-auto !min-h-8 !px-3 text-xs"
+                className="btn-primary ml-auto !min-h-7 !px-2.5 text-[11px]"
                 disabled={generating || segGenerating || splitting}
                 onClick={() => void generateSegment(pendingRegen ? { syncOnly: true } : {})}
               >
-                {generating || segGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Video className="h-3.5 w-3.5" />}
+                {generating || segGenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Video className="h-3 w-3" />}
                 {pendingRegen ? "重生本段" : segReady ? "再生成" : "生成本段"}
               </button>
             </div>
             {segEntityQaBlockers.length ? (
-              <div className="mt-2 rounded-lg border border-rose-500/35 bg-rose-500/10 px-3 py-2 text-[11px] text-rose-100">
+              <div className="mt-1.5 rounded-md border border-rose-500/35 bg-rose-500/10 px-2 py-1.5 text-[10px] leading-snug text-rose-100">
                 <div className="font-medium">
                   本段有 {segEntityQaBlockers.length} 项素材未过质检，默认禁止出片
                 </div>
@@ -1352,7 +1352,7 @@ export function SegmentWorkspace({
                 </button>
               </div>
             ) : null}
-            <div className="mt-2 grid gap-1 text-[12px] text-white/45 sm:grid-cols-2">
+            <div className="mt-1.5 grid gap-0.5 text-[11px] leading-snug text-white/50 sm:grid-cols-2">
               <div>
                 <span className="text-white/30">地点：</span>
                 {activeSeg?.lead?.location || activeSeg?.lead?.sceneName || "—"}
@@ -1365,16 +1365,16 @@ export function SegmentWorkspace({
                 <span className="text-white/30">天气：</span>
                 {activeSeg?.lead?.weather || "—"}
               </div>
-              <div className="sm:col-span-2">
+              <div className="sm:col-span-2 line-clamp-2">
                 <span className="text-white/30">起始状态：</span>
                 {activeSeg?.lead?.openingState || "—"}
               </div>
             </div>
           </div>
 
-          <div className="scrollbar-thin flex-1 space-y-3 overflow-y-auto p-3">
+          <div className="scrollbar-thin flex-1 space-y-2 overflow-y-auto p-2">
             {scriptTab === "prompt" ? (
-              <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[.03] p-4 text-sm">
+              <div className="space-y-2 rounded-xl border border-white/10 bg-white/[.03] p-2.5 text-[11px] leading-snug">
                 {modelPromptBusy ? (
                   <div className="flex items-center justify-center gap-2 py-16 text-white/50">
                     <Loader2 className="h-4 w-4 animate-spin" /> 加载发给模型的提示词…
@@ -1439,9 +1439,9 @@ export function SegmentWorkspace({
               const dlg = parseDialogue(shot.dialogue || "");
               const editing = editingShotId === shot.id;
               return (
-                <article key={shot.id} className="rounded-2xl border border-white/10 bg-white/[.03] p-4">
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <span className="rounded bg-black/55 px-2 py-0.5 text-[11px] font-semibold text-white">
+                <article key={shot.id} className="rounded-lg border border-white/10 bg-white/[.03] p-2.5">
+                  <div className="mb-1 flex flex-wrap items-center gap-1.5">
+                    <span className="rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold text-white">
                       分镜{shot.beatIndex || shot.shotOrder} · {shot.duration || 3}s
                     </span>
                     {dlg?.speaker ? (
@@ -1561,9 +1561,9 @@ export function SegmentWorkspace({
         </section>
 
         {/* Right: preview */}
-        <aside className="scrollbar-thin min-h-0 space-y-3 overflow-y-auto xl:h-full">
-          <div ref={monitorRef} className="overflow-hidden rounded-[18px] bg-[#08090d] p-3 text-white">
-            <div className="mb-2 flex items-center justify-between text-[10px] text-white/45">
+        <aside className="scrollbar-thin min-h-0 space-y-2 overflow-y-auto xl:h-full">
+          <div ref={monitorRef} className="overflow-hidden rounded-xl bg-[#08090d] p-2 text-white">
+            <div className="mb-1 flex items-center justify-between text-[10px] text-white/45">
               <span>
                 片段 {activeSeg?.segmentOrder ?? "—"} / {segments.length}
               </span>
@@ -1572,8 +1572,8 @@ export function SegmentWorkspace({
               </span>
             </div>
             <div
-              className={`relative flex items-center justify-center overflow-hidden rounded-xl bg-black ${
-                ratio === "9:16" ? "mx-auto aspect-[9/16] max-h-[380px]" : "aspect-video"
+              className={`relative flex items-center justify-center overflow-hidden rounded-lg bg-black ${
+                ratio === "9:16" ? "mx-auto aspect-[9/16] max-h-[min(42vh,260px)]" : "aspect-video max-h-[200px]"
               }`}
             >
               {segReady ? (
@@ -1613,23 +1613,23 @@ export function SegmentWorkspace({
               )}
             </div>
             {bgm?.url ? <audio ref={bgmRef} src={bgm.url} loop preload="metadata" /> : null}
-            <div className="mt-3 flex flex-wrap items-center justify-center gap-1.5">
-              <button type="button" className="btn-quiet !min-h-9 !px-2.5 text-white/80" onClick={() => goSeg(-1)}>
-                <ChevronLeft className="h-4 w-4" />
+            <div className="mt-2 flex flex-wrap items-center justify-center gap-1">
+              <button type="button" className="btn-quiet !min-h-7 !px-2 text-white/80" onClick={() => goSeg(-1)}>
+                <ChevronLeft className="h-3.5 w-3.5" />
               </button>
-              <button type="button" className="btn-primary !min-h-9 !rounded-full !px-4" disabled={!segReady} onClick={togglePlay}>
-                {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              <button type="button" className="btn-primary !min-h-7 !rounded-full !px-3 text-[11px]" disabled={!segReady} onClick={togglePlay}>
+                {playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
                 {playing ? "暂停" : "播放"}
               </button>
-              <button type="button" className="btn-quiet !min-h-9 !px-2.5 text-white/80" onClick={() => goSeg(1)}>
-                <ChevronRight className="h-4 w-4" />
+              <button type="button" className="btn-quiet !min-h-7 !px-2 text-white/80" onClick={() => goSeg(1)}>
+                <ChevronRight className="h-3.5 w-3.5" />
               </button>
-              <button type="button" className="btn-quiet !min-h-9 !px-2.5 text-white/80" onClick={() => setMuted((m) => !m)}>
-                {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+              <button type="button" className="btn-quiet !min-h-7 !px-2 text-white/80" onClick={() => setMuted((m) => !m)}>
+                {muted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
               </button>
               <button
                 type="button"
-                className="btn-quiet !min-h-9 !px-2.5 text-white/80"
+                className="btn-quiet !min-h-7 !px-2 text-white/80"
                 onClick={() => {
                   const node = monitorRef.current;
                   if (!node) return;
@@ -1637,10 +1637,10 @@ export function SegmentWorkspace({
                   else void node.requestFullscreen?.();
                 }}
               >
-                <Maximize2 className="h-4 w-4" />
+                <Maximize2 className="h-3.5 w-3.5" />
               </button>
             </div>
-            <div className="mt-2 flex flex-wrap items-center justify-center gap-4 text-xs text-white/60">
+            <div className="mt-1.5 flex flex-wrap items-center justify-center gap-3 text-[10px] text-white/55">
               <label className="flex items-center gap-1.5">
                 <input type="checkbox" checked={continuous} onChange={(e) => setContinuous(e.target.checked)} />
                 连续播放

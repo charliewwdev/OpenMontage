@@ -464,6 +464,18 @@ button:disabled {
      frame and appear stuck to the bottom of the viewport. */
 }
 
+/* Transparent cutout plates (character / prop) — SceneMixer-style checker. */
+.asset-cutout-bg {
+  background-color: #1a1d27;
+  background-image:
+    linear-gradient(45deg, #262a38 25%, transparent 25%),
+    linear-gradient(-45deg, #262a38 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #262a38 75%),
+    linear-gradient(-45deg, transparent 75%, #262a38 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+}
+
 /* Standby / maintenance (deploy gap) */
 .om-maint-orb {
   position: absolute;

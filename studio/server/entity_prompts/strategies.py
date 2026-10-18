@@ -82,6 +82,14 @@ class _PromptDefaults:
         return base_prompt, base_negative
 
 
+_CUTOUT_BG = (
+    "ISOLATED CUTOUT on a pure transparent / alpha PNG background "
+    "(or seamless pure white / light-gray plate for easy keying). "
+    "NO room, NO floor, NO wall texture, NO gradient studio, NO scenery. "
+    "透明背景抠图：主体以外必须是透明或纯白/浅灰无缝底板，禁止场景、地面、墙面与棚拍道具。"
+)
+
+
 class _SpiritPrompt(_PromptDefaults):
     id = "spirit"
 
@@ -90,7 +98,7 @@ class _SpiritPrompt(_PromptDefaults):
 
     def build(self, ctx: PromptBuildContext) -> tuple[str, str | None]:
         prompt = (
-            "SPIRIT LIGHT on a plain seamless dark studio backdrop. "
+            f"SPIRIT LIGHT. {_CUTOUT_BG} "
             "NOT a human, NOT a portrait, NO face, NO body, NO clothes, NO landscape. "
             f"「{ctx.who}」是淡紫色灵光聚成的半透明珠影，表面有淡淡星纹，悬浮居中。"
             "A small translucent lavender glowing orb with faint star-pattern shimmer."
@@ -99,7 +107,8 @@ class _SpiritPrompt(_PromptDefaults):
             prompt += f"光色可参考：{ctx.style}，仍然只是一颗灵光珠影。"
         negative = (
             "person, woman, man, girl, face, body, portrait, clothes, hanfu, hair, "
-            "landscape, mountain, moon, forest, text, watermark"
+            "landscape, mountain, moon, forest, text, watermark, "
+            "room, floor, wall, scenery, colored backdrop, gradient background"
         )
         return prompt, negative
 
@@ -177,7 +186,7 @@ class _CharacterPrompt(_PromptDefaults):
         if not framing.endswith((" ", "。", ".", "！", "!")):
             framing = framing + " "
         prompt = (
-            "CHARACTER SHEET on a plain seamless dark studio backdrop. "
+            f"CHARACTER SHEET / asset cutout. {_CUTOUT_BG} "
             "NO landscape, NO mountains, NO forest, NO moon, NO empty plain. "
             f"{framing}"
             f"画面中央只有角色「{ctx.who}」，五官与发型清晰。"
@@ -187,7 +196,7 @@ class _CharacterPrompt(_PromptDefaults):
         if ctx.atmosphere:
             prompt += (
                 f"光线只作肤色与轮廓参考（{ctx.atmosphere}），"
-                "背景必须是纯色棚拍，禁止画成山景、林间或空镜。"
+                "背景必须透明或纯白/浅灰抠图底板，禁止画成山景、林间或空镜。"
             )
         prompt += (
             "禁止航拍、街景、市集、山景大远景、岩石植被空镜、第二个人物。"
@@ -202,11 +211,11 @@ class _CharacterPrompt(_PromptDefaults):
             if hint:
                 prompt += f" {hint}"
         if ctx.three_view:
-            prompt += "同一人物同一服装的三视图设定稿：正面、侧面、背面，纯色背景，各格仍为半身胸上比例。"
+            prompt += "同一人物同一服装的三视图设定稿：正面、侧面、背面，透明或纯白抠图背景，各格仍为半身胸上比例。"
         else:
             prompt += (
                 "半身胸上定妆（不是全身站立远景），清晰五官与发型层次，领口与肩部服装细节完整，"
-                "电影级柔光与轮廓光，浅景深，剧照质感，居中构图。"
+                "电影级柔光与轮廓光，剧照质感，居中构图，边缘干净可抠。"
             )
         if ctx.force_illustration:
             prompt += "虚构角色插画，避免真人照片质感。"
@@ -220,7 +229,9 @@ class _CharacterPrompt(_PromptDefaults):
             "architecture only, bird's eye, map, multiple people, text, watermark, "
             "extreme close-up, forehead only, eyes only crop, macro face, "
             "full body standing wide shot, full-length figure tiny in frame, "
-            "feet visible, shoes visible, distant full figure"
+            "feet visible, shoes visible, distant full figure, "
+            "room interior, wooden floor, concrete wall, colored backdrop, "
+            "gradient studio background, scenic background, environment"
         )
         return prompt, negative
 
@@ -307,21 +318,23 @@ class _PropPrompt(_PromptDefaults):
 
     def build(self, ctx: PromptBuildContext) -> tuple[str, str | None]:
         prompt = (
-            "ISOLATED PRODUCT PHOTO on a plain seamless studio backdrop, one object only. "
-            "No person, no face, no hands, no fingers, no portrait, no character sheet, no fashion. "
+            f"ISOLATED PRODUCT PHOTO / prop cutout. {_CUTOUT_BG} "
+            "One object only. No person, no face, no hands, no fingers, no portrait, no character sheet, no fashion. "
             f"关键道具产品特写：{ctx.name}。"
             f"只拍这一件物体的外形与材质：{ctx.desc or ctx.name}。"
-            "居中 macro / tabletop 静物，浅景深，材质反光真实；"
-            "禁止任何人物、半身像、城市空镜；不要试图画清纸上的长段剧情文字。"
+            "居中 macro / floating product still，材质反光真实，边缘干净可抠；"
+            "禁止任何人物、半身像、城市空镜、桌面杂物；不要试图画清纸上的长段剧情文字。"
         )
         if ctx.three_view:
-            prompt += "多角度产品级展示。"
+            prompt += "多角度产品级展示，每格仍为透明或纯白抠图背景。"
         if ctx.style:
             prompt += f"色调气质可参考：{ctx.style}（不可盖过物体主体）。"
         negative = (
             "cityscape, aerial view, full body portrait, half-body portrait, headshot, "
             "crowd, people, person, human, face, woman, man, girl, boy, "
-            "fashion model, character sheet, cosplay, selfie, hands holding, fingers"
+            "fashion model, character sheet, cosplay, selfie, hands holding, fingers, "
+            "table clutter, wooden desk, room interior, scenery, colored backdrop, "
+            "gradient studio background, environment"
         )
         return prompt, negative
 
@@ -339,14 +352,14 @@ class _PropPrompt(_PromptDefaults):
         low = (last_reason or "").lower()
         if any(tok in low for tok in self._PORTRAIT_LEAK):
             prompt = (
-                "STRICT PRODUCT MACRO, plain white/gray seamless backdrop, ONE object only. "
+                "STRICT PRODUCT MACRO, transparent or pure white seamless cutout, ONE object only. "
                 f"Object: {ctx.name or 'prop'}. "
                 f"Details: {ctx.desc or ctx.name or ''}. "
-                "No humans anywhere in frame."
+                "No humans anywhere in frame. No scenery."
             )
             neg = (
                 ((base_negative + ", ") if base_negative else "")
-                + "person, people, face, woman, man, portrait, hands, fingers, character sheet"
+                + "person, people, face, woman, man, portrait, hands, fingers, character sheet, scenery"
             )
             return prompt, neg
         return base_prompt, base_negative

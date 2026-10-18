@@ -1176,7 +1176,11 @@ export function SegmentWorkspace({
                             inSeg ? "border-[#7c6cff]" : "border-white/10 opacity-60 hover:opacity-100"
                           }`}
                         >
-                          <div className="flex aspect-[3/4] items-center justify-center bg-[#11131a]">
+                          <div
+                            className={`flex aspect-[3/4] items-center justify-center ${
+                              block.kind === "scene" ? "bg-[#11131a]" : "asset-cutout-bg"
+                            }`}
+                          >
                             {entityThumb(ent) ? (
                               <img
                                 src={entityThumb(ent)}
@@ -1207,9 +1211,9 @@ export function SegmentWorkspace({
                           }`}
                         >
                           <div
-                            className={`flex shrink-0 items-center justify-center overflow-hidden rounded-md bg-[#11131a] ${
-                              block.kind === "prop" ? "h-9 w-9" : "h-9 w-14"
-                            }`}
+                            className={`flex shrink-0 items-center justify-center overflow-hidden rounded-md ${
+                              block.kind === "scene" ? "bg-[#11131a]" : "asset-cutout-bg"
+                            } ${block.kind === "prop" ? "h-9 w-9" : "h-9 w-14"}`}
                           >
                             {entityThumb(ent) ? (
                               <img

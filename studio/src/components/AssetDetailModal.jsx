@@ -239,7 +239,11 @@ export function AssetDetailModal({
             </div>
           ) : (
             <div className="grid max-h-[min(82dvh,860px)] gap-0 overflow-y-auto md:grid-cols-[minmax(0,1.05fr)_minmax(280px,0.95fr)]">
-              <div className="relative min-h-[240px] bg-black/50 md:min-h-[360px]">
+              <div
+                className={`relative min-h-[240px] md:min-h-[360px] ${
+                  entity.kind === "scene" ? "bg-black/50" : "asset-cutout-bg"
+                }`}
+              >
                 {thumb ? (
                   <button
                     type="button"

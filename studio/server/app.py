@@ -8,6 +8,7 @@ import json
 import mimetypes
 import os
 import sys
+import threading
 import time
 import uuid
 from datetime import datetime, timezone
@@ -200,6 +201,32 @@ except Exception as _pg_exc:
     print(f"[studio] postgres bootstrap skipped: {_pg_exc}", flush=True)
 
 STORE = ProjectStore(PROJECTS_ROOT)
+
+
+def _auto_produce_sweep_loop() -> None:
+    import time
+
+    # First pass soon after boot so version updates resume running jobs quickly.
+    time.sleep(3)
+    try:
+        from auto_produce import resume_after_boot, sweep_auto_produce
+
+        resume_after_boot(STORE)
+        sweep_auto_produce(STORE)
+    except Exception:
+        pass
+
+    while True:
+        time.sleep(30)
+        try:
+            from auto_produce import sweep_auto_produce
+
+            sweep_auto_produce(STORE)
+        except Exception:
+            pass
+
+
+threading.Thread(target=_auto_produce_sweep_loop, name="auto-produce-sweep", daemon=True).start()
 ensure_seed_projects(PROJECTS_ROOT, SEED_ROOT)
 load_and_apply(PROJECTS_ROOT)
 init_usage(PROJECTS_ROOT)

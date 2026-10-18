@@ -289,6 +289,122 @@ def apply_experience_to_prompt(
     return prompt, negative
 
 
+# Default expert rules when SKILL.md Runtime omits expert_review (mirrors hard rules).
+_DEFAULT_EXPERT_RULES: list[dict[str, Any]] = [
+    {
+        "id": "character-no-empty-plate",
+        "kinds": ["character"],
+        "fail_if_reason_contains": [
+            "landscape",
+            "cityscape",
+            "aerial",
+            "empty location",
+            "无人空镜",
+            "风景空镜",
+        ],
+    },
+    {
+        "id": "spirit-no-human",
+        "kinds": ["spirit"],
+        "strategies": ["spirit"],
+        "fail_if_reason_contains": [
+            "person",
+            "portrait",
+            "human",
+            "woman",
+            "man",
+            "face",
+            "人像",
+            "半身",
+            "physical human",
+        ],
+        "except_if_reason_contains": ["spirit", "orb", "bead", "灵光", "珠影", "not a person", "no person"],
+    },
+    {
+        "id": "scene-no-people",
+        "kinds": ["scene"],
+        "fail_if_reason_contains": [
+            "portrait",
+            "character sheet",
+            "close-up face",
+            "fashion model",
+            "人像",
+            "半身像",
+        ],
+    },
+    {
+        "id": "prop-no-person",
+        "kinds": ["prop"],
+        "fail_if_reason_contains": [
+            "character portrait",
+            "full character",
+            "portrait of a",
+            "shows a person",
+            "人像",
+            "角色定妆",
+        ],
+        "except_if_reason_contains": ["no person", "product", "object only", "道具"],
+    },
+    {
+        "id": "shot-cast-coherence",
+        "kinds": ["shot", "segment", "video"],
+        "fail_if_reason_contains": [
+            "wrong gender",
+            "blank frame",
+            "black frame",
+            "unrelated scenery",
+            "soft mushy",
+        ],
+    },
+]
+
+
+def expert_rules_for(skill_id: str = "drama-entity-still") -> list[dict[str, Any]]:
+    runtime = get_skill_runtime(skill_id).get("runtime") or {}
+    raw = runtime.get("expert_review") or runtime.get("expert_rules") or []
+    rules = [r for r in raw if isinstance(r, dict) and r.get("id")]
+    return rules or list(_DEFAULT_EXPERT_RULES)
+
+
+def skill_expert_review(
+    qa: dict[str, Any],
+    *,
+    kind: str,
+    strategy_id: str = "",
+    skill_id: str = "drama-entity-still",
+) -> dict[str, Any]:
+    """Deterministic Skill expert gate. Fail-closed on matching soft vision excuses; never soft-pass."""
+    out = dict(qa or {})
+    if out.get("skipped"):
+        return out
+    reason = str(out.get("reason") or "")
+    low = reason.lower()
+    checked: list[str] = []
+    for rule in expert_rules_for(skill_id):
+        kinds = [str(k) for k in (rule.get("kinds") or []) if k]
+        strategies = [str(s) for s in (rule.get("strategies") or []) if s]
+        if strategies and strategy_id and strategy_id not in strategies:
+            continue
+        if kinds and kind not in kinds and strategy_id not in kinds:
+            continue
+        rid = str(rule.get("id") or "")
+        checked.append(rid)
+        if not out.get("pass"):
+            continue
+        fails = [str(t).lower() for t in (rule.get("fail_if_reason_contains") or []) if t]
+        excepts = [str(t).lower() for t in (rule.get("except_if_reason_contains") or []) if t]
+        if fails and any(t in low for t in fails):
+            if excepts and any(t in low for t in excepts):
+                continue
+            out["pass"] = False
+            out["score"] = min(float(out.get("score") or 0), 0.2)
+            out["reason"] = f"skill_expert:{rid}:{reason}"[:400]
+            out["skillExpert"] = {"skillId": skill_id, "failedRule": rid, "checked": checked}
+            return out
+    out["skillExpert"] = {"skillId": skill_id, "failedRule": None, "checked": checked}
+    return out
+
+
 def experience_summary(skill_id: str = "drama-entity-still", projects_root: Path | None = None) -> dict[str, Any]:
     patches = load_experience(skill_id, projects_root)
     learned = [p for p in patches if p.get("source") == "learned"]

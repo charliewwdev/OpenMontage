@@ -40,6 +40,70 @@ def _uses_latin_clip(model_label: str) -> bool:
     return True
 
 
+def clip_identity_prefix(raw: str) -> str:
+    """English locks RealVis/SDXL must see first. Chinese CLIP drops gender, age, and spirit form."""
+    text = raw or ""
+    if any(k in text for k in ("无实体", "灵光聚", "珠影", "淡紫色灵光")):
+        return (
+            "NOT a human, NOT a portrait, NOT a woman, NO face, NO body, NO clothes. "
+            "A small translucent lavender glowing orb with faint star-pattern shimmer, "
+            "spirit light floating on a plain dark studio backdrop."
+        )
+    bits: list[str] = []
+    age_m = re.search(r"(\d{1,2})\s*岁", text)
+    age = age_m.group(1) if age_m else ""
+    if "男孩" in text:
+        bits.append(
+            f"ONE East Asian BOY age {age or '8'}, male child, not an adult, not a woman, not a girl."
+        )
+    elif any(k in text for k in ("男性", "农夫", "男人")):
+        bits.append(
+            f"ONE East Asian MAN age {age or 'adult'}, male, masculine face, not a woman, not a girl."
+        )
+    elif any(k in text for k in ("少女", "村妇", "女子")):
+        bits.append(f"ONE East Asian FEMALE age {age or 'adult'}, not a man.")
+    if any(k in text for k in ("灰袍", "灰衣", "兜帽")):
+        bits.append(
+            "Gray hooded robe, hood shadowing the face, pale jaw only, "
+            "not a white collared shirt, not modern fashion."
+        )
+    if any(k in text for k in ("双丫髻", "枯黄乱发", "粗布短褐")):
+        bits.append(
+            "Withered yellow messy hair in two side buns tied with straw rope, "
+            "coarse blue-gray short jacket, torn linen vest, straw-rope belt, open-toe cloth shoes. "
+            "Not a silk robe."
+        )
+    if "围裙" in text or "村妇" in text:
+        bits.append(
+            "Stout village woman, high cheekbones, hair bun with a wooden pin, "
+            "gray-blue coarse cross-collar shirt, stained apron. Not a young model."
+        )
+    if "农夫" in text or ("草鞋" in text and "微驼" in text):
+        bits.append(
+            "Slightly hunched farmer, deep eye wrinkles, dark brown coarse short jacket, "
+            "rolled trouser cuffs, straw sandals. Male."
+        )
+    if "雀斑" in text or "靛蓝布" in text:
+        bits.append(
+            "Freckles on the nose, indigo cloth jacket with short sleeves, old cloth shoes, child proportions."
+        )
+    low = text.lower()
+    if "white collared" in low or "white shirt" in low:
+        bits.append("No white collared shirt.")
+    if "physical human" in low:
+        bits.append("No solid living human body.")
+    if "young woman" in low or "young east asian female" in low:
+        bits.append("Do not draw a young woman.")
+    # Preserve order, drop duplicates.
+    seen: set[str] = set()
+    out: list[str] = []
+    for bit in bits:
+        if bit not in seen:
+            seen.add(bit)
+            out.append(bit)
+    return " ".join(out)
+
+
 def _translate_prompt_for_latin_clip(prompt: str) -> str:
     """RealVis/SDXL CLIP barely reads Chinese — translate or English-lock the subject.
 
@@ -69,11 +133,18 @@ def _translate_prompt_for_latin_clip(prompt: str) -> str:
         )
         eng = str((data or {}).get("english") or "").strip()
         if len(eng) >= 24:
-            return eng
+            prefix = clip_identity_prefix(raw)
+            return f"{prefix} {eng}".strip() if prefix else eng
     except Exception:
         pass
     # Deterministic fallback — still better than feeding raw CJK into Latin CLIP.
-    return (
+    prefix = clip_identity_prefix(raw)
+    fallback = (
+        "cinematic still, centered, plain studio backdrop, no landscape, no cityscape, "
+        "no aerial view, no empty scenery. "
+        f"Creative brief: {raw[:500]}"
+    )
+    return f"{prefix} {fallback}".strip() if prefix else (
         "photorealistic cinematic portrait of a single East Asian person, clear face, "
         "detailed hair and clothing, half-body or full-body, soft key light, shallow "
         "depth of field, movie still, centered composition, no landscape, no cityscape, "
@@ -561,149 +632,24 @@ def generate_image(
     elif denoise is not None:
         strength = max(0.35, min(1.0, float(denoise)))
 
-    preferred = (_secret("COMFYUI_CHECKPOINT") or "").strip()
-    ckpts = list_checkpoints(root)
-    qwen_local = _pick_qwen_stack(root)
-    qwen_api_ok = _has_qwen_image_api(root)
-    model_label = ""
-    use_latin_clip = False
+    from .comfy_image_models import ComfyImageContext, build_comfy_image_workflow
 
-    # 1) Explicit Qwen Image API. A character reference needs a local img2img graph.
-    if not image_name and (preferred in _QWEN_API_MODELS or preferred.startswith("qwen-image")):
-        if not qwen_api_ok:
-            raise ComfyUIError(
-                f"已选择 {preferred}，但 ComfyUI 未安装 QwenImageTextToImageApi 节点（需 Comfy 登录/Partner Nodes）。"
-            )
-        if not _comfy_org_api_key():
-            strong = next((c for c in ckpts if not _is_weak_latin_only_ckpt(c)), None)
-            raise ComfyUIError(
-                "已选择 Qwen Image 中文出图，但未配置 COMFY_API_KEY，且租机 ComfyUI 未登录 Partner Nodes。"
-                "请到 https://platform.comfy.org 创建 API Key，在设置里保存为 COMFY_API_KEY；"
-                "或在 ComfyUI 网页登录后再试。"
-                + (f" 临时可在顶部改选本地模型：{strong}。" if strong else "")
-            )
-        model_label = preferred if preferred in _QWEN_API_MODELS else "qwen-image-3.0-pro"
-        model_prompt = prompt
-        workflow = _qwen_image_api_workflow(
-            prompt=model_prompt,
+    preferred = (_secret("COMFYUI_CHECKPOINT") or "").strip()
+    model_label, workflow = build_comfy_image_workflow(
+        ComfyImageContext(
+            prompt=prompt,
             negative=negative,
             width=width,
             height=height,
-            seed=seed,
-            model=model_label,
-        )
-    # 2) Explicit local checkpoint (RealVis / SDXL / SD1.5 — English CLIP)
-    elif preferred and preferred in ckpts:
-        model_label = preferred
-        use_latin_clip = _uses_latin_clip(model_label)
-        model_prompt = _translate_prompt_for_latin_clip(prompt) if use_latin_clip else prompt
-        workflow = _basic_checkpoint_workflow(
-            prompt=model_prompt,
-            negative=negative,
-            width=width,
-            height=height,
-            ckpt=preferred,
             seed=seed,
             image_name=image_name,
-            denoise=strength,
+            strength=strength,
+            preferred=preferred,
+            ckpts=list_checkpoints(root),
+            qwen_local=_pick_qwen_stack(root),
+            qwen_api_ok=_has_qwen_image_api(root),
         )
-    # 3) Explicit local Qwen UNET name
-    elif preferred and qwen_local and preferred == qwen_local["unet"]:
-        model_label = preferred
-        model_prompt = prompt
-        workflow = _qwen_image_workflow(
-            prompt=model_prompt,
-            negative=negative,
-            width=width,
-            height=height,
-            unet=qwen_local["unet"],
-            clip=qwen_local["clip"],
-            vae=qwen_local["vae"],
-            seed=seed,
-            image_name=image_name,
-            denoise=strength,
-        )
-    # 4) Auto: Qwen API only when keyed; else strong local ckpt / local Qwen stack
-    elif (
-        not image_name
-        and qwen_api_ok
-        and _comfy_org_api_key()
-        and (not ckpts or all(_is_weak_latin_only_ckpt(c) for c in ckpts))
-    ):
-        model_label = "qwen-image-3.0-pro"
-        model_prompt = prompt
-        workflow = _qwen_image_api_workflow(
-            prompt=model_prompt,
-            negative=negative,
-            width=width,
-            height=height,
-            seed=seed,
-            model=model_label,
-        )
-    elif qwen_local and (not ckpts or all(_is_weak_latin_only_ckpt(c) for c in ckpts)):
-        model_label = qwen_local["unet"]
-        model_prompt = prompt
-        workflow = _qwen_image_workflow(
-            prompt=model_prompt,
-            negative=negative,
-            width=width,
-            height=height,
-            unet=qwen_local["unet"],
-            clip=qwen_local["clip"],
-            vae=qwen_local["vae"],
-            seed=seed,
-            image_name=image_name,
-            denoise=strength,
-        )
-    elif ckpts:
-        # Prefer a non-SD1.5 ckpt when present
-        strong = next((c for c in ckpts if not _is_weak_latin_only_ckpt(c)), None)
-        ckpt = strong or ckpts[0]
-        model_label = ckpt
-        use_latin_clip = _uses_latin_clip(model_label)
-        model_prompt = _translate_prompt_for_latin_clip(prompt) if use_latin_clip else prompt
-        workflow = _basic_checkpoint_workflow(
-            prompt=model_prompt,
-            negative=negative,
-            width=width,
-            height=height,
-            ckpt=ckpt,
-            seed=seed,
-            image_name=image_name,
-            denoise=strength,
-        )
-    elif qwen_local:
-        model_label = qwen_local["unet"]
-        model_prompt = prompt
-        workflow = _qwen_image_workflow(
-            prompt=model_prompt,
-            negative=negative,
-            width=width,
-            height=height,
-            unet=qwen_local["unet"],
-            clip=qwen_local["clip"],
-            vae=qwen_local["vae"],
-            seed=seed,
-            image_name=image_name,
-            denoise=strength,
-        )
-    elif qwen_api_ok and _comfy_org_api_key():
-        model_label = "qwen-image-3.0-pro"
-        model_prompt = prompt
-        workflow = _qwen_image_api_workflow(
-            prompt=model_prompt,
-            negative=negative,
-            width=width,
-            height=height,
-            seed=seed,
-            model=model_label,
-        )
-    else:
-        raise ComfyUIError(
-            "ComfyUI 已连通，但未发现可用中文出图模型。"
-            "当前镜像多为 MiniMax H3 视频权重 + SD1.5，中文角色定妆会漂。"
-            "请安装 SDXL（如 RealVisXL），或配置 COMFY_API_KEY 后选择「Qwen Image 3」。"
-        )
+    )
 
     client_id = str(uuid.uuid4())
     t0 = time.time()

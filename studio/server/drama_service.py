@@ -585,11 +585,8 @@ def build_entity_image_prompt(
     qa_reason: str = "",
     projects_root: Path | None = None,
 ) -> dict[str, Any]:
-    """Build the exact T2I prompt (+ negative) that would be sent for an entity still.
-
-    Driven by studio skill ``drama-entity-still`` Runtime + accumulated experience patches
-    (Skill 管理页可见)，不是与 Skill 脱节的硬编码玩具。
-    """
+    """Build T2I prompt via registered entity prompt strategies + Skill experience patches."""
+    from entity_prompts import PromptBuildContext, resolve_entity_prompt_strategy
     from skill_runtime import (
         apply_experience_to_prompt,
         get_skill_runtime,
@@ -607,103 +604,21 @@ def build_entity_image_prompt(
     variant = ent.get("variant") or ""
     desc = _clean_desc(ent.get("description") or "")
     kind = ent.get("kind") or "prop"
-    negative = None
-    applied_patches: list[dict[str, Any]] = []
-    if kind == "character":
-        look, atmosphere = _split_character_desc(desc)
-        who = f"{name}{(' · ' + variant) if variant else ''}"
-        prompt = (
-            "CHARACTER SHEET on a plain seamless dark studio backdrop. "
-            "NO landscape, NO mountains, NO forest, NO moon, NO empty plain. "
-            f"ONE East Asian person 「{who}」, sharp face, half-body, centered. "
-            f"华语竖屏短剧定妆：画面中央只有一个人，就是「{who}」。"
-            f"发型与服装必须按原文画出，不要换成泛泛古装长袍："
-            f"{look or '短剧主角，五官清晰，服装完整'}。"
-        )
-        if atmosphere:
-            prompt += (
-                f"光线只作肤色与轮廓参考（{atmosphere}），"
-                "背景必须是纯色棚拍，禁止画成山景、林间或空镜。"
-            )
-        prompt += (
-            "禁止航拍、街景、市集、山景大远景、岩石植被空镜、第二个人物。"
-            "No landscape, no mountain, no cityscape, no empty scenery."
-        )
-        if variant and variant not in {"默认形象", "默认造型", "default"}:
-            hint = str(runtime.get("variant_prompt_hint") or "").strip()
-            prompt += (
-                f" 本条为变体「{variant}」，必须让变体差异在画面中清晰可见（妆造/伤势/服装状态），"
-                "同时保持与参考定妆图同一张脸。"
-            )
-            if hint:
-                prompt += f" {hint}"
-            # Injury props: RealVis/SDXL often maps「绷带」→ face wound / blue plastic.
-            # Ask for gauze wrap + medium shot; never "dominate the frame" (unachievable bar).
-            if any(tok in variant for tok in ("受伤", "绷带", "伤", "bandage", "injury")):
-                prompt = (
-                    "MEDIUM SHOT chest-up (not face-only close-up). "
-                    "LEFT shoulder and upper chest have a thick WHITE medical gauze wrap "
-                    "(rolled surgical gauze, cotton dressing — not plastic sheet, not towel). "
-                    "Dark coat torn or blood-stained. Pale sweaty face. "
-                    + prompt
-                )
-                negative = (
-                    (negative + ", ") if negative else ""
-                ) + (
-                    "clean uninjured clothes, pristine high collar, forehead wound only, "
-                    "cheek cut only, facial laceration as sole injury, blue plastic sheet, "
-                    "rain poncho, towel around neck, head-and-shoulders crop hiding shoulders, "
-                    "fashion portrait, unbroken skin"
-                )
-        if three_view:
-            prompt += "同一人物同一服装的三视图设定稿：正面、侧面、背面，纯色背景。"
-        else:
-            prompt += (
-                "半身或全身定妆，清晰五官与发型层次，服装面料与配饰细节完整，"
-                "电影级柔光与轮廓光，浅景深，剧照质感，居中构图。"
-            )
-        if use_illustration:
-            prompt += "虚构角色插画，避免真人照片质感。"
-        else:
-            prompt += "虚构短剧角色，影视剧照质感与妆造完成度，不是简笔卡通、不是证件照、不是AI塑料脸。"
-        if style:
-            prompt += f"色调气质可参考：{style}（不可盖过人物主体）。"
-        negative = (
-            "aerial view, drone shot, cityscape, skyline, landscape, mountain, hillside, "
-            "rocks, forest, nature scenery, empty street, crowded market, crowd, "
-            "architecture only, bird's eye, map, no person, multiple people, text, watermark"
-        )
-    elif kind == "scene":
-        prompt = (
-            "EMPTY location plate, no people, no faces, no portraits, no fashion models. "
-            f"短剧场景空镜：{name}。"
-            f"{desc or '可拍的竖屏短剧空间'}。"
-            "制作设计完整：空间层次、道具陈设、材质与光影氛围，电影级构图，画面中不要出现人物。"
-        )
-        if style:
-            prompt += f"色调气质可参考：{style}。"
-        negative = (
-            "close-up portrait, face closeup, character sheet, person, people, woman, man, "
-            "fashion model, full body, crowd"
-        )
-    else:
-        prompt = (
-            "ISOLATED PRODUCT PHOTO on a plain seamless studio backdrop, one object only. "
-            "No person, no face, no hands, no fingers, no portrait, no character sheet, no fashion. "
-            f"关键道具产品特写：{name}。"
-            f"只拍这一件物体的外形与材质：{desc or name}。"
-            "居中 macro / tabletop 静物，浅景深，材质反光真实；"
-            "禁止任何人物、半身像、城市空镜；不要试图画清纸上的长段剧情文字。"
-        )
-        if three_view:
-            prompt += "多角度产品级展示。"
-        if style:
-            prompt += f"色调气质可参考：{style}（不可盖过物体主体）。"
-        negative = (
-            "cityscape, aerial view, full body portrait, half-body portrait, headshot, "
-            "crowd, people, person, human, face, woman, man, girl, boy, "
-            "fashion model, character sheet, cosplay, selfie, hands holding, fingers"
-        )
+    look, atmosphere = _split_character_desc(desc) if kind == "character" else ("", "")
+    ctx = PromptBuildContext(
+        kind=kind,
+        name=name,
+        variant=variant,
+        desc=desc,
+        style=style,
+        three_view=three_view,
+        force_illustration=use_illustration,
+        runtime=runtime,
+        look=look,
+        atmosphere=atmosphere,
+    )
+    strategy = resolve_entity_prompt_strategy(ctx)
+    prompt, negative = strategy.build(ctx)
 
     applied_patches = match_experience_patches(
         skill_id="drama-entity-still",
@@ -728,6 +643,7 @@ def build_entity_image_prompt(
         "description": desc,
         "style": style,
         "skillId": "drama-entity-still",
+        "promptStrategy": strategy.id,
         "experiencePatchIds": [p.get("id") for p in applied_patches if p.get("id")],
     }
 
@@ -3115,8 +3031,6 @@ def start_shot_video(
         shot.pop("_forcedEntityQa", None)
     store.save(state)
 
-    from job_queue import enqueue
-
     payload: dict[str, Any] = {
         "projectId": project_id,
         "shotId": shot_id,
@@ -3130,25 +3044,19 @@ def start_shot_video(
         "refPath": str(ref_paths[0]) if ref_paths else None,
     }
 
-    if backend == "comfyui":
-        enqueue("shot_video", payload)
-        return shot
+    from providers.video_factory import require_video_backend
 
-    # Seedance: create remote task on request thread (fast), poll on shared media queue.
-    from providers.seedance import create_task
-
-    task_id = create_task(
-        model=model,
+    require_video_backend(backend).submit(
+        store=store,
+        shot=shot,
+        state=state,
+        payload=payload,
         content=content,
+        model=model,
         ratio=ratio,
         resolution=resolution,
         duration=duration,
     )
-    shot["providerTaskId"] = task_id
-    shot["updatedAt"] = _now()
-    store.save(state)
-    payload["seedanceTaskId"] = task_id
-    enqueue("shot_video", payload)
     return shot
 
 
@@ -3167,190 +3075,23 @@ def run_shot_video_job(
     ref_path: str | None = None,
     seedance_task_id: str | None = None,
 ) -> None:
-    """Blocking video job for the shared media queue (Comfy generate or Seedance poll)."""
-    backend = (backend or "").strip().lower()
-    if backend == "comfyui":
-        from media_qa import assert_media_ok
-        from providers.media import generate_video_file
+    """Blocking video job. The runner is looked up from the video backend registry."""
+    from providers.video_factory import run_registered_video_job
 
-        try:
-            vid_id = new_id("vid_")
-            rel = f"media/videos/{vid_id}.mp4"
-            dest = store._dir(project_id) / rel
-            ref = Path(ref_path) if ref_path else None
-            result = generate_video_file(
-                prompt=base_prompt,
-                ratio=ratio or "9:16",
-                duration=int(duration or 5),
-                out_path=dest,
-                reference_path=ref if ref and ref.is_file() else None,
-                resolution=resolution or "720p",
-            )
-            assert_media_ok(dest, unlink_on_fail=True)
-            if dest.is_file():
-                store.persist_media(project_id, rel)
-            st = store.load(project_id)
-            sh = next((x for x in (st.get("shots") or []) if x["id"] == shot_id), None) if st else None
-            if not sh:
-                return
-            prompt_used = base_prompt or sh.get("prompt") or ""
-            ents_alive = [e for e in (st.get("entities") or []) if not e.get("deletedAt")]
-            by_id = {e["id"]: e for e in ents_alive}
-            ref_ents = [by_id[eid] for eid in (sh.get("referenceEntityIds") or []) if eid in by_id]
-            qa = _judge_video_file(dest, prompt=prompt_used, entities=ref_ents)
-            version = {
-                "id": vid_id,
-                "shotId": shot_id,
-                "path": rel if dest.is_file() else None,
-                "providerTaskId": None,
-                "model": result.get("model") or "minimax-h3",
-                "backend": "comfyui",
-                "duration": float(result.get("duration") or duration),
-                "resolution": result.get("resolution") or resolution,
-                "prompt": prompt_used,
-                "qa": qa,
-                "qaPass": bool(qa.get("qaPass")),
-                "rating": None,
-                "note": "",
-                "createdAt": _now(),
-            }
-            sh.setdefault("videos", []).append(version)
-            sh["selectedVideoId"] = vid_id
-            sh["providerTaskId"] = None
-            sh["staleReason"] = None
-            sh["updatedAt"] = _now()
-            sh.pop("_segmentPromptOverride", None)
-            sh.pop("_segmentDurationOverride", None)
-            if version["qaPass"]:
-                sh["status"] = "success"
-                sh["error"] = None
-            else:
-                sh["status"] = "failed"
-                sh["error"] = f"质检未达标: {qa.get('reason') or 'mismatch'}"
-            _propagate_segment_video(st, sh)
-            store.save(st)
-        except Exception as exc:
-            st = store.load(project_id)
-            sh = next((x for x in (st.get("shots") or []) if x["id"] == shot_id), None) if st else None
-            if sh:
-                sh["status"] = "failed"
-                sh["error"] = str(exc)
-                sh["updatedAt"] = _now()
-                _propagate_segment_video(st, sh)
-                store.save(st)
-        return
-
-    # Seedance poll loop (task already created on the HTTP thread).
-    from providers.seedance import query_task
-
-    task_id = seedance_task_id
-    if not task_id:
-        st0 = store.load(project_id)
-        sh0 = next((x for x in (st0.get("shots") or []) if x["id"] == shot_id), None) if st0 else None
-        task_id = (sh0 or {}).get("providerTaskId")
-    if not task_id:
-        st = store.load(project_id)
-        sh = next((x for x in (st.get("shots") or []) if x["id"] == shot_id), None) if st else None
-        if sh:
-            sh["status"] = "failed"
-            sh["error"] = "missing seedance task id"
-            sh["updatedAt"] = _now()
-            _propagate_segment_video(st, sh)
-            store.save(st)
-        return
-
-    import time
-
-    for _ in range(120):
-        try:
-            st = store.load(project_id)
-            sh = next((x for x in (st.get("shots") or []) if x["id"] == shot_id), None) if st else None
-            if not sh:
-                return
-            result = query_task(task_id)
-            status = result.get("status")
-            if status in {"succeeded"}:
-                vid_id = new_id("vid_")
-                rel = f"media/videos/{vid_id}.mp4"
-                dest = store._dir(project_id) / rel
-                if result.get("videoUrl"):
-                    _download(result["videoUrl"], dest)
-                    if dest.is_file():
-                        store.persist_media(project_id, rel)
-                prompt_used = (sh.get("_segmentPromptOverride") or sh.get("prompt") or base_prompt or "").strip()
-                ents_alive = [e for e in (st.get("entities") or []) if not e.get("deletedAt")]
-                by_id = {e["id"]: e for e in ents_alive}
-                ref_ents = [by_id[eid] for eid in (sh.get("referenceEntityIds") or []) if eid in by_id]
-                qa = (
-                    _judge_video_file(dest, prompt=prompt_used, entities=ref_ents)
-                    if dest.is_file()
-                    else {
-                        "pass": False,
-                        "score": 0,
-                        "reason": "missing_file",
-                        "skipped": False,
-                        "qaPass": False,
-                    }
-                )
-                version = {
-                    "id": vid_id,
-                    "shotId": shot_id,
-                    "path": rel if dest.is_file() else None,
-                    "providerTaskId": task_id,
-                    "model": model,
-                    "backend": "seedance",
-                    "duration": float(result.get("duration") or sh.get("duration") or 5),
-                    "resolution": result.get("resolution") or resolution,
-                    "prompt": prompt_used,
-                    "qa": qa,
-                    "qaPass": bool(qa.get("qaPass")),
-                    "rating": None,
-                    "note": "",
-                    "createdAt": _now(),
-                }
-                sh.setdefault("videos", []).append(version)
-                sh["selectedVideoId"] = vid_id
-                sh["staleReason"] = None
-                sh["providerTaskId"] = task_id
-                sh["updatedAt"] = _now()
-                sh.pop("_segmentPromptOverride", None)
-                sh.pop("_segmentDurationOverride", None)
-                if version["qaPass"]:
-                    sh["status"] = "success"
-                    sh["error"] = None
-                else:
-                    sh["status"] = "failed"
-                    sh["error"] = f"质检未达标: {qa.get('reason') or 'mismatch'}"
-                _propagate_segment_video(st, sh)
-                store.save(st)
-                return
-            if status in {"failed", "expired", "cancelled"}:
-                sh["status"] = "failed"
-                sh["error"] = result.get("error") or status
-                sh["updatedAt"] = _now()
-                _propagate_segment_video(st, sh)
-                store.save(st)
-                return
-        except Exception as exc:
-            st = store.load(project_id)
-            sh = next((x for x in (st.get("shots") or []) if x["id"] == shot_id), None) if st else None
-            if sh:
-                sh["status"] = "failed"
-                sh["error"] = str(exc)
-                sh["updatedAt"] = _now()
-                _propagate_segment_video(st, sh)
-                store.save(st)
-            return
-        time.sleep(5)
-
-    st = store.load(project_id)
-    sh = next((x for x in (st.get("shots") or []) if x["id"] == shot_id), None) if st else None
-    if sh and sh.get("status") == "generating":
-        sh["status"] = "failed"
-        sh["error"] = "生成超时"
-        sh["updatedAt"] = _now()
-        _propagate_segment_video(st, sh)
-        store.save(st)
+    run_registered_video_job(
+        backend,
+        store=store,
+        project_id=project_id,
+        shot_id=shot_id,
+        model=model,
+        resolution=resolution,
+        force_entity_qa=force_entity_qa,
+        base_prompt=base_prompt,
+        ratio=ratio,
+        duration=duration,
+        ref_path=ref_path,
+        seedance_task_id=seedance_task_id,
+    )
 
 
 def _judge_video_file(

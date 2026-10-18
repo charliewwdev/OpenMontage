@@ -299,46 +299,21 @@ def chat_json(
         sys_prompt = system
         user_prompt = user + extra
         try:
-            if kind == "cursor":
-                from .cursor_llm import chat_json as cursor_chat_json
+            from .llm_transports import transport_for
 
-                return cursor_chat_json(
-                    system=sys_prompt,
-                    user=user_prompt,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    retries=1,
-                )
-            if kind == "anthropic":
-                text = _chat_anthropic(
-                    key=key,
-                    base=base,
-                    model=model,
-                    system=sys_prompt,
-                    user=user_prompt,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                )
-            elif kind == "gemini":
-                text = _chat_gemini(
-                    key=key,
-                    base=base,
-                    model=model,
-                    system=sys_prompt,
-                    user=user_prompt,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                )
-            else:
-                text = _chat_openai_compat(
-                    key=key,
-                    base=base,
-                    model=model,
-                    system=sys_prompt,
-                    user=user_prompt,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                )
+            transport = transport_for(kind)
+            payload = transport.complete(
+                key=key,
+                base=base,
+                model=model,
+                system=sys_prompt,
+                user=user_prompt,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+            if transport.returns_parsed:
+                return payload
+            text = payload
             data = extract_json(text)
             try:
                 from usage_store import record_usage

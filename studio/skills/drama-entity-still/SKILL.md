@@ -63,6 +63,12 @@ Observe blockers（无图 / qa_fail / soft_pass）
 skill_id: drama-entity-still
 identity_lock: true
 fail_closed: true
+# Cast stills: same scale for every character so the asset rail does not mix
+# extreme close-ups with full-body plates. Video shots may still change camera distance.
+framing_lock: medium_shot_chest_up
+framing_prompt: >
+  MEDIUM SHOT chest-up: head fully in frame with slight headroom, both shoulders visible,
+  face centered. Not extreme face close-up, not full-body wide.
 variant_prompt_hint: >
   Variant must change only wardrobe / injury / makeup state while keeping
   the identical face from the reference still.
@@ -86,6 +92,17 @@ experience_seeds:
     promptBoost: >
       Identity lock: same bone structure, eyes, nose, jawline and hairline as reference.
     negativeBoost: different face, face swap, new identity
+  - id: framing-chest-up
+    kinds: [character]
+    matchReason: [close-up, closeup, extreme, forehead, full body, full-body, 特写, 全身, 额头]
+    matchVariant: []
+    promptBoost: >
+      Framing lock: MEDIUM SHOT chest-up only — head + both shoulders, slight headroom.
+      Rebuild at the same scale as other cast stills; do not extreme-crop the face
+      and do not pull back to full-body wide.
+    negativeBoost: >
+      extreme close-up, forehead only, eyes only crop, full body standing wide,
+      feet visible, distant full figure
   - id: scene-no-people
     kinds: [scene]
     matchReason: [person, people, face, 人物, 人脸]

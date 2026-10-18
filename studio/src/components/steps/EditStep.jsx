@@ -525,7 +525,11 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
                           >
                             <div className={`bg-black/40 ${block.kind === "character" ? "aspect-[3/4]" : "aspect-video"}`}>
                               {ent.selectedImage?.url ? (
-                                <img src={ent.selectedImage.url} alt="" className="h-full w-full object-cover" />
+                                <img
+                                  src={ent.selectedImage.url}
+                                  alt=""
+                                  className={`h-full w-full object-cover ${block.kind === "character" ? "object-top" : ""}`}
+                                />
                               ) : null}
                             </div>
                             <div className="truncate px-1.5 py-1 text-center text-[11px] font-medium">{ent.name}</div>

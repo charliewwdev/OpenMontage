@@ -167,10 +167,20 @@ class _CharacterPrompt(_PromptDefaults):
 
     def build(self, ctx: PromptBuildContext) -> tuple[str, str | None]:
         look = ctx.look or ctx.desc
+        # Locked framing so every cast still matches the same scale in the asset rail
+        # and identity lock stays comparable across characters.
+        framing = str((ctx.runtime or {}).get("framing_prompt") or "").strip() or (
+            "MEDIUM SHOT chest-up framing lock: head fully in frame with a little headroom, "
+            "both shoulders visible, face centered. NOT extreme face close-up, NOT full-body wide. "
+            "统一半身胸上构图：头顶留一点空间，双肩入画，脸居中；禁止只有额头眼睛的大特写，禁止全身远景。"
+        )
+        if not framing.endswith((" ", "。", ".", "！", "!")):
+            framing = framing + " "
         prompt = (
             "CHARACTER SHEET on a plain seamless dark studio backdrop. "
             "NO landscape, NO mountains, NO forest, NO moon, NO empty plain. "
-            f"画面中央只有角色「{ctx.who}」，半身，居中，五官清晰。"
+            f"{framing}"
+            f"画面中央只有角色「{ctx.who}」，五官与发型清晰。"
             f"必须严格符合这段外形，不要改性别、年龄或换成泛泛古装："
             f"{look or '短剧主角，五官清晰，服装完整'}。"
         )
@@ -187,15 +197,15 @@ class _CharacterPrompt(_PromptDefaults):
             hint = str((ctx.runtime or {}).get("variant_prompt_hint") or "").strip()
             prompt += (
                 f" 本条为变体「{ctx.variant}」，必须让变体差异在画面中清晰可见（妆造/伤势/服装状态），"
-                "同时保持与参考定妆图同一张脸。"
+                "同时保持与参考定妆图同一张脸与同一半身构图比例。"
             )
             if hint:
                 prompt += f" {hint}"
         if ctx.three_view:
-            prompt += "同一人物同一服装的三视图设定稿：正面、侧面、背面，纯色背景。"
+            prompt += "同一人物同一服装的三视图设定稿：正面、侧面、背面，纯色背景，各格仍为半身胸上比例。"
         else:
             prompt += (
-                "半身或全身定妆，清晰五官与发型层次，服装面料与配饰细节完整，"
+                "半身胸上定妆（不是全身站立远景），清晰五官与发型层次，领口与肩部服装细节完整，"
                 "电影级柔光与轮廓光，浅景深，剧照质感，居中构图。"
             )
         if ctx.force_illustration:
@@ -207,9 +217,52 @@ class _CharacterPrompt(_PromptDefaults):
         negative = (
             "aerial view, drone shot, cityscape, skyline, landscape, mountain, hillside, "
             "rocks, forest, nature scenery, empty street, crowded market, crowd, "
-            "architecture only, bird's eye, map, multiple people, text, watermark"
+            "architecture only, bird's eye, map, multiple people, text, watermark, "
+            "extreme close-up, forehead only, eyes only crop, macro face, "
+            "full body standing wide shot, full-length figure tiny in frame, "
+            "feet visible, shoes visible, distant full figure"
         )
         return prompt, negative
+
+    def paraphrase_attempt(
+        self,
+        ctx: PromptBuildContext,
+        *,
+        attempt: int,
+        base_prompt: str,
+        base_negative: str | None,
+        last_reason: str = "",
+    ) -> tuple[str, str | None]:
+        if attempt <= 1:
+            return base_prompt, base_negative
+        low = (last_reason or "").lower()
+        framing_fail = any(
+            tok in low
+            for tok in (
+                "close-up",
+                "closeup",
+                "extreme",
+                "forehead",
+                "full body",
+                "full-body",
+                "wide shot",
+                "crop",
+                "特写",
+                "全身",
+                "额头",
+            )
+        )
+        if attempt == 2 or framing_fail:
+            return (
+                "MEDIUM SHOT chest-up only. Head + both shoulders in frame, face centered. "
+                "No extreme face crop, no full-body wide. "
+                f"半身胸上定妆「{ctx.who}」：头顶留空、双肩入画。"
+                f" Keep identity: {ctx.look or ctx.desc or ctx.name}."
+            ), (
+                ((base_negative + ", ") if base_negative else "")
+                + "extreme close-up, forehead crop, full body wide, feet, distant figure"
+            )
+        return base_prompt, base_negative
 
 
 class _ScenePrompt(_PromptDefaults):

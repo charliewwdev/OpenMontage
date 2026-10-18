@@ -249,11 +249,7 @@ export function AssetDetailModal({
                     <img
                       src={thumb}
                       alt={title}
-                      className={
-                        live.kind === "character"
-                          ? "h-full max-h-[420px] w-full object-cover object-top"
-                          : "h-full max-h-[420px] w-full object-contain"
-                      }
+                      className="h-full max-h-[420px] w-full object-contain object-center"
                     />
                     <span className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1.5 text-[10px] font-semibold text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
                       <Maximize2 className="h-3 w-3" /> 查看大图
@@ -346,7 +342,11 @@ export function AssetDetailModal({
                           <img
                             src={image.url}
                             alt={`版本 ${index + 1}`}
-                            className={`h-full w-full object-cover ${live.kind === "character" ? "object-top" : ""}`}
+                            className={
+                              live.kind === "character"
+                                ? "h-full w-full object-contain object-center bg-black/50"
+                                : "h-full w-full object-cover"
+                            }
                           />
                           {image.qaPass === false ? (
                             <span className="absolute inset-x-0 bottom-0 bg-rose-600/80 text-center text-[8px] text-white">未过</span>

@@ -110,6 +110,17 @@ experience_seeds:
     promptBoost: Empty location only — no human figures or silhouettes.
     negativeBoost: person, people, face, portrait, crowd
 expert_review:
+  - id: character-framing-chest-up
+    kinds: [character]
+    fail_if_reason_contains:
+      - extreme close-up
+      - forehead only
+      - eyes only
+      - full-body wide
+      - full body wide
+      - full-length
+      - 特写过近
+      - 全身远景
   - id: character-no-empty-plate
     kinds: [character]
     fail_if_reason_contains: [landscape, cityscape, aerial, empty location, 无人空镜, 风景空镜]

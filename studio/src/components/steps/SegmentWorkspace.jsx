@@ -553,7 +553,7 @@ export function SegmentWorkspace({
     if (!episodeId || !activeSeg) return;
     if (onRequireAuth && !onRequireAuth()) return;
     setFillingStills(true);
-    setBusyMsg?.(`按 drama-entity-still 补本段角色/场景图…`);
+    setBusyMsg?.(`按 drama-entity-still 统一本段角色半身构图并补场景…`);
     try {
       const res = await api(`/api/projects/${encodeURIComponent(projectId)}/entities`, {
         method: "POST",
@@ -564,6 +564,8 @@ export function SegmentWorkspace({
           segmentOrder: activeSeg.segmentOrder,
           kinds: ["character", "scene"],
           onlyMissing: true,
+          // Old stills may already qaPass but be extreme close-up / full-body — force cast regen.
+          forceRefreshKinds: ["character"],
         }),
       });
       apply(res);
@@ -587,9 +589,9 @@ export function SegmentWorkspace({
         }
         return;
       }
-      if (!attempted) toast.success("本段角色/场景图已齐，无需补图");
+      if (!attempted) toast.success("本段角色/场景图已齐");
       else if (queued > 0) {
-        toast.success(`已排队补图 ${queued || attempted} 项（有界线程池后台跑，页面可继续操作）`);
+        toast.success(`已排队统一构图 ${queued || attempted} 项（角色强制半身重出）`);
         // Light poll until no segment asset stays generating.
         const started = Date.now();
         while (Date.now() - started < 20 * 60 * 1000) {
@@ -1127,11 +1129,11 @@ export function SegmentWorkspace({
               type="button"
               className="inline-flex items-center gap-1 text-[10px] text-[#a78bfa] hover:underline disabled:opacity-40"
               disabled={fillingStills || generating || splitting}
-              title="按 Skill「drama-entity-still」为本段无图/未过检的角色与场景出图并质检"
+              title="补齐无图；本段角色强制按半身胸上构图重出定妆（避免特写/全身比例不一）"
               onClick={() => void fillSegmentStills()}
             >
               {fillingStills ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-              {fillingStills ? "补图中…" : "补图"}
+              {fillingStills ? "补图中…" : "统一构图"}
             </button>
           </div>
           {[
@@ -1173,12 +1175,16 @@ export function SegmentWorkspace({
                           inSeg ? "border-[#7c6cff] shadow-[0_0_0_1px_rgba(124,108,255,.4)]" : "border-white/10 opacity-55 hover:opacity-90"
                         }`}
                       >
-                        <div className={`bg-black/40 ${block.kind === "character" ? "aspect-[3/4]" : "aspect-video"}`}>
+                        <div className={`bg-black/50 ${block.kind === "character" ? "aspect-[3/4]" : "aspect-video"}`}>
                           {entityThumb(ent) ? (
                             <img
                               src={entityThumb(ent)}
                               alt=""
-                              className={`h-full w-full object-cover ${block.kind === "character" ? "object-top" : ""}`}
+                              className={
+                                block.kind === "character"
+                                  ? "h-full w-full object-contain object-center"
+                                  : "h-full w-full object-cover"
+                              }
                             />
                           ) : (
                             <div className="flex h-full items-center justify-center text-[10px] text-white/30">无图</div>

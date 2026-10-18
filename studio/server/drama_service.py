@@ -1305,6 +1305,7 @@ def fill_entity_stills(
     kinds: list[str] | None = None,
     entity_ids: list[str] | None = None,
     only_missing: bool = True,
+    force_refresh_kinds: list[str] | None = None,
     wait_generate: bool = False,
 ) -> dict[str, Any]:
     """Skill-aligned asset fill: generate stills for entities missing image or QA.
@@ -1312,11 +1313,14 @@ def fill_entity_stills(
     Uses the same ``generate_entity_image`` path (drama-entity-still + fail-closed QA loop)
     that the Studio agent / out-gate depend on — not a detached Skills-page flow.
     ``wait_generate=False`` (default) enqueues each still on the shared media queue.
+    ``force_refresh_kinds`` re-generates matching kinds even when qaPass is already true
+    (used to unify cast still framing after prompt lock changes).
     """
     state = store.load(project_id)
     if not state:
         raise FileNotFoundError("project not found")
     kind_set = {k for k in (kinds or ["character", "scene"]) if k}
+    force_kinds = {k for k in (force_refresh_kinds or []) if k}
     alive = [e for e in (state.get("entities") or []) if not e.get("deletedAt")]
     by_id = {e["id"]: e for e in alive}
 
@@ -1362,6 +1366,8 @@ def fill_entity_stills(
         target_ids = [e["id"] for e in alive if (e.get("kind") or "") in kind_set]
 
     def _needs_fill(ent: dict[str, Any]) -> bool:
+        if (ent.get("kind") or "") in force_kinds:
+            return True
         img = _selected_entity_image(ent)
         if not img or not img.get("path"):
             return True

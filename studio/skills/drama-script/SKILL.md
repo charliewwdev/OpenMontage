@@ -93,3 +93,14 @@ description: Generate multi-episode short-drama scripts and asset bibles as JSON
 ```
 
 只输出一个完整 JSON 对象。宁可场次密、动作清，也不要短提纲式「一页剧情」。
+
+## Runtime
+
+```yaml
+skill_id: drama-script
+temperature: 0.45
+max_tokens: 16000
+retries: 4
+output_keys: [summary, episodes, characters, scenes, props]
+```
+

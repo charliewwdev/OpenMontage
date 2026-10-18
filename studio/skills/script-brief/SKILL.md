@@ -37,3 +37,13 @@ brief 建议结构：
 【特殊要求】（可选）
 • ...
 ```
+
+## Runtime
+
+```yaml
+skill_id: script-brief
+temperature: 0.6
+max_tokens: 4096
+output_keys: [brief, genreDetected, tips]
+```
+

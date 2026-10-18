@@ -125,3 +125,38 @@ description: Split a confirmed episode into SceneMixer-style segments (片段) w
 ```
 
 只输出 JSON。`segments.length` ∈ [10, 14]；每段 `beats.length` ∈ [3, 4]；每段 `duration` ∈ [10, 15] 且约等于段内 beats 秒数之和。
+
+## Runtime
+
+出片 / 拆镜引擎读取本块。修改后无需改 Python 即可调整密度与专家复审。
+
+```yaml
+skill_id: drama-shot-prompt
+segment_count_min: 10
+segment_count_max: 14
+segment_count_target: 12
+beats_per_segment: "3-4"
+segment_duration_sec: "10-15"
+episode_duration_sec_min: 150
+episode_duration_sec_max: 360
+episode_duration_sec_target: 162
+temperature: 0.35
+max_tokens: 28000
+expert_review:
+  - id: shot-cast-coherence
+    kinds: [shot, segment, video]
+    fail_if_reason_contains:
+      - wrong gender
+      - blank frame
+      - black frame
+      - unrelated scenery
+      - soft mushy
+      - missing cast
+  - id: shot-sharpness
+    kinds: [shot, segment, video]
+    fail_if_reason_contains:
+      - out of focus
+      - mushy face
+      - soft protagonist
+```
+

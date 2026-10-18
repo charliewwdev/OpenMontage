@@ -29,8 +29,9 @@ class EntityPromptStrategy(Protocol):
         attempt: int,
         base_prompt: str,
         base_negative: str | None,
+        last_reason: str = "",
     ) -> tuple[str, str | None]:
-        """Optional attempt rewrite (injury ladder). Default: keep base."""
+        """Optional attempt rewrite (injury / prop leak ladder). Default: keep base."""
         ...
 
 
@@ -75,7 +76,9 @@ class _PromptDefaults:
         attempt: int,
         base_prompt: str,
         base_negative: str | None,
+        last_reason: str = "",
     ) -> tuple[str, str | None]:
+        del last_reason
         return base_prompt, base_negative
 
 
@@ -136,7 +139,9 @@ class _InjuryCharacterPrompt(_PromptDefaults):
         attempt: int,
         base_prompt: str,
         base_negative: str | None,
+        last_reason: str = "",
     ) -> tuple[str, str | None]:
+        del last_reason
         if attempt <= 1:
             return base_prompt, base_negative
         if attempt == 2:
@@ -232,6 +237,18 @@ class _ScenePrompt(_PromptDefaults):
 class _PropPrompt(_PromptDefaults):
     id = "prop"
 
+    _PORTRAIT_LEAK = (
+        "portrait",
+        "person",
+        "woman",
+        "man",
+        "character",
+        "face",
+        "人物",
+        "肖像",
+        "半身",
+    )
+
     def match(self, ctx: PromptBuildContext) -> bool:
         return True
 
@@ -254,6 +271,32 @@ class _PropPrompt(_PromptDefaults):
             "fashion model, character sheet, cosplay, selfie, hands holding, fingers"
         )
         return prompt, negative
+
+    def paraphrase_attempt(
+        self,
+        ctx: PromptBuildContext,
+        *,
+        attempt: int,
+        base_prompt: str,
+        base_negative: str | None,
+        last_reason: str = "",
+    ) -> tuple[str, str | None]:
+        if attempt <= 1:
+            return base_prompt, base_negative
+        low = (last_reason or "").lower()
+        if any(tok in low for tok in self._PORTRAIT_LEAK):
+            prompt = (
+                "STRICT PRODUCT MACRO, plain white/gray seamless backdrop, ONE object only. "
+                f"Object: {ctx.name or 'prop'}. "
+                f"Details: {ctx.desc or ctx.name or ''}. "
+                "No humans anywhere in frame."
+            )
+            neg = (
+                ((base_negative + ", ") if base_negative else "")
+                + "person, people, face, woman, man, portrait, hands, fingers, character sheet"
+            )
+            return prompt, neg
+        return base_prompt, base_negative
 
 
 register_entity_prompt_strategy(_SpiritPrompt(), priority=100)

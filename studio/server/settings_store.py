@@ -304,11 +304,27 @@ def _provider_public(item: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _comfy_api_key() -> str:
+    return (
+        get_secret("COMFY_API_KEY")
+        or get_secret("COMFYUI_API_KEY")
+        or get_secret("COMFY_ORG_API_KEY")
+        or ""
+    )
+
+
 def _comfyui_public() -> dict[str, Any]:
+    api_key = _comfy_api_key()
+    api_meta = {
+        "apiKeyConfigured": bool(api_key),
+        "apiKeyMasked": mask_secret(api_key) if api_key else "",
+    }
     try:
         from providers.comfyui import public_status as comfy_status
 
-        return comfy_status()
+        status = comfy_status()
+        status.update(api_meta)
+        return status
     except Exception:
         return {
             "configured": bool(get_secret("COMFYUI_SERVER_URL")),
@@ -321,9 +337,14 @@ def _comfyui_public() -> dict[str, Any]:
             "market": "https://gpuhome.cc/market",
             "checkpoints": [],
             "checkpoint": get_secret("COMFYUI_CHECKPOINT") or "",
+            "videoModels": [],
+            "videoModel": get_secret("COMFYUI_VIDEO_MODEL") or "",
             "deviceName": "",
             "error": "",
-            "hint": "在 gpuhome.cc/market 租 GPU → 选 ComfyUI 镜像 → 开放端口 → 填入自定义服务地址。",
+            "hint": (
+                "本机填 http://127.0.0.1:8188；云端可租 gpuhome.cc/market 的 ComfyUI 镜像并开放端口。"
+            ),
+            **api_meta,
         }
 
 

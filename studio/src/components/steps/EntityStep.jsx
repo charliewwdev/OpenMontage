@@ -584,7 +584,11 @@ function EntityCard({ entity, accent, working, onGenerate, onUpload, onSelect, o
           </div>
         ) : (
           <>
-            <div className="relative aspect-[4/3] bg-black/40">
+            <div
+              className={`relative aspect-[4/3] ${
+                entity.kind === "scene" ? "bg-black/40" : "asset-cutout-bg"
+              }`}
+            >
               {entity.selectedImage ? (
                 <button
                   type="button"

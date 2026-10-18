@@ -918,6 +918,14 @@ def generate_entity_image(
             negative_prompt=neg,
             denoise=strength,
         )
+        # Character / prop: SceneMixer-style cutout — punch light seamless plate to alpha PNG.
+        if kind in {"character", "prop"}:
+            try:
+                from entity_alpha import punch_light_background_to_alpha
+
+                punch_light_background_to_alpha(dest)
+            except Exception:
+                pass
         store.persist_media(project_id, rel_path)
         return rel_path, dest
 

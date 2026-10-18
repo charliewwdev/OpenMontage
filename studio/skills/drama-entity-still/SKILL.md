@@ -40,9 +40,10 @@ Observe blockers（无图 / qa_fail / soft_pass）
 ### 角色
 
 - 写明「画面中央只有一个人」+ 姓名·变体
+- **默认透明抠图底**：透明 / 纯白 / 浅灰无缝底板，禁止场景、地面、墙面（对齐 SceneMixer 资产库）
 - 五官/发型/服装可辨；氛围光不可盖过主体
 - 变体必须写出**可见差异**（绷带、血迹、妆造），并锁参考脸
-- Negative：航拍、城市空镜、无人风景、第二个人物
+- Negative：航拍、城市空镜、无人风景、第二个人物、彩色棚景
 
 ### 场景
 
@@ -53,7 +54,8 @@ Observe blockers（无图 / qa_fail / soft_pass）
 ### 道具
 
 - 只表现物体外形与材质；产品级质感
-- Negative：人物、城市空镜
+- **默认透明抠图底**：同角色，一物一图、边缘干净可抠
+- Negative：人物、城市空镜、桌面杂物
 
 ## Runtime
 
@@ -66,9 +68,12 @@ fail_closed: true
 # Cast stills: same scale for every character so the asset rail does not mix
 # extreme close-ups with full-body plates. Video shots may still change camera distance.
 framing_lock: medium_shot_chest_up
+# Default cutout plate (SceneMixer-style): transparent / pure white / light gray only.
+cutout_background: transparent
 framing_prompt: >
   MEDIUM SHOT chest-up: head fully in frame with slight headroom, both shoulders visible,
   face centered. Not extreme face close-up, not full-body wide.
+  Isolated cutout on transparent or pure white / light-gray seamless plate — no scenery.
 variant_prompt_hint: >
   Variant must change only wardrobe / injury / makeup state while keeping
   the identical face from the reference still.

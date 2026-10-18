@@ -12,6 +12,24 @@ const KIND_LABEL = {
   prop: "道具",
 };
 
+const ROLE_LABEL = {
+  protagonist: "主角",
+  lead: "主角",
+  main: "主角",
+  supporting: "配角",
+  side: "配角",
+  antagonist: "反派",
+  villain: "反派",
+  extra: "群演",
+  npc: "配角",
+};
+
+function roleBadge(entity) {
+  const raw = String(entity?.metadata?.role || entity?.role || entity?.category || "").trim();
+  if (!raw) return entity?.kind === "character" ? "角色" : "";
+  return ROLE_LABEL[raw.toLowerCase()] || raw;
+}
+
 /**
  * Asset inspector: open from the workspace rail to view /
  * regenerate / upload without leaving the segment desk.
@@ -27,23 +45,73 @@ export function AssetDetailModal({
 }) {
   const caps = config?.capabilities || {};
   const uploadRef = useRef(null);
+  const promptCacheRef = useRef(new Map());
   const [working, setWorking] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [name, setName] = useState(entity?.name || "");
   const [variant, setVariant] = useState(entity?.variant || "");
   const [description, setDescription] = useState(entity?.description || "");
+  const [voiceDescription, setVoiceDescription] = useState(entity?.metadata?.voiceDescription || "");
   const [detailTab, setDetailTab] = useState("edit"); // edit | prompt
   const [promptBusy, setPromptBusy] = useState(false);
   const [promptPayload, setPromptPayload] = useState(null);
+  const [descExpanded, setDescExpanded] = useState(false);
+
+  const loadPrompt = async (entityId, { force = false } = {}) => {
+    if (!entityId || !projectId) return null;
+    if (!force) {
+      const cached = promptCacheRef.current.get(entityId);
+      if (cached) {
+        setPromptPayload(cached);
+        return cached;
+      }
+    }
+    setPromptBusy(true);
+    try {
+      const res = await api(`/api/projects/${encodeURIComponent(projectId)}/entities`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "preview-prompt", entityId }),
+      });
+      promptCacheRef.current.set(entityId, res);
+      setPromptPayload(res);
+      return res;
+    } catch (e) {
+      toast.error(String(e.message || e));
+      return null;
+    } finally {
+      setPromptBusy(false);
+    }
+  };
 
   useEffect(() => {
-    setName(entity?.name || "");
-    setVariant(entity?.variant || "");
-    setDescription(entity?.description || "");
+    if (!entity?.id) return;
+    setName(entity.name || "");
+    setVariant(entity.variant || "");
+    setDescription(entity.description || "");
+    setVoiceDescription(entity.metadata?.voiceDescription || "");
     setPreviewUrl(null);
-    setDetailTab("edit");
-    setPromptPayload(null);
-  }, [entity?.id, entity?.name, entity?.variant, entity?.description]);
+    setDescExpanded(false);
+    const cached = promptCacheRef.current.get(entity.id);
+    if (cached) {
+      setPromptPayload(cached);
+      setPromptBusy(false);
+    } else if (detailTab === "prompt") {
+      void loadPrompt(entity.id);
+    } else {
+      setPromptPayload(null);
+    }
+    // Keep current tab (edit/prompt) when switching characters — no forced reload UX.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only rebind fields on entity id swap
+  }, [entity?.id]);
+
+  useEffect(() => {
+    if (!entity?.id) return;
+    setDescription(entity.description || "");
+    setVoiceDescription(entity.metadata?.voiceDescription || "");
+    setName(entity.name || "");
+    setVariant(entity.variant || "");
+  }, [entity?.name, entity?.variant, entity?.description, entity?.metadata?.voiceDescription, entity?.id]);
 
   if (!entity) return null;
 
@@ -53,6 +121,12 @@ export function AssetDetailModal({
   };
 
   const live = entity;
+  const badge = roleBadge(live);
+  const voiceText = voiceDescription || live.metadata?.voiceDescription || "";
+
+  const invalidatePromptCache = (entityId = live.id) => {
+    if (entityId) promptCacheRef.current.delete(entityId);
+  };
 
   const patch = async (fields) => {
     try {
@@ -61,6 +135,9 @@ export function AssetDetailModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ entityId: live.id, ...fields }),
       });
+      if ("description" in fields || "name" in fields || "variant" in fields || "metadata" in fields) {
+        invalidatePromptCache(live.id);
+      }
       apply(res);
     } catch (e) {
       toast.error(String(e.message || e));
@@ -80,6 +157,7 @@ export function AssetDetailModal({
           redraw: Boolean(redraw),
         }),
       });
+      invalidatePromptCache(live.id);
       apply(res);
       const imgs = (res?.bundle?.entities || []).find((e) => e.id === live.id)?.images || [];
       const last = imgs[imgs.length - 1];
@@ -103,6 +181,7 @@ export function AssetDetailModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "select", entityId: live.id, imageId }),
       });
+      invalidatePromptCache(live.id);
       apply(res);
     } catch (e) {
       toast.error(String(e.message || e));
@@ -124,6 +203,7 @@ export function AssetDetailModal({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "upload", entityId: live.id, dataUrl }),
       });
+      invalidatePromptCache(live.id);
       apply(res);
       toast.success("已上传并设为定稿图");
     } catch (e) {
@@ -135,21 +215,7 @@ export function AssetDetailModal({
 
   const showPromptTab = async () => {
     setDetailTab("prompt");
-    if (promptPayload && promptPayload.entityId === live.id) return;
-    setPromptBusy(true);
-    try {
-      const res = await api(`/api/projects/${encodeURIComponent(projectId)}/entities`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "preview-prompt", entityId: live.id }),
-      });
-      setPromptPayload(res);
-    } catch (e) {
-      toast.error(String(e.message || e));
-      setDetailTab("edit");
-    } finally {
-      setPromptBusy(false);
-    }
+    await loadPrompt(live.id);
   };
 
   const selected =
@@ -159,6 +225,9 @@ export function AssetDetailModal({
   const title = `${live.name}${live.variant ? ` / ${live.variant}` : ""}`;
   const qaPass = selected?.qaPass === true;
   const qaReason = selected?.qa?.reason || live.qaFailReason || "";
+  const longDesc = (description || "").trim();
+  const descNeedsCollapse = longDesc.length > 160;
+  const descShown = !descNeedsCollapse || descExpanded ? longDesc : `${longDesc.slice(0, 160)}…`;
 
   return (
     <>
@@ -169,8 +238,17 @@ export function AssetDetailModal({
         >
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 px-4 py-3">
             <div className="min-w-0">
-              <div className="text-[10px] uppercase tracking-wider text-white/40">{kindLabel}</div>
-              <h3 className="truncate text-lg font-semibold text-white">{title}</h3>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wider text-white/55">
+                  {kindLabel}
+                </span>
+                {badge && live.kind === "character" ? (
+                  <span className="rounded-full bg-[#7c6cff]/25 px-2 py-0.5 text-[10px] font-semibold text-[#c4b5fd]">
+                    {badge}
+                  </span>
+                ) : null}
+              </div>
+              <h3 className="mt-1 truncate text-lg font-semibold text-white">{title}</h3>
             </div>
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-0.5 rounded-lg bg-white/5 p-0.5">
@@ -201,12 +279,17 @@ export function AssetDetailModal({
 
           {detailTab === "prompt" ? (
             <div className="scrollbar-thin max-h-[min(82dvh,860px)] space-y-3 overflow-y-auto p-4 text-sm">
-              {promptBusy ? (
-                <div className="flex items-center gap-2 py-12 justify-center text-white/50">
+              {promptBusy && !promptPayload ? (
+                <div className="flex items-center justify-center gap-2 py-12 text-white/50">
                   <Loader2 className="h-4 w-4 animate-spin" /> 加载提示词…
                 </div>
               ) : (
                 <>
+                  {promptBusy ? (
+                    <div className="flex items-center gap-2 text-[11px] text-white/40">
+                      <Loader2 className="h-3 w-3 animate-spin" /> 更新提示词…
+                    </div>
+                  ) : null}
                   <div>
                     <div className="mb-1 text-[11px] font-medium text-white/40">将提交给大模型的正向提示词</div>
                     <pre className="whitespace-pre-wrap rounded-xl border border-white/10 bg-black/40 p-3 text-[12px] leading-5 text-white/85">
@@ -287,44 +370,109 @@ export function AssetDetailModal({
                   </div>
                 ) : null}
 
-                <label className="block">
-                  <span className="label">名称</span>
-                  <input
-                    className="field"
-                    value={name}
-                    disabled={working}
-                    onChange={(e) => setName(e.target.value)}
-                    onBlur={() => {
-                      if (name.trim() && name !== live.name) void patch({ name: name.trim() });
-                    }}
-                  />
-                </label>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h4 className="text-xl font-semibold text-white">{live.name || "未命名"}</h4>
+                  {badge && live.kind === "character" ? (
+                    <span className="rounded-full bg-[#7c6cff]/25 px-2 py-0.5 text-[11px] font-semibold text-[#c4b5fd]">
+                      {badge}
+                    </span>
+                  ) : null}
+                  {live.variant ? (
+                    <span className="rounded-full border border-white/10 px-2 py-0.5 text-[11px] text-white/50">
+                      {live.variant}
+                    </span>
+                  ) : null}
+                </div>
+
+                <div>
+                  <div className="label !mb-1">形象描述</div>
+                  <p className="text-sm leading-6 text-white/75">{descShown || "尚未填写形象描述"}</p>
+                  {descNeedsCollapse ? (
+                    <button
+                      type="button"
+                      className="mt-1 text-xs font-medium text-[#a78bfa] hover:underline"
+                      onClick={() => setDescExpanded((v) => !v)}
+                    >
+                      {descExpanded ? "收起" : "展开全部"}
+                    </button>
+                  ) : null}
+                </div>
+
                 {live.kind === "character" ? (
-                  <label className="block">
-                    <span className="label">造型</span>
-                    <input
-                      className="field"
-                      value={variant}
-                      disabled={working}
-                      onChange={(e) => setVariant(e.target.value)}
-                      onBlur={() => {
-                        if (variant !== (live.variant || "")) void patch({ variant });
-                      }}
-                    />
-                  </label>
+                  <div>
+                    <div className="label !mb-1">角色音色</div>
+                    {voiceText ? (
+                      <p className="text-sm leading-6 text-white/70">{voiceText}</p>
+                    ) : (
+                      <p className="text-sm text-white/35">暂无音色描述（解析剧本时若有会写入）</p>
+                    )}
+                  </div>
                 ) : null}
-                <label className="block">
-                  <span className="label">视觉描述</span>
-                  <textarea
-                    className="field min-h-28 resize-y text-sm leading-6"
-                    value={description}
-                    disabled={working}
-                    onChange={(e) => setDescription(e.target.value)}
-                    onBlur={() => {
-                      if (description !== (live.description || "")) void patch({ description });
-                    }}
-                  />
-                </label>
+
+                <details className="rounded-xl border border-white/10 bg-white/[.02] p-3">
+                  <summary className="cursor-pointer text-xs font-medium text-white/55">编辑档案</summary>
+                  <div className="mt-3 space-y-3">
+                    <label className="block">
+                      <span className="label">名称</span>
+                      <input
+                        className="field"
+                        value={name}
+                        disabled={working}
+                        onChange={(e) => setName(e.target.value)}
+                        onBlur={() => {
+                          if (name.trim() && name !== live.name) void patch({ name: name.trim() });
+                        }}
+                      />
+                    </label>
+                    {live.kind === "character" ? (
+                      <label className="block">
+                        <span className="label">造型</span>
+                        <input
+                          className="field"
+                          value={variant}
+                          disabled={working}
+                          onChange={(e) => setVariant(e.target.value)}
+                          onBlur={() => {
+                            if (variant !== (live.variant || "")) void patch({ variant });
+                          }}
+                        />
+                      </label>
+                    ) : null}
+                    <label className="block">
+                      <span className="label">形象描述</span>
+                      <textarea
+                        className="field min-h-28 resize-y text-sm leading-6"
+                        value={description}
+                        disabled={working}
+                        onChange={(e) => setDescription(e.target.value)}
+                        onBlur={() => {
+                          if (description !== (live.description || "")) void patch({ description });
+                        }}
+                      />
+                    </label>
+                    {live.kind === "character" ? (
+                      <label className="block">
+                        <span className="label">角色音色</span>
+                        <textarea
+                          className="field min-h-20 resize-y text-sm leading-6"
+                          value={voiceDescription}
+                          disabled={working}
+                          placeholder="例如：少女音偏清亮，喘息中带沙哑…"
+                          onChange={(e) => setVoiceDescription(e.target.value)}
+                          onBlur={() => {
+                            const next = voiceDescription.trim();
+                            const prev = String(live.metadata?.voiceDescription || "").trim();
+                            if (next !== prev) {
+                              void patch({
+                                metadata: { ...(live.metadata || {}), voiceDescription: next },
+                              });
+                            }
+                          }}
+                        />
+                      </label>
+                    ) : null}
+                  </div>
+                </details>
 
                 {(live.images || []).length ? (
                   <div>

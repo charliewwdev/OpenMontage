@@ -1,9 +1,9 @@
 ---
 name: drama-script
-description: Generate multi-episode short-drama scripts and asset bibles as JSON (SceneMixer density).
+description: Generate multi-episode short-drama scripts and asset bibles as JSON (high scene density).
 ---
 
-# 分集剧本生成（对齐 SceneMixer 信息密度）
+# 分集剧本生成（高信息密度）
 
 根据创作需求、题材、画幅、视觉风格生成**可直接拆成 12–30 镜、成片 3–6 分钟**的短剧分集剧本，并同步角色/场景/道具档案。
 

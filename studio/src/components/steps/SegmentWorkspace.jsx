@@ -1175,7 +1175,11 @@ export function SegmentWorkspace({
                       >
                         <div className={`bg-black/40 ${block.kind === "character" ? "aspect-[3/4]" : "aspect-video"}`}>
                           {entityThumb(ent) ? (
-                            <img src={entityThumb(ent)} alt="" className="h-full w-full object-cover" />
+                            <img
+                              src={entityThumb(ent)}
+                              alt=""
+                              className={`h-full w-full object-cover ${block.kind === "character" ? "object-top" : ""}`}
+                            />
                           ) : (
                             <div className="flex h-full items-center justify-center text-[10px] text-white/30">无图</div>
                           )}

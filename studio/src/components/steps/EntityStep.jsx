@@ -594,7 +594,11 @@ function EntityCard({ entity, accent, working, onGenerate, onUpload, onSelect, o
                   <img
                     src={entity.selectedImage.url}
                     alt={previewAlt}
-                    className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-[1.02]"
+                    className={
+                      entity.kind === "character"
+                        ? "h-full w-full object-cover object-top transition-transform duration-300 group-hover:scale-[1.02]"
+                        : "h-full w-full object-contain transition-transform duration-300 group-hover:scale-[1.02]"
+                    }
                   />
                   <span className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-[var(--navy)]/80 px-2.5 py-1.5 text-[10px] font-semibold text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
                     <Maximize2 className="h-3 w-3" /> 查看大图
@@ -670,7 +674,11 @@ function EntityCard({ entity, accent, working, onGenerate, onUpload, onSelect, o
                           : "border-transparent opacity-65 hover:opacity-100"
                       }`}
                     >
-                      <img src={image.url} alt={`版本 ${index + 1}`} className="h-full w-full object-cover" />
+                      <img
+                        src={image.url}
+                        alt={`版本 ${index + 1}`}
+                        className={`h-full w-full object-cover ${entity.kind === "character" ? "object-top" : ""}`}
+                      />
                     </button>
                   ))}
                 </div>

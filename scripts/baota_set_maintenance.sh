@@ -122,17 +122,37 @@ if not conf:
     raise SystemExit(f"nginx conf not readable for {site}")
 
 snippet = f"""
-    # OpenMontage: branded standby instead of default nginx 502
+    # OpenMontage: branded standby (never white nginx 502 page)
     proxy_intercept_errors on;
-    error_page 502 503 504 /maintenance.html;
+    error_page 502 503 504 =200 /maintenance.html;
     location = /maintenance.html {{
         root {root};
-        internal;
+        default_type text/html;
+        charset utf-8;
+        add_header Cache-Control "no-store" always;
     }}
 """.rstrip()
 
-if "error_page 502 503 504 /maintenance.html" in conf:
-    print("nginx already has maintenance error_page")
+if "error_page 502 503 504 =200 /maintenance.html" in conf or "error_page 502 503 504 /maintenance.html" in conf:
+    # Upgrade legacy snippet to =200 if needed
+    if "error_page 502 503 504 =200 /maintenance.html" not in conf and "error_page 502 503 504 /maintenance.html" in conf:
+        conf = conf.replace(
+            "error_page 502 503 504 /maintenance.html;",
+            "error_page 502 503 504 =200 /maintenance.html;",
+        )
+        conf = re.sub(
+            r"location = /maintenance\.html \{\s*root [^;]+;\s*internal;\s*\}",
+            f"location = /maintenance.html {{\n        root {root};\n        default_type text/html;\n        charset utf-8;\n        add_header Cache-Control \"no-store\" always;\n    }}",
+            conf,
+            count=1,
+        )
+        save_conf = post(
+            "/files?action=SaveFileBody",
+            {"path": conf_path, "data": conf, "encoding": "utf-8"},
+        )
+        print("upgraded_error_page_to_200", save_conf.get("status"))
+    else:
+        print("nginx already has maintenance error_page")
 else:
     # Insert before the last closing brace of the first server block if possible
     if "proxy_pass" in conf and "server {" in conf:

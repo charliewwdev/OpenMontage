@@ -68,8 +68,13 @@ fail_closed: true
 # Cast stills: same scale for every character so the asset rail does not mix
 # extreme close-ups with full-body plates. Video shots may still change camera distance.
 framing_lock: medium_shot_chest_up
-# Default cutout plate (SceneMixer-style): transparent / pure white / light gray only.
+# Default cutout plate (SceneMixer-style). Skill 专家改 cutout_prompt 即影响出图。
 cutout_background: transparent
+cutout_prompt: >
+  ISOLATED CUTOUT on a pure transparent / alpha PNG background
+  (or seamless pure white / light-gray plate for easy keying).
+  NO room, NO floor, NO wall texture, NO gradient studio, NO scenery.
+  透明背景抠图：主体以外必须是透明或纯白/浅灰无缝底板，禁止场景、地面、墙面与棚拍道具。
 framing_prompt: >
   MEDIUM SHOT chest-up: head fully in frame with slight headroom, both shoulders visible,
   face centered. Not extreme face close-up, not full-body wide.
@@ -78,6 +83,17 @@ variant_prompt_hint: >
   Variant must change only wardrobe / injury / makeup state while keeping
   the identical face from the reference still.
 experience_seeds:
+  - id: cutout-transparent-bg
+    kinds: [character, prop]
+    matchReason: [background, scenery, landscape, room, floor, wall, 背景, 场景, 地面, 墙面]
+    matchVariant: []
+    promptBoost: >
+      CRITICAL cutout plate: transparent or pure white/light-gray seamless only.
+      Remove any room, floor, wall, scenic backdrop. Subject edges must be clean for keying.
+    negativeBoost: >
+      room interior, wooden floor, concrete wall, scenery, colored backdrop,
+      gradient studio background, environment, landscape
+
   - id: injury-bandage
     kinds: [character]
     matchReason: [bandage, 绷带, white bandage, injury, 受伤, blood, 血迹]

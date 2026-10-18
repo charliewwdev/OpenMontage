@@ -476,16 +476,17 @@ export function AssetsPage({ onUsePrompt }) {
           ) : (
             <>
               <div className="mb-3 text-xs text-white/35">共 {total} 个</div>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              <div className="columns-2 gap-3 sm:columns-3 lg:columns-4 xl:columns-5 2xl:columns-6">
                 {assets.map((item) => {
                   const id = item.id || `${item.projectId}-${item.path}`;
                   const selected = selectedIds.has(id);
                   const catLabel = ASSET_CATS.find((c) => c.id === item.category)?.label || item.category;
+                  const isMedia = item.kind === "image" || item.kind === "video";
                   return (
                     <button
                       key={id}
                       type="button"
-                      className={`panel relative overflow-hidden text-left transition hover:-translate-y-0.5 hover:border-white/20 ${
+                      className={`panel relative mb-3 w-full break-inside-avoid overflow-hidden text-left transition hover:-translate-y-0.5 hover:border-white/20 ${
                         selected ? "border-[#7c6cff]/70 ring-1 ring-[#7c6cff]/40" : ""
                       }`}
                       onClick={() => {
@@ -502,7 +503,13 @@ export function AssetsPage({ onUsePrompt }) {
                           ✓
                         </span>
                       ) : null}
-                      <div className="relative flex aspect-video items-center justify-center bg-[#11131a]">
+                      <div
+                        className={`relative bg-[#11131a] ${
+                          isMedia && !item.broken
+                            ? ""
+                            : "flex aspect-[4/3] items-center justify-center"
+                        }`}
+                      >
                         {item.broken ? (
                           <div className="flex flex-col items-center gap-1 px-3 text-center text-[11px] text-[#f87171]">
                             <ImageIcon className="h-7 w-7 opacity-70" />
@@ -511,7 +518,7 @@ export function AssetsPage({ onUsePrompt }) {
                         ) : item.kind === "video" ? (
                           <video
                             src={item.url}
-                            className="max-h-full max-w-full object-contain object-center"
+                            className="block w-full h-auto"
                             muted
                             playsInline
                             preload="metadata"
@@ -520,7 +527,8 @@ export function AssetsPage({ onUsePrompt }) {
                           <img
                             src={item.url}
                             alt=""
-                            className="max-h-full max-w-full object-contain object-center"
+                            className="block w-full h-auto"
+                            loading="lazy"
                           />
                         ) : item.kind === "doc" ? (
                           <FileText className="h-8 w-8 text-white/30" />

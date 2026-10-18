@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { FileText, ImagePlus, Loader2, Maximize2, RefreshCw, Sparkles, Upload, X } from "lucide-react";
+import { Eraser, FileText, ImagePlus, Loader2, Maximize2, RefreshCw, Sparkles, Upload, X } from "lucide-react";
 import { api } from "../api";
 import { requireCapability, toastMaybeKeys } from "../lib/keys";
 import { toast } from "../lib/toast";
@@ -213,6 +213,28 @@ export function AssetDetailModal({
     }
   };
 
+  const punchAlpha = async () => {
+    if (!thumb || !["character", "prop"].includes(live.kind)) return;
+    setWorking(true);
+    try {
+      const res = await api(`/api/projects/${encodeURIComponent(projectId)}/entities`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "punch-alpha",
+          entityId: live.id,
+          imageId: selected?.id || live.selectedImageId,
+        }),
+      });
+      apply(res);
+      toast.success(res?.punched ? "已抠成透明底" : "已转 PNG（底板色过深或非无缝，未能自动抠除）");
+    } catch (e) {
+      toast.error(String(e.message || e));
+    } finally {
+      setWorking(false);
+    }
+  };
+
   const showPromptTab = async () => {
     setDetailTab("prompt");
     await loadPrompt(live.id);
@@ -330,7 +352,7 @@ export function AssetDetailModal({
                 {thumb ? (
                   <button
                     type="button"
-                    className="group relative h-full w-full cursor-zoom-in"
+                    className="relative h-full w-full cursor-zoom-in"
                     onClick={() => setPreviewUrl(thumb)}
                   >
                     <img
@@ -338,8 +360,8 @@ export function AssetDetailModal({
                       alt={title}
                       className="h-full max-h-[420px] w-full object-contain object-center"
                     />
-                    <span className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-1.5 text-[10px] font-semibold text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
-                      <Maximize2 className="h-3 w-3" /> 查看大图
+                    <span className="pointer-events-none absolute bottom-3 right-3 flex items-center gap-1 rounded-md bg-black/55 px-2 py-1 text-[10px] font-medium text-white/80">
+                      <Maximize2 className="h-3 w-3" /> 大图
                     </span>
                   </button>
                 ) : (
@@ -512,6 +534,17 @@ export function AssetDetailModal({
                   <button type="button" className="btn-secondary" disabled={working || !thumb} onClick={() => void generate(true)}>
                     <RefreshCw className="h-3.5 w-3.5" /> 参考重绘
                   </button>
+                  {["character", "prop"].includes(live.kind) ? (
+                    <button
+                      type="button"
+                      className="btn-secondary col-span-2"
+                      disabled={working || !thumb}
+                      onClick={() => void punchAlpha()}
+                      title="把无缝浅色底板键控成透明 PNG"
+                    >
+                      <Eraser className="h-3.5 w-3.5" /> 抠透明底
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     className="btn-secondary col-span-2"

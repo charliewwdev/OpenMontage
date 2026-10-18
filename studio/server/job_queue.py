@@ -180,16 +180,28 @@ def promote_image_jobs(*, max_items: int = 2000) -> int:
 
 
 def reserve_job(*, timeout: float = 2.0) -> dict[str, Any] | None:
-    """Take a still job if any are waiting, otherwise a video job."""
+    """Reserve one job. Prefer stills when light; do not let a still stampede starve video."""
     r = get_redis()
     if r is None:
         return None
     timeout = max(1, int(timeout or 2))
     raw = None
     try:
-        raw = _move_to_processing(r, IMAGE_QUEUE_KEY, 0)
-        if not raw:
-            raw = _move_to_processing(r, QUEUE_KEY, timeout)
+        try:
+            img_n = int(r.llen(IMAGE_QUEUE_KEY) or 0)
+            vid_n = int(r.llen(QUEUE_KEY) or 0)
+        except Exception:
+            img_n, vid_n = 0, 0
+        # When videos are waiting behind a huge still backlog, pull video first.
+        prefer_video = vid_n > 0 and img_n >= 8
+        if prefer_video:
+            raw = _move_to_processing(r, QUEUE_KEY, 0)
+            if not raw:
+                raw = _move_to_processing(r, IMAGE_QUEUE_KEY, timeout)
+        else:
+            raw = _move_to_processing(r, IMAGE_QUEUE_KEY, 0)
+            if not raw:
+                raw = _move_to_processing(r, QUEUE_KEY, timeout)
     except Exception as exc:  # noqa: BLE001
         log.warning("reserve_job error: %s", exc)
         return None
@@ -207,6 +219,77 @@ def reserve_job(*, timeout: float = 2.0) -> dict[str, Any] | None:
     job["_raw"] = raw
     job["attempts"] = int(job.get("attempts") or 0) + 1
     return job
+
+
+def _entity_selected_qa_ok(ent: dict[str, Any] | None) -> bool:
+    if not ent or not ent.get("selectedImageId"):
+        return False
+    img = next(
+        (i for i in (ent.get("images") or []) if i.get("id") == ent.get("selectedImageId")),
+        None,
+    )
+    if not img:
+        return False
+    if img.get("qaPass") is True:
+        return True
+    qa = img.get("qa") or {}
+    return bool(qa.get("skipped"))
+
+
+def purge_satisfied_entity_image_jobs(*, max_scan: int = 4000) -> dict[str, Any]:
+    """Drop queued entity_image jobs whose entity already has a QA-passed still.
+
+    Speeds video without lowering the QA bar — duplicate / retry stills are waste.
+    """
+    r = get_redis()
+    if r is None:
+        return {"ok": False, "error": "redis unavailable", "removed": 0}
+    store = _store()
+    cache: dict[str, dict[str, Any] | None] = {}
+    removed = 0
+    kept = 0
+    scanned = 0
+    try:
+        items = r.lrange(IMAGE_QUEUE_KEY, 0, max(0, int(max_scan) - 1)) or []
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "error": str(exc)[:160], "removed": 0}
+    for raw in items:
+        scanned += 1
+        try:
+            job = json.loads(raw)
+        except Exception:
+            continue
+        if str(job.get("kind") or "") != "entity_image":
+            kept += 1
+            continue
+        payload = job.get("payload") or {}
+        pid = str(payload.get("projectId") or "")
+        eid = str(payload.get("entityId") or "")
+        if not pid or not eid:
+            kept += 1
+            continue
+        if pid not in cache:
+            try:
+                cache[pid] = store.load(pid)
+            except Exception:
+                cache[pid] = None
+        state = cache.get(pid)
+        ent = None
+        if state:
+            ent = next(
+                (e for e in (state.get("entities") or []) if e.get("id") == eid and not e.get("deletedAt")),
+                None,
+            )
+        if _entity_selected_qa_ok(ent) and not payload.get("force"):
+            try:
+                removed += int(r.lrem(IMAGE_QUEUE_KEY, 1, raw) or 0)
+            except Exception:
+                pass
+        else:
+            kept += 1
+    if removed:
+        log.info("purged %s satisfied entity_image job(s); kept≈%s scanned=%s", removed, kept, scanned)
+    return {"ok": True, "removed": removed, "kept": kept, "scanned": scanned}
 
 
 def ack_job(job: dict[str, Any] | None) -> None:
@@ -288,6 +371,13 @@ def recover_stale_generating(*, max_age_sec: int = 180) -> dict[str, Any]:
                 continue
             if ent.get("imageStatus") != "generating":
                 continue
+            # Already have a QA-passed still — clear sticky lock, do not re-flood the queue.
+            if _entity_selected_qa_ok(ent):
+                ent["imageStatus"] = "ready"
+                ent["imageError"] = None
+                ent["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                dirty = True
+                continue
             updated = str(ent.get("updatedAt") or "")
             age = 10**9
             try:
@@ -359,6 +449,20 @@ def _handle_entity_image(payload: dict[str, Any]) -> Any:
     store = _store()
     project_id = str(payload["projectId"])
     entity_id = str(payload["entityId"])
+    # Skip no-op retries when a QA-passed still already exists (unless force).
+    if not payload.get("force"):
+        st0 = store.load(project_id)
+        ent0 = next(
+            (e for e in ((st0 or {}).get("entities") or []) if e.get("id") == entity_id),
+            None,
+        )
+        if _entity_selected_qa_ok(ent0):
+            if ent0.get("imageStatus") == "generating":
+                ent0["imageStatus"] = "ready"
+                ent0["imageError"] = None
+                ent0["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+                store.save(st0)
+            return {"skipped": True, "reason": "already_qa_passed", "entityId": entity_id}
     try:
         return generate_entity_image(
             store,

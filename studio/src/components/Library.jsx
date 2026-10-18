@@ -1,13 +1,16 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   Clapperboard,
   FolderOpen,
+  ImagePlus,
   KeyRound,
+  Lock,
   Plus,
   RefreshCw,
   Search,
   Sparkles,
   Trash2,
+  Unlock,
   Upload,
 } from "lucide-react";
 import { api } from "../api";
@@ -67,6 +70,173 @@ function ProjectCover({ project, className }) {
   );
 }
 
+function CoverEditorDialog({ project, formats, open, onClose, onSaved }) {
+  const fileRef = useRef(null);
+  const [busy, setBusy] = useState(false);
+  const [formatId, setFormatId] = useState(project?.coverFormatId || formats[0]?.id || "portrait_9_16");
+  const [title, setTitle] = useState(project?.coverTitle || project?.title || "");
+  const [locked, setLocked] = useState(Boolean(project?.coverLocked));
+
+  if (!open || !project) return null;
+
+  const preview =
+    project.coverUrl ||
+    (project.coverPath ? `/api/media/${project.id}/${project.coverPath}` : "") ||
+    project.coverVideoUrl ||
+    "";
+
+  const patch = async (body) => {
+    setBusy(true);
+    try {
+      await api(`/api/projects/${encodeURIComponent(project.id)}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      });
+      toast.success("封面已更新");
+      onSaved?.();
+    } catch (e) {
+      toast.error(String(e.message || e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const fromVideo = () =>
+    void patch({
+      action: "cover-from-video",
+      coverFormatId: formatId,
+      coverTitle: title,
+      force: true,
+    });
+
+  const onUpload = async (file) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const data = String(reader.result || "");
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      void patch({
+        action: "cover-upload",
+        data,
+        ext,
+        coverFormatId: formatId,
+        coverLocked: true,
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+      <div
+        className="panel w-full max-w-lg overflow-hidden border border-white/15 bg-[var(--panel)] shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3">
+          <div>
+            <h3 className="text-sm font-semibold">封面设计 · {project.title}</h3>
+            <p className="mt-0.5 text-[11px] text-[var(--muted)]">首帧抽图 / 上传 / 多比例裁切</p>
+          </div>
+          <button type="button" className="btn-quiet !min-h-8 !px-2 text-xs" onClick={onClose}>
+            关闭
+          </button>
+        </div>
+        <div className="grid gap-4 p-4 sm:grid-cols-[140px_1fr]">
+          <div className="flex aspect-[9/16] max-h-52 items-center justify-center overflow-hidden rounded border border-white/10 bg-black/40 sm:aspect-auto sm:h-52">
+            {preview ? (
+              <img src={preview} alt="" className="max-h-full max-w-full object-contain" />
+            ) : (
+              <span className="text-[10px] text-white/30">暂无封面</span>
+            )}
+          </div>
+          <div className="space-y-3 text-sm">
+            <label className="block">
+              <span className="mb-1 block text-[11px] text-[var(--muted)]">封面格式</span>
+              <select
+                className="field"
+                value={formatId}
+                onChange={(e) => setFormatId(e.target.value)}
+                disabled={busy}
+              >
+                {formats.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.label} ({f.ratio}){f.description ? ` · ${f.description}` : ""}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-[11px] text-[var(--muted)]">封面标题（可选）</span>
+              <input
+                className="field"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder={project.title || "剧名"}
+                disabled={busy}
+              />
+            </label>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className="btn-primary !min-h-8 text-xs" disabled={busy} onClick={fromVideo}>
+                <Clapperboard className="h-3.5 w-3.5" /> 用视频首帧
+              </button>
+              <button
+                type="button"
+                className="btn-secondary !min-h-8 text-xs"
+                disabled={busy}
+                onClick={() => fileRef.current?.click()}
+              >
+                <Upload className="h-3.5 w-3.5" /> 上传封面
+              </button>
+              <button
+                type="button"
+                className="btn-quiet !min-h-8 text-xs"
+                disabled={busy}
+                onClick={() =>
+                  void patch({
+                    action: "cover-patch",
+                    coverFormatId: formatId,
+                    coverTitle: title,
+                    coverLocked: locked,
+                  })
+                }
+              >
+                <ImagePlus className="h-3.5 w-3.5" /> 应用格式
+              </button>
+              <button
+                type="button"
+                className="btn-quiet !min-h-8 text-xs"
+                disabled={busy}
+                onClick={() => {
+                  const next = !locked;
+                  setLocked(next);
+                  void patch({ action: "cover-patch", coverLocked: next });
+                }}
+              >
+                {locked ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
+                {locked ? "已锁定" : "锁定封面"}
+              </button>
+            </div>
+            <p className="text-[10px] leading-4 text-[var(--muted)]">
+              成片成功后会自动用第一段视频首帧生成封面；锁定后不再被自动覆盖。
+            </p>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                void onUpload(f);
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function Library({
   projects,
   config,
@@ -79,11 +249,21 @@ export function Library({
   authed = false,
 }) {
   const [confirmId, setConfirmId] = useState(null);
+  const [coverProjectId, setCoverProjectId] = useState(null);
   const [query, setQuery] = useState("");
   const caps = config?.capabilities || {};
   const keysReady = (caps.configured ?? 0) >= 1;
   const stepLabels = (config?.six_steps || []).map((s) => s.label);
   const entryCards = config?.entryCards || [];
+  const coverFormats = config?.coverFormats?.length
+    ? config.coverFormats
+    : [
+        { id: "portrait_9_16", label: "竖版封面", ratio: "9:16" },
+        { id: "landscape_16_9", label: "横版封面", ratio: "16:9" },
+        { id: "square_1_1", label: "方版封面", ratio: "1:1" },
+        { id: "social_4_5", label: "社媒封面", ratio: "4:5" },
+      ];
+  const coverTarget = (projects || []).find((p) => p.id === coverProjectId);
   const hasRealProject = (projects || []).some((p) => !String(p.id || "").startsWith("welcome"));
   const onboardingSteps = [
     { n: "01", title: "登录账号", done: Boolean(authed) },
@@ -343,13 +523,23 @@ export function Library({
                       <span className="timecode text-[10px] text-white/35">
                         {project.progress?.shots?.completed || 0}/{project.progress?.shots?.total || 0} SHOTS
                       </span>
-                      <button
-                        type="button"
-                        className="btn-quiet !min-h-8 !px-2 text-xs hover:!text-[var(--danger)]"
-                        onClick={() => setConfirmId(project.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" /> 删除
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          className="btn-quiet !min-h-8 !px-2 text-xs"
+                          onClick={() => setCoverProjectId(project.id)}
+                          title="封面设计"
+                        >
+                          <ImagePlus className="h-3.5 w-3.5" /> 封面
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-quiet !min-h-8 !px-2 text-xs hover:!text-[var(--danger)]"
+                          onClick={() => setConfirmId(project.id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" /> 删除
+                        </button>
+                      </div>
                     </div>
                   </article>
                 );
@@ -367,6 +557,16 @@ export function Library({
         danger
         onCancel={() => setConfirmId(null)}
         onConfirm={() => void remove(confirmId)}
+      />
+
+      <CoverEditorDialog
+        open={Boolean(coverProjectId)}
+        project={coverTarget}
+        formats={coverFormats}
+        onClose={() => setCoverProjectId(null)}
+        onSaved={() => {
+          onRefresh?.();
+        }}
       />
     </main>
   );

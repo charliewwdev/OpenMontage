@@ -565,7 +565,7 @@ def start_auto_produce(store: ProjectStore, project_id: str, options: dict[str, 
     opts = {
         # Full short-drama series: up to 10 episodes (not a single sample clip).
         "episodeCount": max(1, min(10, int((options or {}).get("episodeCount") or 1))),
-        # SceneMixer density: 12–30 shots / ep (default 24 ≈ 3–5 min @ 6–12s).
+        # Target density: 12–30 shots / ep (default 24 ≈ 3–5 min @ 6–12s).
         "maxShots": max(12, min(30, int((options or {}).get("maxShots") or 24))),
         "maxCharacters": max(1, min(48, int((options or {}).get("maxCharacters") or 24))),
         "maxScenes": max(1, min(48, int((options or {}).get("maxScenes") or 24))),
@@ -948,7 +948,7 @@ def _run_pipeline(store: ProjectStore, project_id: str, job_id: str) -> None:
             _log(job, f"正在为 {len(target_eps)} 集拆分镜…")
             _save_job(store, project_id, job)
             total_shots = 0
-            # SceneMixer floor: skip only when an episode already has a dense board.
+            # Density floor: skip only when an episode already has a dense board.
             density_floor = max(12, min(max_shots, 12))
             for ep in target_eps:
                 eid = str(ep.get("id") or "")
@@ -1044,7 +1044,7 @@ def _run_pipeline(store: ProjectStore, project_id: str, job_id: str) -> None:
             text_only = bool(opts.get("textOnlyVideo"))
             require_vqa = bool(opts.get("requireVideoQa", True))
 
-            # Prefer segment-level generation (SceneMixer desk); fall back to per-shot.
+            # Prefer segment-level generation (segment desk); fall back to per-shot.
             segment_jobs: list[dict[str, Any]] = []
             for ep in target_eps:
                 eid = str(ep.get("id") or "")
@@ -1090,120 +1090,209 @@ def _run_pipeline(store: ProjectStore, project_id: str, job_id: str) -> None:
             ok_vids = 0
             fail_vids = 0
             if segment_jobs and require_vqa:
-                from drama_service import entity_ref_qa_blockers, fill_entity_stills
+                from concurrent.futures import ThreadPoolExecutor, as_completed
+
+                from drama_service import (
+                    entity_ref_qa_blockers,
+                    fill_entity_stills,
+                    reset_zombie_generating_shots,
+                )
+
+                # Clear deploy/crash zombies so we do not spin on「正在生成」forever.
+                zapped = reset_zombie_generating_shots(store, project_id)
+                if zapped:
+                    _log(job, f"已重置 {zapped} 个空转出片状态，继续提交")
 
                 remaining = list(segment_jobs)
                 cycles = 0
+                # Bounded parallel segments — same QA path; overlaps wait only.
+                # Align with STUDIO_MEDIA_WORKERS / mediaJobWorkers (default 3, max 4).
+                import os as _os
+
+                _raw_par = (
+                    str((opts or {}).get("videoParallel") or "").strip()
+                    or (_os.environ.get("STUDIO_VIDEO_PARALLEL") or "").strip()
+                    or (_os.environ.get("STUDIO_MEDIA_WORKERS") or "").strip()
+                    or "3"
+                )
+                try:
+                    video_parallel = max(1, min(4, int(_raw_par)))
+                except Exception:
+                    video_parallel = 3
+                _log(job, f"出片并行度={video_parallel}（质检仍开启）")
+
+                def _produce_one_segment(job_seg: dict[str, Any]) -> tuple[str, dict[str, Any], str]:
+                    """Returns (ok|defer|fail, job_seg, message)."""
+                    so = int(job_seg.get("segmentOrder") or 0)
+                    eid = str(job_seg.get("episodeId") or "")
+                    epn = job_seg.get("episodeNumber")
+                    st = store.load(project_id) or {}
+                    ents = {
+                        e["id"]: e for e in (st.get("entities") or []) if not e.get("deletedAt")
+                    }
+                    ep_shots = [
+                        s
+                        for s in (st.get("shots") or [])
+                        if str(s.get("episodeId") or "") == eid
+                        and int(s.get("segmentOrder") or 0) == so
+                        and not s.get("deletedAt")
+                    ]
+                    ref_ids: list[str] = []
+                    for s in ep_shots:
+                        for rid in s.get("referenceEntityIds") or []:
+                            if rid not in ref_ids:
+                                ref_ids.append(rid)
+                    blockers = entity_ref_qa_blockers(ents, ref_ids) if not text_only else []
+                    if blockers:
+                        try:
+                            fill_entity_stills(
+                                store,
+                                project_id,
+                                entity_ids=[str(b.get("entityId") or "") for b in blockers],
+                                kinds=["character", "scene", "prop"],
+                                only_missing=True,
+                                wait_generate=False,
+                            )
+                        except Exception as exc:
+                            return ("defer", job_seg, f"第{epn}集段{so} 出图提交失败：{exc}")
+                        names = "、".join(
+                            str(b.get("name") or b.get("entityId") or "") for b in blockers[:4]
+                        )
+                        return ("defer", job_seg, f"第{epn}集段{so} 等待素材：{names}")
+                    try:
+                        if job_seg.get("shotOnly") and job_seg.get("leadId"):
+                            lead_id = str(job_seg["leadId"])
+                            try:
+                                start_shot_video(
+                                    store,
+                                    project_id,
+                                    lead_id,
+                                    model=model,
+                                    resolution=resolution,
+                                    skip_refs=text_only,
+                                )
+                            except RuntimeError as exc:
+                                if "正在生成" not in str(exc):
+                                    raise
+                            finished = _wait_shots(
+                                store,
+                                project_id,
+                                [lead_id],
+                                timeout_s=1200,
+                                job=None,
+                            )
+                            lead = finished[0] if finished else {}
+                            if lead.get("status") == "success":
+                                return ("ok", job_seg, f"片段达标：第{epn}集 · 片段 {so}")
+                            return (
+                                "fail",
+                                job_seg,
+                                f"片段失败 第{epn}集段{so}：{lead.get('error')}",
+                            )
+                        try:
+                            ensure_segment_video_qa(
+                                store,
+                                project_id,
+                                eid,
+                                so,
+                                model=model,
+                                resolution=resolution,
+                                skip_refs=text_only,
+                            )
+                        except RuntimeError as exc:
+                            msg = str(exc)
+                            if "正在生成" not in msg:
+                                raise
+                            # Wait out the in-flight render instead of counting as fail.
+                            lead_id = str(job_seg.get("leadId") or "")
+                            if not lead_id and ep_shots:
+                                lead = next(
+                                    (
+                                        s
+                                        for s in ep_shots
+                                        if s.get("isSegmentLead")
+                                        or int(s.get("beatIndex") or 0) in {0, 1}
+                                    ),
+                                    ep_shots[0],
+                                )
+                                lead_id = str(lead.get("id") or "")
+                            if lead_id:
+                                finished = _wait_shots(
+                                    store,
+                                    project_id,
+                                    [lead_id],
+                                    timeout_s=1200,
+                                    job=None,
+                                )
+                                lead = finished[0] if finished else {}
+                                if lead.get("status") == "success":
+                                    # Re-enter QA path once the take lands.
+                                    ensure_segment_video_qa(
+                                        store,
+                                        project_id,
+                                        eid,
+                                        so,
+                                        model=model,
+                                        resolution=resolution,
+                                        skip_refs=text_only,
+                                    )
+                                    return ("ok", job_seg, f"片段达标：第{epn}集 · 片段 {so}")
+                                return (
+                                    "fail",
+                                    job_seg,
+                                    f"片段未达标：第{epn}集段{so} — {lead.get('error') or msg}",
+                                )
+                            raise
+                        return ("ok", job_seg, f"片段达标：第{epn}集 · 片段 {so}")
+                    except Exception as exc:
+                        return ("fail", job_seg, f"片段未达标：第{epn}集段{so} — {exc}")
+
                 while remaining:
                     if _job_cancelled(store, project_id, job_id):
                         _log(job, "全流程已暂停，停止出片循环")
                         return
                     cycles += 1
+                    if cycles > 1:
+                        zapped = reset_zombie_generating_shots(store, project_id)
+                        if zapped:
+                            _log(job, f"第 {cycles} 轮前重置 {zapped} 个空转状态")
                     deferred: list[dict[str, Any]] = []
-                    state = store.load(project_id) or {}
-                    entities = {
-                        e["id"]: e for e in (state.get("entities") or []) if not e.get("deletedAt")
-                    }
-                    for job_seg in remaining:
-                        if _job_cancelled(store, project_id, job_id):
-                            _log(job, "全流程已暂停，停止出片循环")
-                            return
-                        so = int(job_seg.get("segmentOrder") or 0)
-                        eid = str(job_seg.get("episodeId") or "")
-                        epn = job_seg.get("episodeNumber")
-                        ep_shots = [
-                            s
-                            for s in (state.get("shots") or [])
-                            if str(s.get("episodeId") or "") == eid
-                            and int(s.get("segmentOrder") or 0) == so
-                            and not s.get("deletedAt")
-                        ]
-                        ref_ids: list[str] = []
-                        for s in ep_shots:
-                            for rid in s.get("referenceEntityIds") or []:
-                                if rid not in ref_ids:
-                                    ref_ids.append(rid)
-                        blockers = entity_ref_qa_blockers(entities, ref_ids) if not text_only else []
-                        if blockers:
-                            try:
-                                fill_entity_stills(
-                                    store,
-                                    project_id,
-                                    entity_ids=[str(b.get("entityId") or "") for b in blockers],
-                                    kinds=["character", "scene", "prop"],
-                                    only_missing=True,
-                                    wait_generate=False,
-                                )
-                            except Exception as exc:
-                                _log(job, f"第{epn}集段{so} 出图提交失败：{exc}", ok=False)
-                            names = "、".join(
-                                str(b.get("name") or b.get("entityId") or "") for b in blockers[:4]
-                            )
-                            deferred.append(job_seg)
-                            _set_step(
-                                job,
-                                "videos",
-                                "running",
-                                f"先出图 {len(remaining) - len(deferred)}/{total_segs} · 第{epn}集段{so} 等 {names}",
-                            )
-                            _save_job(store, project_id, job)
-                            continue
-                        _set_step(job, "videos", "running", f"出片 {ok_vids}/{total_segs} · 第{epn}集段{so}")
-                        _log(job, f"出片+质检：第{epn}集 · 片段 {so}…")
-                        _save_job(store, project_id, job)
-                        try:
-                            if job_seg.get("shotOnly") and job_seg.get("leadId"):
-                                start_shot_video(
-                                    store,
-                                    project_id,
-                                    str(job_seg["leadId"]),
-                                    model=model,
-                                    resolution=resolution,
-                                    skip_refs=text_only,
-                                )
-                                finished = _wait_shots(
-                                    store,
-                                    project_id,
-                                    [str(job_seg["leadId"])],
-                                    timeout_s=1200,
-                                    job=job,
-                                )
-                                lead = finished[0] if finished else {}
-                                if lead.get("status") == "success":
-                                    ok_vids += 1
-                                else:
-                                    fail_vids += 1
-                                    deferred.append(job_seg)
-                                    _log(
-                                        job,
-                                        f"片段失败 第{epn}集段{so}：{lead.get('error')}",
-                                        ok=False,
-                                    )
-                            else:
-                                ensure_segment_video_qa(
-                                    store,
-                                    project_id,
-                                    eid,
-                                    so,
-                                    model=model,
-                                    resolution=resolution,
-                                    skip_refs=text_only,
-                                )
+                    batch = remaining
+                    _set_step(
+                        job,
+                        "videos",
+                        "running",
+                        f"出片 {ok_vids}/{total_segs} · 并行≤{video_parallel} · 第{cycles}轮",
+                    )
+                    _log(
+                        job,
+                        f"出片+质检：第 {cycles} 轮，剩余 {len(batch)} 段（并行 {min(video_parallel, len(batch))}）…",
+                    )
+                    _save_job(store, project_id, job)
+                    with ThreadPoolExecutor(max_workers=min(video_parallel, len(batch))) as pool:
+                        futs = [pool.submit(_produce_one_segment, js) for js in batch]
+                        for fut in as_completed(futs):
+                            if _job_cancelled(store, project_id, job_id):
+                                _log(job, "全流程已暂停，停止出片循环")
+                                return
+                            kind, job_seg, msg = fut.result()
+                            if kind == "ok":
                                 ok_vids += 1
-                                _log(job, f"片段达标：第{epn}集 · 片段 {so}")
-                        except Exception as exc:
-                            fail_vids += 1
-                            deferred.append(job_seg)
-                            _log(job, f"片段未达标：第{epn}集段{so} — {exc}", ok=False)
-                        _set_step(job, "videos", "running", f"{ok_vids}/{total_segs}")
-                        _save_job(store, project_id, job)
-                        state = store.load(project_id) or state
-                        entities = {
-                            e["id"]: e
-                            for e in (state.get("entities") or [])
-                            if not e.get("deletedAt")
-                        }
+                                _log(job, msg)
+                            elif kind == "defer":
+                                deferred.append(job_seg)
+                                _log(job, msg, ok=False)
+                            else:
+                                fail_vids += 1
+                                deferred.append(job_seg)
+                                _log(job, msg, ok=False)
+                            _set_step(job, "videos", "running", f"{ok_vids}/{total_segs}")
+                            _save_job(store, project_id, job)
                     if not deferred:
+                        break
+                    # Cap empty spin: after many cycles with zero progress, stop.
+                    if cycles >= 40 and ok_vids == 0:
+                        _log(job, f"出片空转已达 {cycles} 轮且无成功片段，停止循环", ok=False)
                         break
                     _log(
                         job,
@@ -1213,7 +1302,7 @@ def _run_pipeline(store: ProjectStore, project_id: str, job_id: str) -> None:
                     _set_step(job, "videos", "running", f"循环 {ok_vids}/{total_segs} · 剩余 {len(deferred)}")
                     _save_job(store, project_id, job)
                     remaining = deferred
-                    time.sleep(20)
+                    time.sleep(12)
             else:
                 # Legacy per-shot path (no segment QA)
                 shot_ids = [s["id"] for s in shots]

@@ -95,8 +95,8 @@ defaults:
   videoQaMaxAttempts: 5
   # Bounded media thread pool (entity stills + video + QA) when Redis is unset.
   # With REDIS_URL, jobs go to Redis and media_worker processes them.
-  # Override with env STUDIO_MEDIA_WORKERS. Do not set high — Comfy GPU saturates fast.
-  mediaJobWorkers: 2
+  # Override with env STUDIO_MEDIA_WORKERS / STUDIO_VIDEO_PARALLEL. Keep ≤4.
+  mediaJobWorkers: 3
   # Multi-process uvicorn (entrypoint UVICORN_WORKERS). Store uses fcntl locks.
   uvicornWorkers: 2
   maxCharacters: 24
@@ -127,6 +127,25 @@ ratios:
   - value: "1:1"
     label: 方屏
     description: 社媒
+
+# Library cover presets (first video frame / upload crop targets)
+coverFormats:
+  - id: portrait_9_16
+    label: 竖版封面
+    ratio: "9:16"
+    description: 短剧 / 抖音
+  - id: landscape_16_9
+    label: 横版封面
+    ratio: "16:9"
+    description: 横屏预览
+  - id: square_1_1
+    label: 方版封面
+    ratio: "1:1"
+    description: 社媒方图
+  - id: social_4_5
+    label: 社媒封面
+    ratio: "4:5"
+    description: 信息流
 
 sixSteps:
   - id: script

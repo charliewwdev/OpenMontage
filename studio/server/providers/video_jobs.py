@@ -92,6 +92,13 @@ def run_comfy_shot(
             sh["error"] = f"质检未达标: {qa.get('reason') or 'mismatch'}"
         _propagate_segment_video(st, sh)
         store.save(st)
+        if version.get("qaPass") and version.get("path"):
+            try:
+                from cover_service import maybe_set_cover_from_shot_video
+
+                maybe_set_cover_from_shot_video(store, project_id, version.get("path"))
+            except Exception:
+                pass
     except Exception as exc:
         st = store.load(project_id)
         sh = next((x for x in (st.get("shots") or []) if x["id"] == shot_id), None) if st else None
@@ -197,6 +204,13 @@ def run_seedance_shot(
                     sh["error"] = f"质检未达标: {qa.get('reason') or 'mismatch'}"
                 _propagate_segment_video(st, sh)
                 store.save(st)
+                if version.get("qaPass") and version.get("path"):
+                    try:
+                        from cover_service import maybe_set_cover_from_shot_video
+
+                        maybe_set_cover_from_shot_video(store, project_id, version.get("path"))
+                    except Exception:
+                        pass
                 return
             if status in {"failed", "expired", "cancelled"}:
                 sh["status"] = "failed"

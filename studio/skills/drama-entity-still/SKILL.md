@@ -40,7 +40,7 @@ Observe blockers（无图 / qa_fail / soft_pass）
 ### 角色
 
 - 写明「画面中央只有一个人」+ 姓名·变体
-- **默认透明抠图底**：透明 / 纯白 / 浅灰无缝底板，禁止场景、地面、墙面（对齐 SceneMixer 资产库）
+- **默认透明抠图底**：透明 / 纯白 / 浅灰无缝底板，禁止场景、地面、墙面
 - 五官/发型/服装可辨；氛围光不可盖过主体
 - 变体必须写出**可见差异**（绷带、血迹、妆造），并锁参考脸
 - Negative：航拍、城市空镜、无人风景、第二个人物、彩色棚景
@@ -65,20 +65,21 @@ Observe blockers（无图 / qa_fail / soft_pass）
 skill_id: drama-entity-still
 identity_lock: true
 fail_closed: true
-# Cast stills: same scale for every character so the asset rail does not mix
-# extreme close-ups with full-body plates. Video shots may still change camera distance.
-framing_lock: medium_shot_chest_up
-# Default cutout plate (SceneMixer-style). Skill 专家改 cutout_prompt 即影响出图。
+# Cast stills: same full-body scale for every character so the asset rail stays consistent.
+# Video shots may still change camera distance.
+framing_lock: full_body
+# Default cutout plate. Skill 专家改 cutout_prompt 即影响出图。
 cutout_background: transparent
 cutout_prompt: >
-  ISOLATED CUTOUT on a pure transparent / alpha PNG background
-  (or seamless pure white / light-gray plate for easy keying).
-  NO room, NO floor, NO wall texture, NO gradient studio, NO scenery.
-  透明背景抠图：主体以外必须是透明或纯白/浅灰无缝底板，禁止场景、地面、墙面与棚拍道具。
+  ISOLATED CUTOUT on a seamless PURE WHITE (#FFFFFF) studio plate
+  (flat even white, no gradient) so the backdrop can be keyed to transparent alpha.
+  NO room, NO floor, NO wall texture, NO colored backdrop, NO scenery.
+  透明抠图底板：主体以外必须是纯白无缝底板 #FFFFFF（均匀、无渐变），便于键控成透明 PNG；
+  禁止场景、地面、墙面、彩色背景与棚拍道具。
 framing_prompt: >
-  MEDIUM SHOT chest-up: head fully in frame with slight headroom, both shoulders visible,
-  face centered. Not extreme face close-up, not full-body wide.
-  Isolated cutout on transparent or pure white / light-gray seamless plate — no scenery.
+  FULL BODY character sheet: head-to-toe in frame, standing pose, slight headroom and footroom,
+  face and wardrobe readable, centered. Not extreme face close-up, not chest-up crop only.
+  Isolated cutout on seamless PURE WHITE (#FFFFFF) plate for alpha keying — no scenery.
 variant_prompt_hint: >
   Variant must change only wardrobe / injury / makeup state while keeping
   the identical face from the reference still.
@@ -88,11 +89,11 @@ experience_seeds:
     matchReason: [background, scenery, landscape, room, floor, wall, 背景, 场景, 地面, 墙面]
     matchVariant: []
     promptBoost: >
-      CRITICAL cutout plate: transparent or pure white/light-gray seamless only.
-      Remove any room, floor, wall, scenic backdrop. Subject edges must be clean for keying.
+      CRITICAL cutout plate: seamless PURE WHITE (#FFFFFF) only — flat, no gradient.
+      Remove any room, floor, wall, scenic or colored backdrop. Subject edges clean for alpha keying.
     negativeBoost: >
       room interior, wooden floor, concrete wall, scenery, colored backdrop,
-      gradient studio background, environment, landscape
+      gradient studio background, light-gray plate, mid-gray background, environment, landscape
 
   - id: injury-bandage
     kinds: [character]
@@ -113,17 +114,17 @@ experience_seeds:
     promptBoost: >
       Identity lock: same bone structure, eyes, nose, jawline and hairline as reference.
     negativeBoost: different face, face swap, new identity
-  - id: framing-chest-up
+  - id: framing-full-body
     kinds: [character]
-    matchReason: [close-up, closeup, extreme, forehead, full body, full-body, 特写, 全身, 额头]
+    matchReason: [close-up, closeup, extreme, forehead, chest-up, half-body, 特写, 半身, 胸上, 额头]
     matchVariant: []
     promptBoost: >
-      Framing lock: MEDIUM SHOT chest-up only — head + both shoulders, slight headroom.
-      Rebuild at the same scale as other cast stills; do not extreme-crop the face
-      and do not pull back to full-body wide.
+      Framing lock: FULL BODY head-to-toe — standing, face + full wardrobe readable,
+      slight headroom and footroom. Same scale as other cast stills;
+      do not extreme-crop the face and do not stop at chest-up only.
     negativeBoost: >
-      extreme close-up, forehead only, eyes only crop, full body standing wide,
-      feet visible, distant full figure
+      extreme close-up, forehead only, eyes only crop, chest-up only, half-body crop,
+      bust portrait, shoulders only
   - id: scene-no-people
     kinds: [scene]
     matchReason: [person, people, face, 人物, 人脸]
@@ -131,17 +132,18 @@ experience_seeds:
     promptBoost: Empty location only — no human figures or silhouettes.
     negativeBoost: person, people, face, portrait, crowd
 expert_review:
-  - id: character-framing-chest-up
+  - id: character-framing-full-body
     kinds: [character]
     fail_if_reason_contains:
       - extreme close-up
       - forehead only
       - eyes only
-      - full-body wide
-      - full body wide
-      - full-length
+      - chest-up only
+      - half-body only
+      - bust portrait
       - 特写过近
-      - 全身远景
+      - 半身裁切
+      - 只有胸上
   - id: character-no-empty-plate
     kinds: [character]
     fail_if_reason_contains: [landscape, cityscape, aerial, empty location, 无人空镜, 风景空镜]

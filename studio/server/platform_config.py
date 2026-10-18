@@ -128,6 +128,11 @@ def genres() -> list[str]:
     return [str(x) for x in items if str(x).strip()]
 
 
+def cover_formats() -> list[dict[str, Any]]:
+    items = load_platform_config().get("coverFormats") or []
+    return [x for x in items if isinstance(x, dict)] if isinstance(items, list) else []
+
+
 def ratios() -> list[dict[str, Any]]:
     items = load_platform_config().get("ratios") or []
     return [x for x in items if isinstance(x, dict) and x.get("value")]
@@ -308,6 +313,7 @@ def public_platform_payload() -> dict[str, Any]:
 
         "genres": genres(),
         "ratios": ratios(),
+        "coverFormats": cover_formats(),
         "six_steps": six_steps(),
         "pipelineLabels": cfg.get("pipelineLabels") or [],
         "creationSteps": cfg.get("creationSteps") or [],

@@ -83,10 +83,11 @@ class _PromptDefaults:
 
 
 _DEFAULT_CUTOUT_BG = (
-    "ISOLATED CUTOUT on a pure transparent / alpha PNG background "
-    "(or seamless pure white / light-gray plate for easy keying). "
-    "NO room, NO floor, NO wall texture, NO gradient studio, NO scenery. "
-    "透明背景抠图：主体以外必须是透明或纯白/浅灰无缝底板，禁止场景、地面、墙面与棚拍道具。"
+    "ISOLATED CUTOUT on a seamless PURE WHITE (#FFFFFF) studio plate "
+    "(flat even white, no gradient) so the backdrop can be keyed to transparent alpha. "
+    "NO room, NO floor, NO wall texture, NO colored backdrop, NO scenery. "
+    "透明抠图底板：主体以外必须是纯白无缝底板 #FFFFFF（均匀、无渐变），便于键控成透明 PNG；"
+    "禁止场景、地面、墙面、彩色背景与棚拍道具。"
 )
 
 
@@ -138,7 +139,7 @@ class _InjuryCharacterPrompt(_PromptDefaults):
     def build(self, ctx: PromptBuildContext) -> tuple[str, str | None]:
         base_prompt, base_neg = _CharacterPrompt().build(ctx)
         prompt = (
-            "MEDIUM SHOT chest-up (not face-only close-up). "
+            "FULL BODY standing (not face-only close-up, not chest-up crop). "
             "LEFT shoulder and upper chest have a thick WHITE medical gauze wrap "
             "(rolled surgical gauze, cotton dressing — not plastic sheet, not towel). "
             "Dark coat torn or blood-stained. Pale sweaty face. "
@@ -170,10 +171,10 @@ class _InjuryCharacterPrompt(_PromptDefaults):
         if attempt == 2:
             # Synonyms help CLIP more than repeating「绷带」.
             return (
-                f"Cinematic half-body portrait of injured character 「{ctx.who}」. "
+                f"Cinematic full-body portrait of injured character 「{ctx.who}」. "
                 "Surgical white cotton gauze dressing taped/wrapped on left deltoid and clavicle. "
-                "Torn dark coat with dried blood. Sweaty pale skin. Medium shot shows both shoulders. "
-                "左肩锁骨处白色医用纱布包扎清晰，破损外套，半身构图。"
+                "Torn dark coat with dried blood. Sweaty pale skin. Head-to-toe standing figure. "
+                "左肩锁骨处白色医用纱布包扎清晰，破损外套，全身构图。"
                 f" Keep identity: {ctx.look or ctx.desc or ctx.name}."
             ), base_negative
         return (
@@ -193,9 +194,10 @@ class _CharacterPrompt(_PromptDefaults):
         # Locked framing so every cast still matches the same scale in the asset rail
         # and identity lock stays comparable across characters.
         framing = str((ctx.runtime or {}).get("framing_prompt") or "").strip() or (
-            "MEDIUM SHOT chest-up framing lock: head fully in frame with a little headroom, "
-            "both shoulders visible, face centered. NOT extreme face close-up, NOT full-body wide. "
-            "统一半身胸上构图：头顶留一点空间，双肩入画，脸居中；禁止只有额头眼睛的大特写，禁止全身远景。"
+            "FULL BODY framing lock: head-to-toe standing figure, slight headroom and footroom, "
+            "face and full wardrobe readable, centered. NOT extreme face close-up, NOT chest-up crop only. "
+            "统一全身定妆：从头到脚完整入画，站姿，头顶与脚底留一点空间，五官与服装可读；"
+            "禁止只有额头眼睛的大特写，禁止半身/胸上裁切。"
         )
         if not framing.endswith((" ", "。", ".", "！", "!")):
             framing = framing + " "
@@ -203,7 +205,7 @@ class _CharacterPrompt(_PromptDefaults):
             f"CHARACTER SHEET / asset cutout. {_cutout_clause(ctx)} "
             "NO landscape, NO mountains, NO forest, NO moon, NO empty plain. "
             f"{framing}"
-            f"画面中央只有角色「{ctx.who}」，五官与发型清晰。"
+            f"画面中央只有角色「{ctx.who}」，五官与发型清晰，全身服装完整。"
             f"必须严格符合这段外形，不要改性别、年龄或换成泛泛古装："
             f"{look or '短剧主角，五官清晰，服装完整'}。"
         )
@@ -220,15 +222,15 @@ class _CharacterPrompt(_PromptDefaults):
             hint = str((ctx.runtime or {}).get("variant_prompt_hint") or "").strip()
             prompt += (
                 f" 本条为变体「{ctx.variant}」，必须让变体差异在画面中清晰可见（妆造/伤势/服装状态），"
-                "同时保持与参考定妆图同一张脸与同一半身构图比例。"
+                "同时保持与参考定妆图同一张脸与同一全身构图比例。"
             )
             if hint:
                 prompt += f" {hint}"
         if ctx.three_view:
-            prompt += "同一人物同一服装的三视图设定稿：正面、侧面、背面，透明或纯白抠图背景，各格仍为半身胸上比例。"
+            prompt += "同一人物同一服装的三视图设定稿：正面、侧面、背面，透明或纯白抠图背景，各格仍为全身比例。"
         else:
             prompt += (
-                "半身胸上定妆（不是全身站立远景），清晰五官与发型层次，领口与肩部服装细节完整，"
+                "全身定妆（从头到脚，不是半身胸上），清晰五官与发型层次，整套服装与鞋履可见，"
                 "电影级柔光与轮廓光，剧照质感，居中构图，边缘干净可抠。"
             )
         if ctx.force_illustration:
@@ -242,8 +244,8 @@ class _CharacterPrompt(_PromptDefaults):
             "rocks, forest, nature scenery, empty street, crowded market, crowd, "
             "architecture only, bird's eye, map, multiple people, text, watermark, "
             "extreme close-up, forehead only, eyes only crop, macro face, "
-            "full body standing wide shot, full-length figure tiny in frame, "
-            "feet visible, shoes visible, distant full figure, "
+            "chest-up only, half-body crop, bust portrait, shoulders only, "
+            "head-and-shoulders only, cropped at waist, "
             "room interior, wooden floor, concrete wall, colored backdrop, "
             "gradient studio background, scenic background, environment"
         )
@@ -268,24 +270,26 @@ class _CharacterPrompt(_PromptDefaults):
                 "closeup",
                 "extreme",
                 "forehead",
-                "full body",
-                "full-body",
-                "wide shot",
+                "chest-up",
+                "half-body",
+                "half body",
+                "bust",
                 "crop",
                 "特写",
-                "全身",
+                "半身",
+                "胸上",
                 "额头",
             )
         )
         if attempt == 2 or framing_fail:
             return (
-                "MEDIUM SHOT chest-up only. Head + both shoulders in frame, face centered. "
-                "No extreme face crop, no full-body wide. "
-                f"半身胸上定妆「{ctx.who}」：头顶留空、双肩入画。"
+                "FULL BODY only. Head-to-toe standing figure, face + wardrobe readable. "
+                "No extreme face crop, no chest-up-only crop. "
+                f"全身定妆「{ctx.who}」：从头到脚完整入画。"
                 f" Keep identity: {ctx.look or ctx.desc or ctx.name}."
             ), (
                 ((base_negative + ", ") if base_negative else "")
-                + "extreme close-up, forehead crop, full body wide, feet, distant figure"
+                + "extreme close-up, forehead crop, chest-up only, half-body crop, bust portrait"
             )
         return base_prompt, base_negative
 

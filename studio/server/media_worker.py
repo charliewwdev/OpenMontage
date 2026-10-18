@@ -8,6 +8,10 @@ Usage (compose / Coolify)::
 Requires ``STUDIO_REDIS_URL`` or ``REDIS_URL``. Without Redis the process exits
 non-zero (API falls back to in-process thread pool).
 
+Concurrency:
+- ``STUDIO_MEDIA_WORKERS`` (default 2, max 4) runs that many jobs in parallel
+  inside one process (bounded thread pool). Quality gates unchanged.
+
 Crash safety:
 - Jobs are reserved via queue→processing (BLMOVE / BRPOPLPUSH), not BLPOP.
 - On startup, in-flight processing jobs are reclaimed back onto the queue.
@@ -21,6 +25,8 @@ import os
 import signal
 import sys
 import time
+from concurrent.futures import Future, ThreadPoolExecutor, wait, FIRST_COMPLETED
+from typing import Any
 
 logging.basicConfig(
     level=os.environ.get("STUDIO_LOG_LEVEL", "INFO"),
@@ -35,6 +41,41 @@ def _handle_signal(signum, _frame) -> None:
     global _STOP
     log.info("signal %s received, draining current job then exit", signum)
     _STOP = True
+
+
+def _worker_concurrency() -> int:
+    raw = (os.environ.get("STUDIO_MEDIA_WORKERS") or "").strip()
+    if raw.isdigit() and int(raw) > 0:
+        return max(1, min(4, int(raw)))
+    try:
+        from platform_config import load_platform_config
+
+        n = int((load_platform_config() or {}).get("defaults", {}).get("mediaJobWorkers") or 2)
+        return max(1, min(4, n))
+    except Exception:
+        return 2
+
+
+def _run_one(job: dict[str, Any], projects_root) -> None:
+    from job_queue import ack_job, dispatch_job
+    from settings_store import load_and_apply
+
+    job_id = job.get("id") or "?"
+    kind = job.get("kind") or "?"
+    log.info("start job=%s kind=%s attempt=%s", job_id, kind, job.get("attempts"))
+    try:
+        load_and_apply(projects_root)
+    except Exception:
+        pass
+    t0 = time.time()
+    try:
+        dispatch_job(job)
+        log.info("done job=%s kind=%s in %.1fs", job_id, kind, time.time() - t0)
+    except Exception as exc:  # noqa: BLE001
+        log.exception("fail job=%s kind=%s: %s", job_id, kind, exc)
+    finally:
+        # Always ack so a permanent failure does not loop forever after reclaim.
+        ack_job(job)
 
 
 def main() -> int:
@@ -52,8 +93,6 @@ def main() -> int:
 
     from job_queue import (
         QUEUE_KEY,
-        ack_job,
-        dispatch_job,
         get_redis,
         promote_image_jobs,
         reclaim_processing,
@@ -94,36 +133,46 @@ def main() -> int:
     except Exception as exc:  # noqa: BLE001
         log.warning("recover_stale_generating failed: %s", exc)
 
-    log.info("listening on %s (reliable reserve→processing)", QUEUE_KEY)
+    conc = _worker_concurrency()
+    log.info("listening on %s concurrency=%s (reliable reserve→processing)", QUEUE_KEY, conc)
     last_reload = 0.0
-    while not _STOP:
-        # Refresh shared secrets periodically (ops restore / UI saves hit API only).
-        now = time.time()
-        if now - last_reload > 60:
-            try:
-                load_and_apply(projects_root)
-                last_reload = now
-            except Exception:
-                pass
-        job = reserve_job(timeout=2.0)
-        if not job:
-            continue
-        job_id = job.get("id") or "?"
-        kind = job.get("kind") or "?"
-        log.info("start job=%s kind=%s attempt=%s", job_id, kind, job.get("attempts"))
-        try:
-            load_and_apply(projects_root)
-        except Exception:
-            pass
-        t0 = time.time()
-        try:
-            dispatch_job(job)
-            log.info("done job=%s kind=%s in %.1fs", job_id, kind, time.time() - t0)
-        except Exception as exc:  # noqa: BLE001
-            log.exception("fail job=%s kind=%s: %s", job_id, kind, exc)
-        finally:
-            # Always ack so a permanent failure does not loop forever after reclaim.
-            ack_job(job)
+    inflight: set[Future] = set()
+
+    with ThreadPoolExecutor(max_workers=conc, thread_name_prefix="media-job") as pool:
+        while not _STOP:
+            # Refresh shared secrets periodically (ops restore / UI saves hit API only).
+            now = time.time()
+            if now - last_reload > 60:
+                try:
+                    load_and_apply(projects_root)
+                    last_reload = now
+                except Exception:
+                    pass
+
+            # Reap finished futures.
+            if inflight:
+                done, inflight = wait(inflight, timeout=0.05, return_when=FIRST_COMPLETED)
+                inflight = set(inflight)
+
+            # Fill free slots.
+            while not _STOP and len(inflight) < conc:
+                # Non-blocking reserve when already busy; block briefly when idle.
+                timeout = 0.0 if inflight else 2.0
+                job = reserve_job(timeout=timeout)
+                if not job:
+                    break
+                fut = pool.submit(_run_one, job, projects_root)
+                inflight.add(fut)
+
+            if not inflight:
+                # Idle — reserve_job already waited; tiny sleep avoids hot loop on errors.
+                time.sleep(0.05)
+
+        # Drain in-flight on shutdown.
+        if inflight:
+            log.info("draining %s in-flight job(s)…", len(inflight))
+            wait(inflight, timeout=600)
+
     log.info("stopped")
     return 0
 

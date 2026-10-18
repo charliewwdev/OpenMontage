@@ -70,7 +70,9 @@ services:
       REDIS_URL: ${REDIS_URL:-redis://drama-redis:6379/0}
       STUDIO_REDIS_URL: ${STUDIO_REDIS_URL:-${REDIS_URL:-redis://drama-redis:6379/0}}
       UVICORN_WORKERS: ${UVICORN_WORKERS:-2}
-      STUDIO_MEDIA_WORKERS: ${STUDIO_MEDIA_WORKERS:-2}
+      # Parallel Redis media jobs (stills + video). Keep ≤4 — remote Comfy/H3 saturates.
+      STUDIO_MEDIA_WORKERS: ${STUDIO_MEDIA_WORKERS:-3}
+      STUDIO_VIDEO_PARALLEL: ${STUDIO_VIDEO_PARALLEL:-3}
       STUDIO_DIST: /app/studio/dist
       STUDIO_PUBLIC_URL: ${STUDIO_PUBLIC_URL:-http://localhost:8787}
       STUDIO_CORS_ORIGINS: ${STUDIO_CORS_ORIGINS:-${STUDIO_PUBLIC_URL:-http://localhost:8787}}

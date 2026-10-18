@@ -553,7 +553,7 @@ export function SegmentWorkspace({
     if (!episodeId || !activeSeg) return;
     if (onRequireAuth && !onRequireAuth()) return;
     setFillingStills(true);
-    setBusyMsg?.(`按 drama-entity-still 统一本段角色半身构图并补场景…`);
+    setBusyMsg?.(`按 drama-entity-still 统一本段角色全身构图并补场景…`);
     try {
       const res = await api(`/api/projects/${encodeURIComponent(projectId)}/entities`, {
         method: "POST",
@@ -591,7 +591,7 @@ export function SegmentWorkspace({
       }
       if (!attempted) toast.success("本段角色/场景图已齐");
       else if (queued > 0) {
-        toast.success(`已排队统一构图 ${queued || attempted} 项（角色强制半身重出）`);
+        toast.success(`已排队统一构图 ${queued || attempted} 项（角色强制全身重出）`);
         // Light poll until no segment asset stays generating.
         const started = Date.now();
         while (Date.now() - started < 20 * 60 * 1000) {
@@ -1044,7 +1044,7 @@ export function SegmentWorkspace({
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-1.5 text-[12px] leading-snug">
-      {/* Compact toolbar — SceneMixer-like density */}
+      {/* Compact toolbar — compact density */}
       <div className="flex shrink-0 flex-wrap items-center gap-2 rounded-lg border border-white/10 bg-[#0c0e14] px-2 py-1.5">
         <div className="min-w-0 shrink">
           <h2 className="truncate text-[13px] font-semibold text-white">
@@ -1129,7 +1129,7 @@ export function SegmentWorkspace({
               type="button"
               className="inline-flex items-center gap-1 text-[10px] text-[#a78bfa] hover:underline disabled:opacity-40"
               disabled={fillingStills || generating || splitting}
-              title="补齐无图；本段角色强制按半身胸上构图重出定妆"
+              title="补齐无图；本段角色强制按全身构图重出定妆"
               onClick={() => void fillSegmentStills()}
             >
               {fillingStills ? <Loader2 className="h-3 w-3 animate-spin" /> : null}

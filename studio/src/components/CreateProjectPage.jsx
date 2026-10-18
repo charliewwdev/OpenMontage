@@ -181,8 +181,8 @@ export function CreateProjectPage({ config, entryMode = null, onBack, onCreated,
   };
 
   return (
-    <main className="min-h-screen p-3 md:p-5 lg:p-6">
-      <div className="yc-frame mx-auto max-w-[1480px] p-4 md:p-7">
+    <main className="min-h-screen p-2 md:p-3">
+      <div className="yc-frame mx-0 w-full max-w-none p-3 md:p-4">
       <header className="overflow-hidden rounded-[22px] border border-white/10 bg-[linear-gradient(135deg,#15182a_0%,#1a1240_45%,#0d1b3a_100%)] text-white shadow-float">
         <div className="grid lg:grid-cols-[1fr_360px]">
           <div className="p-6 md:p-9">

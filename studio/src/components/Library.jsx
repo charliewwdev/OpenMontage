@@ -28,7 +28,7 @@ function progressSteps(project, stepCount = 7) {
   return flags.slice(0, stepCount);
 }
 
-function ProjectCover({ project }) {
+function ProjectCover({ project, className }) {
   const [imgFailed, setImgFailed] = useState(false);
   const [videoFailed, setVideoFailed] = useState(false);
   const still =
@@ -41,7 +41,7 @@ function ProjectCover({ project }) {
         src={still}
         alt=""
         onError={() => setImgFailed(true)}
-        className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+        className={className || "h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"}
       />
     );
   }
@@ -55,7 +55,7 @@ function ProjectCover({ project }) {
         autoPlay
         preload="metadata"
         onError={() => setVideoFailed(true)}
-        className="h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"
+        className={className || "h-full w-full object-cover transition duration-500 group-hover:scale-[1.03]"}
       />
     );
   }
@@ -285,7 +285,7 @@ export function Library({
           ) : visible.length === 0 ? (
             <div className="panel py-16 text-center text-sm text-[var(--muted)]">没有匹配的项目。</div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               {visible.map((project) => {
                 const steps = progressSteps(project, stepLabels.length || 6);
                 const doneCount = steps.filter(Boolean).length;
@@ -295,10 +295,10 @@ export function Library({
                     className="panel group overflow-hidden transition hover:-translate-y-0.5 hover:border-white/20"
                   >
                     <button type="button" className="w-full text-left" onClick={() => onOpen(project.id)}>
-                      <div className="aspect-[16/9] overflow-hidden bg-black/40">
-                        <ProjectCover project={project} />
+                      <div className="flex aspect-[16/9] items-center justify-center overflow-hidden bg-black/50">
+                        <ProjectCover project={project} className="max-h-full max-w-full object-contain" />
                       </div>
-                      <div className="p-5">
+                      <div className="p-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="rounded-full border border-white/10 bg-white/[.04] px-2 py-0.5 text-[10px] text-white/60">
                           {project.genre || "未分类"}
@@ -307,11 +307,11 @@ export function Library({
                           {project.ratio || "9:16"}
                         </span>
                       </div>
-                      <h3 className="mt-3 truncate text-xl font-semibold">{project.title}</h3>
-                      <p className="mt-1 line-clamp-2 min-h-10 text-sm leading-5 text-[var(--muted)]">
+                      <h3 className="mt-2 truncate text-base font-semibold">{project.title}</h3>
+                      <p className="mt-1 line-clamp-2 min-h-8 text-xs leading-4 text-[var(--muted)]">
                         {project.synopsis || project.brief || "尚未生成剧本"}
                       </p>
-                      <div className="mt-5">
+                      <div className="mt-3">
                         <div className="mb-2 flex items-center justify-between text-[10px] text-[var(--muted)]">
                           <span>制作进度</span>
                           <span className="timecode text-[#a5b4fc]">
@@ -339,7 +339,7 @@ export function Library({
                       </div>
                       </div>
                     </button>
-                    <div className="flex items-center justify-between border-t border-[var(--line)] bg-black/20 px-5 py-3">
+                    <div className="flex items-center justify-between border-t border-[var(--line)] bg-black/20 px-3 py-2">
                       <span className="timecode text-[10px] text-white/35">
                         {project.progress?.shots?.completed || 0}/{project.progress?.shots?.total || 0} SHOTS
                       </span>

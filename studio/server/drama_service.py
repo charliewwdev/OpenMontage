@@ -557,25 +557,6 @@ def _boost_restates_wrong_subject(text: str) -> bool:
     )
 
 
-def _still_retry_clause(kind: str, attempt: int, max_attempts: int) -> str:
-    """Kind-specific retry. Scenes must stay empty plates; a shared「禁止空镜」pushes them into portraits."""
-    tag = f" 【质检重试 {attempt}/{max_attempts}】"
-    if kind == "scene":
-        return (
-            tag
-            + "EMPTY LOCATION PLATE only. No people, no faces, no portraits. "
-            "必须是上述地点的无人空镜。"
-        )
-    if kind == "prop":
-        return (
-            tag
-            + "PRODUCT PHOTO of the single named object. "
-            "No people, no faces, no hands, no portrait, no scenery. "
-            "画面主体只有这一件道具。"
-        )
-    return tag + "ONE character portrait of the named person. 禁止航拍、城市空镜、风景、人群和第二个人物。"
-
-
 def build_entity_image_prompt(
     state: dict[str, Any],
     ent: dict[str, Any],
@@ -863,6 +844,7 @@ def generate_entity_image(
             force_illustration=force_illustration,
         )
 
+    from entity_prompts import PromptBuildContext, resolve_entity_prompt_strategy
     from providers.media import generate_image
     from skill_runtime import apply_experience_to_prompt, match_experience_patches, record_qa_failure
 
@@ -887,6 +869,19 @@ def generate_entity_image(
     negative = built.get("negativePrompt")
     kind = built["kind"]
     ratio = state["project"].get("ratio") or "9:16"
+    look, atmosphere = _split_character_desc(_clean_desc(ent.get("description") or "")) if kind == "character" else ("", "")
+    prompt_ctx = PromptBuildContext(
+        kind=kind,
+        name=str(ent.get("name") or ""),
+        variant=str(ent.get("variant") or ""),
+        desc=_clean_desc(ent.get("description") or ""),
+        style=str(built.get("style") or ""),
+        three_view=three_view,
+        force_illustration=force_illustration,
+        look=look,
+        atmosphere=atmosphere,
+    )
+    prompt_strategy = resolve_entity_prompt_strategy(prompt_ctx)
 
     ref = None
     denoise: float | None = None
@@ -895,8 +890,7 @@ def generate_entity_image(
     injury_bible = _soften_injury_entity_bible(ent) if injury_edit else ""
     if kind in _STILL_REF_LOCK and not injury_edit:
         # Default / non-injury: img2img from a passed still.
-        # Injury MUST NOT start from a clean headshot — that locks the Intact high collar
-        # and forces the model into face-wounds / blue plastic instead of shoulder gauze.
+        # Injury MUST NOT start from a clean headshot — that locks Intact wardrobe.
         ref = _entity_still_ref_path(store, project_id, state, ent)
         if ref is not None:
             prompt += _STILL_REF_LOCK[kind]
@@ -933,25 +927,8 @@ def generate_entity_image(
         max_attempts = max(max_attempts, 3)
     min_score = qa_min_score()
     pass_bar = 0.55 if injury_edit else min_score
-    who = f"{ent.get('name') or ''}{(' · ' + variant) if variant else ''}"
     if injury_edit:
-        # Primary path is text-to-image medium shot — gauze needs shoulder room the default
-        # close-up never has.
-        prompt = (
-            f"Photorealistic short-drama MEDIUM SHOT (chest-up) of ONE East Asian man 「{who}」. "
-            "LEFT shoulder AND upper arm wrapped in thick WHITE rolled surgical gauze "
-            "(cotton mesh texture, multiple layers), covering deltoid and clavicle. "
-            "Open black short coat over a dark shirt, coat may show blood stains. "
-            "Hard jawline, short black hair, pale sweaty face, cinematic still, vertical 9:16. "
-            "华语竖屏短剧半身定妆：左肩与上臂多层白色医用纱布包扎清晰，黑色短大衣敞开，不是脸部刀伤特写。"
-        )
-        negative = (
-            "forehead wound only, cheek laceration only, face cut as sole injury, "
-            "blue plastic sheet, rain poncho, PE apron, towel around neck, "
-            "clean intact high collar, head-and-shoulders crop hiding shoulders, "
-            "triangular arm sling strap only, bare clean shoulders, "
-            "landscape, cityscape, multiple people, fashion beauty shot"
-        )
+        # Stay on the injury strategy prompt — never hard-swap to a fixed “East Asian man” template.
         denoise = None
         ref = None
     base_prompt = prompt
@@ -959,34 +936,24 @@ def generate_entity_image(
     last_reason = ""
 
     for attempt in range(1, max_attempts + 1):
-        ptext = base_prompt
-        neg = negative
+        ptext, neg = prompt_strategy.paraphrase_attempt(
+            prompt_ctx,
+            attempt=attempt,
+            base_prompt=base_prompt,
+            base_negative=negative,
+        )
         attempt_ref = ref
         attempt_denoise = denoise
         judge_desc = injury_bible if injury_edit else str(ent.get("description") or "")
         if injury_edit:
-            if attempt == 2:
-                # Paraphrase — cotton dressing synonyms help CLIP more than repeating「绷带」.
-                ptext = (
-                    f"Cinematic half-body portrait of injured East Asian man 「{who}」. "
-                    "Surgical white cotton gauze dressing taped/wrapped on left deltoid and clavicle. "
-                    "Torn dark coat with dried blood. Sweaty pale skin. Medium shot shows both shoulders. "
-                    "左肩锁骨处白色医用纱布包扎清晰，破损黑大衣，半身构图。"
-                )
-            elif attempt >= 3 and ref is None:
-                # Last resort: loose img2img from default face ONLY if we can find it —
-                # denoise near 1 so wardrobe can rebuild.
+            if attempt >= 3 and ref is None:
+                # Last resort: loose img2img from default face so wardrobe can rebuild.
                 face_ref = _entity_still_ref_path(store, project_id, state, ent)
                 if face_ref is not None:
                     attempt_ref = face_ref
                     attempt_denoise = 0.94
-                    ptext = (
-                        base_prompt
-                        + " Keep a similar East Asian male face; rebuild wardrobe and shoulder gauze."
-                    )
             judge_desc = _INJURY_ACHIEVABLE_BIBLE
         if attempt > 1 and last_reason and not injury_edit:
-            # Skill 经验：非受伤变体按上次 QA reason 叠加补丁。
             record_qa_failure(
                 skill_id="drama-entity-still",
                 kind=kind,
@@ -1009,8 +976,7 @@ def generate_entity_image(
                     if not _boost_restates_wrong_subject(str(p.get("promptBoost") or ""))
                 ]
             ptext, neg = apply_experience_to_prompt(ptext, neg, retry_patches)
-            ptext += _still_retry_clause(kind, attempt, max_attempts)
-            # Portrait leak on props: drop any residual person cues and force tabletop product.
+            ptext += prompt_strategy.retry_clause(prompt_ctx, attempt=attempt, max_attempts=max_attempts)
             if kind == "prop" and any(
                 tok in last_reason.lower()
                 for tok in ("portrait", "person", "woman", "man", "character", "face", "人物", "肖像", "半身")
@@ -1025,9 +991,8 @@ def generate_entity_image(
                     (neg + ", ") if neg else ""
                 ) + "person, people, face, woman, man, portrait, hands, fingers, character sheet"
         elif attempt > 1 and not injury_edit:
-            ptext = ptext + _still_retry_clause(kind, attempt, max_attempts)
+            ptext = ptext + prompt_strategy.retry_clause(prompt_ctx, attempt=attempt, max_attempts=max_attempts)
         elif injury_edit and attempt > 1 and last_reason:
-            # Log failure for skill page, but do NOT stack CRITICAL dominate-frame boosts.
             record_qa_failure(
                 skill_id="drama-entity-still",
                 kind=kind,

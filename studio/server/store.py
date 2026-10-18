@@ -146,6 +146,7 @@ class ProjectStore:
         project.mkdir(parents=True, exist_ok=True)
         (project / "media" / "images").mkdir(parents=True, exist_ok=True)
         (project / "media" / "videos").mkdir(parents=True, exist_ok=True)
+        (project / "media" / "covers").mkdir(parents=True, exist_ok=True)
         (project / "media" / "exports").mkdir(parents=True, exist_ok=True)
 
     def _load_unlocked(self, project_id: str) -> dict[str, Any] | None:
@@ -404,10 +405,19 @@ class ProjectStore:
                 state = self.load(project_id) or state
         except Exception:
             pass
-        # attach media urls
+        # attach media urls (mtime query busts browser cache after in-place alpha punch)
         for ent in state.get("entities") or []:
             for img in ent.get("images") or []:
-                img["url"] = f"/api/media/{project_id}/{img['path']}"
+                rel = img.get("path") or ""
+                bust = ""
+                if rel:
+                    try:
+                        mp = self._dir(project_id) / rel
+                        if mp.is_file():
+                            bust = f"?t={int(mp.stat().st_mtime)}"
+                    except Exception:
+                        bust = ""
+                img["url"] = f"/api/media/{project_id}/{rel}{bust}" if rel else None
             sel = ent.get("selectedImageId")
             ent["selectedImage"] = next((i for i in (ent.get("images") or []) if i["id"] == sel), None)
         for shot in state.get("shots") or []:

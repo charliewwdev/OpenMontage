@@ -61,6 +61,7 @@ from drama_service import (  # noqa: E402
     revise_segment,
     start_segment_video,
     start_shot_video,
+    punch_entity_image_alpha,
     upload_entity_image,
     upsert_entity,
 )
@@ -797,6 +798,17 @@ def _build_jobs_payload() -> dict[str, Any]:
 @app.get("/api/settings/jobs")
 def get_jobs() -> dict[str, Any]:
     return _build_jobs_payload()
+
+
+@app.post("/api/settings/jobs/purge-satisfied-stills")
+def purge_satisfied_stills() -> dict[str, Any]:
+    """Drop queued entity_image jobs that already have a QA-passed still (no quality drop)."""
+    if not current_user_id():
+        raise _http_error(401, "login required")
+    from job_queue import purge_satisfied_entity_image_jobs, queue_stats
+
+    result = purge_satisfied_entity_image_jobs()
+    return {**result, "mediaQueue": queue_stats(), "jobs": _build_jobs_payload()}
 
 
 @app.websocket("/api/settings/jobs/ws")
@@ -1905,6 +1917,13 @@ async def entities_post(project_id: str, request: Request) -> dict[str, Any]:
             ext = body.get("ext") or "png"
         ver = upload_entity_image(STORE, pid, body["entityId"], base64.b64decode(b64), ext)
         return {"image": ver, "bundle": STORE.bundle(pid)}
+    if action in {"punch-alpha", "cutout", "抠透明底"}:
+        return punch_entity_image_alpha(
+            STORE,
+            pid,
+            body.get("entityId") or body.get("id"),
+            image_id=body.get("imageId"),
+        )
     ent = upsert_entity(STORE, pid, body)
     return {"entity": ent, "bundle": STORE.bundle(pid)}
 

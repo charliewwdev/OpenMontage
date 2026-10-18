@@ -1,22 +1,29 @@
-"""Punch near-white / light-gray studio backdrops to PNG alpha for cast & prop cutouts."""
+"""Punch seamless studio backdrops to PNG alpha for cast and prop cutouts."""
 
 from __future__ import annotations
 
+from collections import Counter
 from pathlib import Path
+
+
+def _dist2(a: tuple[int, int, int], b: tuple[int, int, int]) -> int:
+    return (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2
 
 
 def punch_light_background_to_alpha(
     path: Path,
     *,
-    threshold: int = 232,
-    min_corner_hits: int = 3,
+    color_tolerance: int = 38,
+    min_corner_hits: int = 5,
+    min_punch_ratio: float = 0.06,
+    max_punch_ratio: float = 0.92,
 ) -> bool:
     """
-    If most image corners are light (SceneMixer-style seamless plate), flood-fill
-    contiguous light pixels from the border to alpha=0 and rewrite as RGBA PNG.
+    Key the backdrop from border/corner samples (not absolute white).
 
-    Returns True when the file was rewritten. Soft-fails (False) when Pillow is
-    missing or the plate does not look like a light cutout backdrop.
+    Light studio plates are often mid light-gray (~180–220), which absolute
+    white thresholds miss. We pick the dominant edge color and flood-fill similar
+    pixels from the border to alpha=0, then rewrite as RGBA PNG.
     """
     try:
         from PIL import Image
@@ -36,30 +43,52 @@ def punch_light_background_to_alpha(
         return False
 
     px = im.load()
-    corners = [
-        (0, 0),
-        (w - 1, 0),
-        (0, h - 1),
-        (w - 1, h - 1),
-        (w // 2, 0),
-        (w // 2, h - 1),
-        (0, h // 2),
-        (w - 1, h // 2),
-    ]
+    samples: list[tuple[int, int, int]] = []
+    step = max(1, min(w, h) // 40)
+    for x in range(0, w, step):
+        for y in (0, h - 1):
+            r, g, b, a = px[x, y]
+            if a >= 16:
+                samples.append((r, g, b))
+    for y in range(0, h, step):
+        for x in (0, w - 1):
+            r, g, b, a = px[x, y]
+            if a >= 16:
+                samples.append((r, g, b))
 
-    def _is_light(rgb: tuple[int, int, int, int]) -> bool:
-        r, g, b, a = rgb
+    if len(samples) < 8:
+        return False
+
+    # Quantize to stabilize the backdrop key.
+    bucket = Counter(((r // 8) * 8, (g // 8) * 8, (b // 8) * 8) for r, g, b in samples)
+    key = bucket.most_common(1)[0][0]
+    # Reject keys that look like clothing/hair (high chroma or too dark).
+    chroma = max(key) - min(key)
+    luma = sum(key) / 3
+    if luma < 95 or chroma > 48:
+        return False
+
+    tol2 = color_tolerance * color_tolerance
+
+    def _is_bg(rgba: tuple[int, int, int, int]) -> bool:
+        r, g, b, a = rgba
         if a < 16:
             return True
-        if min(r, g, b) < threshold - 40:
+        if _dist2((r, g, b), key) > tol2:
             return False
-        # Near-white or soft studio gray (low chroma).
-        if max(r, g, b) - min(r, g, b) > 28:
+        # Keep near-neutral relative to key (avoid eating colored garment edges).
+        if abs((max(r, g, b) - min(r, g, b)) - chroma) > 36:
             return False
-        return (r + g + b) / 3 >= threshold
+        return True
 
-    hits = sum(1 for xy in corners if _is_light(px[xy[0], xy[1]]))
-    if hits < min_corner_hits:
+    edge_hits = 0
+    for x in range(0, w, max(1, w // 16)):
+        if _is_bg(px[x, 0]) or _is_bg(px[x, h - 1]):
+            edge_hits += 1
+    for y in range(0, h, max(1, h // 16)):
+        if _is_bg(px[0, y]) or _is_bg(px[w - 1, y]):
+            edge_hits += 1
+    if edge_hits < min_corner_hits:
         return False
 
     visited = bytearray(w * h)
@@ -81,14 +110,14 @@ def punch_light_background_to_alpha(
             continue
         visited[i] = 1
         rgba = px[x, y]
-        if not _is_light(rgba):
+        if not _is_bg(rgba):
             continue
         px[x, y] = (rgba[0], rgba[1], rgba[2], 0)
         punched += 1
         stack.extend(((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)))
 
-    # Require a meaningful backdrop area so we don't nuke a full-bleed plate.
-    if punched < (w * h) * 0.08:
+    ratio = punched / float(w * h)
+    if ratio < min_punch_ratio or ratio > max_punch_ratio:
         return False
 
     im.save(p, format="PNG")

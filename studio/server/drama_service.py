@@ -683,7 +683,7 @@ _STILL_REF_LOCK = {
 
 # Vision QA used to require「绷带占满画面」— RealVis never hits that, so retries loop forever.
 _INJURY_ACHIEVABLE_BIBLE = (
-    "East Asian man, chest-up medium shot. "
+    "East Asian man, full-body standing character sheet. "
     "White cotton/gauze medical wrap visible on the upper body "
     "(shoulder, clavicle, upper chest, or upper arm near the shoulder — a gauze-like sling counts). "
     "Dark coat optional. Face may look pale/sweaty. "
@@ -911,7 +911,7 @@ def generate_entity_image(
         *,
         reference_path: Path | None,
         strength: float | None,
-    ) -> tuple[str, Path]:
+    ) -> tuple[str, Path, bool]:
         rel_path = f"media/images/{img_id}.png"
         dest = store._dir(project_id) / rel_path
         generate_image(
@@ -922,16 +922,17 @@ def generate_entity_image(
             negative_prompt=neg,
             denoise=strength,
         )
-        # Character / prop: SceneMixer-style cutout — punch light seamless plate to alpha PNG.
+        # Character / prop: Cutout — punch light seamless plate to alpha PNG.
+        punched = False
         if kind in {"character", "prop"}:
             try:
                 from entity_alpha import punch_light_background_to_alpha
 
-                punch_light_background_to_alpha(dest)
+                punched = bool(punch_light_background_to_alpha(dest))
             except Exception:
-                pass
+                punched = False
         store.persist_media(project_id, rel_path)
-        return rel_path, dest
+        return rel_path, dest, punched
 
     from prompt_qa import entity_qa_max_attempts, judge_image_against_prompt, qa_meets_bar, qa_min_score
 
@@ -1007,8 +1008,9 @@ def generate_entity_image(
                 projects_root=projects_root,
             )
         img_id = new_id("img_")
+        punched = False
         try:
-            rel, out = _gen_once(
+            rel, out, punched = _gen_once(
                 ptext,
                 neg,
                 img_id,
@@ -1065,6 +1067,7 @@ def generate_entity_image(
             "negativePrompt": neg,
             "qa": qa,
             "qaPass": qa_meets_bar(qa, min_score=pass_bar),
+            "alphaCutout": bool(punched),
             "createdAt": _now(),
         }
         if best is None:
@@ -1158,12 +1161,18 @@ def generate_entity_image(
         ent["imageError"] = str(
             (version.get("qa") or {}).get("reason") or last_reason or "generate_failed"
         )[:300]
-    # Prefer character still as project library cover
+    # Fallback library cover from character still only when no designed cover yet
     proj = state.get("project") or {}
-    if version.get("qaPass") and version.get("path") and (
-        ent.get("kind") == "character" or not proj.get("coverPath")
+    if (
+        version.get("qaPass")
+        and version.get("path")
+        and not proj.get("coverLocked")
+        and proj.get("coverSource") not in {"video_first_frame", "upload"}
+        and (not proj.get("coverPath") or proj.get("coverSource") in {None, "", "entity_still", "auto"})
+        and ent.get("kind") == "character"
     ):
         proj["coverPath"] = version["path"]
+        proj["coverSource"] = "entity_still"
         proj["updatedAt"] = _now()
         state["project"] = proj
     if version.get("qaPass") and version.get("path"):
@@ -1633,9 +1642,18 @@ def select_entity_image(store: ProjectStore, project_id: str, entity_id: str, im
             e["updatedAt"] = _now()
             hit = next((i for i in (e.get("images") or []) if i.get("id") == image_id), None)
             sync_entity_qa_flags(e)
-            if hit and hit.get("path") and (e.get("kind") == "character" or not (state.get("project") or {}).get("coverPath")):
-                state.setdefault("project", {})["coverPath"] = hit["path"]
-                state["project"]["updatedAt"] = _now()
+            proj = state.setdefault("project", {})
+            if (
+                hit
+                and hit.get("path")
+                and e.get("kind") == "character"
+                and not proj.get("coverLocked")
+                and proj.get("coverSource") not in {"video_first_frame", "upload"}
+                and (not proj.get("coverPath") or proj.get("coverSource") in {None, "", "entity_still", "auto"})
+            ):
+                proj["coverPath"] = hit["path"]
+                proj["coverSource"] = "entity_still"
+                proj["updatedAt"] = _now()
             _mark_shots_stale(
                 state,
                 entity_id=entity_id,
@@ -1653,14 +1671,35 @@ def upload_entity_image(store: ProjectStore, project_id: str, entity_id: str, da
     if not ent:
         raise FileNotFoundError("entity not found")
     img_id = new_id("img_")
-    rel = f"media/images/{img_id}.{ext.lstrip('.')}"
+    kind = str(ent.get("kind") or "")
+    # Character / prop cutouts always land as PNG so alpha punch can stick.
+    use_ext = "png" if kind in {"character", "prop"} else ext.lstrip(".")
+    rel = f"media/images/{img_id}.{use_ext}"
     store.write_media(project_id, rel, data)
+    if kind in {"character", "prop"}:
+        try:
+            from entity_alpha import punch_light_background_to_alpha
+            from PIL import Image
+            import io
+
+            dest = store._dir(project_id) / rel
+            # Normalize uploads (jpg/webp) to RGBA PNG before keying.
+            im = Image.open(io.BytesIO(data)).convert("RGBA")
+            im.save(dest, format="PNG")
+            punched = punch_light_background_to_alpha(dest)
+            store.persist_media(project_id, rel)
+            version_meta = {"alphaCutout": bool(punched)}
+        except Exception:
+            version_meta = {}
+    else:
+        version_meta = {}
     version = {
         "id": img_id,
         "entityId": entity_id,
         "path": rel,
         "prompt": "local-upload",
         "createdAt": _now(),
+        **version_meta,
     }
     ent.setdefault("images", []).append(version)
     ent["selectedImageId"] = img_id
@@ -1672,6 +1711,54 @@ def upload_entity_image(store: ProjectStore, project_id: str, entity_id: str, da
     )
     store.save(state)
     return version
+
+
+def punch_entity_image_alpha(
+    store: ProjectStore,
+    project_id: str,
+    entity_id: str,
+    *,
+    image_id: str | None = None,
+) -> dict:
+    """Retrofit: punch seamless plate on an existing still to transparent PNG."""
+    state = store.load(project_id)
+    if not state:
+        raise FileNotFoundError("project not found")
+    ent = next((e for e in state.get("entities") or [] if e["id"] == entity_id), None)
+    if not ent:
+        raise FileNotFoundError("entity not found")
+    kind = str(ent.get("kind") or "")
+    if kind not in {"character", "prop"}:
+        raise ValueError("仅角色与道具支持抠透明底")
+    sid = image_id or ent.get("selectedImageId")
+    hit = next((i for i in (ent.get("images") or []) if i.get("id") == sid), None)
+    if not hit or not hit.get("path"):
+        raise FileNotFoundError("image not found")
+    src = store.ensure_media(project_id, hit["path"])
+    if not src or not Path(src).is_file():
+        raise FileNotFoundError("image file missing")
+
+    from entity_alpha import punch_light_background_to_alpha
+    from PIL import Image
+
+    src_path = Path(src)
+    # Always rewrite as PNG under the same image id so alpha survives.
+    rel = f"media/images/{hit['id']}.png"
+    dest = store._dir(project_id) / rel
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    im = Image.open(src_path).convert("RGBA")
+    im.save(dest, format="PNG")
+    ok = punch_light_background_to_alpha(dest)
+    if not ok:
+        # Still keep RGBA PNG (may already be transparent, or plate too dark/colored).
+        pass
+    store.persist_media(project_id, rel)
+    hit["path"] = rel
+    hit["alphaCutout"] = bool(ok)
+    hit["updatedAt"] = _now()
+    ent["updatedAt"] = _now()
+    store.save(state)
+    return {"image": hit, "punched": bool(ok), "bundle": store.bundle(project_id)}
 
 
 _JUNK_TRIGGER = re.compile(
@@ -1703,7 +1790,7 @@ def _compose_short_drama_prompt(
     shot_order: int = 1,
     duration: int = 4,
 ) -> str:
-    """Build one SceneMixer-style beat: shot mark, who/where, one action, lip-sync, close lips."""
+    """Build one beat: shot mark, who/where, one action, lip-sync, close lips."""
     chars = [str(c).strip() for c in (characters or []) if str(c).strip()]
     lead = f"@{chars[0]}" if chars else "@主角"
     other = f"@{chars[1]}" if len(chars) > 1 else ""
@@ -1880,7 +1967,7 @@ def bind_episode_refs(store: ProjectStore, project_id: str, episode_id: str) -> 
     return out
 
 
-# SceneMixer-aligned: ~12 segments × 3–4 beats; episode ~2.5–6 min.
+# Segment pacing: ~12 segments × 3–4 beats; episode ~2.5–6 min.
 _STORYBOARD_SEG_MIN = 10
 _STORYBOARD_SEG_MAX = 14
 _STORYBOARD_SHOT_MIN = 30  # 10×3
@@ -1904,7 +1991,7 @@ def _materialize_one_beat(
     segment_meta: dict | None = None,
     ts: str | None = None,
 ) -> dict:
-    """One SceneMixer beat → store shot row (video unit is the segment, not the beat)."""
+    """One beat → store shot row (video unit is the segment, not the beat)."""
     ts = ts or _now()
     meta = segment_meta or {}
     prompt = (sh.get("prompt") or "").strip()
@@ -2028,7 +2115,7 @@ def _materialize_storyboard_segments(
     available: list[dict],
     style_hint: str,
 ) -> list[dict]:
-    """SceneMixer segments[] → flat shot rows with segmentOrder / beatIndex."""
+    """segments[] → flat shot rows with segmentOrder / beatIndex."""
     ts = _now()
     shots: list[dict] = []
     shot_order = 0
@@ -2842,7 +2929,7 @@ def start_segment_video(
     skip_refs: bool = False,
     force_entity_qa: bool = False,
 ) -> dict:
-    """Generate one video for a SceneMixer segment (all beats in one Seedance/H3 call)."""
+    """Generate one video for a segment (all beats in one Seedance/H3 call)."""
     state = store.load(project_id)
     if not state:
         raise FileNotFoundError("project not found")
@@ -2903,15 +2990,32 @@ def start_segment_video(
         s["error"] = None
         s["updatedAt"] = _now()
     store.save(state)
-    return start_shot_video(
-        store,
-        project_id,
-        lead["id"],
-        model=model,
-        resolution=resolution,
-        skip_refs=skip_refs,
-        force_entity_qa=force_entity_qa,
-    )
+    try:
+        return start_shot_video(
+            store,
+            project_id,
+            lead["id"],
+            model=model,
+            resolution=resolution,
+            skip_refs=skip_refs,
+            force_entity_qa=force_entity_qa,
+        )
+    except Exception:
+        # Submit failed after siblings were marked generating — unwind zombie flags.
+        state2 = store.load(project_id) or state
+        sib_ids = {s["id"] for s in seg["shots"]}
+        touched = False
+        for s in state2.get("shots") or []:
+            if s.get("id") not in sib_ids:
+                continue
+            if s.get("status") == "generating" and not s.get("providerTaskId"):
+                s["status"] = "pending"
+                s["error"] = "提交失败，已重置"
+                s["updatedAt"] = _now()
+                touched = True
+        if touched:
+            store.save(state2)
+        raise
 
 
 def start_shot_video(
@@ -2933,7 +3037,7 @@ def start_shot_video(
     if not shot:
         raise FileNotFoundError("shot not found")
     if shot.get("status") == "generating" and not shot.get("_segmentPromptOverride"):
-        # Allow retry if the poll thread died / hung (stuck > 20 minutes).
+        # Live job (has task) → wait up to 20 min; zombie (no task/video) → reset after 90s.
         try:
             from datetime import datetime, timezone
 
@@ -2944,10 +3048,12 @@ def start_shot_video(
                 if ts.tzinfo is None:
                     ts = ts.replace(tzinfo=timezone.utc)
                 age_s = (datetime.now(timezone.utc) - ts).total_seconds()
-            if age_s < 20 * 60:
+            zombie = not shot.get("providerTaskId") and not (shot.get("videos") or shot.get("selectedVideoId"))
+            limit = 90 if zombie else 20 * 60
+            if age_s < limit:
                 raise RuntimeError("该镜头正在生成")
             shot["status"] = "pending"
-            shot["error"] = "上次生成超时，已自动重置"
+            shot["error"] = "空转生成状态已重置" if zombie else "上次生成超时，已自动重置"
             shot["providerTaskId"] = None
         except RuntimeError:
             raise
@@ -3140,8 +3246,18 @@ def _wait_shot_terminal(
     return poll_shot(store, project_id, shot_id)
 
 
-def _reset_stale_segment_generating(shots: list[dict[str, Any]], *, max_age_s: float = 20 * 60) -> bool:
-    """Clear generating flags left behind after a worker restart or a timed-out render."""
+def _reset_stale_segment_generating(
+    shots: list[dict[str, Any]],
+    *,
+    max_age_s: float = 20 * 60,
+    zombie_age_s: float = 90,
+) -> bool:
+    """Clear generating flags left behind after a worker restart or a timed-out render.
+
+    Zombie = status generating but no provider task and no video yet — common after
+    deploy when siblings were marked generating before submit failed/died. Those must
+    clear far sooner than a live Comfy/Hailuo job (which has a task id).
+    """
     from datetime import datetime, timezone
 
     now = datetime.now(timezone.utc)
@@ -3158,14 +3274,38 @@ def _reset_stale_segment_generating(shots: list[dict[str, Any]], *, max_age_s: f
             age_s = (now - ts).total_seconds()
         except Exception:
             age_s = max_age_s
-        if age_s < max_age_s:
+        has_task = bool(shot.get("providerTaskId"))
+        has_video = bool(shot.get("videos") or shot.get("selectedVideoId"))
+        zombie = (not has_task) and (not has_video)
+        limit = zombie_age_s if zombie else max_age_s
+        if age_s < limit:
             continue
         shot["status"] = "pending"
-        shot["error"] = "上次生成超时，已自动重置"
+        shot["error"] = "上次生成超时，已自动重置" if not zombie else "空转生成状态已重置"
         shot["providerTaskId"] = None
         shot["updatedAt"] = _now()
         changed = True
     return changed
+
+
+def reset_zombie_generating_shots(store: ProjectStore, project_id: str) -> int:
+    """Project-wide clear of stuck generating shots (no task / no video). Returns count."""
+    state = store.load(project_id)
+    if not state:
+        return 0
+    shots = [s for s in (state.get("shots") or []) if not s.get("deletedAt")]
+    before = {
+        s["id"]
+        for s in shots
+        if s.get("status") == "generating"
+        and not s.get("providerTaskId")
+        and not (s.get("videos") or s.get("selectedVideoId"))
+    }
+    # zombie_age_s=0 → clear any generating-without-task immediately (recovery / resume).
+    if not _reset_stale_segment_generating(shots, zombie_age_s=0):
+        return 0
+    store.save(state)
+    return len(before)
 
 
 def _segment_video_already_passed(lead: dict[str, Any] | None) -> bool:
@@ -3388,7 +3528,7 @@ def ensure_edit_draft(store: ProjectStore, project_id: str, episode_id: str) -> 
     ]
     has_segments = any(int(s.get("segmentOrder") or 0) > 0 for s in ready)
     if has_segments:
-        # One timeline clip per SceneMixer segment (lead beat holds the take).
+        # One timeline clip per segment (lead beat holds the take).
         ready = [
             s
             for s in ready
@@ -3640,4 +3780,47 @@ def patch_project(store: ProjectStore, project_id: str, fields: dict) -> dict:
     ]:
         if src in fields:
             p[key] = fields[src]
+    # Cover design fields (still / first-frame / upload)
+    cover_keys = (
+        "coverPath",
+        "coverFormatId",
+        "coverTitle",
+        "coverLocked",
+        "coverSourcePath",
+    )
+    if any(k in fields for k in cover_keys) or fields.get("action") in {
+        "cover-from-video",
+        "cover-upload",
+        "cover-patch",
+    }:
+        from cover_service import patch_cover_settings, set_cover_from_upload, set_cover_from_video
+
+        action = str(fields.get("action") or "").strip()
+        if action == "cover-from-video":
+            set_cover_from_video(
+                store,
+                project_id,
+                str(fields.get("videoPath") or fields.get("coverSourcePath") or ""),
+                format_id=fields.get("coverFormatId"),
+                title=fields.get("coverTitle"),
+                force=bool(fields.get("force")),
+            )
+            return store.load(project_id) or state
+        if action == "cover-upload" and fields.get("data"):
+            import base64
+
+            raw = fields.get("data") or ""
+            if isinstance(raw, str) and "," in raw:
+                raw = raw.split(",", 1)[1]
+            set_cover_from_upload(
+                store,
+                project_id,
+                base64.b64decode(raw),
+                ext=str(fields.get("ext") or "jpg"),
+                format_id=fields.get("coverFormatId"),
+                lock=fields.get("coverLocked", True) is not False,
+            )
+            return store.load(project_id) or state
+        patch_cover_settings(store, project_id, fields)
+        return store.load(project_id) or state
     return store.save(state)

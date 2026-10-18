@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { FileText, ImagePlus, Loader2, Maximize2, Plus, RefreshCw, ShieldCheck, Sparkles, Trash2, Upload, X } from "lucide-react";
+import { Eraser, FileText, ImagePlus, Loader2, Maximize2, Plus, RefreshCw, ShieldCheck, Sparkles, Trash2, Upload, X } from "lucide-react";
 import { api } from "../../api";
 import { requireCapability, toastMaybeKeys } from "../../lib/keys";
 import { toast } from "../../lib/toast";
@@ -306,6 +306,29 @@ export function EntityStep({
     reader.readAsDataURL(file);
   };
 
+  const punchAlpha = async (entity) => {
+    if (!entity?.selectedImage || !["character", "prop"].includes(entity.kind)) return;
+    if (onRequireAuth && !onRequireAuth()) return;
+    setWorking(entity.id, true);
+    try {
+      const res = await api(`/api/projects/${encodeURIComponent(projectId)}/entities`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "punch-alpha",
+          entityId: entity.id,
+          imageId: entity.selectedImageId,
+        }),
+      });
+      apply(res);
+      toast.success(res?.punched ? "已抠成透明底" : "已转 PNG（底板未能自动抠除）");
+    } catch (e) {
+      toast.error(String(e.message || e));
+    } finally {
+      setWorking(entity.id, false);
+    }
+  };
+
   const selectVersion = async (entity, imageId) => {
     try {
       const res = await api(`/api/projects/${encodeURIComponent(projectId)}/entities`, {
@@ -405,6 +428,7 @@ export function EntityStep({
               working={workingIds.has(entity.id) || entity.imageStatus === "generating"}
               onGenerate={generate}
               onUpload={upload}
+              onPunchAlpha={punchAlpha}
               onSelect={selectVersion}
               onUpdate={update}
               onDelete={remove}
@@ -489,7 +513,7 @@ export function EntityStep({
   );
 }
 
-function EntityCard({ entity, accent, working, onGenerate, onUpload, onSelect, onUpdate, onDelete, promptPayload, onLoadPrompt }) {
+function EntityCard({ entity, accent, working, onGenerate, onUpload, onPunchAlpha, onSelect, onUpdate, onDelete, promptPayload, onLoadPrompt }) {
   const uploadRef = useRef(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [cardTab, setCardTab] = useState("edit"); // edit | prompt
@@ -585,23 +609,27 @@ function EntityCard({ entity, accent, working, onGenerate, onUpload, onSelect, o
         ) : (
           <>
             <div
-              className={`relative aspect-[4/3] ${
-                entity.kind === "scene" ? "bg-black/40" : "asset-cutout-bg"
-              }`}
+              className={`relative ${
+                entity.kind === "character"
+                  ? "aspect-[3/4]"
+                  : entity.kind === "prop"
+                    ? "aspect-square"
+                    : "aspect-[4/3]"
+              } ${entity.kind === "scene" ? "bg-black/40" : "asset-cutout-bg"}`}
             >
               {entity.selectedImage ? (
                 <button
                   type="button"
-                  className="group relative h-full w-full cursor-zoom-in overflow-hidden"
+                  className="relative h-full w-full cursor-zoom-in overflow-hidden"
                   onClick={() => setPreviewUrl(entity.selectedImage?.url || null)}
                 >
                   <img
                     src={entity.selectedImage.url}
                     alt={previewAlt}
-                    className="h-full w-full object-contain object-center transition-transform duration-300 group-hover:scale-[1.02]"
+                    className="h-full w-full object-contain object-center"
                   />
-                  <span className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-[var(--navy)]/80 px-2.5 py-1.5 text-[10px] font-semibold text-white opacity-0 backdrop-blur-sm transition-opacity group-hover:opacity-100">
-                    <Maximize2 className="h-3 w-3" /> 查看大图
+                  <span className="pointer-events-none absolute bottom-3 right-3 flex items-center gap-1 rounded-md bg-[var(--navy)]/70 px-2 py-1 text-[10px] font-medium text-white/80">
+                    <Maximize2 className="h-3 w-3" /> 大图
                   </span>
                 </button>
               ) : (
@@ -695,6 +723,17 @@ function EntityCard({ entity, accent, working, onGenerate, onUpload, onSelect, o
                 >
                   <RefreshCw className="h-3.5 w-3.5" /> 参考重绘
                 </button>
+                {["character", "prop"].includes(entity.kind) ? (
+                  <button
+                    type="button"
+                    className="btn-secondary col-span-2"
+                    disabled={locked || !entity.selectedImage}
+                    onClick={() => void onPunchAlpha?.(entity)}
+                    title="把无缝浅色底板键控成透明 PNG"
+                  >
+                    <Eraser className="h-3.5 w-3.5" /> 抠透明底
+                  </button>
+                ) : null}
                 <button type="button" className="btn-secondary col-span-2" disabled={locked} onClick={() => uploadRef.current?.click()}>
                   <Upload className="h-3.5 w-3.5" /> 上传本地图
                 </button>

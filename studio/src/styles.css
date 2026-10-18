@@ -464,7 +464,7 @@ button:disabled {
      frame and appear stuck to the bottom of the viewport. */
 }
 
-/* Transparent cutout plates (character / prop) — SceneMixer-style checker. */
+/* Transparent cutout plates (character / prop). */
 .asset-cutout-bg {
   background-color: #1a1d27;
   background-image:

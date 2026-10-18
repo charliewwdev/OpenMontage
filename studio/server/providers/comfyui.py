@@ -43,7 +43,15 @@ def _uses_latin_clip(model_label: str) -> bool:
 def clip_identity_prefix(raw: str) -> str:
     """English locks RealVis/SDXL must see first. Chinese CLIP drops gender, age, and spirit form."""
     text = raw or ""
-    if any(k in text for k in ("无实体", "灵光聚", "珠影", "淡紫色灵光")):
+    try:
+        from entity_prompts.types import SPIRIT_MARKERS, is_spirit
+    except Exception:
+        SPIRIT_MARKERS = ("无实体", "灵光聚", "珠影", "淡紫色灵光")  # type: ignore[misc]
+
+        def is_spirit(*, name: str = "", desc: str = "") -> bool:  # type: ignore[misc]
+            return any(k in f"{name}{desc}" for k in SPIRIT_MARKERS)
+
+    if is_spirit(name="", desc=text) or any(k in text for k in SPIRIT_MARKERS):
         return (
             "NOT a human, NOT a portrait, NOT a woman, NO face, NO body, NO clothes. "
             "A small translucent lavender glowing orb with faint star-pattern shimmer, "

@@ -18,6 +18,21 @@ class EntityPromptStrategy(Protocol):
 
     def build(self, ctx: PromptBuildContext) -> tuple[str, str | None]: ...
 
+    def retry_clause(self, ctx: PromptBuildContext, *, attempt: int, max_attempts: int) -> str:
+        """Kind-specific QA retry suffix. Scenes stay empty plates."""
+        ...
+
+    def paraphrase_attempt(
+        self,
+        ctx: PromptBuildContext,
+        *,
+        attempt: int,
+        base_prompt: str,
+        base_negative: str | None,
+    ) -> tuple[str, str | None]:
+        """Optional attempt rewrite (injury ladder). Default: keep base."""
+        ...
+
 
 def register_entity_prompt_strategy(strategy: EntityPromptStrategy, *, priority: int) -> EntityPromptStrategy:
     return ENTITY_PROMPT_STRATEGIES.register(strategy.id, strategy, priority=priority)
@@ -33,7 +48,38 @@ def resolve_entity_prompt_strategy(ctx: PromptBuildContext) -> EntityPromptStrat
     return fallback
 
 
-class _SpiritPrompt:
+class _PromptDefaults:
+    def retry_clause(self, ctx: PromptBuildContext, *, attempt: int, max_attempts: int) -> str:
+        tag = f" 【质检重试 {attempt}/{max_attempts}】"
+        if ctx.kind == "scene":
+            return (
+                tag
+                + "EMPTY LOCATION PLATE only. No people, no faces, no portraits. "
+                "必须是上述地点的无人空镜。"
+            )
+        if ctx.kind == "prop":
+            return (
+                tag
+                + "PRODUCT PHOTO of the single named object. "
+                "No people, no faces, no hands, no portrait, no scenery. "
+                "画面主体只有这一件道具。"
+            )
+        if self.id == "spirit":  # type: ignore[attr-defined]
+            return tag + "SPIRIT LIGHT orb only. Not a human portrait."
+        return tag + "ONE character portrait of the named person. 禁止航拍、城市空镜、风景、人群和第二个人物。"
+
+    def paraphrase_attempt(
+        self,
+        ctx: PromptBuildContext,
+        *,
+        attempt: int,
+        base_prompt: str,
+        base_negative: str | None,
+    ) -> tuple[str, str | None]:
+        return base_prompt, base_negative
+
+
+class _SpiritPrompt(_PromptDefaults):
     id = "spirit"
 
     def match(self, ctx: PromptBuildContext) -> bool:
@@ -55,7 +101,7 @@ class _SpiritPrompt:
         return prompt, negative
 
 
-class _InjuryCharacterPrompt:
+class _InjuryCharacterPrompt(_PromptDefaults):
     id = "injury_character"
 
     def match(self, ctx: PromptBuildContext) -> bool:
@@ -83,8 +129,32 @@ class _InjuryCharacterPrompt:
         )
         return prompt, negative
 
+    def paraphrase_attempt(
+        self,
+        ctx: PromptBuildContext,
+        *,
+        attempt: int,
+        base_prompt: str,
+        base_negative: str | None,
+    ) -> tuple[str, str | None]:
+        if attempt <= 1:
+            return base_prompt, base_negative
+        if attempt == 2:
+            # Synonyms help CLIP more than repeating「绷带」.
+            return (
+                f"Cinematic half-body portrait of injured character 「{ctx.who}」. "
+                "Surgical white cotton gauze dressing taped/wrapped on left deltoid and clavicle. "
+                "Torn dark coat with dried blood. Sweaty pale skin. Medium shot shows both shoulders. "
+                "左肩锁骨处白色医用纱布包扎清晰，破损外套，半身构图。"
+                f" Keep identity: {ctx.look or ctx.desc or ctx.name}."
+            ), base_negative
+        return (
+            base_prompt
+            + " Keep a similar face identity; rebuild wardrobe and shoulder gauze."
+        ), base_negative
 
-class _CharacterPrompt:
+
+class _CharacterPrompt(_PromptDefaults):
     id = "character"
 
     def match(self, ctx: PromptBuildContext) -> bool:
@@ -137,7 +207,7 @@ class _CharacterPrompt:
         return prompt, negative
 
 
-class _ScenePrompt:
+class _ScenePrompt(_PromptDefaults):
     id = "scene"
 
     def match(self, ctx: PromptBuildContext) -> bool:
@@ -159,7 +229,7 @@ class _ScenePrompt:
         return prompt, negative
 
 
-class _PropPrompt:
+class _PropPrompt(_PromptDefaults):
     id = "prop"
 
     def match(self, ctx: PromptBuildContext) -> bool:

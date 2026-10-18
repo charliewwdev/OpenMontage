@@ -106,9 +106,11 @@ class _InjuryCharacterStrategy:
     def vision_system(self, ctx: QaContext) -> str:
         return _json_preamble("practical media QA judge for short-drama injury stills") + (
             "Be lenient on injury wardrobe when white gauze/cotton wrap is visible on the upper body. "
-            "PASS only if the image clearly shows a human character portrait / half-body / full-body "
-            "matching the description (single person preferred). FAIL for aerial cityscapes, "
-            "landscapes, crowded streets, empty rooms, props-only, or animals unless the prompt asks for them."
+            "PASS only if the image clearly shows a human character in MEDIUM SHOT chest-up "
+            "(head fully in frame + both shoulders visible) matching the description. "
+            "FAIL extreme face close-ups (forehead/eyes only), full-body wide shots with feet, "
+            "aerial cityscapes, landscapes, crowded streets, empty rooms, props-only, or animals "
+            "unless the prompt asks for them."
             + _gender_rule(ctx.gender)
         )
 
@@ -145,9 +147,14 @@ class _CharacterStrategy:
 
     def vision_system(self, ctx: QaContext) -> str:
         return _json_preamble("strict media QA judge for short-drama production") + (
-            "PASS only if the image clearly shows a human character portrait / half-body / full-body "
-            "matching the description (single person preferred). FAIL for aerial cityscapes, "
-            "landscapes, crowded streets, empty rooms, props-only, or animals unless the prompt asks for them."
+            "PASS only if the image clearly shows ONE human character in MEDIUM SHOT chest-up: "
+            "head fully in frame with a little headroom, both shoulders visible, face centered. "
+            "Matching the description (single person preferred). "
+            "FAIL extreme face close-ups (forehead/eyes-only crops), FAIL full-body / full-length "
+            "wide shots where feet or the whole standing figure dominates, "
+            "FAIL aerial cityscapes, landscapes, crowded streets, empty rooms, props-only, "
+            "or animals unless the prompt asks for them. "
+            "If framing is wrong, reason MUST include 'extreme close-up' or 'full-body wide'."
             + _gender_rule(ctx.gender)
         )
 
@@ -159,8 +166,10 @@ class _CharacterStrategy:
         return (
             f"Asset kind: character\n"
             f"{name_line}{desc_line}"
+            "Framing rubric: require MEDIUM SHOT chest-up (head + both shoulders). "
+            "Reject extreme close-up and full-body wide.\n"
             f"Generation prompt (truncated):\n{ctx.prompt[:1200]}\n\n"
-            "Does the attached image match this prompt, bible, and kind rules?"
+            "Does the attached image match this prompt, bible, framing, and kind rules?"
         )
 
     def gate_ids(self, ctx: QaContext) -> list[str]:

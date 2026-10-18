@@ -466,6 +466,7 @@ def _handle_fill_stills(payload: dict[str, Any]) -> Any:
         kinds=payload.get("kinds") or ["character", "scene"],
         entity_ids=payload.get("entityIds"),
         only_missing=payload.get("onlyMissing", True) is not False,
+        force_refresh_kinds=payload.get("forceRefreshKinds") or [],
         # Nested generates already enqueue; run fill coordinator inline.
         wait_generate=False,
     )

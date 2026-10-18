@@ -1869,6 +1869,7 @@ async def entities_post(project_id: str, request: Request) -> dict[str, Any]:
                     "kinds": body.get("kinds") or ["character", "scene"],
                     "entityIds": body.get("entityIds"),
                     "onlyMissing": body.get("onlyMissing", True) is not False,
+                    "forceRefreshKinds": body.get("forceRefreshKinds") or [],
                 },
             )
             return {**stub, "async": True, "bundle": STORE.bundle(pid)}
@@ -1880,6 +1881,7 @@ async def entities_post(project_id: str, request: Request) -> dict[str, Any]:
             kinds=body.get("kinds") or ["character", "scene"],
             entity_ids=body.get("entityIds"),
             only_missing=body.get("onlyMissing", True) is not False,
+            force_refresh_kinds=body.get("forceRefreshKinds") or [],
         )
         return {**summary, "bundle": STORE.bundle(pid)}
     if action == "job-stats":

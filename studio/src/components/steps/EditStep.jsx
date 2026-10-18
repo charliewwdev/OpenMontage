@@ -523,12 +523,16 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
                                 : "border-[var(--line)] opacity-80"
                             }`}
                           >
-                            <div className={`bg-black/40 ${block.kind === "character" ? "aspect-[3/4]" : "aspect-video"}`}>
+                            <div className={`bg-black/50 ${block.kind === "character" ? "aspect-[3/4]" : "aspect-video"}`}>
                               {ent.selectedImage?.url ? (
                                 <img
                                   src={ent.selectedImage.url}
                                   alt=""
-                                  className={`h-full w-full object-cover ${block.kind === "character" ? "object-top" : ""}`}
+                                  className={
+                                    block.kind === "character"
+                                      ? "h-full w-full object-contain object-center"
+                                      : "h-full w-full object-cover"
+                                  }
                                 />
                               ) : null}
                             </div>

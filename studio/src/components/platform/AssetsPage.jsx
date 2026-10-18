@@ -502,16 +502,26 @@ export function AssetsPage({ onUsePrompt }) {
                           ✓
                         </span>
                       ) : null}
-                      <div className="relative flex aspect-video items-center justify-center bg-black/40">
+                      <div className="relative flex aspect-video items-center justify-center bg-[#11131a]">
                         {item.broken ? (
                           <div className="flex flex-col items-center gap-1 px-3 text-center text-[11px] text-[#f87171]">
                             <ImageIcon className="h-7 w-7 opacity-70" />
                             损坏 / 空文件
                           </div>
                         ) : item.kind === "video" ? (
-                          <video src={item.url} className="h-full w-full object-cover" muted />
+                          <video
+                            src={item.url}
+                            className="max-h-full max-w-full object-contain object-center"
+                            muted
+                            playsInline
+                            preload="metadata"
+                          />
                         ) : item.kind === "image" ? (
-                          <img src={item.url} alt="" className="h-full w-full object-cover" />
+                          <img
+                            src={item.url}
+                            alt=""
+                            className="max-h-full max-w-full object-contain object-center"
+                          />
                         ) : item.kind === "doc" ? (
                           <FileText className="h-8 w-8 text-white/30" />
                         ) : (

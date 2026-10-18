@@ -461,6 +461,10 @@ def upsert_entity(store: ProjectStore, project_id: str, payload: dict) -> dict:
                 for key in ("name", "variant", "description", "category", "imageStatus", "imageError"):
                     if key in payload:
                         e[key] = payload[key]
+                if isinstance(payload.get("metadata"), dict):
+                    base = dict(e.get("metadata") or {})
+                    base.update({k: v for k, v in payload["metadata"].items() if v is not None})
+                    e["metadata"] = base
                 if payload.get("clearQaFailed"):
                     e.pop("qaFailed", None)
                     e.pop("qaFailReason", None)

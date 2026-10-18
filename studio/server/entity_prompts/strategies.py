@@ -82,12 +82,26 @@ class _PromptDefaults:
         return base_prompt, base_negative
 
 
-_CUTOUT_BG = (
+_DEFAULT_CUTOUT_BG = (
     "ISOLATED CUTOUT on a pure transparent / alpha PNG background "
     "(or seamless pure white / light-gray plate for easy keying). "
     "NO room, NO floor, NO wall texture, NO gradient studio, NO scenery. "
     "透明背景抠图：主体以外必须是透明或纯白/浅灰无缝底板，禁止场景、地面、墙面与棚拍道具。"
 )
+
+
+def _cutout_clause(ctx: PromptBuildContext) -> str:
+    """Prefer drama-entity-still Skill Runtime `cutout_prompt` (Skill 专家可改)."""
+    runtime = ctx.runtime or {}
+    text = str(runtime.get("cutout_prompt") or "").strip()
+    if text:
+        return text
+    mode = str(runtime.get("cutout_background") or "transparent").strip().lower()
+    if mode in {"", "transparent", "alpha", "cutout", "1", "true", "yes"}:
+        return _DEFAULT_CUTOUT_BG
+    if mode in {"0", "false", "no", "off", "none", "disabled"}:
+        return "Plain seamless studio backdrop (no scenery)."
+    return _DEFAULT_CUTOUT_BG
 
 
 class _SpiritPrompt(_PromptDefaults):
@@ -98,7 +112,7 @@ class _SpiritPrompt(_PromptDefaults):
 
     def build(self, ctx: PromptBuildContext) -> tuple[str, str | None]:
         prompt = (
-            f"SPIRIT LIGHT. {_CUTOUT_BG} "
+            f"SPIRIT LIGHT. {_cutout_clause(ctx)} "
             "NOT a human, NOT a portrait, NO face, NO body, NO clothes, NO landscape. "
             f"「{ctx.who}」是淡紫色灵光聚成的半透明珠影，表面有淡淡星纹，悬浮居中。"
             "A small translucent lavender glowing orb with faint star-pattern shimmer."
@@ -186,7 +200,7 @@ class _CharacterPrompt(_PromptDefaults):
         if not framing.endswith((" ", "。", ".", "！", "!")):
             framing = framing + " "
         prompt = (
-            f"CHARACTER SHEET / asset cutout. {_CUTOUT_BG} "
+            f"CHARACTER SHEET / asset cutout. {_cutout_clause(ctx)} "
             "NO landscape, NO mountains, NO forest, NO moon, NO empty plain. "
             f"{framing}"
             f"画面中央只有角色「{ctx.who}」，五官与发型清晰。"
@@ -318,7 +332,7 @@ class _PropPrompt(_PromptDefaults):
 
     def build(self, ctx: PromptBuildContext) -> tuple[str, str | None]:
         prompt = (
-            f"ISOLATED PRODUCT PHOTO / prop cutout. {_CUTOUT_BG} "
+            f"ISOLATED PRODUCT PHOTO / prop cutout. {_cutout_clause(ctx)} "
             "One object only. No person, no face, no hands, no fingers, no portrait, no character sheet, no fashion. "
             f"关键道具产品特写：{ctx.name}。"
             f"只拍这一件物体的外形与材质：{ctx.desc or ctx.name}。"

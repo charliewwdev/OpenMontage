@@ -796,6 +796,7 @@ def _minimax_h3_workflow(
     seed: int,
     stack: dict[str, str],
     image_name: str | None,
+    end_image_name: str | None,
     use_low_vram: bool,
 ) -> tuple[dict[str, Any], str]:
     """Build MiniMax H3 FL2VA API graph. Returns (workflow, save_node_id)."""
@@ -866,6 +867,9 @@ def _minimax_h3_workflow(
     if image_name:
         wf["11"] = {"class_type": "LoadImage", "inputs": {"image": image_name}}
         i2v_inputs["first_frame"] = ["11", 0]
+    if end_image_name:
+        wf["12"] = {"class_type": "LoadImage", "inputs": {"image": end_image_name}}
+        i2v_inputs["last_frame"] = ["12", 0]
 
     wf["29"] = {"class_type": "MiniMaxH3ImageToVideo", "inputs": i2v_inputs}
     wf["15"] = {
@@ -974,9 +978,11 @@ def generate_video(
     duration: float | int,
     out_path: Path,
     reference_path: Path | None = None,
+    end_reference_path: Path | None = None,
     resolution: str = "720p",
-    timeout: int = 1200,
+    timeout: int = 1800,
     preferred_model: str = "",
+    use_turbo: bool = True,
 ) -> tuple[Path, str]:
     """Image/text-to-video via ComfyUI registry (MiniMax H3 first).
 
@@ -1000,6 +1006,9 @@ def generate_video(
     image_name = None
     if reference_path and Path(reference_path).is_file():
         image_name = _upload_image(root, Path(reference_path))
+    end_image_name = None
+    if end_reference_path and Path(end_reference_path).is_file():
+        end_image_name = _upload_image(root, Path(end_reference_path))
 
     preferred = (preferred_model or _secret("COMFYUI_VIDEO_MODEL") or "").strip()
     model_label, workflow, save_node = build_comfy_video_workflow(
@@ -1010,6 +1019,8 @@ def generate_video(
             length=length,
             seed=seed,
             image_name=image_name,
+            end_image_name=end_image_name,
+            use_turbo=use_turbo,
             root=root,
             preferred=preferred,
         )

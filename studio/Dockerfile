@@ -41,6 +41,7 @@ COPY workflow_defs ./workflow_defs
 COPY studio/server ./studio/server
 COPY studio/skills ./studio/skills
 COPY studio/config ./studio/config
+COPY studio/assets ./studio/assets
 COPY --from=ui /ui/dist ./studio/dist
 COPY studio/public/maintenance.html /usr/share/nginx/html/maintenance.html
 COPY studio/deploy/nginx-incontainer.conf /etc/nginx/conf.d/studio.conf.template
@@ -60,7 +61,9 @@ EXPOSE 8787
 ENV PYTHONPATH=/app/studio/server:/app \
     STUDIO_APP_PORT=8788
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=25s --retries=5 \
-  CMD curl -fsS "http://127.0.0.1:${PORT}/api/health" || curl -fsS "http://127.0.0.1:${PORT}/maintenance.html" || exit 1
+# Must require real API JSON — never treat branded maintenance.html as healthy
+# (nginx returns HTTP 200 for maintenance when uvicorn is down).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=5 \
+  CMD curl -fsS "http://127.0.0.1:${PORT}/api/health" | grep -q '"ok"'
 
 CMD ["/entrypoint.sh"]

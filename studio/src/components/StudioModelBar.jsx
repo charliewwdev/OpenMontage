@@ -29,6 +29,10 @@ function resolveImageValue(keys) {
     const ckpt = keys?.comfyui?.checkpoint || "";
     return ckpt ? `comfyui:${ckpt}` : "comfyui:";
   }
+  if (pref === "nvidia") {
+    const mid = keys?.nvidia?.model || "flux-3-image-klein";
+    return `nvidia:${mid}`;
+  }
   return pref;
 }
 
@@ -89,6 +93,9 @@ export function StudioModelBar({ config, onChanged }) {
 
   useEffect(() => {
     void load();
+    const onKeys = () => void load();
+    window.addEventListener("studio-keys-changed", onKeys);
+    return () => window.removeEventListener("studio-keys-changed", onKeys);
   }, [caps.imageBackend, caps.videoBackend]);
 
   const imageModels = useMemo(() => {
@@ -171,6 +178,13 @@ export function StudioModelBar({ config, onChanged }) {
       });
       return;
     }
+    if (backend === "nvidia") {
+      void save({
+        STUDIO_IMAGE_BACKEND: "nvidia",
+        ...(model ? { NVIDIA_IMAGE_MODEL: model } : {}),
+      });
+      return;
+    }
     if (backend === "comfyui") {
       const videoStillAuto = (keys?.videoBackendPref || "auto") === "auto";
       void save({
@@ -247,7 +261,12 @@ export function StudioModelBar({ config, onChanged }) {
       <button
         type="button"
         className="btn-secondary !min-h-9 max-w-[340px] gap-1.5 !px-2.5 text-[11px]"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          setOpen((v) => {
+            if (!v) void load();
+            return !v;
+          });
+        }}
         title={t("studio_model_switcher_title")}
       >
         <ImageIcon className="h-3.5 w-3.5 shrink-0 opacity-70" />
@@ -268,29 +287,40 @@ export function StudioModelBar({ config, onChanged }) {
             <div className="mb-2 text-[11px] font-semibold text-white/80">{t("studio_model_switcher_title")}</div>
             <p className="mb-3 text-[10px] leading-4 text-white/40">{t("studio_model_switcher_hint")}</p>
 
-            <label className="mb-3 block">
+            <div className="mb-3 block">
               <span className="label !mb-1">{t("studio_model_image_label")}</span>
-              <select
-                className="field !py-2 text-sm"
-                disabled={busy}
-                value={imageValue}
-                onChange={(e) => onPickImage(e.target.value)}
-              >
-                <option value="auto">{t("studio_model_auto")}</option>
+              <div className="max-h-64 overflow-y-auto rounded-xl border border-white/10 bg-black/30 p-1" role="listbox" aria-label={t("studio_model_image_label")}>
+                <button
+                  type="button"
+                  disabled={busy}
+                  className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-sm hover:bg-white/10 ${imageValue === "auto" ? "bg-white/10" : ""}`}
+                  onClick={() => onPickImage("auto")}
+                >
+                  <span>{t("studio_model_auto")}</span>
+                  {imageValue === "auto" ? <Check className="h-3.5 w-3.5" /> : null}
+                </button>
                 {imageGroups.map((g) => (
-                  <optgroup key={g.name} label={g.name}>
+                  <div key={g.name} className="mt-1">
+                    <div className="px-2 py-1 text-[10px] font-medium text-white/40">{g.name}</div>
                     {g.items.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.label}
-                      </option>
+                      <button
+                        key={m.id}
+                        type="button"
+                        disabled={busy}
+                        className={`flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-left text-sm hover:bg-white/10 ${imageValue === m.id ? "bg-white/10" : ""}`}
+                        onClick={() => onPickImage(m.id)}
+                      >
+                        <span className="truncate">{m.label}</span>
+                        {imageValue === m.id ? <Check className="h-3.5 w-3.5 shrink-0" /> : null}
+                      </button>
                     ))}
-                  </optgroup>
+                  </div>
                 ))}
-              </select>
+              </div>
               <span className="mt-1 block text-[10px] text-white/35">
                 {t("studio_model_active")}: {activeImageLabel}
               </span>
-            </label>
+            </div>
 
             <label className="mb-3 block">
               <span className="label !mb-1">{t("studio_model_video_label")}</span>

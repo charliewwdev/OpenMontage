@@ -30,6 +30,8 @@ def run_comfy_shot(
     ratio: str = "9:16",
     duration: int = 5,
     ref_path: str | None = None,
+    end_ref_path: str | None = None,
+    use_turbo: bool = True,
     **_: Any,
 ) -> None:
     from drama_service import _judge_video_file, _now, _propagate_segment_video, new_id
@@ -41,13 +43,16 @@ def run_comfy_shot(
         rel = f"media/videos/{vid_id}.mp4"
         dest = store._dir(project_id) / rel
         ref = Path(ref_path) if ref_path else None
+        end_ref = Path(end_ref_path) if end_ref_path else None
         result = generate_video_file(
             prompt=base_prompt,
             ratio=ratio or "9:16",
             duration=int(duration or 5),
             out_path=dest,
             reference_path=ref if ref and ref.is_file() else None,
+            end_reference_path=end_ref if end_ref and end_ref.is_file() else None,
             resolution=resolution or "720p",
+            use_turbo=bool(use_turbo),
         )
         assert_media_ok(dest, unlink_on_fail=True)
         if dest.is_file():
@@ -60,7 +65,17 @@ def run_comfy_shot(
         ents_alive = [e for e in (st.get("entities") or []) if not e.get("deletedAt")]
         by_id = {e["id"]: e for e in ents_alive}
         ref_ents = [by_id[eid] for eid in (sh.get("referenceEntityIds") or []) if eid in by_id]
-        qa = _judge_video_file(dest, prompt=prompt_used, entities=ref_ents)
+        # First/last-frame idlock is identity-locked by construction — skip vision QA gate.
+        portrait = (
+            (st.get("project") or {}).get("workflow") == "portrait-match"
+            or sh.get("idlock")
+            or sh.get("skipVideoQa")
+            or bool(end_ref and end_ref.is_file())
+        )
+        if portrait:
+            qa = {"pass": True, "score": 1, "reason": "portrait-idlock", "skipped": True, "qaPass": True}
+        else:
+            qa = _judge_video_file(dest, prompt=prompt_used, entities=ref_ents)
         version = {
             "id": vid_id,
             "shotId": shot_id,

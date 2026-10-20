@@ -105,6 +105,51 @@ def _cutout_clause(ctx: PromptBuildContext) -> str:
     return _DEFAULT_CUTOUT_BG
 
 
+def _drawable_look_checklist(look: str) -> str:
+    """Front-load model-friendly English visual anchors from a Chinese cast bible.
+
+    Vision models follow early tokens; poetic Chinese alone yields neat black buns /
+    clean hanfu and then QA burns retries. Keep the original bible after the checklist.
+    """
+    raw = str(look or "").strip()
+    if not raw:
+        return ""
+    bits: list[str] = []
+    # Age / body
+    if any(tok in raw for tok in ("12岁", "十二岁", "少女", "幼女", "女孩")):
+        bits.append("slim young East Asian girl (~12 look), not an adult fashion model")
+    elif any(tok in raw for tok in ("少年", "男孩", "男童")):
+        bits.append("slim young East Asian boy, not an adult")
+    # Hair silhouette — the #1 failure mode on 花恋紫
+    if any(tok in raw for tok in ("双丫髻", "双髻", "丫髻")):
+        bits.append(
+            "CRITICAL hair: messy dry straw-yellow double buns (双丫髻) tied with rough hemp/straw rope, "
+            "loose wisps on cheeks — NOT neat glossy black buns, NOT a single topknot, NOT platinum blonde"
+        )
+    elif any(tok in raw for tok in ("丸子头", "单髻", "高髻")):
+        bits.append("CRITICAL hair: single messy bun matching the bible — not a sleek salon style")
+    elif "枯黄" in raw or "黄发" in raw:
+        bits.append("CRITICAL hair: dry straw-yellow unkempt hair (枯黄乱发), not glossy black")
+    if "草绳" in raw and not any("hemp/straw rope" in b for b in bits):
+        bits.append("hair tied with visible hemp/straw rope")
+    # Wardrobe
+    if any(tok in raw for tok in ("粗布短褐", "短褐", "粗布")):
+        bits.append("washed gray-blue coarse short tunic (青灰粗布短褐), frayed edges")
+    if any(tok in raw for tok in ("破麻背心", "麻背心", "破麻")):
+        bits.append("torn hemp vest over the tunic")
+    if "草绳" in raw and "腰" in raw:
+        bits.append("hemp rope belt at the waist")
+    if any(tok in raw for tok in ("露趾布鞋", "布鞋")):
+        bits.append("open-toe cloth shoes visible at the feet")
+    # Bruises are secondary — mention lightly so models don't over-focus
+    if any(tok in raw for tok in ("淤痕", "瘀痕", "伤疤")):
+        bits.append("faint old bruises on arms optional")
+    if not bits:
+        return raw
+    checklist = "FIRST-PASS visual checklist (must render): " + "; ".join(bits) + "."
+    return f"{checklist} Bible: {raw}"
+
+
 class _SpiritPrompt(_PromptDefaults):
     id = "spirit"
 
@@ -190,7 +235,7 @@ class _CharacterPrompt(_PromptDefaults):
         return ctx.kind == "character"
 
     def build(self, ctx: PromptBuildContext) -> tuple[str, str | None]:
-        look = ctx.look or ctx.desc
+        look = _drawable_look_checklist(ctx.look or ctx.desc)
         # Locked framing so every cast still matches the same scale in the asset rail
         # and identity lock stays comparable across characters.
         framing = str((ctx.runtime or {}).get("framing_prompt") or "").strip() or (
@@ -201,10 +246,15 @@ class _CharacterPrompt(_PromptDefaults):
         )
         if not framing.endswith((" ", "。", ".", "！", "!")):
             framing = framing + " "
+        first_pass = str((ctx.runtime or {}).get("first_pass_prompt") or "").strip()
         prompt = (
             f"CHARACTER SHEET / asset cutout. {_cutout_clause(ctx)} "
             "NO landscape, NO mountains, NO forest, NO moon, NO empty plain. "
             f"{framing}"
+        )
+        if first_pass:
+            prompt += first_pass if first_pass.endswith(" ") else first_pass + " "
+        prompt += (
             f"画面中央只有角色「{ctx.who}」，五官与发型清晰，全身服装完整。"
             f"必须严格符合这段外形，不要改性别、年龄或换成泛泛古装："
             f"{look or '短剧主角，五官清晰，服装完整'}。"
@@ -281,16 +331,60 @@ class _CharacterPrompt(_PromptDefaults):
                 "额头",
             )
         )
-        if attempt == 2 or framing_fail:
+        hair_fail = any(
+            tok in low
+            for tok in (
+                "hair",
+                "hairstyle",
+                "bun",
+                "buns",
+                "topknot",
+                "发型",
+                "双丫",
+                "丫髻",
+                "枯黄",
+                "草绳",
+            )
+        )
+        wardrobe_fail = any(
+            tok in low
+            for tok in (
+                "garment",
+                "clothing",
+                "wardrobe",
+                "vest",
+                "tunic",
+                "coat",
+                "服装",
+                "短褐",
+                "背心",
+                "粗布",
+            )
+        )
+        look = _drawable_look_checklist(ctx.look or ctx.desc or ctx.name)
+        if framing_fail or attempt == 2:
             return (
                 "FULL BODY only. Head-to-toe standing figure, face + wardrobe readable. "
                 "No extreme face crop, no chest-up-only crop. "
                 f"全身定妆「{ctx.who}」：从头到脚完整入画。"
-                f" Keep identity: {ctx.look or ctx.desc or ctx.name}."
+                f" Keep identity: {look}."
             ), (
                 ((base_negative + ", ") if base_negative else "")
                 + "extreme close-up, forehead crop, chest-up only, half-body crop, bust portrait"
             )
+        if hair_fail:
+            return (
+                f"Same FULL BODY cast still of 「{ctx.who}」. "
+                "FIX HAIR FIRST: messy straw-yellow double buns with hemp rope ties if the bible says so; "
+                "reject neat black salon buns. "
+                f"{look}"
+            ), base_negative
+        if wardrobe_fail:
+            return (
+                f"Same FULL BODY cast still of 「{ctx.who}」. "
+                "FIX WARDROBE FIRST: washed gray-blue coarse tunic + torn hemp vest when specified. "
+                f"{look}"
+            ), base_negative
         return base_prompt, base_negative
 
 

@@ -16,6 +16,7 @@ import { ToolsPage } from "./components/platform/ToolsPage";
 import { AgentPage } from "./components/platform/AgentPage";
 import { CanvasPage } from "./components/platform/CanvasPage";
 import { InspirePage } from "./components/platform/InspirePage";
+import { PortraitMatchPage } from "./components/platform/PortraitMatchPage";
 import { TvPage } from "./components/platform/TvPage";
 import { ChallengePage } from "./components/platform/ChallengePage";
 import { ResourcesPage } from "./components/platform/ResourcesPage";
@@ -52,8 +53,9 @@ function readAppRoute() {
   const episodeId = (params.get("ep") || "").trim();
   const nav = (params.get("nav") || "").trim();
   let screen = (params.get("screen") || "").trim();
-  if (projectId) screen = "studio";
+  if (projectId && screen !== "portrait") screen = "studio";
   else if (screen === "create") screen = "create";
+  else if (screen === "portrait") screen = "portrait";
   else if (nav && nav !== "workshop") screen = "platform";
   else if (!screen) screen = "";
   return { projectId, step, episodeId, nav, screen };
@@ -64,7 +66,10 @@ function writeAppRoute({ projectId = "", step = "", episodeId = "", nav = "", sc
   const params = new URLSearchParams(window.location.search);
   // Keep unrelated query keys (e.g. ref) intact.
   for (const key of ["project", "p", "step", "ep", "nav", "screen"]) params.delete(key);
-  if (projectId) {
+  if (screen === "portrait") {
+    params.set("screen", "portrait");
+    if (projectId) params.set("project", projectId);
+  } else if (projectId) {
     params.set("project", projectId);
     if (step && STUDIO_STEPS.has(step)) params.set("step", step);
     if (episodeId) params.set("ep", episodeId);
@@ -214,12 +219,17 @@ export default function App() {
     }
   }, []);
 
-  const loadProject = useCallback(async (id, quiet = false, openStep = "workspace", openEpisodeId = "") => {
+  const loadProject = useCallback(async (id, quiet = false, openStep = "workspace", openEpisodeId = "", opts = {}) => {
     if (!quiet) setLoading(true);
     setProjectId(id);
     try {
       const b = await api(`/api/projects/${encodeURIComponent(id)}`);
       setBundle(b);
+      if ((b?.project || {}).workflow === "portrait-match" && !opts.forceStudio) {
+        setScreen("portrait");
+        setNav("workshop");
+        return;
+      }
       if (!quiet) {
         const nextStep = normalizeStudioStep(openStep || "workspace");
         setStep(nextStep);
@@ -269,6 +279,11 @@ export default function App() {
         setScreen("create");
         return;
       }
+      if (route.screen === "portrait") {
+        setNav("workshop");
+        setScreen("portrait");
+        return;
+      }
       if (route.nav && route.nav !== "workshop") {
         setNav(route.nav);
         setScreen("platform");
@@ -283,11 +298,18 @@ export default function App() {
   useEffect(() => {
     if (!authReady) return;
     writeAppRoute({
-      projectId: screen === "studio" ? projectId : "",
+      projectId: screen === "studio" || screen === "portrait" ? projectId : "",
       step: screen === "studio" ? step : "",
       episodeId: screen === "studio" ? focusEpisodeId : "",
-      nav: screen === "studio" ? "workshop" : nav,
-      screen: screen === "create" ? "create" : screen === "studio" ? "studio" : "",
+      nav: screen === "studio" || screen === "portrait" ? "workshop" : nav,
+      screen:
+        screen === "create"
+          ? "create"
+          : screen === "portrait"
+            ? "portrait"
+            : screen === "studio"
+              ? "studio"
+              : "",
     });
   }, [authReady, screen, projectId, step, focusEpisodeId, nav]);
 
@@ -443,6 +465,26 @@ export default function App() {
         />
       );
     }
+  } else if (screen === "portrait") {
+    body = (
+      <PortraitMatchPage
+        config={config}
+        projectId={projectId}
+        preferredTemplate={createMode?.templateId || createMode?.preset?.templateId || ""}
+        onBack={() => {
+          setCreateMode(null);
+          setProjectId("");
+          setBundle(null);
+          setScreen("library");
+          setNav("workshop");
+          void refreshProjects();
+        }}
+        onOpenDrama={(id) => {
+          void loadProject(id, false, "workspace", "", { forceStudio: true });
+        }}
+        onNeedKeys={goKeys}
+      />
+    );
   } else if (screen === "studio") {
     body = (
       <StudioShell
@@ -538,6 +580,17 @@ export default function App() {
             setAgentSeed(text);
             onNavigate("agent");
           }}
+          onStartPortrait={(scenario) => {
+            if (!requireAuth()) return;
+            setCreateMode({
+              id: "portrait-match",
+              templateId: scenario?.templateId || "ref1",
+              ...(scenario || {}),
+            });
+            setProjectId("");
+            setBundle(null);
+            setScreen("portrait");
+          }}
         />
       );
     } else if (nav === "tv") {
@@ -584,7 +637,14 @@ export default function App() {
           onOpen={(id) => void loadProject(id)}
           onCreate={(mode, card) => {
             if (!requireAuth()) return;
-            setCreateMode({ id: mode || "drama", ...(card || {}) });
+            const next = { id: mode || "drama", ...(card || {}) };
+            setCreateMode(next);
+            if (mode === "portrait-match" || card?.workflow === "portrait-match") {
+              setProjectId("");
+              setBundle(null);
+              setScreen("portrait");
+              return;
+            }
             setScreen("create");
           }}
           onNeedKeys={goKeys}
@@ -609,7 +669,14 @@ export default function App() {
         onOpen={(id) => void loadProject(id)}
         onCreate={(mode, card) => {
           if (!requireAuth()) return;
-          setCreateMode({ id: mode || "drama", ...(card || {}) });
+          const next = { id: mode || "drama", ...(card || {}) };
+          setCreateMode(next);
+          if (mode === "portrait-match" || card?.workflow === "portrait-match") {
+            setProjectId("");
+            setBundle(null);
+            setScreen("portrait");
+            return;
+          }
           setScreen("create");
         }}
         onNeedKeys={goKeys}

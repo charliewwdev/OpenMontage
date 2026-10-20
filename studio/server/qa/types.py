@@ -9,7 +9,20 @@ from typing import Any
 
 
 SPIRIT_MARKERS = ("无实体", "灵光聚", "珠影", "淡紫色灵光")
-INJURY_MARKERS = ("bandage", "gauze", "绷带", "纱布", "受伤", "injury")
+# Bible / variant markers only. Never match the English word "injury" inside
+# identity-lock phrases like "wardrobe or injury state" — that false-positive
+# forced default cast stills into the gauze QA ladder.
+INJURY_MARKERS = ("bandage", "gauze", "绷带", "纱布", "受伤", "负伤", "外伤")
+INJURY_VARIANT_MARKERS = (
+    "受伤",
+    "绷带",
+    "负伤",
+    "外伤",
+    "伤势",
+    "bandage",
+    "injury",
+    "wounded",
+)
 
 
 def gender_hint_from_text(text: str) -> str | None:
@@ -36,7 +49,18 @@ def is_spirit_text(*parts: str) -> bool:
     return any(k in blob for k in SPIRIT_MARKERS)
 
 
+def is_injury_variant_name(variant: str) -> bool:
+    """True when the entity variant itself is an injury look."""
+    v = str(variant or "").strip().lower()
+    if not v:
+        return False
+    if any(tok in v for tok in INJURY_VARIANT_MARKERS):
+        return True
+    return v.endswith("伤") or "伤后" in v or "伤态" in v
+
+
 def is_injury_text(*parts: str) -> bool:
+    """Detect injury intent from bible/variant text — not from generation prompts."""
     blob = "\n".join(parts).lower()
     return any(tok in blob for tok in INJURY_MARKERS)
 
@@ -49,6 +73,7 @@ class QaContext:
     prompt: str
     entity_name: str = ""
     entity_description: str = ""
+    entity_variant: str = ""
     entity_context: str = ""
     entities: list[dict[str, Any]] = field(default_factory=list)
     media_paths: list[Path] = field(default_factory=list)
@@ -68,6 +93,7 @@ class QaContext:
         path: Path,
         entity_name: str = "",
         entity_description: str = "",
+        entity_variant: str = "",
     ) -> QaContext:
         gender = gender_hint_from_text(f"{entity_description}\n{prompt}")
         return cls(
@@ -75,6 +101,7 @@ class QaContext:
             prompt=prompt or "",
             entity_name=entity_name or "",
             entity_description=entity_description or "",
+            entity_variant=entity_variant or "",
             media_paths=[path],
             gender=gender,
         )

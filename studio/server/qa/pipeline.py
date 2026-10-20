@@ -26,6 +26,7 @@ def run_image_qa(
     kind: str = "character",
     entity_name: str = "",
     entity_description: str = "",
+    entity_variant: str = "",
     vision_call: Callable[..., dict[str, Any]],
     image_data_url: Callable[[Path], str],
 ) -> dict[str, Any]:
@@ -41,6 +42,7 @@ def run_image_qa(
         path=p,
         entity_name=entity_name,
         entity_description=entity_description,
+        entity_variant=entity_variant,
     )
     strategy = resolve_qa_strategy(ctx)
     ctx.strategy_id = strategy.id

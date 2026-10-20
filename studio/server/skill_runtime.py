@@ -22,12 +22,12 @@ _DEFAULT_EXPERIENCE: list[dict[str, Any]] = [
         "id": "injury-bandage",
         "skillId": "drama-entity-still",
         "kinds": ["character"],
-        "matchReason": ["bandage", "绷带", "white bandage", "injury", "受伤", "blood stain", "血迹"],
-        "matchVariant": ["受伤", "绷带", "伤"],
+        "matchReason": ["bandage", "绷带", "white bandage", "gauze", "受伤", "blood stain", "血迹"],
+        "matchVariant": ["受伤", "绷带", "负伤", "外伤", "伤势"],
         "promptBoost": (
-            "Show thick WHITE medical gauze bandage on the LEFT shoulder/upper chest, "
-            "and a blood-stained or torn dark coat. Half-body framing so the bandage is visible. "
-            "Keep the same East Asian male face when a reference is used."
+            "FULL BODY standing. Show thick WHITE medical gauze bandage on the LEFT shoulder/upper chest, "
+            "and a blood-stained or torn dark coat so the wrap is readable. "
+            "Keep the same face as the reference still — only wardrobe/injury props change."
         ),
         "negativeBoost": (
             "clean uninjured clothes, no bandage, pristine coat, forehead wound only, "
@@ -44,9 +44,48 @@ _DEFAULT_EXPERIENCE: list[dict[str, Any]] = [
         "matchVariant": [],
         "promptBoost": (
             "Identity lock: same East Asian face as reference still — identical bone structure, "
-            "eyes, nose, jawline and hairline; only wardrobe/injury state may change."
+            "eyes, nose, jawline and hairline; only wardrobe or variant state may change."
         ),
         "negativeBoost": "different face, face swap, new identity, younger or older face",
+        "source": "seed",
+        "hits": 0,
+    },
+    {
+        "id": "hair-double-bun-rope",
+        "skillId": "drama-entity-still",
+        "kinds": ["character"],
+        "matchReason": [
+            "hairstyle",
+            "hair",
+            "bun",
+            "buns",
+            "topknot",
+            "发型",
+            "双丫",
+            "丫髻",
+            "枯黄",
+            "草绳",
+        ],
+        "matchVariant": [],
+        "promptBoost": (
+            "CRITICAL hair fix: messy dry straw-yellow double buns (双丫髻) tied with rough hemp rope, "
+            "loose cheek wisps — NOT neat glossy black buns, NOT a single topknot, NOT platinum blonde."
+        ),
+        "negativeBoost": "neat black double buns, sleek salon hair, single topknot, platinum blonde",
+        "source": "seed",
+        "hits": 0,
+    },
+    {
+        "id": "wardrobe-coarse-tunic",
+        "skillId": "drama-entity-still",
+        "kinds": ["character"],
+        "matchReason": ["garment", "clothing", "wardrobe", "vest", "tunic", "服装", "短褐", "背心", "粗布"],
+        "matchVariant": [],
+        "promptBoost": (
+            "CRITICAL wardrobe fix: washed gray-blue coarse short tunic (青灰粗布短褐) with a torn hemp vest; "
+            "frayed edges, not clean modern costume."
+        ),
+        "negativeBoost": "clean blue hanfu, fashion coat, pristine costume, modern clothes",
         "source": "seed",
         "hits": 0,
     },
@@ -239,9 +278,11 @@ def _patch_matches(patch: dict[str, Any], *, kind: str, variant: str, reason: st
         return False
     reason_l = reason.lower()
     variant_l = (variant or "").lower()
-    for token in patch.get("matchVariant") or []:
-        if str(token).lower() in variant_l:
-            return True
+    variants = [str(t) for t in (patch.get("matchVariant") or []) if t]
+    # Variant-scoped patches (e.g. injury-bandage) must NOT fire from reason alone —
+    # otherwise a default cast still that once saw the word "injury" keeps getting gauze boosts.
+    if variants:
+        return any(tok.lower() in variant_l for tok in variants)
     for token in patch.get("matchReason") or []:
         if str(token).lower() in reason_l:
             return True

@@ -22,6 +22,8 @@ class ComfyVideoContext:
     image_name: str | None
     root: str
     preferred: str
+    end_image_name: str | None = None
+    use_turbo: bool = True
 
 
 class ComfyVideoModel(Protocol):
@@ -104,7 +106,9 @@ class _MiniMaxH3:
         use_low_vram = _node_exists(ctx.root, "MiniMaxLowVRAMAttention") and _node_exists(
             ctx.root, "MiniMaxChunkFeedForward"
         )
-        if stack.get("turbo") and not _node_exists(ctx.root, "MiniMaxH3TurboLoRA"):
+        if stack.get("turbo") and (
+            not ctx.use_turbo or not _node_exists(ctx.root, "MiniMaxH3TurboLoRA")
+        ):
             stack = {k: v for k, v in stack.items() if k != "turbo"}
         if not _node_exists(ctx.root, "MiniMaxH3SigmaShift"):
             raise ComfyUIError("ComfyUI 缺少 MiniMaxH3SigmaShift 节点，请升级含 MiniMax H3 的镜像。")
@@ -117,6 +121,7 @@ class _MiniMaxH3:
             seed=ctx.seed,
             stack=stack,
             image_name=ctx.image_name,
+            end_image_name=ctx.end_image_name,
             use_low_vram=use_low_vram,
         )
         label = stack.get("unet") or self.id

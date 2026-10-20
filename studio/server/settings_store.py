@@ -443,6 +443,23 @@ def _studio_image_models(
                     "group": "ComfyUI",
                 }
             )
+    from providers.nvidia_flux import MODELS
+
+    labels = {
+        "flux-3-image-klein": "FLUX 3 Image Klein（开源 · 当前可用）",
+        "flux.1-schnell": "FLUX.1 schnell（开源）",
+        "flux.2-klein-4b": "FLUX.2 klein 4B（开源）",
+    }
+    for mid in MODELS:
+        out.append(
+            {
+                "id": f"nvidia:{mid}",
+                "backend": "nvidia",
+                "model": mid,
+                "label": labels.get(mid, mid),
+                "group": "NVIDIA 开源",
+            }
+        )
     return out
 
 
@@ -641,6 +658,11 @@ def public_status() -> dict[str, Any]:
             "seedreamModel": seedream,
             "seedanceModel": seedance,
         },
+        "nvidia": {
+            "configured": bool(get_secret("NVIDIA_API_KEY") or get_secret("NVIDIA_NIM_API_KEY")),
+            "masked": mask_secret(get_secret("NVIDIA_API_KEY") or get_secret("NVIDIA_NIM_API_KEY")),
+            "model": get_secret("NVIDIA_IMAGE_MODEL") or "flux-3-image-klein",
+        },
         "comfyui": comfy,
         "imageBackend": _image_backend_id(volc_key),
         "videoBackend": _video_backend_id(volc_key),
@@ -655,6 +677,11 @@ def public_status() -> dict[str, Any]:
         "mediaQa": (get_secret("STUDIO_MEDIA_QA") or "1").strip() not in {"0", "false", "off", "no"},
         "imageBackendsAvailable": [
             *(["seedream"] if volc_key else []),
+            *(
+                ["nvidia"]
+                if (get_secret("NVIDIA_API_KEY") or get_secret("NVIDIA_NIM_API_KEY"))
+                else []
+            ),
             *(
                 ["comfyui"]
                 if (get_secret("COMFYUI_SERVER_URL") or get_secret("COMFYUI_IMAGE_SERVER_URL"))

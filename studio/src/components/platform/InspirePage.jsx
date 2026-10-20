@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Copy, Lightbulb, RefreshCw, Search, Sparkles, X } from "lucide-react";
+import { Copy, Flame, Lightbulb, RefreshCw, Search, Sparkles, X } from "lucide-react";
 import { api } from "../../api";
 import { useLocale } from "../../lib/i18n";
 import { toast } from "../../lib/toast";
@@ -58,11 +58,107 @@ function PinCard({ pin, prompt, onOpen, onDead }) {
   );
 }
 
-export function InspirePage({ config, onUsePrompt }) {
+function ScenarioCard({ item, expanded, onToggle, onUsePrompt, onStartPortrait, t }) {
+  const why = Array.isArray(item.whyItWorks) ? item.whyItWorks : [];
+  const beats = Array.isArray(item.beats) ? item.beats : [];
+
+  return (
+    <article className="panel flex flex-col gap-3 border border-[var(--line)] bg-gradient-to-br from-[#ff5a3d]/08 to-transparent p-4">
+      <button type="button" className="w-full text-left" onClick={onToggle}>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-[#ff5a3d]/20 px-2 py-0.5 text-[10px] font-medium text-[#ff8f6b]">
+            {item.platform}
+          </span>
+          <span className="rounded-full bg-white/[.06] px-2 py-0.5 text-[10px] text-white/50">
+            {item.duration}
+          </span>
+          {item.genre ? (
+            <span className="rounded-full bg-white/[.06] px-2 py-0.5 text-[10px] text-white/50">
+              {item.genre}
+            </span>
+          ) : null}
+        </div>
+        <div className="mt-2 text-sm font-semibold text-white">{item.title}</div>
+        <p className="mt-1 text-xs leading-5 text-white/55">{item.hook}</p>
+      </button>
+
+      {expanded ? (
+        <div className="space-y-3 border-t border-[var(--line)] pt-3">
+          {why.length ? (
+            <div>
+              <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-white/35">
+                {t("inspire_scenario_why")}
+              </div>
+              <ul className="space-y-1 text-xs leading-5 text-white/70">
+                {why.map((line) => (
+                  <li key={line}>· {line}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+          {beats.length ? (
+            <div>
+              <div className="mb-1 text-[11px] font-medium uppercase tracking-wide text-white/35">
+                {t("inspire_scenario_beats")}
+              </div>
+              <ol className="space-y-1.5 text-xs leading-5 text-white/75">
+                {beats.map((beat) => (
+                  <li key={`${beat.t}-${beat.action}`}>
+                    <span className="font-medium text-[#ff8f6b]">{beat.t}</span>
+                    <span className="text-white/40"> · </span>
+                    {beat.action}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ) : null}
+          {item.styleNotes ? (
+            <p className="text-[11px] leading-5 text-white/40">{item.styleNotes}</p>
+          ) : null}
+          {item.referenceNote ? (
+            <p className="text-[10px] leading-4 text-white/30">{item.referenceNote}</p>
+          ) : null}
+        </div>
+      ) : null}
+
+      <div className="mt-auto flex gap-2">
+        <button
+          type="button"
+          className="btn-secondary flex-1 !min-h-9"
+          onClick={async () => {
+            await navigator.clipboard.writeText(item.prompt || "");
+            toast.success(t("inspire_toast_copied"));
+          }}
+        >
+          <Copy className="h-3.5 w-3.5" /> {t("inspire_action_copy")}
+        </button>
+        <button
+          type="button"
+          className="btn-primary flex-1 !min-h-9"
+          onClick={() => {
+            if (item.workflow === "portrait-match" && onStartPortrait) {
+              onStartPortrait(item);
+              return;
+            }
+            onUsePrompt?.(item.prompt);
+          }}
+        >
+          <Lightbulb className="h-3.5 w-3.5" /> {t("inspire_action_create")}
+        </button>
+      </div>
+    </article>
+  );
+}
+
+export function InspirePage({ config, onUsePrompt, onStartPortrait }) {
   const { t } = useLocale();
   const prompts = config?.inspirePrompts || [];
+  const platforms = config?.inspirePlatforms || [];
+  const scenarios = config?.viralScenarios || [];
   const page = config?.pages?.inspire || {};
   const [promptFilter, setPromptFilter] = useState("全部");
+  const [scenarioFilter, setScenarioFilter] = useState("全部");
+  const [expandedId, setExpandedId] = useState(scenarios[0]?.id || null);
   const [category, setCategory] = useState("all");
   const [mediaType, setMediaType] = useState("all");
   const [search, setSearch] = useState("");
@@ -79,11 +175,21 @@ export function InspirePage({ config, onUsePrompt }) {
     return [all, ...new Set(prompts.map((p) => p.tag))];
   }, [prompts, t]);
 
+  const scenarioPlatforms = useMemo(() => {
+    const all = t("inspire_filter_all");
+    return [all, ...new Set(scenarios.map((s) => s.platform).filter(Boolean))];
+  }, [scenarios, t]);
+
   const allLabel = t("inspire_filter_all");
   const promptList =
     promptFilter === allLabel || promptFilter === "全部"
       ? prompts
       : prompts.filter((p) => p.tag === promptFilter);
+
+  const scenarioList =
+    scenarioFilter === allLabel || scenarioFilter === "全部"
+      ? scenarios
+      : scenarios.filter((s) => s.platform === scenarioFilter);
 
   const loadPins = async ({
     refresh = false,
@@ -138,11 +244,93 @@ export function InspirePage({ config, onUsePrompt }) {
 
   return (
     <PageShell
-      eyebrow={page.eyebrow || "Inspiration"}
-      title={page.title || "灵感广场"}
-      description={page.description || "探索影视灵感素材，学习提示词技巧；点击卡片查看完整创作提示词。"}
+      eyebrow={page.eyebrow || "Viral Content"}
+      title={page.title || "爆款内容广场"}
+      description={
+        page.description ||
+        "先看各大平台真实短视频爆款长什么样（节拍结构），再选平台套路一键带入创作。"
+      }
     >
+      {scenarios.length ? (
+        <div className="mb-8">
+          <div className="mb-1 text-sm font-semibold text-white">{t("inspire_scenarios_title")}</div>
+          <p className="mb-3 text-xs leading-5 text-white/40">{t("inspire_scenarios_hint")}</p>
+          <div className="mb-4 flex flex-wrap gap-2">
+            {scenarioPlatforms.map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                className={
+                  scenarioFilter === tag ? "btn-primary !min-h-9 !px-3" : "btn-secondary !min-h-9 !px-3"
+                }
+                onClick={() => setScenarioFilter(tag)}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {scenarioList.map((item) => (
+              <ScenarioCard
+                key={item.id}
+                item={item}
+                expanded={expandedId === item.id}
+                onToggle={() => setExpandedId((cur) => (cur === item.id ? null : item.id))}
+                onUsePrompt={onUsePrompt}
+                onStartPortrait={onStartPortrait}
+                t={t}
+              />
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {platforms.length ? (
+        <div className="mb-8">
+          <div className="mb-3 text-sm font-semibold text-white">{t("inspire_platforms_title")}</div>
+          <div className="mb-2 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {platforms.map((item) => (
+              <article
+                key={item.id}
+                className="panel flex flex-col gap-3 border border-[var(--line)] bg-gradient-to-br from-white/[.04] to-transparent p-4"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#ff5a3d]/15 text-[#ff8f6b]">
+                    <Flame className="h-4 w-4" />
+                  </span>
+                  <div>
+                    <div className="text-sm font-semibold text-white">{item.label}</div>
+                    <div className="text-xs text-white/45">{item.blurb}</div>
+                  </div>
+                </div>
+                <div className="mt-auto flex gap-2">
+                  <button
+                    type="button"
+                    className="btn-secondary flex-1 !min-h-9"
+                    onClick={async () => {
+                      await navigator.clipboard.writeText(item.prompt);
+                      toast.success(t("inspire_toast_copied"));
+                    }}
+                  >
+                    <Copy className="h-3.5 w-3.5" /> {t("inspire_action_copy")}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary flex-1 !min-h-9"
+                    onClick={() => onUsePrompt?.(item.prompt)}
+                  >
+                    <Lightbulb className="h-3.5 w-3.5" /> {t("inspire_action_create")}
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       <div className="mb-8">
+        <div className="mb-1 text-sm font-semibold text-white">{t("inspire_wall_title")}</div>
+        <p className="mb-4 text-xs leading-5 text-white/40">{t("inspire_wall_hint")}</p>
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <label className="relative min-w-[220px] flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
@@ -228,7 +416,7 @@ export function InspirePage({ config, onUsePrompt }) {
           <p className="py-10 text-center text-sm text-white/40">{t("common_state_loading")}</p>
         ) : null}
         {!pinLoading && !pins.length ? (
-          <p className="py-10 text-center text-sm text-white/40">没有找到匹配的灵感，试试换个关键词或分类。</p>
+          <p className="py-10 text-center text-sm text-white/40">{t("inspire_empty_pins")}</p>
         ) : null}
       </div>
 
@@ -290,13 +478,15 @@ export function InspirePage({ config, onUsePrompt }) {
             <div className="flex items-center justify-center bg-black/30 p-3 md:p-5">
               <img
                 src={selected.imageUrl}
-                alt={selected.title || "inspiration"}
+                alt={selected.title || "viral reference"}
                 className="max-h-[70vh] w-full rounded-xl object-contain"
               />
             </div>
             <div className="flex min-h-0 flex-col gap-4 border-t border-[var(--line)] p-4 md:border-l md:border-t-0 md:p-5">
               <div>
-                <div className="text-sm font-semibold text-white">{selected.title || "灵感详情"}</div>
+                <div className="text-sm font-semibold text-white">
+                  {selected.title || t("inspire_detail_title")}
+                </div>
               </div>
 
               <div className="min-h-0 flex-1 rounded-2xl border border-[var(--line)] bg-white/[.03] p-4">
@@ -321,7 +511,7 @@ export function InspirePage({ config, onUsePrompt }) {
                 <div className="max-h-[36vh] overflow-y-auto whitespace-pre-wrap text-sm leading-7 text-white/85">
                   {pinPrompt(selected) || "暂无提示词"}
                 </div>
-                <p className="mt-3 text-xs text-white/35">学习这个提示词，创作属于你的作品</p>
+                <p className="mt-3 text-xs text-white/35">{t("inspire_learn_hint")}</p>
               </div>
 
               <div className="flex flex-wrap gap-2">
@@ -335,7 +525,7 @@ export function InspirePage({ config, onUsePrompt }) {
                     onUsePrompt?.(text);
                   }}
                 >
-                  <Lightbulb className="h-3.5 w-3.5" /> 用这个提示词创作
+                  <Lightbulb className="h-3.5 w-3.5" /> 用这个提示词打造
                 </button>
               </div>
             </div>

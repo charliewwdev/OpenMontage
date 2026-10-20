@@ -73,6 +73,8 @@ services:
       # Parallel Redis media jobs (stills + video). Keep ≤4 — remote Comfy/H3 saturates.
       STUDIO_MEDIA_WORKERS: ${STUDIO_MEDIA_WORKERS:-3}
       STUDIO_VIDEO_PARALLEL: ${STUDIO_VIDEO_PARALLEL:-3}
+      # NVIDIA / Seedream stills. Does not add ComfyUI GPU jobs.
+      STUDIO_IMAGE_WORKERS: ${STUDIO_IMAGE_WORKERS:-2}
       STUDIO_DIST: /app/studio/dist
       STUDIO_PUBLIC_URL: ${STUDIO_PUBLIC_URL:-http://localhost:8787}
       STUDIO_CORS_ORIGINS: ${STUDIO_CORS_ORIGINS:-${STUDIO_PUBLIC_URL:-http://localhost:8787}}

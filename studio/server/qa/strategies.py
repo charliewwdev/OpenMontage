@@ -6,7 +6,7 @@ from typing import Protocol
 
 from providers.registry import Registry
 
-from .types import QaContext, is_injury_text, is_spirit_text
+from .types import QaContext, is_injury_text, is_injury_variant_name, is_spirit_text
 
 QA_STRATEGIES: Registry["QaStrategy"] = Registry()
 
@@ -90,7 +90,9 @@ class _SpiritStrategy:
         )
 
     def gate_ids(self, ctx: QaContext) -> list[str]:
-        return ["spirit_no_human", "sharpness", "skill_expert"]
+        # Soft luminous orbs score near-zero Laplacian variance; sharpness is for
+        # solid subjects (faces / props), not spirit glow on a white cutout plate.
+        return ["spirit_no_human", "skill_expert"]
 
 
 class _InjuryCharacterStrategy:
@@ -101,7 +103,11 @@ class _InjuryCharacterStrategy:
             return False
         if is_spirit_text(ctx.entity_name, ctx.entity_description, ctx.prompt):
             return False
-        return is_injury_text(ctx.entity_description, ctx.prompt, ctx.entity_name)
+        # Variant wins. Never classify from generation prompt — lock phrases often
+        # contain the English word "injury" and wrongly demand gauze on default stills.
+        if is_injury_variant_name(ctx.entity_variant):
+            return True
+        return is_injury_text(ctx.entity_description, ctx.entity_name)
 
     def vision_system(self, ctx: QaContext) -> str:
         return _json_preamble("practical media QA judge for short-drama injury stills") + (
@@ -146,14 +152,19 @@ class _CharacterStrategy:
         return ctx.kind == "character"
 
     def vision_system(self, ctx: QaContext) -> str:
-        return _json_preamble("strict media QA judge for short-drama production") + (
-            "PASS only if the image clearly shows ONE human character in FULL BODY: "
-            "head-to-toe standing figure, slight headroom and footroom, face and full wardrobe readable, "
-            "centered (single person preferred). "
-            "FAIL extreme face close-ups (forehead/eyes-only crops), FAIL chest-up-only / half-body "
-            "bust crops that cut off the legs, "
-            "FAIL aerial cityscapes, landscapes, crowded streets, empty rooms, props-only, "
-            "or animals unless the prompt asks for them. "
+        return _json_preamble("practical media QA judge for short-drama cast stills") + (
+            "PASS when PRIMARY checks all hold. Do NOT fail solely on SECONDARY nits.\n"
+            "PRIMARY (must all pass): "
+            "(1) exactly ONE human character; "
+            "(2) FULL BODY head-to-toe standing, face + full wardrobe + shoes readable; "
+            "(3) seamless cutout plate (pure white / light gray / transparent) — no landscape scenery; "
+            "(4) hair silhouette matches THIS entity's bible only (do not borrow another cast member's hair); "
+            "(5) wardrobe category matches THIS entity's bible only.\n"
+            "SECONDARY (never fail alone): exact hair dye shade, dry/cracked lips, old arm bruises, "
+            "precise fabric hue, poetic moonlight, makeup micro-detail.\n"
+            "FAIL extreme close-ups, chest-up-only / half-body crops, landscapes, crowds, wrong gender, "
+            "or a completely different hair silhouette / wardrobe category vs THIS bible. "
+            "Never require traits from a different named character. "
             "If framing is wrong, reason MUST include 'extreme close-up' or 'chest-up only'."
             + _gender_rule(ctx.gender)
         )
@@ -164,12 +175,13 @@ class _CharacterStrategy:
             f"Entity bible (truncated):\n{ctx.entity_description[:600]}\n" if ctx.entity_description else ""
         )
         return (
-            f"Asset kind: character\n"
+            f"Asset kind: character (default cast still — NOT an injury still)\n"
             f"{name_line}{desc_line}"
-            "Framing rubric: require FULL BODY head-to-toe (standing, wardrobe readable). "
-            "Reject extreme close-up and chest-up-only crop.\n"
+            "Framing: FULL BODY head-to-toe. Reject extreme close-up and chest-up-only.\n"
+            "Do NOT require white medical gauze / bandage unless the variant is an injury look.\n"
+            "Judge PRIMARY traits only; ignore secondary nits listed in the system rubric.\n"
             f"Generation prompt (truncated):\n{ctx.prompt[:1200]}\n\n"
-            "Does the attached image match this prompt, bible, framing, and kind rules?"
+            "Does the attached image match PRIMARY bible traits, framing, and kind rules?"
         )
 
     def gate_ids(self, ctx: QaContext) -> list[str]:

@@ -667,9 +667,11 @@ def preview_entity_prompt(
 
 _DEFAULT_STILL_VARIANTS = {"", "默认形象", "默认造型", "default"}
 _STILL_REF_LOCK = {
+    # Do NOT say "injury" here — that word flips vision QA into the injury strategy
+    # and wrongly demands white gauze on default cast stills.
     "character": (
         " Keep the SAME face identity as the reference image;"
-        " only change wardrobe and injury as described."
+        " only change wardrobe or variant state as described."
     ),
     "scene": (
         " Keep the SAME location and layout as the reference image;"
@@ -693,7 +695,14 @@ _INJURY_ACHIEVABLE_BIBLE = (
 
 
 def _is_injury_variant(variant: str) -> bool:
-    return any(tok in str(variant or "") for tok in ("受伤", "绷带", "伤", "bandage", "injury"))
+    """True only for injury *variants* — never match lock phrases that say 'injury'."""
+    v = str(variant or "").strip().lower()
+    if not v:
+        return False
+    return any(
+        tok in v
+        for tok in ("受伤", "绷带", "负伤", "外伤", "伤势", "bandage", "injury", "wounded")
+    ) or (v.endswith("伤") or "伤后" in v or "伤态" in v)
 
 
 def _soften_injury_entity_bible(ent: dict[str, Any]) -> str:
@@ -774,6 +783,7 @@ def start_entity_image_job(
     three_view: bool = False,
     redraw: bool = False,
     force_illustration: bool = False,
+    force: bool = False,
 ) -> dict[str, Any]:
     """Enqueue entity still generation (Redis worker or bounded pool); return immediately."""
     from job_queue import enqueue
@@ -812,7 +822,8 @@ def start_entity_image_job(
             "projectId": project_id,
             "entityId": entity_id,
             "threeView": three_view,
-            "redraw": redraw,
+            "redraw": redraw or force,
+            "force": force or redraw,
             "forceIllustration": force_illustration,
         },
     )
@@ -836,6 +847,7 @@ def generate_entity_image(
     three_view: bool = False,
     redraw: bool = False,
     force_illustration: bool = False,
+    force: bool = False,
     wait: bool = True,
 ) -> dict:
     """Generate (+ QA-loop) an entity still.
@@ -851,6 +863,7 @@ def generate_entity_image(
             three_view=three_view,
             redraw=redraw,
             force_illustration=force_illustration,
+            force=force or redraw,
         )
 
     from entity_prompts import PromptBuildContext, resolve_entity_prompt_strategy
@@ -972,6 +985,22 @@ def generate_entity_image(
                     attempt_ref = face_ref
                     attempt_denoise = 0.94
             judge_desc = _INJURY_ACHIEVABLE_BIBLE
+        # Near-pass lock: refine the best previous still instead of cold T2I redraws.
+        # This is the main waste killer for hard cast bibles (hair/wardrobe).
+        if (
+            not injury_edit
+            and kind == "character"
+            and attempt > 1
+            and best
+            and best.get("path")
+            and not best.get("qaPass")
+        ):
+            prev_score = float((best.get("qa") or {}).get("score") or 0)
+            if prev_score >= 0.35:
+                prev_path = store._dir(project_id) / str(best["path"])
+                if prev_path.is_file():
+                    attempt_ref = prev_path
+                    attempt_denoise = 0.55 if prev_score >= 0.5 else 0.68
         if attempt > 1 and last_reason and not injury_edit:
             record_qa_failure(
                 skill_id="drama-entity-still",
@@ -1046,6 +1075,7 @@ def generate_entity_image(
                 kind=kind,
                 entity_name=str(ent.get("name") or ""),
                 entity_description=judge_desc,
+                entity_variant=str(ent.get("variant") or ""),
             )
         except Exception as exc:  # noqa: BLE001
             # Fail closed — never soft-pass when the judge itself crashes.
@@ -1251,6 +1281,7 @@ def recheck_entity_qa(
                 kind=kind,
                 entity_name=str(ent.get("name") or ""),
                 entity_description=str(ent.get("description") or ""),
+                entity_variant=str(ent.get("variant") or ""),
             )
         except Exception as exc:  # noqa: BLE001
             qa = {"pass": False, "score": 0, "reason": f"qa_exception:{exc}", "skipped": True}
@@ -1386,10 +1417,36 @@ def fill_entity_stills(
     else:
         target_ids = [e["id"] for e in alive if (e.get("kind") or "") in kind_set]
 
+    def _still_matches_framing_lock(img: dict[str, Any] | None) -> bool:
+        """Pass-and-stop: already-qaPass stills that already use the active framing lock."""
+        if not img or not img.get("path") or img.get("qaPass") is not True:
+            return False
+        from prompt_qa import is_soft_pass_qa, qa_meets_bar
+
+        if is_soft_pass_qa(img.get("qa")) or not qa_meets_bar(img.get("qa") or {}):
+            return False
+        prompt_l = str(img.get("prompt") or "").lower()
+        # Current cast lock is full_body — accept CN/EN markers already baked into the still.
+        return any(
+            tok in prompt_l
+            for tok in (
+                "full body",
+                "head-to-toe",
+                "head to toe",
+                "从头到脚",
+                "全身定妆",
+                "全身构图",
+            )
+        )
+
     def _needs_fill(ent: dict[str, Any]) -> bool:
-        if (ent.get("kind") or "") in force_kinds:
-            return True
         img = _selected_entity_image(ent)
+        # force_refresh_kinds used to redraw every character even when qaPass + framing
+        # already matched — that is how 花恋紫 piled up 30+ waste stills.
+        if (ent.get("kind") or "") in force_kinds:
+            if _still_matches_framing_lock(img):
+                return False
+            return True
         if not img or not img.get("path"):
             return True
         if not only_missing:
@@ -1409,7 +1466,18 @@ def fill_entity_stills(
     for eid in todo:
         ent = by_id[eid]
         try:
-            ver = generate_entity_image(store, project_id, eid, wait=wait)
+            refreshing = (ent.get("kind") or "") in force_kinds
+            # Only force redraw when the selected still is missing the framing lock.
+            if refreshing and _still_matches_framing_lock(_selected_entity_image(ent)):
+                refreshing = False
+            ver = generate_entity_image(
+                store,
+                project_id,
+                eid,
+                wait=wait,
+                redraw=refreshing,
+                force=refreshing,
+            )
             if ver.get("queued") or ver.get("async"):
                 queued += 1
                 results.append(
@@ -3067,10 +3135,34 @@ def start_shot_video(
         dialogue=str(shot.get("dialogue") or ""),
     )
     ratio = state["project"].get("ratio") or "9:16"
-    duration = int(shot.get("_segmentDurationOverride") or shot.get("duration") or 5)
-    duration = max(4, min(15, duration))
+    raw_dur = shot.get("_segmentDurationOverride") or shot.get("duration") or 5
+    try:
+        duration = float(raw_dur)
+    except (TypeError, ValueError):
+        duration = 5.0
+    # Portrait idlock matches offline H3 FL2VA at ~3.5s; drama shots stay 4–15s.
+    if shot.get("idlock") or (state.get("project") or {}).get("workflow") == "portrait-match":
+        duration = max(3.0, min(5.0, duration))
+    else:
+        duration = max(4, min(15, int(round(duration))))
 
     ref_entity_ids = list(shot.get("referenceEntityIds") or [])[:9]
+    # First/last-frame idlock (portrait-match): paths relative to project root.
+    proj_dir = store._dir(project_id)
+    start_rel = str(shot.get("startFramePath") or "").strip()
+    end_rel = str(shot.get("endFramePath") or "").strip()
+    start_abs = proj_dir / start_rel if start_rel else None
+    end_abs = proj_dir / end_rel if end_rel else None
+    idlock = bool(
+        start_abs
+        and start_abs.is_file()
+        and end_abs
+        and end_abs.is_file()
+        and (shot.get("idlock") or (state.get("project") or {}).get("workflow") == "portrait-match")
+    )
+    if idlock:
+        skip_refs = True
+
     # Segment path already asserted; re-assert for single-shot / retry paths.
     assert_entity_refs_ready_for_video(
         state,
@@ -3081,10 +3173,23 @@ def start_shot_video(
 
     # Prefer first existing entity reference image for I2V (ComfyUI / Seedance).
     ref_paths: list[Path] = []
+    end_ref_path: str | None = None
     content: list[dict] = [{"type": "text", "text": base_prompt}]
     import base64
 
-    if not skip_refs:
+    if idlock and start_abs and end_abs:
+        ref_paths = [start_abs]
+        end_ref_path = str(end_abs)
+        for p, role in ((start_abs, "first_frame"), (end_abs, "last_frame")):
+            b64 = base64.b64encode(p.read_bytes()).decode("ascii")
+            content.append(
+                {
+                    "type": "image_url",
+                    "image_url": {"url": f"data:image/jpeg;base64,{b64}"},
+                    "role": role,
+                }
+            )
+    elif not skip_refs:
         for eid in ref_entity_ids:
             ent = entities.get(eid)
             if not ent or not ent.get("selectedImageId"):
@@ -3110,6 +3215,8 @@ def start_shot_video(
         raise RuntimeError(
             "未配置出片后端：请填写火山 Seedance Key，或配置智川云 ComfyUI（MiniMax H3）地址。"
         )
+    if idlock and backend != "comfyui":
+        raise RuntimeError("写真对标首尾帧身份锁需要 ComfyUI · MiniMax H3，请在顶部切换出片后端。")
 
     shot["status"] = "generating"
     shot["providerTaskId"] = None
@@ -3135,6 +3242,9 @@ def start_shot_video(
         "ratio": ratio,
         "duration": duration,
         "refPath": str(ref_paths[0]) if ref_paths else None,
+        "endRefPath": end_ref_path,
+        # Idlock quality: full H3 denoise (no turbo LoRA).
+        "useTurbo": False if idlock else True,
     }
 
     from providers.video_factory import require_video_backend
@@ -3166,6 +3276,8 @@ def run_shot_video_job(
     ratio: str = "9:16",
     duration: int = 5,
     ref_path: str | None = None,
+    end_ref_path: str | None = None,
+    use_turbo: bool = True,
     seedance_task_id: str | None = None,
 ) -> None:
     """Blocking video job. The runner is looked up from the video backend registry."""
@@ -3183,6 +3295,8 @@ def run_shot_video_job(
         ratio=ratio,
         duration=duration,
         ref_path=ref_path,
+        end_ref_path=end_ref_path,
+        use_turbo=use_turbo,
         seedance_task_id=seedance_task_id,
     )
 

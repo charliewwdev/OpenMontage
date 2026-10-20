@@ -123,6 +123,7 @@ AUTH_PUBLIC_PREFIXES = (
 # Browse without login (mutations on these prefixes still require auth).
 AUTH_PUBLIC_GET_PREFIXES = (
     "/api/inspire/",
+    "/api/portrait-match/",  # templates + sample assets; create/generate still need login
     "/api/platform/skills",
     "/api/platform/assets",
     "/api/platform/prompts",
@@ -808,6 +809,31 @@ def purge_satisfied_stills() -> dict[str, Any]:
     from job_queue import purge_satisfied_entity_image_jobs, queue_stats
 
     result = purge_satisfied_entity_image_jobs()
+    return {**result, "mediaQueue": queue_stats(), "jobs": _build_jobs_payload()}
+
+
+@app.post("/api/settings/jobs/purge-project")
+async def purge_project_jobs(request: Request) -> dict[str, Any]:
+    """Drop queued media jobs for one project (free GPU after pausing auto-produce)."""
+    if not current_user_id():
+        raise _http_error(401, "login required")
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    if not isinstance(body, dict):
+        body = {}
+    pid = str(body.get("projectId") or "").strip()
+    if not pid:
+        raise _http_error(400, "projectId required")
+    _assert_project_access(pid, write=True)
+    from job_queue import purge_project_media_jobs, queue_stats
+
+    result = purge_project_media_jobs(
+        pid,
+        video=body.get("video", True) is not False,
+        image=bool(body.get("image")),
+    )
     return {**result, "mediaQueue": queue_stats(), "jobs": _build_jobs_payload()}
 
 
@@ -1528,6 +1554,69 @@ def inspire_img(u: str = Query("")) -> Response:
     )
 
 
+@app.get("/api/portrait-match/templates")
+def portrait_match_templates() -> dict[str, Any]:
+    from portrait_match import list_templates
+
+    return {"templates": list_templates()}
+
+
+@app.get("/api/portrait-match/assets/{asset_path:path}")
+def portrait_match_asset(asset_path: str) -> FileResponse:
+    from portrait_match import assets_root
+
+    root = assets_root().resolve()
+    target = (root / asset_path).resolve()
+    if not str(target).startswith(str(root)) or not target.is_file():
+        raise _http_error(404, "asset not found")
+    return FileResponse(target)
+
+
+@app.post("/api/portrait-match/projects", status_code=201)
+async def portrait_match_create(request: Request) -> dict[str, Any]:
+    from portrait_match import create_from_template
+
+    body = await request.json()
+    try:
+        bundle = create_from_template(
+            STORE,
+            template_id=str(body.get("templateId") or body.get("template") or ""),
+            title=(body.get("title") or None),
+            owner_id=current_user_id() or None,
+            include_sample=body.get("includeSample", True) is not False,
+        )
+    except (ValueError, FileNotFoundError, RuntimeError) as exc:
+        raise _http_error(400, str(exc)) from exc
+    return {"bundle": bundle, "project": (bundle or {}).get("project")}
+
+
+@app.post("/api/projects/{project_id}/portrait-match/generate")
+async def portrait_match_generate(project_id: str, request: Request) -> dict[str, Any]:
+    from portrait_match import start_all_idlock
+
+    body = await request.json() if request.headers.get("content-type", "").startswith("application/json") else {}
+    try:
+        return start_all_idlock(
+            STORE,
+            project_id,
+            model=str(body.get("model") or ""),
+            resolution=str(body.get("resolution") or "720p"),
+            only_missing=body.get("onlyMissing", True) is not False,
+        )
+    except (FileNotFoundError, RuntimeError) as exc:
+        raise _http_error(400, str(exc)) from exc
+
+
+@app.post("/api/projects/{project_id}/portrait-match/assemble")
+def portrait_match_assemble(project_id: str) -> dict[str, Any]:
+    from portrait_match import assemble_portrait
+
+    try:
+        return assemble_portrait(STORE, project_id)
+    except (FileNotFoundError, RuntimeError) as exc:
+        raise _http_error(400, str(exc)) from exc
+
+
 @app.get("/api/projects")
 def list_projects() -> dict[str, Any]:
     items = STORE.list_items()
@@ -1807,13 +1896,18 @@ async def entities_post(project_id: str, request: Request) -> dict[str, Any]:
     action = body.get("action")
     if action == "generate":
         # Default async: enqueue on bounded media pool so HTTP stays responsive.
+        # User-initiated generate must force=True — otherwise purge_satisfied drops
+        # the job when a prior still already has qaPass (「生成新版本」出现排队即消失).
         wait = bool(body.get("wait"))
+        redraw = bool(body.get("redraw"))
+        force = bool(body.get("force")) if "force" in body else True
         ver = generate_entity_image(
             STORE,
             pid,
             body.get("entityId") or body.get("id"),
             three_view=bool(body.get("threeView")),
-            redraw=bool(body.get("redraw")),
+            redraw=redraw,
+            force=force or redraw,
             wait=wait,
         )
         return {"image": ver, "async": not wait, "bundle": STORE.bundle(pid)}

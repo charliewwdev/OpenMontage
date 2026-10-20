@@ -393,6 +393,39 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
     );
   };
 
+  const nvidiaConfigured = Boolean(status?.nvidia?.configured);
+  const nvidiaSection = (
+    <section className="provider-card !items-stretch !flex-col gap-3 sm:!flex-row sm:!items-center">
+      <div className="provider-card-icon">N</div>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-[15px] font-semibold">NVIDIA 开源出图</h3>
+          <span className="text-xs text-[var(--muted)]">FLUX schnell / klein · 试用额度</span>
+          {nvidiaConfigured ? (
+            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">
+              已配置
+            </span>
+          ) : (
+            <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] text-[var(--muted)]">
+              未配置
+            </span>
+          )}
+          {status?.imageBackend === "nvidia" ? <span className="provider-badge-active">出图使用中</span> : null}
+        </div>
+        <p className="mt-1 text-[11px] leading-4 text-white/40">
+          到{" "}
+          <a className="text-[#a5b4fc] hover:underline" href="https://build.nvidia.com/settings" target="_blank" rel="noreferrer">
+            build.nvidia.com
+          </a>{" "}
+          领取试用 Key。保存后在顶部出图模型里选 FLUX.1 schnell。
+        </p>
+        <div className="mt-3">
+          <NvidiaKeyCard status={status} onUpdated={onUpdated} />
+        </div>
+      </div>
+    </section>
+  );
+
   const volcSection = (
     <section className="provider-card !items-stretch !flex-col gap-3 sm:!flex-row sm:!items-center">
       <div className="provider-card-icon">火</div>
@@ -484,6 +517,7 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
             <div className="space-y-2.5">
               <SectionLabel>媒体 · 出图 / 出片</SectionLabel>
               {volcConfigured ? volcSection : null}
+              {nvidiaConfigured ? nvidiaSection : null}
               {comfyConfigured ? comfySection : null}
             </div>
           ) : null}
@@ -501,6 +535,7 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
         <div className="space-y-2.5">
           <SectionLabel>媒体 · 未配置</SectionLabel>
           {!volcConfigured ? volcSection : null}
+          {!nvidiaConfigured ? nvidiaSection : null}
           {!comfyConfigured ? comfySection : null}
         </div>
       ) : null}
@@ -512,6 +547,49 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
         onClose={() => setEditor(null)}
         onSave={savePayload}
       />
+    </div>
+  );
+}
+
+function NvidiaKeyCard({ status, onUpdated }) {
+  const [key, setKey] = useState("");
+  const [saving, setSaving] = useState(false);
+  const configured = status?.nvidia?.configured;
+  const save = async () => {
+    if (!key.trim()) {
+      toast.error("请填写 NVIDIA API Key");
+      return;
+    }
+    setSaving(true);
+    try {
+      const data = await api("/api/settings/keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ NVIDIA_API_KEY: key.trim(), NVIDIA_IMAGE_MODEL: "flux-3-image-klein" }),
+      });
+      setKey("");
+      onUpdated?.(data);
+      toast.success("NVIDIA Key 已保存");
+    } catch (e) {
+      toast.error(String(e.message || e));
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+      <input
+        className="field sm:flex-1"
+        type="password"
+        autoComplete="off"
+        placeholder={configured ? `已配置 ${status?.nvidia?.masked || ""}，粘贴新 Key 以更换` : "粘贴 nvapi- Key"}
+        value={key}
+        onChange={(e) => setKey(e.target.value)}
+      />
+      <button type="button" className="btn-secondary !min-h-[38px] !px-3 text-xs" disabled={saving || !key.trim()} onClick={() => void save()}>
+        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+        保存
+      </button>
     </div>
   );
 }
@@ -1413,6 +1491,7 @@ export function KeysSettings({ config, onUpdated }) {
   const onKeysUpdated = (data) => {
     setStatus(data.keys);
     onUpdated?.(data);
+    window.dispatchEvent(new CustomEvent("studio-keys-changed"));
   };
 
   const test = async () => {

@@ -130,7 +130,47 @@ class SeedreamImageBackend:
         )
 
 
+class NvidiaFluxImageBackend:
+    id = "nvidia"
+
+    def configured(self) -> bool:
+        try:
+            from .nvidia_flux import configured as nvidia_ok
+
+            return bool(nvidia_ok())
+        except Exception:
+            return False
+
+    def unavailable_message(self) -> str:
+        return "顶部已选择 NVIDIA 开源出图，但没有 NVIDIA_API_KEY。到 build.nvidia.com 领取试用 Key 后填到密钥设置。"
+
+    def generate(
+        self,
+        *,
+        prompt: str,
+        ratio: str,
+        out_path: Path,
+        reference_path: Path | None = None,
+        negative_prompt: str | None = None,
+        denoise: float | None = None,
+    ) -> Path:
+        del denoise
+        from .nvidia_flux import NvidiaFluxError, generate_image as nvidia_generate
+
+        try:
+            return nvidia_generate(
+                prompt=prompt,
+                ratio=ratio,
+                out_path=out_path,
+                reference_path=reference_path,
+                negative_prompt=negative_prompt,
+            )
+        except NvidiaFluxError as exc:
+            raise RuntimeError(str(exc)) from exc
+
+
 IMAGE_BACKENDS.register(ComfyImageBackend.id, ComfyImageBackend(), priority=20)
+IMAGE_BACKENDS.register(NvidiaFluxImageBackend.id, NvidiaFluxImageBackend(), priority=15)
 IMAGE_BACKENDS.register(SeedreamImageBackend.id, SeedreamImageBackend(), priority=10)
 
 
@@ -171,7 +211,9 @@ def generate_image(
         pinned = IMAGE_BACKENDS.get(preferred)
         if pinned is not None:
             raise RuntimeError(pinned.unavailable_message())
-        raise RuntimeError("未配置出图后端：请在顶部选择 Seedream 或 ComfyUI，并配置对应 Key / 租机地址。")
+        raise RuntimeError(
+            "未配置出图后端：请在顶部选择 Seedream、ComfyUI 或 NVIDIA 开源出图，并配置对应 Key。"
+        )
     if (
         preferred not in {"", "auto"}
         and IMAGE_BACKENDS.get(preferred) is not None

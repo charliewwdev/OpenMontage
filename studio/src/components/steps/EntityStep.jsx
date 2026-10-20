@@ -157,6 +157,8 @@ export function EntityStep({
           entityId: entity.id,
           threeView: kind !== "scene" && threeView,
           redraw,
+          // Always force so Redis purge won't drop jobs when an older still already qaPass.
+          force: true,
         }),
       });
       apply(res);

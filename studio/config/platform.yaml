@@ -97,6 +97,9 @@ defaults:
   # With REDIS_URL, jobs go to Redis and media_worker processes them.
   # Override with env STUDIO_MEDIA_WORKERS / STUDIO_VIDEO_PARALLEL. Keep ≤4.
   mediaJobWorkers: 3
+  # API stills (NVIDIA / Seedream) run beside video. ComfyUI stills stay on the GPU slots.
+  # Override with STUDIO_IMAGE_WORKERS. 0 disables. Cap 4.
+  imageJobWorkers: 2
   # Multi-process uvicorn (entrypoint UVICORN_WORKERS). Store uses fcntl locks.
   uvicornWorkers: 2
   maxCharacters: 24
@@ -210,6 +213,16 @@ entryCards:
     preset:
       genre: 赘婿逆袭
       ratio: "9:16"
+  - id: portrait-match
+    title: 写真对标
+    badge: "H3"
+    desc: 抖音氛围写真 · 首尾帧身份锁 · 竖屏 9:16
+    tone: from-[#0ea5e9] via-[#6366f1] to-[#a855f7]
+    available: true
+    preset:
+      genre: 氛围写真
+      ratio: "9:16"
+    workflow: portrait-match
   - id: short
     title: 短剧
     badge: "+"
@@ -259,8 +272,8 @@ nav:
     label: 无限画布
     icon: Workflow
   - id: inspire
-    label: 灵感广场
-    icon: Compass
+    label: 爆款内容广场
+    icon: Flame
   - id: cup
     label: 创作挑战
     icon: Trophy
@@ -362,9 +375,9 @@ tools:
     group: workflow
     nav: canvas
   - id: inspire
-    title: 灵感广场
-    desc: 浏览提示词与影视参考图
-    icon: Compass
+    title: 爆款内容广场
+    desc: TikTok / 抖音 / 小红书等社媒爆款视频打造工作流
+    icon: Flame
     group: workflow
     nav: inspire
   - id: assets
@@ -392,23 +405,197 @@ tools:
     group: workflow
     nav: jobs
 
+# Platform playbooks for 爆款内容广场 (consumed by InspirePage; do not hardcode in JSX).
+inspirePlatforms:
+  - id: douyin
+    label: 抖音
+    blurb: 竖屏 9–15s · 氛围/钩子两类主场
+    prompt: 做一条抖音原生竖屏短视频（9:16，约 10–15 秒）：要么走「AI 氛围感写真卡点」（首帧美人脸停滑、暖夜景 bokeh、卡点切镜、诗意标题+话题标签），要么走「短剧钩子」（前 3 秒强冲突、一次身份反转、结尾悬念）。对白/字幕短促清晰，不要水印。
+  - id: tiktok
+    label: TikTok
+    blurb: Trend pacing · Part 2 CTA
+    prompt: "Create a TikTok-native vertical short (9:16, 15–20s): cold open hook in 1s, trend-aware pacing, one clear plot twist, end card for Part 2. No watermark, punchy captions."
+  - id: xhs
+    label: 小红书
+    blurb: 种草结构 · 可截图标题
+    prompt: 打造小红书种草向竖屏短片：开场痛点共鸣 → 3 个可执行方法/前后对比 → 温柔人设收尾 CTA。画面干净、标题句可截图，适合图文封面二创。
+  - id: reels
+    label: Reels
+    blurb: 7–15s lifestyle jump cuts
+    prompt: "Instagram Reels workflow: 7–15s lifestyle cut, first frame must stop the scroll, jump cuts every 0.8–1.2s, trending audio space, soft product integration without hard sell."
+  - id: shorts
+    label: Shorts
+    blurb: 问答完播 · 高信息密度
+    prompt: YouTube Shorts 爆款结构：疑问句标题钩子 → 30 秒内完整回答一个问题 → 结尾 CTA 订阅/评论。信息密度高，画面以特写与字幕驱动。
+  - id: bilibili
+    label: B站
+    blurb: 三分钟讲透 · 知识切片
+    prompt: B 站「三分钟讲透」口播短片：开头质疑常识，中段拆 3 个证据点，结尾金句总结。适合知识区与二创切片。
+
+# Real short-video viral scenarios (beat structure), not still-mood boards.
+# Grounded in observed Douyin/TikTok/小红书 feed patterns; not live chart scrapes.
+viralScenarios:
+  - id: douyin-ai-portrait-beat
+    platform: 抖音
+    title: AI 氛围感写真卡点
+    duration: 9–12 秒
+    genre: 氛围写真
+    hook: 首帧美人脸 + 夜景暖光 bokeh，0.5 秒内停滑
+    workflow: portrait-match
+    templateId: ref1
+    whyItWorks:
+      - 几乎无剧情，全靠脸、光影、卡点音乐完成完播
+      - 诗意标题 + #写真摄影 #卡点音乐 走话题分发
+      - 评论区围绕「是不是 AI」讨论，二次加热
+    beats:
+      - t: 0–1s
+        action: 特写回眸/微笑入画，暖色路灯虚化背景
+      - t: 1–6s
+        action: 2–3 个姿态切换，切点对齐鼓点（持杯、侧身、风吹裙摆）
+      - t: 6–11s
+        action: 拉远半身城市夜景，标题句落版，循环感收尾
+    styleNotes: 9:16；电影感浅景深；AI 生成人物需自然肤质；平台会标「疑似 AI」；留卡点音乐位
+    prompt: 做一条约 11 秒抖音竖屏 AI 氛围感女像短片（9:16）：雨夜/城市河边暖光 bokeh，偶像感造型（麻花辫、针织开衫、格子裙、手持咖啡），前 1 秒特写回眸停滑，中段 2–3 个卡点切镜对齐鼓点，结尾半身拉远。标题气质像「雨夜回眸，晚风遇你」，带 #写真摄影 #氛围感 #卡点音乐。无对白，音乐驱动，不要水印。
+    referenceNote: 结构对标抖音搜索流常见「AI 写真卡点」赛道（约 10s 完播循环），非实时榜单抓取。走「写真对标」工作流：MiniMax H3 首尾帧身份锁。
+  - id: douyin-drama-hook
+    platform: 抖音
+    title: 竖屏短剧 15s 钩子
+    duration: 15–30 秒
+    genre: 短剧
+    hook: 前 3 秒强冲突（骂/打脸/身份羞辱）
+    whyItWorks:
+      - 冲突开场立刻抬完播意向
+      - 一次身份反转让中段有记忆点
+      - 结尾悬念驱动「下一条/全集」
+    beats:
+      - t: 0–3s
+        action: 冷开场冲突特写 + 一句狠对白字幕
+      - t: 3–12s
+        action: 身份线索埋点，对手得意
+      - t: 12–20s
+        action: 反转亮牌，情绪翻转
+      - t: 20–30s
+        action: 悬念卡点 +「下集更刺激」文案
+    styleNotes: 对白短促；底部大字幕；都市夜戏冷暖对比
+    prompt: 做一条 15–30 秒竖屏抖音短剧钩子：前 3 秒强冲突开场，中间一次身份反转，结尾留悬念引导下一条。题材偏都市爽感，对白短促，字幕清晰，9:16。
+    referenceNote: 抖音/红果短剧切片通用结构。
+  - id: tiktok-cold-open
+    platform: TikTok
+    title: Cold-open trend short
+    duration: 15–20s
+    genre: Narrative short
+    hook: Hook in first 1 second — face or action mid-conflict
+    whyItWorks:
+      - Cold open beats slow intros on For You
+      - One twist + Part 2 CTA maximizes follows
+    beats:
+      - t: 0–1s
+        action: Mid-action cold open, no logo bumper
+      - t: 1–10s
+        action: Escalate with jump cuts every ~1s
+      - t: 10–18s
+        action: Twist reveal
+      - t: 18–20s
+        action: "Part 2 end card"
+    styleNotes: 9:16, punchy captions, leave room for trending audio
+    prompt: "Create a TikTok-native vertical short (9:16, 15–20s): cold open hook in 1s, trend-aware pacing, one clear plot twist, end card for Part 2. No watermark, punchy captions."
+    referenceNote: Typical English-side FYP narrative short pattern.
+  - id: xhs-seed-howto
+    platform: 小红书
+    title: 三步种草前后对比
+    duration: 20–35 秒
+    genre: 种草
+    hook: 开场痛点一句 + 可截图大标题
+    whyItWorks:
+      - 痛点共鸣停滑
+      - 三步法便于收藏与二创封面
+    beats:
+      - t: 0–3s
+        action: 痛点画面 + 大标题
+      - t: 3–22s
+        action: 方法 1/2/3 或 Before→After
+      - t: 22–30s
+        action: 人设收尾 + 关注/收藏 CTA
+    styleNotes: 画面干净；标题可截图；竖屏
+    prompt: 打造小红书种草向竖屏短片：开场痛点共鸣 → 3 个可执行方法/前后对比 → 温柔人设收尾 CTA。画面干净、标题句可截图，适合图文封面二创。
+    referenceNote: 小红书笔记视频常见种草骨架。
+  - id: reels-lifestyle
+    platform: Reels
+    title: Lifestyle jump-cut loop
+    duration: 7–15s
+    genre: Lifestyle
+    hook: First frame must stop the scroll
+    whyItWorks:
+      - Ultra-short loops favor rewatch
+      - Soft product placement feels native
+    beats:
+      - t: 0–1s
+        action: Hero first frame
+      - t: 1–12s
+        action: Jump cuts every 0.8–1.2s
+      - t: 12–15s
+        action: Soft product beat + loop-friendly end
+    styleNotes: Trending audio space; no hard sell
+    prompt: "Instagram Reels workflow: 7–15s lifestyle cut, first frame must stop the scroll, jump cuts every 0.8–1.2s, trending audio space, soft product integration without hard sell."
+    referenceNote: Reels lifestyle / UGC aesthetic loop.
+  - id: shorts-qa
+    platform: Shorts
+    title: 一问一答完播
+    duration: 30–45 秒
+    genre: 知识
+    hook: 疑问句标题钩子
+    whyItWorks:
+      - 承诺在 30 秒内答完，推高完播
+      - 特写+字幕信息密度高
+    beats:
+      - t: 0–3s
+        action: 疑问句标题 + 说话人特写
+      - t: 3–25s
+        action: 分点回答，每点一切镜
+      - t: 25–35s
+        action: 金句总结 + 订阅/评论 CTA
+    styleNotes: 高信息密度；字幕驱动
+    prompt: YouTube Shorts 爆款结构：疑问句标题钩子 → 30 秒内完整回答一个问题 → 结尾 CTA 订阅/评论。信息密度高，画面以特写与字幕驱动。
+    referenceNote: Shorts Q&A / explainer pattern.
+  - id: bilibili-explain
+    platform: B站
+    title: 三分钟讲透切片
+    duration: 60–180 秒
+    genre: 知识口播
+    hook: 开头质疑一条常识
+    whyItWorks:
+      - 质疑开场提高停留
+      - 三点证据方便二创切片
+    beats:
+      - t: 开场
+        action: 质疑常识 / 抛冲突观点
+      - t: 中段
+        action: 拆 3 个证据点
+      - t: 结尾
+        action: 金句总结 + 三连引导
+    styleNotes: 竖/横皆可；口播清晰
+    prompt: B 站「三分钟讲透」口播短片：开头质疑常识，中段拆 3 个证据点，结尾金句总结。适合知识区与二创切片。
+    referenceNote: B 站知识区口播切片习惯结构。
+
 inspirePrompts:
-  - tag: 都市爽剧
-    text: 落魄女婿被丈母娘羞辱三年后，以隐秘身份归来，用商业与人情双重反击。
-  - tag: 悬疑
-    text: 女法医发现每具尸体都带着同一串古语，而破译者正是失踪多年的自己。
-  - tag: 甜宠
-    text: 冷面总裁误把替身当成真正的青梅竹马，直到替身要离开，他才发现心动早已失控。
-  - tag: 穿越
-    text: 游戏策划死后穿越进自己设计的副本，必须用策划知识通关，才能回到现实。
-  - tag: 职场
-    text: 新人设计师被抢创意后反杀：她用一场直播让品牌方看到真正的创作者。
-  - tag: 科幻
-    text: 记忆可交易的城市里，男主卖掉童年换工作机会，却发现买家正是未来的自己。
-  - tag: 古风
-    text: 女刺客伪装成哑巴丫鬟潜入侯府，却发现侯爷早就识破，并故意留下她。
-  - tag: 校园
-    text: 学渣为了追女神报名辩论社，结果被拉进一场关乎学校存亡的全国赛。
+  - tag: 抖音·AI写真
+    text: 做一条约 11 秒抖音竖屏 AI 氛围感女像短片（9:16）：城市夜景暖光 bokeh，偶像感造型，前 1 秒特写回眸停滑，中段 2–3 个卡点切镜对齐鼓点，结尾半身拉远。诗意标题 + #写真摄影 #氛围感 #卡点音乐。无对白，音乐驱动，不要水印。
+  - tag: 抖音·短剧
+    text: 做一条 15–30 秒竖屏抖音短剧钩子：前 3 秒强冲突开场，中间一次身份反转，结尾留悬念引导下一条。题材偏都市爽感，对白短促，字幕清晰，9:16。
+  - tag: TikTok
+    text: "Create a TikTok-native vertical short (9:16, 15–20s): cold open hook in 1s, trend-aware pacing, one clear plot twist, end card for Part 2. No watermark, punchy English/Chinese bilingual captions optional."
+  - tag: 小红书
+    text: 打造小红书种草向竖屏短片：开场痛点共鸣 → 3 个可执行方法/前后对比 → 温柔人设收尾 CTA。画面干净、标题句可截图，适合图文封面二创。
+  - tag: Reels
+    text: "Instagram Reels workflow: 7–15s lifestyle cut, first frame must stop the scroll, jump cuts every 0.8–1.2s, trending audio space, soft product integration without hard sell."
+  - tag: Shorts
+    text: YouTube Shorts 爆款结构：疑问句标题钩子 → 30 秒内完整回答一个问题 → 结尾 CTA 订阅/评论。信息密度高，画面以特写与字幕驱动。
+  - tag: B站
+    text: B 站竖屏/横屏皆可的「三分钟讲透」口播短片：开头质疑常识，中段拆 3 个证据点，结尾金句总结。适合知识区与二创切片。
+  - tag: 剧情切片
+    text: 从长剧/短剧中切一条高完播切片：选冲突最强的 20–40 秒，补上下文字幕条，片头 1 秒钩子文案，片尾引导完整集。
+  - tag: 带货转化
+    text: 电商转化短视频工作流：痛点演示 → 产品解决过程特写 → 三连利益点字幕 → 限时催单 CTA。节奏快、证据感强、避免空镜。
 
 challenges:
   - id: hook-15
@@ -449,10 +636,10 @@ resources:
     icon: Images
     external: false
     group: studio
-  - title: 灵感广场
-    desc: 影视参考图与提示词
+  - title: 爆款内容广场
+    desc: 真实短视频场景节拍 + 平台套路 + 画面气质墙
     href: inspire
-    icon: Compass
+    icon: Flame
     external: false
     group: studio
   - title: 文本大模型
@@ -486,9 +673,11 @@ helpSections:
   - title: 六步工坊
     body: 剧本（文本大模型）→ 角色/场景/道具（Seedream）→ 分镜（Seedance）→ 配音 → 剪辑（FFmpeg）。也可用「一键全流程」后台自动跑通；每一步仍可单独重跑或换版本。
   - title: 模型配置与能力
-    body: 支持智川云 Token（tokens.gpuhome.cc）、DeepSeek、OpenAI、Claude、Gemini、通义、Kimi、豆包、智谱、Grok、MiniMax、OpenRouter、Cursor Auto 等。出图/出片可用火山方舟，或在智川云租 GPU 后填写 ComfyUI 地址。密钥按账号隔离保存，热加载无需重启。
+    body: 支持智川云 Token（tokens.gpuhome.cc）、算桥/算家云（api.suanjiayun.com）、DeepSeek、OpenAI、Claude、Gemini、通义、Kimi、豆包、智谱、Grok、MiniMax、OpenRouter、Cursor Auto 等。出图/出片可用火山方舟，或在智川云租 GPU 后填写 ComfyUI 地址。密钥按账号隔离保存，热加载无需重启。
   - title: 资产与画布
     body: 资产库汇总角色/场景/道具图片与个人上传；提示词库可新建复用；无限画布展示当前项目节点进度；作品频道回看成片导出。
+  - title: 爆款内容广场
+    body: 顶部「真实短视频场景」展示抖音/TikTok/小红书等平台爆款的节拍结构（如 AI 氛围感写真卡点、短剧钩子），可一键带入创作；平台套路与工作流提示词可复制；下方画面墙仅作气质参考（多为静帧），不是热榜成片抓取。
 
 splitStages:
   - startsAt: 0
@@ -743,9 +932,9 @@ toolHub:
 
 pages:
   inspire:
-    eyebrow: Inspiration
-    title: 灵感广场
-    description: 探索影视灵感素材，学习提示词技巧；点击卡片查看完整创作提示词，一键复制或带入创作。
+    eyebrow: Viral Content
+    title: 爆款内容广场
+    description: 先看各大平台真实短视频爆款长什么样（节拍结构），再选平台套路一键带入创作；下方画面墙只作气质参考，不是成片模板。
   challenge:
     eyebrow: Challenge
     title: 创作挑战

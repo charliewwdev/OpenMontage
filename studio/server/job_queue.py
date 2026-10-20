@@ -179,29 +179,67 @@ def promote_image_jobs(*, max_items: int = 2000) -> int:
     return moved
 
 
-def reserve_job(*, timeout: float = 2.0) -> dict[str, Any] | None:
-    """Reserve one job. Prefer stills when light; do not let a still stampede starve video."""
+def api_image_workers() -> int:
+    """Extra still slots for API image backends (NVIDIA / Seedream).
+
+    ComfyUI stills stay on the video worker slots so they do not double-book the GPU.
+    ``STUDIO_IMAGE_WORKERS=0`` turns the lane off. Default 2, cap 4.
+    """
+    raw = (os.environ.get("STUDIO_IMAGE_WORKERS") or "").strip()
+    if raw == "0":
+        return 0
+    try:
+        from providers.image_factory import image_backend
+
+        if image_backend() not in {"nvidia", "seedream"}:
+            return 0
+    except Exception:
+        return 0
+    if raw.isdigit():
+        return max(0, min(4, int(raw)))
+    try:
+        from platform_config import load_platform_config
+
+        n = int((load_platform_config() or {}).get("defaults", {}).get("imageJobWorkers") or 2)
+        return max(0, min(4, n))
+    except Exception:
+        return 2
+
+
+def reserve_job(*, timeout: float = 2.0, lane: str = "any") -> dict[str, Any] | None:
+    """Reserve one job.
+
+    ``lane="image"`` only takes stills. ``lane="video"`` only takes video.
+    ``lane="any"`` prefers stills until the still backlog is large.
+    ``timeout=0`` is non-blocking.
+    """
     r = get_redis()
     if r is None:
         return None
-    timeout = max(1, int(timeout or 2))
+    block = 0 if timeout is not None and float(timeout) <= 0 else max(1, int(timeout or 2))
+    lane = (lane or "any").strip().lower()
     raw = None
     try:
-        try:
-            img_n = int(r.llen(IMAGE_QUEUE_KEY) or 0)
-            vid_n = int(r.llen(QUEUE_KEY) or 0)
-        except Exception:
-            img_n, vid_n = 0, 0
-        # When videos are waiting behind a huge still backlog, pull video first.
-        prefer_video = vid_n > 0 and img_n >= 8
-        if prefer_video:
-            raw = _move_to_processing(r, QUEUE_KEY, 0)
-            if not raw:
-                raw = _move_to_processing(r, IMAGE_QUEUE_KEY, timeout)
+        if lane == "image":
+            raw = _move_to_processing(r, IMAGE_QUEUE_KEY, block)
+        elif lane == "video":
+            raw = _move_to_processing(r, QUEUE_KEY, block)
         else:
-            raw = _move_to_processing(r, IMAGE_QUEUE_KEY, 0)
-            if not raw:
-                raw = _move_to_processing(r, QUEUE_KEY, timeout)
+            try:
+                img_n = int(r.llen(IMAGE_QUEUE_KEY) or 0)
+                vid_n = int(r.llen(QUEUE_KEY) or 0)
+            except Exception:
+                img_n, vid_n = 0, 0
+            # When videos are waiting behind a huge still backlog, pull video first.
+            prefer_video = vid_n > 0 and img_n >= 8
+            if prefer_video:
+                raw = _move_to_processing(r, QUEUE_KEY, 0)
+                if not raw:
+                    raw = _move_to_processing(r, IMAGE_QUEUE_KEY, block)
+            else:
+                raw = _move_to_processing(r, IMAGE_QUEUE_KEY, 0)
+                if not raw:
+                    raw = _move_to_processing(r, QUEUE_KEY, block)
     except Exception as exc:  # noqa: BLE001
         log.warning("reserve_job error: %s", exc)
         return None
@@ -280,7 +318,19 @@ def purge_satisfied_entity_image_jobs(*, max_scan: int = 4000) -> dict[str, Any]
                 (e for e in (state.get("entities") or []) if e.get("id") == eid and not e.get("deletedAt")),
                 None,
             )
-        if _entity_selected_qa_ok(ent) and not payload.get("force"):
+        # Drop duplicates when the selected still already passes. Also drop stale
+        # force/redraw jobs superseded by a newer qaPass (e.g. sync generate finished
+        # while an older redraw sat behind video workers).
+        drop = False
+        if _entity_selected_qa_ok(ent):
+            if not payload.get("force") and not payload.get("redraw"):
+                drop = True
+            else:
+                job_at = str(job.get("enqueuedAt") or "")
+                ent_at = str((ent or {}).get("updatedAt") or "")
+                if job_at and ent_at and ent_at > job_at:
+                    drop = True
+        if drop:
             try:
                 removed += int(r.lrem(IMAGE_QUEUE_KEY, 1, raw) or 0)
             except Exception:
@@ -290,6 +340,66 @@ def purge_satisfied_entity_image_jobs(*, max_scan: int = 4000) -> dict[str, Any]
     if removed:
         log.info("purged %s satisfied entity_image job(s); kept≈%s scanned=%s", removed, kept, scanned)
     return {"ok": True, "removed": removed, "kept": kept, "scanned": scanned}
+
+
+def purge_project_media_jobs(
+    project_id: str,
+    *,
+    max_scan: int = 8000,
+    video: bool = True,
+    image: bool = False,
+) -> dict[str, Any]:
+    """Drop queued (and matching processing-list) media jobs for one project.
+
+    Used when pausing a drama to free Comfy/GPU for another task.
+    """
+    pid = str(project_id or "").strip()
+    if not pid:
+        return {"ok": False, "error": "projectId required", "removed": 0}
+    r = get_redis()
+    if r is None:
+        return {"ok": False, "error": "redis unavailable", "removed": 0}
+
+    def _drop_from(key: str) -> tuple[int, int]:
+        removed_n = 0
+        scanned_n = 0
+        try:
+            items = r.lrange(key, 0, max(0, int(max_scan) - 1)) or []
+        except Exception as exc:  # noqa: BLE001
+            raise RuntimeError(str(exc)[:160]) from exc
+        for raw in items:
+            scanned_n += 1
+            try:
+                job = json.loads(raw)
+            except Exception:
+                continue
+            payload = job.get("payload") if isinstance(job.get("payload"), dict) else {}
+            job_pid = str(payload.get("projectId") or job.get("projectId") or "")
+            if job_pid != pid:
+                continue
+            try:
+                removed_n += int(r.lrem(key, 0, raw) or 0)
+            except Exception:
+                pass
+        return removed_n, scanned_n
+
+    removed = 0
+    scanned = 0
+    keys: list[str] = []
+    if video:
+        keys.extend([QUEUE_KEY, PROCESSING_KEY])
+    if image:
+        keys.append(IMAGE_QUEUE_KEY)
+    try:
+        for key in keys:
+            n, s = _drop_from(key)
+            removed += n
+            scanned += s
+    except RuntimeError as exc:
+        return {"ok": False, "error": str(exc), "removed": removed, "scanned": scanned}
+    if removed:
+        log.info("purged %s media job(s) for project=%s scanned=%s", removed, pid, scanned)
+    return {"ok": True, "projectId": pid, "removed": removed, "scanned": scanned, "keys": keys}
 
 
 def ack_job(job: dict[str, Any] | None) -> None:
@@ -449,8 +559,9 @@ def _handle_entity_image(payload: dict[str, Any]) -> Any:
     store = _store()
     project_id = str(payload["projectId"])
     entity_id = str(payload["entityId"])
-    # Skip no-op retries when a QA-passed still already exists (unless force).
-    if not payload.get("force"):
+    # Skip no-op retries when a QA-passed still already exists (unless force/redraw).
+    # Stale force/redraw jobs are dropped by purge_satisfied when selection is newer.
+    if not payload.get("force") and not payload.get("redraw"):
         st0 = store.load(project_id)
         ent0 = next(
             (e for e in ((st0 or {}).get("entities") or []) if e.get("id") == entity_id),
@@ -458,7 +569,7 @@ def _handle_entity_image(payload: dict[str, Any]) -> Any:
         )
         if _entity_selected_qa_ok(ent0):
             if ent0.get("imageStatus") == "generating":
-                ent0["imageStatus"] = "ready"
+                ent0["imageStatus"] = "done"
                 ent0["imageError"] = None
                 ent0["updatedAt"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
                 store.save(st0)
@@ -530,6 +641,9 @@ def _handle_shot_video(payload: dict[str, Any]) -> Any:
     if deferred:
         log.info("defer video shot=%s %s", payload.get("shotId"), deferred[:180])
         return {"deferred": True, "reason": deferred[:240]}
+    use_turbo = payload.get("useTurbo")
+    if use_turbo is None:
+        use_turbo = not bool(payload.get("endRefPath"))
     return run_shot_video_job(
         _store(),
         str(payload["projectId"]),
@@ -542,6 +656,8 @@ def _handle_shot_video(payload: dict[str, Any]) -> Any:
         ratio=str(payload.get("ratio") or "9:16"),
         duration=int(payload.get("duration") or 5),
         ref_path=payload.get("refPath"),
+        end_ref_path=payload.get("endRefPath"),
+        use_turbo=bool(use_turbo),
         seedance_task_id=payload.get("seedanceTaskId"),
     )
 
@@ -587,6 +703,7 @@ def queue_stats() -> dict[str, Any]:
             stats["redisImagePending"] = int(r.llen(IMAGE_QUEUE_KEY))
             stats["redisVideoPending"] = int(r.llen(QUEUE_KEY))
             stats["redisProcessing"] = int(r.llen(PROCESSING_KEY))
+            stats["imageLaneWorkers"] = api_image_workers()
         except Exception as exc:  # noqa: BLE001
             stats["redisError"] = str(exc)[:120]
     return stats

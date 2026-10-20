@@ -38,6 +38,24 @@ LLM_PROVIDERS: list[dict[str, Any]] = [
         ],
     },
     {
+        "id": "suanqiao",
+        "label": "算桥 / 算家云",
+        "kind": "openai",
+        "keyEnv": "SUANQIAO_API_KEY",
+        "baseEnv": "SUANQIAO_BASE_URL",
+        "modelEnv": "SUANQIAO_MODEL",
+        # Docs: https://api.suanjiayun.com/ — console https://suanjiayun.com/apiUser/
+        # Chat Completions: POST {base}/chat/completions (OpenAI-compatible)
+        "defaultBase": "https://api.suanjiayun.com/v1",
+        "defaultModel": "qwen3.6-plus",
+        "docs": "https://api.suanjiayun.com/modelList",
+        "placeholder": "sk-...",
+        "hint": "算桥控制台创建令牌（积分计费，按项目隔离）。账号与算家云互通，但计费独立。",
+        "models": [
+            {"id": "qwen3.6-plus", "label": "Qwen3.6 Plus（默认）"},
+        ],
+    },
+    {
         "id": "deepseek",
         "label": "DeepSeek",
         "kind": "openai",
@@ -243,7 +261,10 @@ def all_secret_envs() -> tuple[str, ...]:
             "COMFYUI_API_KEY",
             "COMFY_ORG_API_KEY",
             # Studio generation prefs (not secrets; stored alongside keys for BYOK scope)
-            "STUDIO_IMAGE_BACKEND",  # auto | seedream | comfyui
+            "NVIDIA_API_KEY",
+            "NVIDIA_NIM_API_KEY",
+            "NVIDIA_IMAGE_MODEL",
+            "STUDIO_IMAGE_BACKEND",  # auto | seedream | comfyui | nvidia
             "STUDIO_VIDEO_BACKEND",  # auto | seedance | comfyui
             "STUDIO_TTS_BACKEND",  # auto | edge | openai | indextts
             "STUDIO_TTS_MODEL",

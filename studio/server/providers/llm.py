@@ -110,6 +110,7 @@ def resolve_provider() -> dict[str, Any]:
     # Prefer explicit order when auto-picking
     for pid in (
         "gpuhome",
+        "suanqiao",
         "deepseek",
         "openai",
         "anthropic",

@@ -365,8 +365,9 @@ def judge_image_against_prompt(
     kind: str = "character",
     entity_name: str = "",
     entity_description: str = "",
+    entity_variant: str = "",
 ) -> dict[str, Any]:
-    """Return {ok, pass, score, reason, skipped}. Strategy resolved from kind + bible."""
+    """Return {ok, pass, score, reason, skipped}. Strategy resolved from kind + bible/variant."""
     from qa.pipeline import run_image_qa
 
     return run_image_qa(
@@ -375,6 +376,7 @@ def judge_image_against_prompt(
         kind=kind,
         entity_name=entity_name,
         entity_description=entity_description,
+        entity_variant=entity_variant,
         vision_call=_call_vision_judge,
         image_data_url=_qa_image_data_url,
     )

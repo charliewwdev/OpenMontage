@@ -140,7 +140,7 @@ export VOLCENGINE_API_KEY='...'   # or ARK_API_KEY
 ### Product target
 
 对齐 **有彩视界在线版** 信息架构与影视工坊正式 UI（片库英雄区、建片场、六步侧栏、风格库弹层）。  
-平台导航已铺：创作 Agent / 创作中心 / 有彩画布 / 个人资产 / 灵感广场（能力逐项接入；非其云积分 SaaS）。
+平台导航已铺：创作 Agent / 创作中心 / 有彩画布 / 个人资产 / 爆款内容广场（能力逐项接入；非其云积分 SaaS）。
 
 ### Acceptance checklist (影视工坊 · 在线版对照)
 

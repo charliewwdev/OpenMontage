@@ -322,6 +322,8 @@ def public_platform_payload() -> dict[str, Any]:
         "nav": cfg.get("nav") or [],
         "tools": cfg.get("tools") or [],
         "inspirePrompts": cfg.get("inspirePrompts") or [],
+        "inspirePlatforms": cfg.get("inspirePlatforms") or [],
+        "viralScenarios": cfg.get("viralScenarios") or [],
         "challenges": cfg.get("challenges") or [],
         "resources": cfg.get("resources") or [],
         "helpSections": cfg.get("helpSections") or [],

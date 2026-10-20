@@ -49,6 +49,7 @@ wanted = [
     "DASHSCOPE_API_KEY", "DASHSCOPE_BASE_URL", "QWEN_MODEL",
     "MOONSHOT_API_KEY", "MOONSHOT_BASE_URL", "MOONSHOT_MODEL",
     "VOLCENGINE_API_KEY", "ARK_API_KEY", "ARK_API_BASE", "VOLCENGINE_API_BASE",
+    "NVIDIA_API_KEY", "NVIDIA_NIM_API_KEY", "NVIDIA_IMAGE_MODEL",
     "ARK_PLAN", "AGENT_PLAN_TIER", "SEEDREAM_MODEL", "SEEDANCE_MODEL",
 ]
 # Backend prefs: only restore when explicitly requested. Blind restore was flipping

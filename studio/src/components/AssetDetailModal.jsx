@@ -155,6 +155,7 @@ export function AssetDetailModal({
           action: "generate",
           entityId: live.id,
           redraw: Boolean(redraw),
+          force: true,
         }),
       });
       invalidatePromptCache(live.id);

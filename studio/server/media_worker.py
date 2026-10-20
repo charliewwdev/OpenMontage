@@ -9,8 +9,10 @@ Requires ``STUDIO_REDIS_URL`` or ``REDIS_URL``. Without Redis the process exits
 non-zero (API falls back to in-process thread pool).
 
 Concurrency:
-- ``STUDIO_MEDIA_WORKERS`` (default 2, max 4) runs that many jobs in parallel
+- ``STUDIO_MEDIA_WORKERS`` (default 2, max 4) runs video jobs in parallel
   inside one process (bounded thread pool). Quality gates unchanged.
+- ``STUDIO_IMAGE_WORKERS`` (default 2, max 4) runs NVIDIA / Seedream stills
+  beside those video slots. ComfyUI stills stay on the video slots.
 
 Crash safety:
 - Jobs are reserved via queue→processing (BLMOVE / BRPOPLPUSH), not BLPOP.
@@ -99,6 +101,7 @@ def main() -> int:
         recover_stale_generating,
         redis_enabled,
         redis_url,
+        api_image_workers,
         reserve_job,
     )
     from settings_store import load_and_apply
@@ -133,12 +136,21 @@ def main() -> int:
     except Exception as exc:  # noqa: BLE001
         log.warning("recover_stale_generating failed: %s", exc)
 
-    conc = _worker_concurrency()
-    log.info("listening on %s concurrency=%s (reliable reserve→processing)", QUEUE_KEY, conc)
+    video_conc = _worker_concurrency()
+    image_conc = api_image_workers()
+    pool_size = max(1, video_conc + max(image_conc, 4))
+    log.info(
+        "listening on %s video_slots=%s image_slots=%s (reliable reserve→processing)",
+        QUEUE_KEY,
+        video_conc,
+        image_conc,
+    )
     last_reload = 0.0
-    inflight: set[Future] = set()
+    last_lane = 0.0
+    video_inflight: set[Future] = set()
+    image_inflight: set[Future] = set()
 
-    with ThreadPoolExecutor(max_workers=conc, thread_name_prefix="media-job") as pool:
+    with ThreadPoolExecutor(max_workers=pool_size, thread_name_prefix="media-job") as pool:
         while not _STOP:
             # Refresh shared secrets periodically (ops restore / UI saves hit API only).
             now = time.time()
@@ -148,27 +160,36 @@ def main() -> int:
                     last_reload = now
                 except Exception:
                     pass
+            if now - last_lane > 15:
+                image_conc = api_image_workers()
+                last_lane = now
 
-            # Reap finished futures.
-            if inflight:
-                done, inflight = wait(inflight, timeout=0.05, return_when=FIRST_COMPLETED)
-                inflight = set(inflight)
+            busy = video_inflight | image_inflight
+            if busy:
+                done, _pending = wait(busy, timeout=0.2, return_when=FIRST_COMPLETED)
+                if done:
+                    video_inflight -= done
+                    image_inflight -= done
 
-            # Fill free slots.
-            while not _STOP and len(inflight) < conc:
-                # Non-blocking reserve when already busy; block briefly when idle.
-                timeout = 0.0 if inflight else 2.0
-                job = reserve_job(timeout=timeout)
+            video_lane = "video" if image_conc else "any"
+            while not _STOP and len(video_inflight) < video_conc:
+                timeout = 0.0 if video_inflight or image_inflight else 1.0
+                job = reserve_job(timeout=timeout, lane=video_lane)
                 if not job:
                     break
-                fut = pool.submit(_run_one, job, projects_root)
-                inflight.add(fut)
+                video_inflight.add(pool.submit(_run_one, job, projects_root))
 
-            if not inflight:
-                # Idle — reserve_job already waited; tiny sleep avoids hot loop on errors.
+            while not _STOP and image_conc and len(image_inflight) < image_conc:
+                timeout = 0.0 if video_inflight or image_inflight else 1.0
+                job = reserve_job(timeout=timeout, lane="image")
+                if not job:
+                    break
+                image_inflight.add(pool.submit(_run_one, job, projects_root))
+
+            if not video_inflight and not image_inflight:
                 time.sleep(0.05)
 
-        # Drain in-flight on shutdown.
+        inflight = video_inflight | image_inflight
         if inflight:
             log.info("draining %s in-flight job(s)…", len(inflight))
             wait(inflight, timeout=600)

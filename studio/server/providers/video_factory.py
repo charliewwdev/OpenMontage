@@ -66,7 +66,9 @@ class ComfyVideoBackend:
         duration: float | int,
         out_path: Path,
         reference_path: Path | None = None,
+        end_reference_path: Path | None = None,
         resolution: str = "720p",
+        use_turbo: bool = True,
     ) -> dict:
         """Sync render. Does not re-read STUDIO_VIDEO_BACKEND (a flaky probe must not swap providers)."""
         from .comfyui import generate_video as comfy_generate
@@ -77,7 +79,9 @@ class ComfyVideoBackend:
             duration=duration,
             out_path=out_path,
             reference_path=reference_path,
+            end_reference_path=end_reference_path,
             resolution=resolution,
+            use_turbo=use_turbo,
         )
         return {
             "backend": self.id,
@@ -174,7 +178,9 @@ def generate_video_file(
     duration: float | int,
     out_path: Path,
     reference_path: Path | None = None,
+    end_reference_path: Path | None = None,
     resolution: str = "720p",
+    use_turbo: bool = True,
 ) -> dict:
     backend = VIDEO_BACKENDS.get("comfyui")
     if backend is None or not hasattr(backend, "render_file"):
@@ -185,7 +191,9 @@ def generate_video_file(
         duration=duration,
         out_path=out_path,
         reference_path=reference_path,
+        end_reference_path=end_reference_path,
         resolution=resolution,
+        use_turbo=use_turbo,
     )
 
 

@@ -73,7 +73,15 @@ def run_comfy_shot(
             or bool(end_ref and end_ref.is_file())
         )
         if portrait:
-            qa = {"pass": True, "score": 1, "reason": "portrait-idlock", "skipped": True, "qaPass": True}
+            # Intentional bypass (idlock) — do NOT set skipped=True; UI treats skipped as soft-fail「质检未过」.
+            qa = {
+                "pass": True,
+                "score": 1.0,
+                "reason": "portrait-idlock",
+                "skipped": False,
+                "qaPass": True,
+                "bypass": "portrait-idlock",
+            }
         else:
             qa = _judge_video_file(dest, prompt=prompt_used, entities=ref_ents)
         version = {

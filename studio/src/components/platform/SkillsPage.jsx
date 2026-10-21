@@ -53,7 +53,20 @@ function skillPrompt(skill) {
   return `请按 Skill「${skill.title}」${skill.slash || `/${skill.id}`} 的规则帮我创作：\n\n${(skill.summary || "").trim()}`;
 }
 
-export function SkillsPage({ config, onUsePrompt }) {
+function ctaLabel(skill) {
+  const route = skill?.workshop?.route;
+  if (route === "portrait") return "打开写真对标";
+  if (route === "workshop") return "进入影视工坊";
+  if (route === "agent") return "对话创作";
+  return "去创作";
+}
+
+export function SkillsPage({ config, onUsePrompt, onUseSkill }) {
+  const activate = (skill) => {
+    if (onUseSkill) onUseSkill(skill);
+    else onUsePrompt?.(skillPrompt(skill));
+  };
+
   const page = config?.pages?.skills || {};
   const [skills, setSkills] = useState([]);
   const [sources, setSources] = useState(FALLBACK_SOURCES);
@@ -110,7 +123,7 @@ export function SkillsPage({ config, onUsePrompt }) {
       title={page.title || "把专业方法装进你的创作 Agent"}
       description={
         page.description ||
-        "发现、安装并管理创作 Skill。输入 /skill-name 可直接指定技能，也可按需允许 Agent 自动调用。"
+        "官方 Skill 已绑定影视工坊步骤：一点即进入对应剧本 / 定妆 / 分镜 / 写真对标。对话类 Skill 仍走创作 Agent。"
       }
       actions={
         <>
@@ -205,9 +218,9 @@ export function SkillsPage({ config, onUsePrompt }) {
                 <button
                   type="button"
                   className="btn-primary !min-h-8 !px-3 !text-xs"
-                  onClick={() => onUsePrompt?.(skillPrompt(skill))}
+                  onClick={() => activate(skill)}
                 >
-                  <Sparkles className="h-3 w-3" /> 去创作
+                  <Sparkles className="h-3 w-3" /> {ctaLabel(skill)}
                 </button>
               </div>
             </article>
@@ -343,11 +356,11 @@ export function SkillsPage({ config, onUsePrompt }) {
                 type="button"
                 className="btn-primary"
                 onClick={() => {
-                  onUsePrompt?.(skillPrompt(active));
+                  activate(active);
                   setActive(null);
                 }}
               >
-                <Sparkles className="h-3.5 w-3.5" /> 用这个 Skill 创作
+                <Sparkles className="h-3.5 w-3.5" /> {ctaLabel(active)}
               </button>
             </div>
           </div>

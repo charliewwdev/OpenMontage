@@ -223,13 +223,27 @@ export default function App() {
     if (!quiet) setLoading(true);
     setProjectId(id);
     try {
-      const b = await api(`/api/projects/${encodeURIComponent(id)}`);
-      setBundle(b);
-      if ((b?.project || {}).workflow === "portrait-match" && !opts.forceStudio) {
-        setScreen("portrait");
-        setNav("workshop");
-        return;
+      let b = await api(`/api/projects/${encodeURIComponent(id)}`);
+      // Portrait-match is short-video too: always enter 影视工坊 (same shell as drama), not a silo page.
+      // Ensure episodes are confirmed so SegmentWorkspace can generate like any other project.
+      if ((b?.project || {}).workflow === "portrait-match") {
+        const draftIds = (b?.episodes || [])
+          .filter((e) => e.status !== "confirmed" && !e.deletedAt)
+          .map((e) => e.id);
+        if (draftIds.length) {
+          try {
+            b =
+              (await api(`/api/projects/${encodeURIComponent(id)}/episodes`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ episodeIds: draftIds, status: "confirmed" }),
+              })) || b;
+          } catch {
+            /* ignore — workspace may still open */
+          }
+        }
       }
+      setBundle(b);
       if (!quiet) {
         const nextStep = normalizeStudioStep(openStep || "workspace");
         setStep(nextStep);
@@ -458,7 +472,7 @@ export default function App() {
           }}
           onCreated={(id) => {
             setCreateMode(null);
-            void loadProject(id);
+            void loadProject(id, false, step || "script");
             void refreshProjects();
           }}
           onNeedKeys={goKeys}
@@ -479,8 +493,13 @@ export default function App() {
           setNav("workshop");
           void refreshProjects();
         }}
+        onEnterWorkshop={(id) => {
+          setCreateMode(null);
+          void loadProject(id, false, "workspace");
+          void refreshProjects();
+        }}
         onOpenDrama={(id) => {
-          void loadProject(id, false, "workspace", "", { forceStudio: true });
+          void loadProject(id, false, "workspace");
         }}
         onNeedKeys={goKeys}
       />
@@ -524,6 +543,49 @@ export default function App() {
         <SkillsPage
           config={config}
           onUsePrompt={(text) => {
+            setAgentSeed(text);
+            onNavigate("agent");
+          }}
+          onUseSkill={(skill) => {
+            const ws = skill?.workshop || {};
+            const route = ws.route || "agent";
+            const stepName = normalizeStudioStep(ws.step || "script");
+
+            if (route === "portrait") {
+              // Template picker only; after create we enter the same 影视工坊 workspace.
+              if (!requireAuth()) return;
+              setCreateMode({ id: "portrait-match", templateId: "ref1", fromSkill: skill.id });
+              setProjectId("");
+              setBundle(null);
+              setScreen("portrait");
+              setNav("workshop");
+              writeAppRoute({ screen: "portrait", nav: "workshop" });
+              toast.success(`选择模板后进入影视工坊（/${skill.id}）`);
+              return;
+            }
+
+            if (route === "workshop") {
+              // Prefer current studio project; else open library with step preselected for next create/open.
+              if (projectId && bundle?.project) {
+                setStep(stepName);
+                setScreen("studio");
+                setNav("workshop");
+                writeAppRoute({ projectId, step: stepName, nav: "workshop" });
+                toast.success(`已进入工坊「${stepName}」· /${skill.id}`);
+                return;
+              }
+              setStep(stepName);
+              setNav("workshop");
+              setScreen("library");
+              writeAppRoute({ nav: "workshop", step: stepName });
+              toast.info(`请打开或新建项目，将进入「${stepName}」步骤（Skill /${skill.id}）`);
+              return;
+            }
+
+            // agent / chat-only
+            const text = skill.prompt
+              ? skill.prompt
+              : `请按 Skill「${skill.title}」/${skill.id} 的规则帮我创作：\n\n${(skill.summary || "").trim()}`;
             setAgentSeed(text);
             onNavigate("agent");
           }}
@@ -666,7 +728,7 @@ export default function App() {
         config={config}
         authed={authed}
         onRequireAuth={requireAuth}
-        onOpen={(id) => void loadProject(id)}
+        onOpen={(id) => void loadProject(id, false, step || "workspace")}
         onCreate={(mode, card) => {
           if (!requireAuth()) return;
           const next = { id: mode || "drama", ...(card || {}) };

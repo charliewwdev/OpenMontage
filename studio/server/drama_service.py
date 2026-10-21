@@ -69,6 +69,7 @@ def optimize_brief(store: ProjectStore, payload: dict) -> dict:
         "brief": brief[:100_000],
         "genreDetected": data.get("genreDetected") or "",
         "tips": (data.get("tips") or [])[:5],
+        "skillId": "script-brief",
     }
 
 
@@ -772,6 +773,12 @@ def _entity_still_ref_path(
         path = _passed_selected_still(store, project_id, other)
         if path is not None:
             return path
+    # Portrait-match: seed img2img from Douyin keyframe lock before first qaPass still exists.
+    lock_rel = str((ent.get("metadata") or {}).get("identityLockPath") or "").strip()
+    if lock_rel:
+        lock_path = store._dir(project_id) / lock_rel
+        if lock_path.is_file():
+            return lock_path
     return None
 
 
@@ -3130,7 +3137,16 @@ def start_shot_video(
 
     entities = {e["id"]: e for e in state.get("entities") or [] if not e.get("deletedAt")}
     override = (shot.get("_segmentPromptOverride") or "").strip()
-    base_prompt = override or _normalize_short_drama_prompt(
+    # Portrait idlock: UI shows Chinese `prompt`; H3 follows English `modelPrompt` better.
+    idlock_model = (
+        (shot.get("modelPrompt") or "").strip()
+        if (
+            shot.get("idlock")
+            or (state.get("project") or {}).get("workflow") == "portrait-match"
+        )
+        else ""
+    )
+    base_prompt = override or idlock_model or _normalize_short_drama_prompt(
         (shot.get("prompt") or "").strip(),
         dialogue=str(shot.get("dialogue") or ""),
     )
@@ -3160,16 +3176,36 @@ def start_shot_video(
         and end_abs.is_file()
         and (shot.get("idlock") or (state.get("project") or {}).get("workflow") == "portrait-match")
     )
+    # Portrait idlock: H3 media uses first/last frames only, but workshop still requires
+    # 角色/场景 drama-entity-still qaPass + structured prompts (unless forceEntityQa).
     if idlock:
         skip_refs = True
+        mode = (state.get("project") or {}).get("portraitMatchMode") or "gen-likeness"
+        if mode != "reshoot" and not force_entity_qa:
+            assert_entity_refs_ready_for_video(
+                state,
+                ref_entity_ids,
+                force=False,
+                skip_refs=False,
+            )
+            bad_prompts = [
+                s.get("title") or s.get("id")
+                for s in (state.get("shots") or [])
+                if s.get("id") == shot_id and not (s.get("promptQa") or {}).get("pass", True)
+            ]
+            if bad_prompts:
+                raise RuntimeError(
+                    "本镜提示词未达标（缺角色/场景/动作/运镜/转镜/光影之一）。请先在工作台补全提示词。"
+                )
 
     # Segment path already asserted; re-assert for single-shot / retry paths.
-    assert_entity_refs_ready_for_video(
-        state,
-        ref_entity_ids,
-        force=force_entity_qa,
-        skip_refs=skip_refs,
-    )
+    if not idlock:
+        assert_entity_refs_ready_for_video(
+            state,
+            ref_entity_ids,
+            force=force_entity_qa,
+            skip_refs=skip_refs,
+        )
 
     # Prefer first existing entity reference image for I2V (ComfyUI / Seedance).
     ref_paths: list[Path] = []

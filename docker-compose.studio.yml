@@ -120,6 +120,45 @@ services:
       retries: 3
       start_period: 20s
 
+  # Edge media worker: run on a host that can reach ComfyUI (e.g. Mac / GPU LAN)
+  # when Coolify egress to 智川云 is blocked. API stays on Coolify; this only consumes Redis.
+  #   REDIS_URL=redis://<coolify-host>:6379/0 \
+  #   COMFYUI_SERVER_URL=https://….gpuhome.cc:8443 \
+  #   docker compose -f docker-compose.studio.yml --profile edge-worker up media-worker-edge
+  media-worker-edge:
+    profiles: ["edge-worker"]
+    build:
+      context: .
+      dockerfile: studio/Dockerfile
+    image: openmontage-drama-studio:local
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - "cd /app && PYTHONPATH=/app/studio/server:/app python -m media_worker"
+    environment:
+      OPENMONTAGE_ROOT: /app
+      PROJECTS_ROOT: /data/projects
+      # Required when starting this profile: Redis URL of the Coolify Studio stack.
+      REDIS_URL: ${REDIS_URL:-}
+      STUDIO_REDIS_URL: ${STUDIO_REDIS_URL:-${REDIS_URL}}
+      DATABASE_URL: ${DATABASE_URL:-}
+      STUDIO_DATABASE_URL: ${STUDIO_DATABASE_URL:-}
+      COMFYUI_SERVER_URL: ${COMFYUI_SERVER_URL:-}
+      COMFYUI_VIDEO_SERVER_URL: ${COMFYUI_VIDEO_SERVER_URL:-}
+      COMFYUI_VIDEO_MODEL: ${COMFYUI_VIDEO_MODEL:-}
+      COMFY_API_KEY: ${COMFY_API_KEY:-}
+      COMFYUI_API_KEY: ${COMFYUI_API_KEY:-}
+      STUDIO_MEDIA_WORKERS: ${STUDIO_MEDIA_WORKERS:-2}
+      STUDIO_VIDEO_PARALLEL: ${STUDIO_VIDEO_PARALLEL:-2}
+      STUDIO_IMAGE_WORKERS: ${STUDIO_IMAGE_WORKERS:-1}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
+      MINIO_BUCKET: ${MINIO_BUCKET:-dtok-app}
+      MINIO_PREFIX: ${MINIO_PREFIX:-openmontage}
+    volumes:
+      - drama_projects:/data/projects
+
 volumes:
   drama_projects:
   drama_pg:

@@ -264,7 +264,7 @@ class _CastGenderGate:
 
 
 class _SkillExpertGate:
-    """Skill 专家复审：读 drama-entity-still Runtime / 默认硬规则，只否决不放水。"""
+    """Skill 专家复审：读对应 Skill Runtime / 默认硬规则，只否决不放水。"""
 
     id = "skill_expert"
 
@@ -274,7 +274,12 @@ class _SkillExpertGate:
         kind = ctx.strategy_id if ctx.strategy_id == "spirit" else ctx.kind
         skill_id = "drama-entity-still"
         if ctx.kind in {"shot", "segment", "video"}:
-            skill_id = "drama-shot-prompt"
+            # Portrait-match idlock prompts always include first/last-frame identity lock copy.
+            prompt = str(ctx.prompt or "").lower()
+            if "first and last frame" in prompt or "identical face" in prompt:
+                skill_id = "portrait-idlock"
+            else:
+                skill_id = "drama-shot-prompt"
         return skill_expert_review(
             qa,
             kind=kind,

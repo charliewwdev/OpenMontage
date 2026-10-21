@@ -428,8 +428,39 @@ def health() -> dict[str, Any]:
 
 
 @app.get("/api/settings/keys")
-def get_keys() -> dict[str, Any]:
-    return {"keys": public_status(), "capabilities": _providers_payload()}
+def get_keys(probe: int = 0) -> dict[str, Any]:
+    """Public key status. Pass ?probe=1 to live-ping ComfyUI (slower; use before generate)."""
+    if not probe:
+        return {"keys": public_status(), "capabilities": _providers_payload()}
+    # Live probe path: reuse /keys/test Comfy branch so UI gets reachable:true when egress works.
+    keys_payload = public_status()
+    from settings_store import get_secret
+
+    if get_secret("COMFYUI_SERVER_URL") or get_secret("COMFYUI_IMAGE_SERVER_URL"):
+        try:
+            from providers.comfyui import list_checkpoints, ping, public_status as comfy_public
+
+            info = ping()
+            ckpts = list_checkpoints()
+            probed = comfy_public(probe=True)
+            keys_payload["comfyui"] = {
+                **probed,
+                "reachable": True,
+                "checkpoints": ckpts[:20] or probed.get("checkpoints") or [],
+                "checkpoint": get_secret("COMFYUI_CHECKPOINT")
+                or (ckpts[0] if ckpts else "")
+                or probed.get("checkpoint")
+                or "",
+                "deviceName": info.get("deviceName") or probed.get("deviceName") or "",
+                "error": "",
+                "probedAt": datetime.now(timezone.utc).isoformat(),
+            }
+        except Exception as exc:  # noqa: BLE001
+            comfy = dict(keys_payload.get("comfyui") or {})
+            comfy["reachable"] = False
+            comfy["error"] = str(exc)[:240]
+            keys_payload["comfyui"] = comfy
+    return {"keys": keys_payload, "capabilities": _providers_payload()}
 
 
 @app.post("/api/settings/keys")
@@ -1144,6 +1175,7 @@ def platform_skills() -> dict[str, Any]:
             f"# {meta.get('title') or sid}\n\n{meta.get('summary') or ''}\n\n{prompt}".strip()
         )
         exp = _skill_experience_payload(sid) if sid == "drama-entity-still" or (SKILLS_ROOT / sid).is_dir() else {}
+        workshop = meta.get("workshop") if isinstance(meta.get("workshop"), dict) else {}
         skills.append(
             {
                 **base,
@@ -1156,6 +1188,7 @@ def platform_skills() -> dict[str, Any]:
                 "prompt": prompt,
                 "content": content,
                 "slash": f"/{sid}",
+                "workshop": workshop,
                 "experience": {
                     "patchCount": exp.get("patchCount") or 0,
                     "learnedCount": exp.get("learnedCount") or 0,
@@ -1556,9 +1589,13 @@ def inspire_img(u: str = Query("")) -> Response:
 
 @app.get("/api/portrait-match/templates")
 def portrait_match_templates() -> dict[str, Any]:
-    from portrait_match import list_templates
+    from portrait_match import MATCH_MODES, QUALITY_DIAGNOSIS, list_templates
 
-    return {"templates": list_templates()}
+    return {
+        "templates": list_templates(),
+        "matchModes": MATCH_MODES,
+        "qualityDiagnosis": QUALITY_DIAGNOSIS,
+    }
 
 
 @app.get("/api/portrait-match/assets/{asset_path:path}")
@@ -1584,6 +1621,7 @@ async def portrait_match_create(request: Request) -> dict[str, Any]:
             title=(body.get("title") or None),
             owner_id=current_user_id() or None,
             include_sample=body.get("includeSample", True) is not False,
+            match_mode=str(body.get("matchMode") or body.get("mode") or "gen-likeness"),
         )
     except (ValueError, FileNotFoundError, RuntimeError) as exc:
         raise _http_error(400, str(exc)) from exc
@@ -1600,11 +1638,46 @@ async def portrait_match_generate(project_id: str, request: Request) -> dict[str
             STORE,
             project_id,
             model=str(body.get("model") or ""),
-            resolution=str(body.get("resolution") or "720p"),
+            resolution=str(body.get("resolution") or "1080p"),
             only_missing=body.get("onlyMissing", True) is not False,
+            # refreshFrames: pull Douyin-original keyframes into project and regen all shots
+            refresh_frames=body.get("refreshFrames") is True or body.get("alignDouyin") is True,
         )
     except (FileNotFoundError, RuntimeError) as exc:
         raise _http_error(400, str(exc)) from exc
+
+
+@app.post("/api/projects/{project_id}/portrait-match/refresh-frames")
+def portrait_match_refresh_frames(project_id: str) -> dict[str, Any]:
+    """Replace idlock frames with Douyin-original extracts (invalidate videos)."""
+    from portrait_match import refresh_idlock_frames_from_assets
+
+    try:
+        return refresh_idlock_frames_from_assets(STORE, project_id, invalidate_videos=True)
+    except (FileNotFoundError, RuntimeError) as exc:
+        raise _http_error(400, str(exc)) from exc
+
+
+@app.get("/api/projects/{project_id}/portrait-match/quality")
+def portrait_match_quality(project_id: str) -> dict[str, Any]:
+    """角色 / 场景 / 提示词是否达标。"""
+    from portrait_match import portrait_workshop_quality_report
+
+    return portrait_workshop_quality_report(STORE, project_id)
+
+
+@app.post("/api/projects/{project_id}/portrait-match/prepare-assets")
+def portrait_match_prepare_assets(project_id: str) -> dict[str, Any]:
+    """Enqueue drama-entity-still for character + scene; refresh structured prompts."""
+    from portrait_match import enqueue_portrait_entity_stills, ensure_portrait_workshop_assets, portrait_workshop_quality_report
+
+    ensure_portrait_workshop_assets(STORE, project_id)
+    stills = enqueue_portrait_entity_stills(STORE, project_id)
+    return {
+        "entityStills": stills,
+        "quality": portrait_workshop_quality_report(STORE, project_id),
+        "bundle": STORE.bundle(project_id),
+    }
 
 
 @app.post("/api/projects/{project_id}/portrait-match/assemble")
@@ -1802,6 +1875,15 @@ async def create_project(request: Request) -> dict[str, Any]:
 def get_project(project_id: str) -> dict[str, Any]:
     pid = unquote(project_id)
     _assert_project_access(pid)
+    # Portrait-match: backfill empty 角色/场景 + normalize false「质检未过」on load.
+    try:
+        from portrait_match import ensure_portrait_workshop_assets
+
+        fixed = ensure_portrait_workshop_assets(STORE, pid)
+        if fixed:
+            return fixed
+    except Exception:
+        pass
     bundle = STORE.bundle(pid)
     if not bundle:
         raise _http_error(404, "project not found")
@@ -1872,7 +1954,8 @@ async def script_actions(project_id: str, request: Request) -> dict[str, Any]:
         )
     else:
         raise _http_error(400, "unknown script action")
-    return STORE.bundle(pid)
+    bundle = STORE.bundle(pid) or {}
+    return {**bundle, "skillId": "drama-script"}
 
 
 @app.patch("/api/projects/{project_id}/episodes")
@@ -2049,7 +2132,7 @@ async def storyboard_actions(project_id: str, request: Request) -> dict[str, Any
     op = body.get("action") or "generate"
     if op == "generate":
         shots = generate_storyboard(STORE, pid, body["episodeId"])
-        return {"shots": shots, "bundle": STORE.bundle(pid)}
+        return {"skillId": "drama-shot-prompt", "shots": shots, "bundle": STORE.bundle(pid)}
     if op == "migrate-segments":
         shots = migrate_episode_segments(STORE, pid, body["episodeId"])
         return {"shots": shots, "bundle": STORE.bundle(pid)}

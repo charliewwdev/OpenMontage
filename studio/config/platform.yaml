@@ -804,6 +804,9 @@ skillTags:
   - 创作工作流
 
 # Catalog metadata merged onto local SKILL.md; extras appear as official cards.
+# workshop.route: workshop | portrait | agent
+# workshop.step: script | character | scene | workspace (when route=workshop)
+# workshop.aliasOf: catalog-only skills that open the runtime skill's workshop step
 skillCatalog:
   - id: drama-script
     title: 分集剧本生成
@@ -812,6 +815,9 @@ skillCatalog:
     category: film
     tags: [短剧漫剧, 剧本创作]
     accent: "#7c6cff"
+    workshop:
+      route: workshop
+      step: script
   - id: drama-entity-still
     title: 资产定妆图
     summary: 角色/场景/道具定妆出图，变体锁脸 + 质检失败经验回流，与工作台补图同一链路。
@@ -819,6 +825,9 @@ skillCatalog:
     category: image
     tags: [短剧漫剧, 图片生成, 角色设计, 质检]
     accent: "#f472b6"
+    workshop:
+      route: workshop
+      step: character
   - id: drama-shot-prompt
     title: 影视分镜提示词
     summary: 把定稿单集拆成 Seedance 可用镜头提示词，保留对白与素材引用。
@@ -826,6 +835,9 @@ skillCatalog:
     category: film
     tags: [短剧漫剧, 分镜设计, 镜头语言, Seedance]
     accent: "#a78bfa"
+    workshop:
+      route: workshop
+      step: workspace
   - id: script-brief
     title: 爽剧创作需求优化
     summary: 把一句话想法整理成可执行 brief，直接回填后续剧本生成。
@@ -833,46 +845,74 @@ skillCatalog:
     category: text
     tags: [优化改写, 剧本创作, 短剧漫剧]
     accent: "#60a5fa"
+    workshop:
+      route: workshop
+      step: script
+  - id: portrait-idlock
+    title: 写真对标 · 首尾帧身份锁
+    summary: 抖音氛围写真 · MiniMax H3 首尾帧 idlock · 与短剧相同进入影视工坊工作台出片。
+    source: official
+    category: video
+    tags: [视频生成, 写真对标, 身份锁, 短剧漫剧]
+    accent: "#f472b6"
+    workshop:
+      route: portrait
+      step: workspace
   - id: character-look
     title: 角色造型设计
-    summary: 为短剧主角生成稳定造型描述与出图指引，保持多场戏一致。
+    summary: 为短剧主角生成稳定造型描述与出图指引，保持多场戏一致。绑定工坊「资产定妆」链路。
     source: official
     category: image
     tags: [角色设计, 图片生成, 短剧漫剧]
     accent: "#f472b6"
     prompt: 请按角色造型 Skill：为短剧主角设计稳定造型（发型服装妆面）、三视图要点与 Seedream 出图提示词。
+    workshop:
+      route: workshop
+      step: character
+      aliasOf: drama-entity-still
   - id: scene-look
     title: 场景空间设计
-    summary: 空镜与实景空间设定，输出光线、色调与可复用场景板。
+    summary: 空镜与实景空间设定，输出光线、色调与可复用场景板。绑定工坊「空镜场景」定妆链路。
     source: official
     category: image
     tags: [场景设计, 图片生成]
     accent: "#34d399"
     prompt: 请按场景设计 Skill：为一组短剧空镜设计空间、光线与色调，并给出可复用场景板提示词。
+    workshop:
+      route: workshop
+      step: scene
+      aliasOf: drama-entity-still
   - id: director-workflow
     title: 导演工作流
-    summary: 用导演思维串联剧本→素材→分镜→成片，控制品质与节奏。
+    summary: 用导演思维串联剧本→素材→分镜→成片，控制品质与节奏。（对话创作）
     source: official
     category: productivity
-    tags: [创作工作流, 短剧漫剧]
+    tags: [创作工作流, 短剧漫剧, 对话创作]
     accent: "#fbbf24"
     prompt: 请按导演工作流 Skill：帮我规划从剧本到成片的六步计划，并指出每步验收标准。
+    workshop:
+      route: agent
   - id: voice-guide
     title: 角色配音旁白
-    summary: 为角色选择音色气质，生成旁白与对白配音说明。
+    summary: 为角色选择音色气质，生成旁白与对白配音说明。（对话创作）
     source: official
     category: audio
-    tags: [配音旁白, 短剧漫剧]
+    tags: [配音旁白, 短剧漫剧, 对话创作]
     accent: "#fb923c"
     prompt: 请按配音旁白 Skill：为主要角色设定音色气质，并写一段开场旁白。
+    workshop:
+      route: agent
   - id: seedance-clip
     title: Seedance 镜头成片
-    summary: 针对单镜图生视频，控制时长、运镜与对白节奏。
+    summary: 针对单镜图生视频，控制时长、运镜与对白节奏。打开片段工作台出片。
     source: official
     category: video
     tags: [视频生成, Seedance, 镜头语言]
     accent: "#22d3ee"
     prompt: 请按 Seedance 镜头 Skill：把这一场戏拆成 4–15 秒可生成片段，写清景别运镜与对白。
+    workshop:
+      route: workshop
+      step: workspace
 
 toolHub:
   categories:
@@ -945,8 +985,8 @@ pages:
     description: 直接描述创意，或选择专业分类开始创作
   skills:
     eyebrow: Skills
-    title: 把专业方法装进你的创作 Agent
-    description: 发现、安装并管理创作 Skill。输入 /skill-name 可直接指定技能，也可按需允许 Agent 自动调用。
+    title: Skill 专家 × 影视工坊
+    description: 官方 Skill 已绑定工坊步骤——一点即进入剧本 / 定妆 / 分镜 / 写真对标；对话类 Skill 仍走创作 Agent。
   resources:
     eyebrow: Resources
     title: 资源中心

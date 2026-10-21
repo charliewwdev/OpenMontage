@@ -83,8 +83,6 @@ Slim Coolify tree from OpenMontage ${SHA} (demo media omitted for git.dtok.io HT
 EOF
 )"
 
-git remote add dtok "$REMOTE"
-
 # Load GitLab PAT from env or local secrets files (never printed).
 if [[ -z "${DTOK_GIT_TOKEN:-}" ]]; then
   for cand in \
@@ -118,6 +116,13 @@ PY
   done
 fi
 
+# Embed PAT in remote URL — credential helpers often hold stale/expired tokens.
+if [[ -n "${DTOK_GIT_TOKEN:-}" ]]; then
+  git remote add dtok "https://oauth2:${DTOK_GIT_TOKEN}@git.dtok.io/dtok-app/OpenMontage.git"
+else
+  git remote add dtok "$REMOTE"
+fi
+
 API="https://git.dtok.io/api/v4/projects/dtok-app%2FOpenMontage"
 
 # deploy/main are often protected against force-push; temporarily unprotect when we have a PAT.
@@ -133,7 +138,7 @@ fi
 SLIM_SHA="$(git rev-parse HEAD)"
 
 echo "==> Force-pushing slim tree to ${REMOTE} (${BRANCH})"
-if ! git -c http.postBuffer=524288000 push -f dtok "HEAD:${BRANCH}"; then
+if ! git -c http.postBuffer=524288000 -c credential.helper= push -f dtok "HEAD:${BRANCH}"; then
   echo "ERROR: git push to ${REMOTE} ${BRANCH} failed." >&2
   if [[ -z "${DTOK_GIT_TOKEN:-}" ]]; then
     echo "HINT: set DTOK_GIT_TOKEN (GitLab PAT) so this script can unprotect ${BRANCH}." >&2

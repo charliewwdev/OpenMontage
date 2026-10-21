@@ -617,12 +617,19 @@ def ensure_portrait_workshop_assets(store: Any, project_id: str) -> dict[str, An
     dirty = _normalize_portrait_qa(state)
 
     tid = str(proj.get("portraitTemplate") or "")
-    pairs_by_id = {str(p.get("id")): p for p in (_load_pairs().get(tid) or []) if p.get("id")}
-    for sh in state.get("shots") or []:
-        if sh.get("deletedAt"):
-            continue
-        label = str(sh.get("title") or sh.get("action") or "")
+    pairs_list = _load_pairs().get(tid) or []
+    pairs_by_id = {str(p.get("id")): p for p in pairs_list if p.get("id")}
+    ordered_live = sorted(
+        [s for s in (state.get("shots") or []) if not s.get("deletedAt")],
+        key=lambda s: int(s.get("order") or 0),
+    )
+    for idx, sh in enumerate(ordered_live):
+        label = str(
+            sh.get("idlockShotId") or sh.get("title") or sh.get("action") or ""
+        )
         pair = pairs_by_id.get(label) or {}
+        if not pair and idx < len(pairs_list):
+            pair = pairs_list[idx] or {}
         gap = pair.get("gap")
         if gap is not None:
             try:

@@ -1,192 +1,204 @@
 <p align="center">
-  <img src="assets/drama-studio-mark.svg" alt="OpenMontage" width="72"/>
+  <img src="assets/drama-studio-mark.svg" alt="OpenMontage Drama Studio" width="72"/>
 </p>
 
-<h1 align="center">OpenMontage</h1>
+<h1 align="center">OpenMontage Drama Studio</h1>
 
 <p align="center">
-  <strong>Drama Studio · 一站式短剧工坊</strong><br/>
-  <sub>从一句话灵感到可拍成片 · script → cast → storyboard → shoot → edit</sub>
+  <strong>From a one-line idea to a finished short drama, viral short or product clip.</strong><br/>
+  Script → characters → scenes → props → storyboard &amp; shots → voice → edit, in one self-hostable web studio.
 </p>
 
 <p align="center">
-  <a href="https://openmontage.dtok.io/"><img src="https://img.shields.io/badge/Live-openmontage.dtok.io-E11D48?style=flat-square" alt="Live"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPLv3-334155?style=flat-square" alt="License"/></a>
+  <a href="https://openmontage.dtok.io/"><img src="https://img.shields.io/badge/Live_demo-openmontage.dtok.io-E11D48?style=flat-square" alt="Live demo"/></a>
+  <a href="https://github.com/charliewwdev/OpenMontage/stargazers"><img src="https://img.shields.io/github/stars/charliewwdev/OpenMontage?style=flat-square" alt="GitHub stars"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPLv3-334155?style=flat-square" alt="License: AGPL-3.0"/></a>
   <img src="https://img.shields.io/badge/Stack-React%20%2B%20FastAPI%20%2B%20Postgres-0F172A?style=flat-square" alt="Stack"/>
+  <img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker Compose"/>
+  <img src="https://img.shields.io/github/last-commit/charliewwdev/OpenMontage?style=flat-square" alt="Last commit"/>
 </p>
 
+<p align="center"><b>English</b> · <a href="README_zh-CN.md">简体中文</a></p>
+
+<!--
+  DEMO GIF PLACEHOLDER (TODO before launch)
+  Record a 20–30 s capture: type one line → walk through the 7 stages → play the exported clip.
+  Save as docs/demo.gif (< 10 MB) or upload an MP4 to a GitHub issue/release, then replace this comment with:
+  <p align="center"><img src="docs/demo.gif" alt="One line in, short drama out" width="720"/></p>
+-->
+
 ---
 
-## 项目简介
+## What it is
 
-OpenMontage Drama Studio 是面向短剧 / 短视频制作的 **产品化工坊**：左侧按模块浏览，影视工坊内按七步生产线推进。浏览灵感、技能、资产无需登录；调用大模型与写入项目时再鉴权。
+OpenMontage Drama Studio is a web studio for making short-form video with AI. You describe an idea in one
+sentence (for example *"10-episode revenge drama, 9:16, hook in the first 3 seconds"*), the studio drafts the
+script, and you move it through a production line where every stage is editable. Characters, scenes and props
+become reference images that feed the video shots, so you can redo a single character or shot without starting over.
 
-| | |
+- **Bring your own keys.** Text models, image models and video models are configured per account in *Model settings*.
+- **Browse first.** The inspiration wall, skills and asset pages can be browsed without signing in; signing in is
+  required for model calls and saving projects.
+- **Step by step or one click.** Run each stage yourself, or let the agent run the whole pipeline in the background
+  and then re-run any stage or swap a version.
+
+Try the hosted instance: **[openmontage.dtok.io](https://openmontage.dtok.io/)**
+
+## The 7-stage workshop
+
+| # | Stage | What happens |
+|:-:|:---|:---|
+| 1 | **Script** (剧本) | Genre, aspect ratio, visual style, synopsis or source material; generate, continue, rewrite, lock the episode |
+| 2 | **Characters** (角色) | Character art (Seedream, or ComfyUI on your own GPU), version history, turnarounds, reference re-draws, local upload |
+| 3 | **Scenes** (场景) | Space and lighting setup, scene concept art |
+| 4 | **Props** (道具) | Key props and material detail |
+| 5 | **Storyboard & shots** (分镜) | LLM shot breakdown; Seedance generates each shot using the character / scene / prop references |
+| 6 | **Voice** (配音) | Narration and dialogue TTS (edge-tts by default, OpenAI-compatible speech as fallback), mixed in on export |
+| 7 | **Edit** (剪辑) | Order the segments on a timeline and export the episode |
+
+In the current UI, stages 1–4 have their own tabs and stages 5–7 happen together per segment in the
+**Workspace** (工作台) tab. The **infinite canvas** shows the same seven stages as a node graph, coloured by progress.
+
+## What you can make
+
+- **Short dramas.** Project templates for 爽剧 (hype drama), 短剧 (short drama) and 正剧 (straight drama), or upload your own script.
+- **Viral short videos.** The *Viral gallery* (爆款内容广场) has beat-by-beat playbooks for Douyin, TikTok, Xiaohongshu,
+  Instagram Reels, YouTube Shorts and Bilibili (hooks, pacing, CTA) that you can send straight into a project.
+  These are structural templates based on common feed patterns, not scraped trending charts.
+- **Ad and product videos.** A built-in e-commerce conversion template (pain point → product demo close-ups →
+  benefit captions → CTA), a soft product-placement Reels playbook, and marketing / e-commerce skills in the
+  skill market. They run through the same workshop; there is no separate ad editor.
+
+## Platform modules
+
+| Module | What it does |
 |:---|:---|
-| 产品地址 | [openmontage.dtok.io](https://openmontage.dtok.io/) |
-| 典型路径 | 先逛逛 → 登录创作 → 配密钥 → 六步成片 |
-| 状态持久化 | 项目 / 密钥 / 积分 / 用量 → **PostgreSQL**；图片视频 → **MinIO** |
-| 主要模型 | 文本 LLM（OpenAI 兼容等多家）· Seedream 出图 · Seedance 出视频 |
+| Viral gallery (爆款内容广场) | Platform playbooks, copyable prompts, a visual reference wall |
+| Creation hub (创作中心) | Text / visual / audio / video / workshop / canvas entry points |
+| Creation agent (创作 Agent) | One-line project setup: genre, episode count, aspect ratio, hook; generates the first scripts and checks which models are configured |
+| Workshop (影视工坊) | Project library and the 7-stage production line |
+| Assets (个人资产) | Media and prompt library, filtered by character / scene / prop / storyboard / final cut |
+| Skill market (Skill 专家) | Official and community skills (episode scripts, shot prompts, character looks, director workflows) you can install into the agent |
+| Infinite canvas (无限画布) | The project pipeline as a draggable node graph |
+| Model settings (模型配置) | Text and media providers, connection test, hot reload without restart |
+| Also | Works channel, challenges, resources, usage stats, task queue, help center, credits, referral program |
 
----
+<details>
+<summary><b>Screenshots</b></summary>
 
-## 平台模块一览
+Viral gallery
+![Viral gallery](docs/screenshots/01-inspire.png)
 
-左侧导航对应整站能力。下表说明每个模块做什么，并附线上截图。
+Creation hub
+![Creation hub](docs/screenshots/02-tools.png)
 
-### 爆款内容广场
+Creation agent
+![Creation agent](docs/screenshots/03-agent.png)
 
-面向 TikTok、抖音、小红书、Reels、Shorts、B 站等社媒的爆款视频打造工作流；选平台套路后复制提示词或一键带入创作，下方参考墙可学习画面与提示词。
+Workshop
+![Workshop](docs/screenshots/04-workshop.png)
 
-![爆款内容广场](docs/screenshots/01-inspire.png)
+Script desk
+![Script](docs/screenshots/05-workshop-script.png)
 
-### 创作中心
+Character looks
+![Characters](docs/screenshots/06-workshop-character.png)
 
-文本 / 视觉 / 音频 / 视频 / 工坊 / 画布入口汇总；一句话描述需求后跳转到对应工具。
+Storyboard desk
+![Storyboard](docs/screenshots/07-workshop-storyboard.png)
 
-![创作中心](docs/screenshots/02-tools.png)
+Assets
+![Assets](docs/screenshots/08-assets.png)
 
-### 创作 Agent
+Skill market
+![Skills](docs/screenshots/09-skills.png)
 
-一句话建项：题材、集数、画幅、示例钩子；调用已配置 LLM 生成首批剧本，并显示运行检查（文本 / Seedream / Seedance）。
+Infinite canvas
+![Canvas](docs/screenshots/10-canvas.png)
 
-![创作 Agent](docs/screenshots/03-agent.png)
+Model settings
+![Model settings](docs/screenshots/11-keys.png)
 
-### 影视工坊
+</details>
 
-项目库与创作入口（爽剧 / 短剧 / 正剧 / 上传剧本），进入后走七步生产线。
-
-![影视工坊](docs/screenshots/04-workshop.png)
-
-**工坊内七步：**
-
-| 步骤 | 功能 |
-|:---|:---|
-| 1 剧本 | 题材、画幅、视觉风格、梗概 / 素材；生成、续写、重写、定稿 |
-| 2 角色 | Seedream 造型出图、版本回看、三视图、参考重绘、本地上传 |
-| 3 场景 | 空间与光线设定、场景原画 |
-| 4 道具 | 关键道具与材质细节 |
-| 5 分镜 | DeepSeek 拆镜；Seedance 生成镜头视频（参考角色 / 场景 / 道具） |
-| 6 配音 | 旁白与对白 TTS，剪辑时可混入音轨 |
-| 7 剪辑 | 时间线编排与成片导出 |
-
-剧本工作台：
-
-![剧本](docs/screenshots/05-workshop-script.png)
-
-角色造型：
-
-![角色](docs/screenshots/06-workshop-character.png)
-
-分镜导演台：
-
-![分镜](docs/screenshots/07-workshop-storyboard.png)
-
-### 个人资产
-
-素材库 + 提示词库：上传 / AI 生成筛选，按角色·场景·道具·分镜·成片等分类；可批量管理并带入创作。
-
-![个人资产](docs/screenshots/08-assets.png)
-
-### Skill 专家
-
-官方 / 用户分享技能市场：分集剧本、分镜提示词、角色造型、场景设计、导演工作流等；可投稿与安装到 Agent。
-
-![Skill 专家](docs/screenshots/09-skills.png)
-
-### 无限画布
-
-把当前项目生产线可视化为可拖拽节点图（剧本 → 角色 / 场景 / 道具 → 分镜 → 配音 → 剪辑），按进度着色，点击进入对应工坊步骤。
-
-![无限画布](docs/screenshots/10-canvas.png)
-
-### 模型配置
-
-管理文本与媒体供应商：OpenAI / DeepSeek / Claude / Gemini / 通义 / 豆包等；启用后立即用于剧本与分镜；可检测连通。
-
-![模型配置](docs/screenshots/11-keys.png)
-
-### 其他模块
-
-| 模块 | 功能 |
-|:---|:---|
-| **作品频道** | 汇总导出成片，按项目浏览 |
-| **创作挑战** | 挑战任务与积分激励 |
-| **资源导航** | 外部工具与学习资源入口 |
-| **用量统计** | 请求 / token / 费用趋势（侧栏显示今日花费） |
-| **帮助中心** | 使用说明与 FAQ |
-| **积分充值** | 软积分余额与套餐 |
-| **推荐计划** | 邀请码与推荐奖励 |
-
----
-
-## 端到端工作流
-
-```text
-灵感 / Agent 一句话
-        ↓
-   创建项目（题材 · 画幅）
-        ↓
- 剧本定稿 → 角色 / 场景 / 道具出图
-        ↓
- 分镜拆解 → Seedance 出视频 → 配音 → 剪辑导出
-        ↓
-   作品频道 / 个人资产
-```
-
----
-
-## 架构
+## Architecture
 
 ```text
   React UI (studio/src)
        │
        ▼
   FastAPI (studio/server) ──▶ PostgreSQL  (projects · studio_kv · meta)
-       │
+       │            └──────▶ Redis       (media job queue)
        └──▶ MinIO / S3     (inspire · media blobs)
 ```
 
-| 目录 | 说明 |
+| Path | Contents |
 |:---|:---|
-| `studio/` | Drama Studio 前端 + API |
-| `studio/config/platform.yaml` | 导航、工坊步骤、工具、文案配置 |
-| `pipeline_defs/` · `skills/` | Agent 流水线与导演技能 |
-| `lib/` · `tools/` | 工具注册表 |
-| `docs/screenshots/` | 本文截图 |
+| `studio/` | Drama Studio front end and API |
+| `studio/config/platform.yaml` | Navigation, workshop stages, tools, copy (single source of truth) |
+| `pipeline_defs/` · `skills/` | Agent pipelines and director skills |
+| `lib/` · `tools/` | Tool registry |
+| `docs/screenshots/` | Screenshots used in this README |
 
----
+## Requirements (read before self-hosting)
 
-## 快速开始
+| | Included in `docker-compose.studio.yml`? |
+|:---|:---|
+| Studio app (UI + API) and media worker | ✅ built from this repo |
+| PostgreSQL 16 | ✅ bundled |
+| Redis 7 (media job queue) | ✅ bundled |
+| S3-compatible object storage (MinIO / S3) | ❌ **you provide** an endpoint, access key, secret and bucket (`OSS_*` / `MINIO_*` / `S3_*`) |
+| Text LLM key | ❌ **you provide**: DeepSeek, OpenAI, Claude, Gemini, Qwen (通义), Doubao (豆包), Kimi, GLM, MiniMax, OpenRouter or another OpenAI-compatible endpoint |
+| Image + video generation | ❌ **you provide**: a Volcengine Ark key for **Seedream** (images) and **Seedance** (video). These are **paid third-party APIs**. Images can instead go to your own ComfyUI server. |
+| TTS | edge-tts by default (no key); optional OpenAI-compatible speech endpoint |
+
+Other things to know:
+
+- `studio/.env.example` ships with defaults for the hosted instance (`openmontage.dtok.io`, its MinIO host and the
+  DTok account API in `API_BASE_URL`). Replace them with your own values. By default sign-in is proxied to the
+  account API in `API_BASE_URL`; see `STUDIO_AUTH_REQUIRED` and the demo-user settings in the same file.
+- The hosted instance has a credits / top-up page. Self-hosted, you pay your model providers directly.
+
+## Quick start
+
+Docker (Compose reads `.env` from the repo root):
+
+```bash
+cp studio/.env.example .env
+# fill in DATABASE_URL (or keep the bundled drama-db default), your S3/MinIO settings, and model API keys
+docker compose -f docker-compose.studio.yml up --build
+# open http://localhost:8787 · health check: GET /api/health (Postgres + object storage)
+```
+
+Local development:
 
 ```bash
 cp studio/.env.example studio/.env
-# 填写 DATABASE_URL、MinIO(OSS_*)、各供应商密钥
+# fill in DATABASE_URL, MinIO (OSS_*), provider keys, then export them into your shell
 
 cd studio/server && pip install -r requirements.txt
 uvicorn app:app --host 0.0.0.0 --port 8787
 
-cd studio && npm install && npm run dev
+cd studio && npm install && npm run dev   # http://127.0.0.1:5173, /api is proxied to 8787
 ```
 
-Docker：
+Agent / CLI pipeline notes: [`AGENT_GUIDE.md`](AGENT_GUIDE.md).
 
-```bash
-docker compose -f docker-compose.studio.yml up --build
-```
+## Tech stack
 
-健康检查：`GET /api/health`（Postgres + 对象存储状态）。
+Python · FastAPI · React · PostgreSQL · Redis · MinIO / S3 · Seedream · Seedance · edge-tts · FFmpeg · Docker / Coolify
 
-Agent / CLI 管线说明见 [`AGENT_GUIDE.md`](AGENT_GUIDE.md)。
+## About the name
 
----
+OpenMontage Drama Studio is an independent product by [@charliewwdev](https://github.com/charliewwdev).
+It started from the AGPL-3.0 [charliewwdev/OpenMontage](https://github.com/charliewwdev/OpenMontage) codebase and has
+since been rebuilt into a separate short-drama studio. It is **not affiliated with or endorsed by** the upstream
+project. The repository keeps the upstream git history, so upstream authors appear in the contributor list.
 
-## 技术栈
+## License and attribution
 
-Python · FastAPI · React · PostgreSQL · MinIO · Seedream · Seedance · Docker / Coolify
+Licensed under the **GNU AGPL-3.0**; see [`LICENSE`](LICENSE).
 
----
-
-## License
-
-AGPL-3.0 — 见 [`LICENSE`](LICENSE)。
+This is a modified version of [charliewwdev/OpenMontage](https://github.com/charliewwdev/OpenMontage). Original code is
+copyright its respective authors; modifications are by @charliewwdev (see the git history for what changed and when).
+If you run a modified version as a network service, AGPL-3.0 §13 requires you to offer its source to your users.

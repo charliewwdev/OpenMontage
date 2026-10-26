@@ -5,9 +5,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        Have an idea? If it's open-ended or you want to discuss direction first, consider posting in
-        [Discussions → Ideas](https://github.com/charliewwdev/OpenMontage/discussions/categories/ideas).
-        Use this form for a concrete, actionable request.
+        Have an idea? Use this form for a concrete, actionable request.
+        If it's open-ended, describe the direction you have in mind and we can discuss it in the issue.
   - type: textarea
     id: problem
     attributes:

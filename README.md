@@ -64,6 +64,8 @@ In the current UI, stages 1–4 have their own tabs and stages 5–7 happen toge
 
 ## What you can make
 
+Need a starting prompt? Try the [one-line idea examples](docs/examples.md) for short dramas, viral shorts, and product ads.
+
 - **Short dramas.** Project templates for 爽剧 (hype drama), 短剧 (short drama) and 正剧 (straight drama), or upload your own script.
 - **Viral short videos.** The *Viral gallery* (爆款内容广场) has beat-by-beat playbooks for Douyin, TikTok, Xiaohongshu,
   Instagram Reels, YouTube Shorts and Bilibili (hooks, pacing, CTA) that you can send straight into a project.

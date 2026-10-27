@@ -95,31 +95,31 @@ export function buildXShareText(opts = {}) {
 
   // Second beat: name the OSS product + who it's for (no "excited to announce").
   const line2 = isPortrait
-    ? `OpenMontage (open source): match Douyin looks + original audio beats — ${title}.`
-    : `OpenMontage (open source): short-drama / vertical AI video studio — ${title}.`;
+    ? `OpenMontage — open-source AI video studio. Match Douyin looks + original audio (${title}).`
+    : `OpenMontage — open-source AI video studio for short drama (${title}).`;
 
-  // Proof line — self-host / BYOK is what OSS AI posts lead with for credibility.
-  const line3 = hook
-    ? `${hook}. Self-hostable · BYOK · not a black-box SaaS.`
-    : "Self-hostable · BYOK · pipeline skills, not a black-box SaaS.";
+  // Proof — self-host / BYOK is the credibility line on X OSS AI posts.
+  const line3 = "Self-hostable · BYOK · not a black-box SaaS.";
+  const lineHook = hook ? hook.charAt(0).toUpperCase() + hook.slice(1) + "." : "";
 
-  // Prefer video (demo) over project page; GitHub as OSS CTA. Drop extras if over budget.
+  // Pack short lines first so GitHub always fits; long media URL last (optional).
+  // Research: one clear link beats stuffing; demo video if room.
   const candidates = [
     line1,
     line2,
+    lineHook,
     line3,
-    videoUrl || "",
     GITHUB_URL,
-    pageUrl && pageUrl !== videoUrl ? pageUrl : "",
+    pageUrl || "",
+    videoUrl || "",
   ].filter(Boolean);
 
   let text = "";
   for (const part of candidates) {
     const next = text ? `${text}\n\n${part}` : part;
-    if (next.length > 260) break;
+    if (next.length > 260) continue; // skip oversize parts, keep packing shorter ones
     text = next;
   }
-  // Always keep hook + OSS line + at least one link if possible
   if (!text) text = `${line1}\n\n${GITHUB_URL}`;
   return text;
 }

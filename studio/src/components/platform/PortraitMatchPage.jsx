@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, Clapperboard, Film, Loader2, Play, RefreshCw, Sparkles } from "lucide-react";
+import { ArrowLeft, Clapperboard, Film, Loader2, Play, RefreshCw, Share2, Sparkles } from "lucide-react";
 import { api } from "../../api";
 import { toast } from "../../lib/toast";
 import { requireCapability, toastMaybeKeys } from "../../lib/keys";
+import { openShareToX } from "../../lib/shareToX";
 import { SkillExpertBadge } from "../SkillExpertBadge";
 import { PageShell } from "./PageShell";
 
@@ -404,7 +405,27 @@ export function PortraitMatchPage({
               ) : null}
               {assembled?.outputUrl ? (
                 <div className="panel border border-[#7c6cff]/40 p-3">
-                  <p className="mb-2 text-xs text-[#a5b4fc]">本次合片成片</p>
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="text-xs text-[#a5b4fc]">本次合片成片</p>
+                    <button
+                      type="button"
+                      className="btn-secondary !min-h-7 text-[11px]"
+                      title="打开 X，自动填好宣传文案与成片链接"
+                      onClick={() => {
+                        const ok = openShareToX({
+                          project,
+                          projectId,
+                          outputUrl: assembled.outputUrl,
+                          outputPath: assembled.outputPath,
+                          durationSec: assembled.visualDur || assembled.targetDur || null,
+                        });
+                        if (ok) toast.success("已打开 X，确认后即可发布");
+                        else toast.error("无法打开 X 分享");
+                      }}
+                    >
+                      <Share2 className="h-3 w-3" /> 分享到 X
+                    </button>
+                  </div>
                   <video src={assembled.outputUrl} className="max-h-80 w-full rounded-xl object-contain" controls playsInline />
                 </div>
               ) : null}

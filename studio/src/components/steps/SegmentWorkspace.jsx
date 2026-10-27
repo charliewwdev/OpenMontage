@@ -11,6 +11,7 @@ import {
   Pause,
   Play,
   Save,
+  Share2,
   Sparkles,
   Video,
   Volume2,
@@ -25,9 +26,11 @@ import {
   listEntityQaBlockers,
 } from "../../lib/entityQaGate";
 import { requireCapability, toastMaybeKeys } from "../../lib/keys";
+import { openShareToX } from "../../lib/shareToX";
 import { toast } from "../../lib/toast";
 import { useTimer } from "../../lib/useTimer";
 import { AssetDetailModal } from "../AssetDetailModal";
+import { SkillExpertBadge } from "../SkillExpertBadge";
 import { ConfirmDialog } from "../ConfirmDialog";
 
 function parseDialogue(raw = "") {
@@ -299,6 +302,11 @@ export function SegmentWorkspace({
     if (!["480p", "720p", "1080p"].includes(resolution)) setResolution("720p");
   }, [resolution]);
 
+  // 极像质量堆叠：写真对标默认 1080p 出片
+  useEffect(() => {
+    if (bundle?.project?.workflow === "portrait-match") setResolution("1080p");
+  }, [bundle?.project?.workflow]);
+
   const episode = (bundle?.episodes || []).find((e) => e.id === episodeId);
   const shots = useMemo(
     () =>
@@ -376,6 +384,26 @@ export function SegmentWorkspace({
       cancelled = true;
     };
   }, [readOnly, episodeId, projectId, shots, splitting, onBundle]);
+
+  // Portrait: ensure 角色/场景走 drama-entity-still，提示词结构化达标。
+  useEffect(() => {
+    if (readOnly || bundle?.project?.workflow !== "portrait-match") return;
+    if (bundle?.project?.portraitMatchMode === "reshoot") return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api(`/api/projects/${encodeURIComponent(projectId)}/portrait-match/prepare-assets`, {
+          method: "POST",
+        });
+        if (!cancelled && res?.bundle) onBundle?.(res.bundle);
+      } catch {
+        /* non-blocking */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [readOnly, projectId, bundle?.project?.workflow, bundle?.project?.portraitMatchMode, onBundle]);
 
   // Bind cast/prop/scene names into referenceEntityIds once per episode load.
   useEffect(() => {
@@ -729,14 +757,23 @@ export function SegmentWorkspace({
     setExporting(true);
     setBusyMsg?.("导出成片中…");
     try {
-      const res = await api(`/api/projects/${encodeURIComponent(projectId)}/edits`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "export", episodeId: episode.id }),
-      });
+      const isPortrait = bundle?.project?.workflow === "portrait-match";
+      // Portrait idlock: use end-of-clip × gap assemble so adjacent beats share the junction pose.
+      const res = isPortrait
+        ? await api(`/api/projects/${encodeURIComponent(projectId)}/portrait-match/assemble`, {
+            method: "POST",
+          })
+        : await api(`/api/projects/${encodeURIComponent(projectId)}/edits`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "export", episodeId: episode.id }),
+          });
       apply(res);
-      const url = res?.edit?.outputUrl || res?.bundle?.edits?.find((e) => e.episodeId === episode.id)?.outputUrl;
-      if (url) toast.success("成片已导出");
+      const url =
+        res?.edit?.outputUrl ||
+        res?.bundle?.edits?.slice(-1)?.[0]?.outputUrl ||
+        res?.bundle?.edits?.find((e) => e.episodeId === episode.id)?.outputUrl;
+      if (url) toast.success(isPortrait ? "对标合片已导出（v3 片头卡点 + 原曲）" : "成片已导出");
       else toast.success("导出任务已完成");
     } catch (error) {
       toast.error(String(error.message || error));
@@ -988,13 +1025,29 @@ export function SegmentWorkspace({
   }, [goSeg, activeSeg?.video?.url]);
 
   const ratio = bundle?.project?.ratio || "9:16";
-  const editDraft = (bundle?.edits || []).find((e) => e.episodeId === episodeId);
+  const editDraft = useMemo(() => {
+    const edits = bundle?.edits || [];
+    const byEp = edits.find((e) => e.episodeId === episodeId && (e.outputUrl || e.outputPath));
+    if (byEp) return byEp;
+    // Portrait assemble writes kind=portrait-assemble without episodeId.
+    if (bundle?.project?.workflow === "portrait-match") {
+      return [...edits].reverse().find((e) => e.kind === "portrait-assemble" && (e.outputUrl || e.outputPath));
+    }
+    return edits.find((e) => e.episodeId === episodeId) || null;
+  }, [bundle?.edits, bundle?.project?.workflow, episodeId]);
   const segReady = Boolean(activeSeg?.video?.url);
   const segVideoQa = activeSeg?.video?.qa || {};
+  const portraitBypass =
+    Boolean(segVideoQa.bypass === "portrait-idlock" || segVideoQa.reason === "portrait-idlock") ||
+    Boolean(bundle?.project?.workflow === "portrait-match") ||
+    Boolean(activeSeg?.lead?.idlock || activeSeg?.lead?.skipVideoQa);
   // Soft-skipped QA (JSON/vision errors) must not read as green「已完成」.
-  const segQaPass = activeSeg?.video?.qaPass === true && !segVideoQa.skipped;
+  // Portrait idlock sets qaPass intentionally — never treat that as「质检未过」.
+  const segQaPass =
+    activeSeg?.video?.qaPass === true && (!segVideoQa.skipped || portraitBypass);
   const segQaFail =
     segReady &&
+    !portraitBypass &&
     (activeSeg?.video?.qaPass === false ||
       Boolean(segVideoQa.skipped) ||
       activeSeg?.lead?.status === "failed" ||
@@ -1026,6 +1079,7 @@ export function SegmentWorkspace({
         <p className="mt-2 max-w-md text-sm text-white/50">
           将本集拆成约 10–15 秒的片段，每段含 3–4 个分镜节拍；角色、道具、台词都挂在段上。
         </p>
+        <SkillExpertBadge skillId="drama-shot-prompt" className="mt-4" />
         <button type="button" className="btn-primary mt-5" disabled={splitting} onClick={() => void split()}>
           {splitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
           {splitting ? `拆分中 · ${splitElapsedTime}` : "AI 拆成片段"}
@@ -1056,6 +1110,7 @@ export function SegmentWorkspace({
           <p className="text-[10px] text-white/40">
             {segments.length} 片段 · {readyCount}/{segments.length} 已出片 · 约 {Math.round(totalDur)}s
           </p>
+          <SkillExpertBadge skillId="drama-shot-prompt" className="mt-1" />
         </div>
         {segments.length ? (
           <div className="flex min-w-0 items-center gap-0.5" aria-label="片段导航">
@@ -1107,9 +1162,30 @@ export function SegmentWorkspace({
             重新拆分
           </button>
           {editDraft?.outputUrl ? (
-            <a href={editDraft.outputUrl} className="btn-secondary !min-h-7 text-[11px]" target="_blank" rel="noreferrer">
-              <Film className="h-3 w-3" /> 查看成片
-            </a>
+            <>
+              <a href={editDraft.outputUrl} className="btn-secondary !min-h-7 text-[11px]" target="_blank" rel="noreferrer">
+                <Film className="h-3 w-3" /> 查看成片
+              </a>
+              <button
+                type="button"
+                className="btn-secondary !min-h-7 text-[11px]"
+                title="打开 X，自动填好宣传文案与成片链接"
+                onClick={() => {
+                  const ok = openShareToX({
+                    project: bundle?.project,
+                    projectId,
+                    outputUrl: editDraft.outputUrl,
+                    outputPath: editDraft.outputPath,
+                    episodeId: episode?.id,
+                    durationSec: editDraft.visualDur || editDraft.targetDur || null,
+                  });
+                  if (ok) toast.success("已打开 X，确认后即可发布");
+                  else toast.error("无法打开 X 分享");
+                }}
+              >
+                <Share2 className="h-3 w-3" /> 分享到 X
+              </button>
+            </>
           ) : (
             <button type="button" className="btn-secondary !min-h-7 text-[11px]" disabled={exporting || !readyCount} onClick={() => void exportEpisode()}>
               {exporting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Film className="h-3 w-3" />}
@@ -1118,6 +1194,21 @@ export function SegmentWorkspace({
           )}
         </div>
       </div>
+
+      {bundle?.project?.workflow === "portrait-match" ? (
+        <p className="shrink-0 rounded-md border border-amber-400/20 bg-amber-400/5 px-2.5 py-1.5 text-[11px] leading-relaxed text-amber-100/80">
+          {bundle?.project?.portraitMatchMode === "reshoot" ? (
+            <>
+              原片重拍：按「重拍企划」真机拍。角色/场景/卡点表仍须可读达标；本路径不跑 H3。
+            </>
+          ) : (
+            <>
+              极像质量堆叠：门禁过后再堆 H3——原片关键帧定妆、1080p、非 turbo、强化帧间提示、合片锐化+原曲。
+              角色/场景/提示词未达标会拦截出片；目标抖音划过「极像」。
+            </>
+          )}
+        </p>
+      ) : null}
 
       {/* Main 3-column desk — denser columns */}
       <div className="grid min-h-0 flex-1 gap-1.5 overflow-hidden xl:grid-cols-[188px_minmax(0,1fr)_minmax(220px,280px)]">
@@ -1315,15 +1406,21 @@ export function SegmentWorkspace({
               ) : (
                 <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/45">待出片</span>
               )}
-              <button
-                type="button"
-                className="btn-primary ml-auto !min-h-7 !px-2.5 text-[11px]"
-                disabled={generating || segGenerating || splitting}
-                onClick={() => void generateSegment(pendingRegen ? { syncOnly: true } : {})}
-              >
-                {generating || segGenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Video className="h-3 w-3" />}
-                {pendingRegen ? "重生本段" : segReady ? "再生成" : "生成本段"}
-              </button>
+              {bundle?.project?.portraitMatchMode === "reshoot" ? (
+                <span className="ml-auto rounded-full bg-sky-500/15 px-2 py-0.5 text-[10px] text-sky-100">
+                  重拍参考 · 不生成
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  className="btn-primary ml-auto !min-h-7 !px-2.5 text-[11px]"
+                  disabled={generating || segGenerating || splitting}
+                  onClick={() => void generateSegment(pendingRegen ? { syncOnly: true } : {})}
+                >
+                  {generating || segGenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Video className="h-3 w-3" />}
+                  {pendingRegen ? "重生本段" : segReady ? "再生成" : "生成本段"}
+                </button>
+              )}
             </div>
             {segEntityQaBlockers.length ? (
               <div className="mt-1.5 rounded-md border border-rose-500/35 bg-rose-500/10 px-2 py-1.5 text-[10px] leading-snug text-rose-100">
@@ -1482,6 +1579,19 @@ export function SegmentWorkspace({
                   </div>
                   {scriptTab === "lens" ? (
                     <>
+                      {bundle?.project?.workflow === "portrait-match" ? (
+                        <div className="mb-2 flex flex-wrap gap-1.5 text-[10px]">
+                          <span className="rounded bg-white/8 px-1.5 py-0.5 text-white/70">
+                            动作 · {shot.actionZh || shot.action || "—"}
+                          </span>
+                          <span className="rounded bg-white/8 px-1.5 py-0.5 text-white/70">
+                            运镜 · {shot.camera || "锁定/微跟"}
+                          </span>
+                          <span className="rounded bg-white/8 px-1.5 py-0.5 text-white/70">
+                            转镜 · {shot.transition || "硬切卡点"}
+                          </span>
+                        </div>
+                      ) : null}
                       <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-white/35">镜头提示词</div>
                       <PromptWithChips
                         prompt={shot.prompt || shot.action || "（无镜头提示词）"}

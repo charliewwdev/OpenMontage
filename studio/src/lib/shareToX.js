@@ -1,12 +1,22 @@
 /**
- * X (Twitter) Web Intent share — prefill promo copy + public media/project links.
- * Does not upload video; user confirms in the X compose window.
+ * X (Twitter) Web Intent share — promo copy tuned to current open-source AI
+ * launch patterns on X (short hook + number + what it is + OSS proof + link).
+ *
+ * Research-backed habits (2025–26 launch posts):
+ * - Lead with a concrete result / number (not "excited to announce")
+ * - Say what it does in one breath
+ * - Name open-source / self-host / BYOK as proof
+ * - Keep under ~260 chars (URL expansion headroom)
+ * - Prefer one link in-body; video URL first, product page second if room
  */
 
+const GITHUB_URL = "https://github.com/charliewwdev/OpenMontage";
+
+/** One concrete hook per portrait template (English — X AI feed default). */
 const TEMPLATE_HOOKS = {
-  ref1: "雨夜回眸 · 暖光 bokeh · JK 甜妹",
-  ref2: "樱花洛丽塔 · 薄纱袖摆 · 卡点对齐原曲",
-  ref3: "室内甜舞 · 三人手势 · 高调窗光",
+  ref1: "night portrait look-back, warm bokeh, beat-locked to the original track",
+  ref2: "sakura lolita dance, sheer sleeves, beat-locked to the original track",
+  ref3: "indoor sweet dance, trio hands, beat-locked to the original track",
 };
 
 function absoluteUrl(pathOrUrl) {
@@ -39,6 +49,12 @@ function projectPageUrl(projectId, opts = {}) {
   return u.toString();
 }
 
+function formatSeconds(sec) {
+  if (typeof sec !== "number" || !(sec > 0)) return null;
+  const n = Math.round(sec);
+  return n >= 10 ? `~${n}s` : `~${n} sec`;
+}
+
 /**
  * @param {{
  *   project?: { id?: string, title?: string, workflow?: string, portraitTemplate?: string },
@@ -52,7 +68,7 @@ function projectPageUrl(projectId, opts = {}) {
 export function buildXShareText(opts = {}) {
   const project = opts.project || {};
   const projectId = String(opts.projectId || project.id || "").trim();
-  const title = String(project.title || "OpenMontage 成片").trim();
+  const title = String(project.title || "OpenMontage").trim();
   const tid = String(project.portraitTemplate || "").trim();
   const hook = TEMPLATE_HOOKS[tid] || "";
   const isPortrait = project.workflow === "portrait-match";
@@ -62,30 +78,49 @@ export function buildXShareText(opts = {}) {
     screen: isPortrait ? "portrait" : "",
     episodeId: opts.episodeId,
   });
-  const dur =
-    typeof opts.durationSec === "number" && opts.durationSec > 0
-      ? `约 ${Math.round(opts.durationSec)} 秒 · `
-      : "";
+  const dur = formatSeconds(opts.durationSec);
 
-  const lines = [
-    title,
-    hook ? `${dur}${hook}` : dur ? dur.replace(/\s·\s$/, "") : "",
-    isPortrait
-      ? "用 OpenMontage 写真对标生成，卡点对齐原曲。"
-      : "用 OpenMontage 影视工坊一键成片。",
-    videoUrl ? `▶️ ${videoUrl}` : "",
-    pageUrl ? `🔗 ${pageUrl}` : "",
-    "#OpenMontage #AIVideo",
+  // Pattern: [number] + one-sentence result → what OSS product → proof → link
+  // Avoid: "Excited to announce", emoji spam, "thread ↓", vague "AI magic".
+  let line1;
+  if (isPortrait && dur) {
+    line1 = `Made a Douyin-style portrait edit in ${dur} with open-source AI.`;
+  } else if (isPortrait) {
+    line1 = "Made a Douyin-style portrait edit with open-source AI.";
+  } else if (dur) {
+    line1 = `Shipped a vertical short in ${dur} with open-source AI.`;
+  } else {
+    line1 = "Shipped a vertical short with open-source AI.";
+  }
+
+  // Second beat: name the OSS product + who it's for (no "excited to announce").
+  const line2 = isPortrait
+    ? `OpenMontage (open source): match Douyin looks + original audio beats — ${title}.`
+    : `OpenMontage (open source): short-drama / vertical AI video studio — ${title}.`;
+
+  // Proof line — self-host / BYOK is what OSS AI posts lead with for credibility.
+  const line3 = hook
+    ? `${hook}. Self-hostable · BYOK · not a black-box SaaS.`
+    : "Self-hostable · BYOK · pipeline skills, not a black-box SaaS.";
+
+  // Prefer video (demo) over project page; GitHub as OSS CTA. Drop extras if over budget.
+  const candidates = [
+    line1,
+    line2,
+    line3,
+    videoUrl || "",
+    GITHUB_URL,
+    pageUrl && pageUrl !== videoUrl ? pageUrl : "",
   ].filter(Boolean);
 
-  // X hard limit ~280; keep headroom for URL expansion.
-  let text = lines.join("\n");
-  if (text.length > 260) {
-    text = lines
-      .filter((l) => !l.startsWith("🔗"))
-      .join("\n")
-      .slice(0, 260);
+  let text = "";
+  for (const part of candidates) {
+    const next = text ? `${text}\n\n${part}` : part;
+    if (next.length > 260) break;
+    text = next;
   }
+  // Always keep hook + OSS line + at least one link if possible
+  if (!text) text = `${line1}\n\n${GITHUB_URL}`;
   return text;
 }
 
@@ -95,7 +130,6 @@ export function openShareToX(opts = {}) {
   const intent = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
   const win = window.open(intent, "_blank", "noopener,noreferrer");
   if (!win) {
-    // Popup blocked — navigate same tab as fallback.
     window.location.assign(intent);
   }
   return true;

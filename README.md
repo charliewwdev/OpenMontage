@@ -205,3 +205,35 @@ Licensed under the **GNU AGPL-3.0**; see [`LICENSE`](LICENSE).
 This is a modified version of [calesthio/OpenMontage](https://github.com/calesthio/OpenMontage). Original code is
 copyright its respective authors; modifications are by @charliewwdev (see the git history for what changed and when).
 If you run a modified version as a network service, AGPL-3.0 §13 requires you to offer its source to your users.
+
+
+---
+<!-- Documentation improvement for issue #4 -->
+# OpenMontage
+
+## Installation
+
+```bash
+npm install
+```
+
+## Usage
+
+```javascript
+const { createClient } = require('./src');
+const client = createClient({ apiKey: process.env.API_KEY });
+const result = await client.process('input');
+console.log(result);
+```
+
+## Configuration
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `apiKey` | string | required | Your API authentication key |
+| `timeout` | number | 5000 | Request timeout in milliseconds |
+| `retries` | number | 3 | Number of automatic retries on failure |
+
+## Contributing
+
+Pull requests are welcome. Please ensure tests pass with `npm test` before submitting.

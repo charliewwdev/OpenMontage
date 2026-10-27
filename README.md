@@ -13,10 +13,13 @@
   <a href="https://openmontage.dtok.io/"><img src="https://img.shields.io/badge/Live_demo-openmontage.dtok.io-E11D48?style=flat-square" alt="Live demo"/></a>
   <a href="https://github.com/charliewwdev/OpenMontage/stargazers"><img src="https://img.shields.io/github/stars/charliewwdev/OpenMontage?style=flat-square" alt="GitHub stars"/></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPLv3-334155?style=flat-square" alt="License: AGPL-3.0"/></a>
+  <a href="https://github.com/charliewwdev/OpenMontage/releases"><img src="https://img.shields.io/github/v/release/charliewwdev/OpenMontage?style=flat-square" alt="Release"/></a>
   <img src="https://img.shields.io/badge/Stack-React%20%2B%20FastAPI%20%2B%20Postgres-0F172A?style=flat-square" alt="Stack"/>
   <img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker Compose"/>
   <img src="https://img.shields.io/github/last-commit/charliewwdev/OpenMontage?style=flat-square" alt="Last commit"/>
 </p>
+
+<p align="center">⭐ If this is useful, a star helps others find it.</p>
 
 <p align="center"><b>English</b> · <a href="README_zh-CN.md">简体中文</a></p>
 

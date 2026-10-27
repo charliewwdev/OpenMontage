@@ -82,45 +82,36 @@ export function buildXShareText(opts = {}) {
 
   // Pattern: [number] + one-sentence result → what OSS product → proof → link
   // Avoid: "Excited to announce", emoji spam, "thread ↓", vague "AI magic".
+  // Compact formula (Karos / OSS launch posts): number-first hook → name product → proof → link.
   let line1;
   if (isPortrait && dur) {
-    line1 = `Made a Douyin-style portrait edit in ${dur} with open-source AI.`;
+    line1 = `Douyin-style portrait edit in ${dur} — open-source AI.`;
   } else if (isPortrait) {
-    line1 = "Made a Douyin-style portrait edit with open-source AI.";
+    line1 = "Douyin-style portrait edit — open-source AI.";
   } else if (dur) {
-    line1 = `Shipped a vertical short in ${dur} with open-source AI.`;
+    line1 = `Vertical short in ${dur} — open-source AI.`;
   } else {
-    line1 = "Shipped a vertical short with open-source AI.";
+    line1 = "Vertical short — open-source AI.";
   }
 
-  // Second beat: name the OSS product + who it's for (no "excited to announce").
   const line2 = isPortrait
-    ? `OpenMontage — open-source AI video studio. Match Douyin looks + original audio (${title}).`
-    : `OpenMontage — open-source AI video studio for short drama (${title}).`;
+    ? `OpenMontage: match looks + original audio beats (${title}).`
+    : `OpenMontage: short-drama AI video studio (${title}).`;
 
-  // Proof — self-host / BYOK is the credibility line on X OSS AI posts.
-  const line3 = "Self-hostable · BYOK · not a black-box SaaS.";
-  const lineHook = hook ? hook.charAt(0).toUpperCase() + hook.slice(1) + "." : "";
+  const line3 = "Open source · self-hostable · BYOK.";
+  const lineHook = hook ? `${hook.charAt(0).toUpperCase()}${hook.slice(1)}.` : "";
 
-  // Pack short lines first so GitHub always fits; long media URL last (optional).
-  // Research: one clear link beats stuffing; demo video if room.
-  const candidates = [
-    line1,
-    line2,
-    lineHook,
-    line3,
-    GITHUB_URL,
-    pageUrl || "",
-    videoUrl || "",
-  ].filter(Boolean);
+  // Must-fit: hook + product + GitHub. Optional: scene line, page, video.
+  const required = [line1, line2, GITHUB_URL];
+  const optional = [lineHook, line3, pageUrl || "", videoUrl || ""];
 
-  let text = "";
-  for (const part of candidates) {
-    const next = text ? `${text}\n\n${part}` : part;
-    if (next.length > 260) continue; // skip oversize parts, keep packing shorter ones
+  let text = required.join("\n\n");
+  for (const part of optional) {
+    if (!part) continue;
+    const next = `${text}\n\n${part}`;
+    if (next.length > 260) continue;
     text = next;
   }
-  if (!text) text = `${line1}\n\n${GITHUB_URL}`;
   return text;
 }
 

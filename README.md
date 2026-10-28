@@ -23,12 +23,11 @@
 
 <p align="center"><b>English</b> · <a href="README_zh-CN.md">简体中文</a></p>
 
-<!--
-  DEMO GIF PLACEHOLDER (TODO before launch)
-  Record a 20–30 s capture: type one line → walk through the 7 stages → play the exported clip.
-  Save as docs/demo.gif (< 10 MB) or upload an MP4 to a GitHub issue/release, then replace this comment with:
-  <p align="center"><img src="docs/demo.gif" alt="One line in, short drama out" width="720"/></p>
--->
+<p align="center">
+  <a href="https://openmontage.dtok.io/"><img src="docs/assets/demo.gif" alt="OpenMontage Drama Studio demo: workshop home, a finished episode's stage tabs and shot workbench, and the infinite canvas" width="720"/></a>
+</p>
+
+<p align="center"><sub>Real capture of the hosted instance in guest (browse) mode: workshop home → a finished episode's stages and shot workbench → infinite canvas. Try it at <a href="https://openmontage.dtok.io/">openmontage.dtok.io</a>.</sub></p>
 
 ---
 

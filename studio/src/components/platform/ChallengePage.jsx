@@ -65,7 +65,7 @@ export function ChallengePage({ config, onStart }) {
     <PageShell
       eyebrow={page.eyebrow || "Challenge"}
       title={page.title || "创作挑战"}
-      description={page.description || "限时主题任务，练熟六步工坊节奏；接受后会把 brief 带入创作 Agent。完成可获得本地创作积分。"}
+      description={page.description || "限时主题任务，练熟七步工坊节奏；接受后会把 brief 带入创作 Agent。完成可获得本地创作积分。"}
     >
       <div className="mb-3 grid gap-2 sm:grid-cols-4">
         <article className="panel p-2.5">

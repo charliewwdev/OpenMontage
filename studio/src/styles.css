@@ -26,16 +26,18 @@ html[data-theme="dark"] {
   --line-strong: rgba(255, 255, 255, 0.14);
   --navy: #0c0e14;
   --navy-soft: #151822;
-  --accent: #7c6cff;
-  --accent-2: #4f8cff;
-  --projector: #7c6cff;
+  --accent: #e11d48;
+  --accent-2: #fb7185;
+  --accent-soft: #fda4af;
+  --metal: #c4a574;
+  --projector: #e11d48;
   --timecode: #f2b84b;
   --danger: #f07178;
   --ok: #34d399;
   --run: #60a5fa;
   --orange: #fb923c;
-  --gradient: linear-gradient(135deg, #4f8cff 0%, #7c6cff 55%, #a78bfa 100%);
-  --gradient-soft: linear-gradient(135deg, rgba(79, 140, 255, 0.22), rgba(124, 108, 255, 0.18));
+  --gradient: linear-gradient(135deg, #be123c 0%, #e11d48 48%, #c4a574 100%);
+  --gradient-soft: linear-gradient(135deg, rgba(225, 29, 72, 0.2), rgba(196, 165, 116, 0.12));
 }
 
 html[data-theme="light"] {
@@ -51,22 +53,24 @@ html[data-theme="light"] {
   --line-strong: rgba(16, 24, 40, 0.18);
   --navy: #eef0f6;
   --navy-soft: #e4e7f0;
-  --accent: #5b4fd6;
-  --accent-2: #3b82f6;
-  --projector: #5b4fd6;
+  --accent: #be123c;
+  --accent-2: #e11d48;
+  --accent-soft: #9f1239;
+  --metal: #a3845a;
+  --projector: #be123c;
   --timecode: #b45309;
   --danger: #dc2626;
   --ok: #059669;
   --run: #2563eb;
   --orange: #ea580c;
-  --gradient: linear-gradient(135deg, #3b82f6 0%, #6366f1 55%, #8b5cf6 100%);
-  --gradient-soft: linear-gradient(135deg, rgba(59, 130, 246, 0.14), rgba(99, 102, 241, 0.12));
+  --gradient: linear-gradient(135deg, #9f1239 0%, #e11d48 50%, #a3845a 100%);
+  --gradient-soft: linear-gradient(135deg, rgba(190, 18, 60, 0.12), rgba(163, 132, 90, 0.1));
 }
 
 html[data-theme="light"] body {
   background:
-    radial-gradient(1200px 600px at 10% -10%, rgba(59, 130, 246, 0.1), transparent 55%),
-    radial-gradient(900px 500px at 90% 0%, rgba(139, 92, 246, 0.08), transparent 50%),
+    radial-gradient(1200px 600px at 10% -10%, rgba(225, 29, 72, 0.08), transparent 55%),
+    radial-gradient(900px 500px at 90% 0%, rgba(196, 165, 116, 0.1), transparent 50%),
     var(--stage);
 }
 
@@ -90,8 +94,8 @@ body,
 body {
   min-height: 100vh;
   background:
-    radial-gradient(1200px 600px at 10% -10%, rgba(79, 140, 255, 0.12), transparent 55%),
-    radial-gradient(900px 500px at 90% 0%, rgba(167, 139, 250, 0.1), transparent 50%),
+    radial-gradient(1200px 600px at 10% -10%, rgba(225, 29, 72, 0.1), transparent 55%),
+    radial-gradient(900px 500px at 90% 0%, rgba(196, 165, 116, 0.08), transparent 50%),
     var(--stage);
   color: var(--ink);
   font-family: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
@@ -308,7 +312,7 @@ button:disabled {
 
 .nav-active {
   background: var(--gradient-soft);
-  box-shadow: inset 3px 0 0 #8b7cff;
+  box-shadow: inset 3px 0 0 var(--accent);
 }
 
 /* Provider list cards — horizontal rows (Operate density) */
@@ -328,7 +332,7 @@ button:disabled {
 }
 
 .provider-card:hover {
-  border-color: rgba(59, 130, 246, 0.35);
+  border-color: rgba(225, 29, 72, 0.35);
   background: rgba(255, 255, 255, 0.035);
 }
 

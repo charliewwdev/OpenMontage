@@ -34,7 +34,7 @@ function PinCard({ pin, prompt, onOpen, onDead }) {
       aria-hidden={!ready}
       className={
         ready
-          ? "group mb-3 block w-full break-inside-avoid overflow-hidden rounded-2xl border border-[var(--line)] bg-white/[.03] text-left transition hover:border-[#7c6cff]/45"
+          ? "group mb-3 block w-full break-inside-avoid overflow-hidden rounded-2xl border border-[var(--line)] bg-white/[.03] text-left transition hover:border-[var(--accent)]/40"
           : "pointer-events-none absolute h-0 w-0 overflow-hidden opacity-0"
       }
     >
@@ -49,7 +49,7 @@ function PinCard({ pin, prompt, onOpen, onDead }) {
           onError={() => onDead(key)}
         />
         {ready && prompt ? (
-          <span className="absolute left-2 top-2 rounded-full bg-[#7c6cff]/95 px-2 py-0.5 text-[10px] font-medium text-white shadow">
+          <span className="absolute left-2 top-2 rounded-full bg-[var(--accent)] px-2 py-0.5 text-[10px] font-medium text-white">
             含提示词
           </span>
         ) : null}
@@ -61,25 +61,29 @@ function PinCard({ pin, prompt, onOpen, onDead }) {
 function ScenarioCard({ item, expanded, onToggle, onUsePrompt, onStartPortrait, t }) {
   const why = Array.isArray(item.whyItWorks) ? item.whyItWorks : [];
   const beats = Array.isArray(item.beats) ? item.beats : [];
+  const ctaLabel =
+    item.workflow === "portrait-match"
+      ? t("inspire_action_to_portrait", undefined, "去工坊 · 写真对标")
+      : t("inspire_action_to_workshop", undefined, "去工坊开拍");
 
   return (
-    <article className="panel flex flex-col gap-3 border border-[var(--line)] bg-gradient-to-br from-[#ff5a3d]/08 to-transparent p-4">
+    <article className="panel flex min-h-[168px] flex-col gap-3 p-3.5">
       <button type="button" className="w-full text-left" onClick={onToggle}>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-[#ff5a3d]/20 px-2 py-0.5 text-[10px] font-medium text-[#ff8f6b]">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="rounded border border-[var(--accent)]/25 bg-[var(--accent)]/10 px-1.5 py-0.5 text-[10px] font-medium text-[var(--accent-2)]">
             {item.platform}
           </span>
-          <span className="rounded-full bg-white/[.06] px-2 py-0.5 text-[10px] text-white/50">
+          <span className="rounded border border-white/10 bg-white/[.04] px-1.5 py-0.5 text-[10px] text-white/50">
             {item.duration}
           </span>
           {item.genre ? (
-            <span className="rounded-full bg-white/[.06] px-2 py-0.5 text-[10px] text-white/50">
+            <span className="rounded border border-white/10 bg-white/[.04] px-1.5 py-0.5 text-[10px] text-white/50">
               {item.genre}
             </span>
           ) : null}
         </div>
-        <div className="mt-2 text-sm font-semibold text-white">{item.title}</div>
-        <p className="mt-1 text-xs leading-5 text-white/55">{item.hook}</p>
+        <div className="mt-2 line-clamp-2 text-[13px] font-semibold text-white">{item.title}</div>
+        <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-white/55">{item.hook}</p>
       </button>
 
       {expanded ? (
@@ -104,7 +108,7 @@ function ScenarioCard({ item, expanded, onToggle, onUsePrompt, onStartPortrait, 
               <ol className="space-y-1.5 text-xs leading-5 text-white/75">
                 {beats.map((beat) => (
                   <li key={`${beat.t}-${beat.action}`}>
-                    <span className="font-medium text-[#ff8f6b]">{beat.t}</span>
+                    <span className="font-medium text-[var(--accent-2)]">{beat.t}</span>
                     <span className="text-white/40"> · </span>
                     {beat.action}
                   </li>
@@ -143,7 +147,7 @@ function ScenarioCard({ item, expanded, onToggle, onUsePrompt, onStartPortrait, 
             onUsePrompt?.(item.prompt);
           }}
         >
-          <Lightbulb className="h-3.5 w-3.5" /> {t("inspire_action_create")}
+          <Lightbulb className="h-3.5 w-3.5" /> {ctaLabel}
         </button>
       </div>
     </article>
@@ -338,7 +342,7 @@ export function InspirePage({ config, onUsePrompt, onStartPortrait }) {
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="搜索提示词或文件名..."
-              className="w-full rounded-xl border border-[var(--line)] bg-white/[.04] py-2.5 pl-10 pr-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-[#7c6cff]/55"
+              className="w-full rounded-xl border border-[var(--line)] bg-white/[.04] py-2.5 pl-10 pr-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-[var(--accent)]/55"
             />
           </label>
           <button
@@ -492,7 +496,7 @@ export function InspirePage({ config, onUsePrompt, onStartPortrait }) {
               <div className="min-h-0 flex-1 rounded-2xl border border-[var(--line)] bg-white/[.03] p-4">
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 text-sm font-medium text-white">
-                    <Sparkles className="h-3.5 w-3.5 text-[#7c6cff]" />
+                    <Sparkles className="h-3.5 w-3.5 text-[var(--accent-2)]" />
                     创作提示词
                   </div>
                   <button

@@ -456,7 +456,7 @@ export function StudioShell({
         }}
         className={`w-full rounded-lg border px-2 py-1.5 text-left transition ${
           active
-            ? "border-[#7c6cff]/55 bg-[#7c6cff]/15 shadow-[0_0_14px_rgba(124,108,255,.18)]"
+            ? "border-[var(--accent)]/55 bg-[var(--accent)]/15 shadow-[0_0_14px_rgba(225,29,72,.18)]"
             : "border-transparent hover:border-white/10 hover:bg-white/[.04]"
         }`}
       >
@@ -553,7 +553,7 @@ export function StudioShell({
 
         <section className="relative flex min-w-0 flex-col lg:h-screen lg:overflow-hidden">
           {(busyMsg || loading) && (
-            <div className="absolute inset-x-0 top-16 z-20 flex items-center justify-center gap-2 bg-[#7c6cff]/90 px-4 py-2 text-sm text-white">
+            <div className="absolute inset-x-0 top-16 z-20 flex items-center justify-center gap-2 bg-[var(--accent)]/90 px-4 py-2 text-sm text-white">
               <Loader2 className="h-3.5 w-3.5 animate-spin" />
               {busyMsg || t("common_state_loading")}
             </div>
@@ -649,7 +649,7 @@ export function StudioShell({
                     onClick={() => setStep(item.key)}
                     className={`flex min-w-[4.75rem] shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-left transition ${
                       active
-                        ? "border-transparent bg-[var(--gradient)] text-white shadow-[0_0_10px_rgba(124,108,255,.28)]"
+                        ? "border-transparent bg-[var(--gradient)] text-white shadow-[0_0_10px_rgba(225,29,72,.28)]"
                         : done
                           ? "border-[var(--ok)]/30 bg-[var(--ok)]/10 text-white/85 hover:bg-[var(--ok)]/15"
                           : "border-white/10 bg-white/[.03] text-white/65 hover:bg-white/[.06] hover:text-white"
@@ -682,7 +682,7 @@ export function StudioShell({
             </div>
           ) : null}
           {autoJob?.status === "running" && autoLive ? (
-            <div className="border-b border-[#7c6cff]/35 bg-[#7c6cff]/15 px-4 py-2.5 text-xs text-[#ddd6fe] md:px-6">
+            <div className="border-b border-[var(--accent)]/35 bg-[var(--accent)]/15 px-4 py-2.5 text-xs text-[#ddd6fe] md:px-6">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
                 <span className="inline-flex items-center gap-2 font-medium">
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -704,7 +704,7 @@ export function StudioShell({
                 <span className="inline-flex items-center gap-2 text-white/70">
                   <span className="h-1.5 w-28 overflow-hidden rounded-full bg-black/30">
                     <span
-                      className="block h-full rounded-full bg-[#c4b5fd]"
+                      className="block h-full rounded-full bg-[var(--accent-soft)]"
                       style={{ width: `${autoLive.pct}%` }}
                     />
                   </span>

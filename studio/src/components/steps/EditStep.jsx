@@ -13,9 +13,11 @@ import {
   Scissors,
   Volume2,
   VolumeX,
+  X,
 } from "lucide-react";
 import { api } from "../../api";
 import { toast } from "../../lib/toast";
+import { ModalOverlay } from "../ModalPortal";
 
 function clipId() {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -146,6 +148,7 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
   const [editMode, setEditMode] = useState("trim"); // trim | visual | line
   const [draftStart, setDraftStart] = useState(0);
   const [draftEnd, setDraftEnd] = useState(5);
+  const [previewFinalOpen, setPreviewFinalOpen] = useState(false);
   const videoRef = useRef(null);
   const bgmRef = useRef(null);
   const shotListRef = useRef(null);
@@ -472,9 +475,9 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
             {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} 保存
           </button>
           {draft?.outputUrl ? (
-            <a href={draft.outputUrl} className="btn-secondary" target="_blank" rel="noreferrer">
+            <button type="button" className="btn-secondary" title="弹窗预览成片" onClick={() => setPreviewFinalOpen(true)}>
               <Film className="h-4 w-4" /> 查看成片
-            </a>
+            </button>
           ) : null}
           <button
             type="button"
@@ -528,7 +531,7 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
                             }`}
                           >
                             <div
-                              className={`flex items-center justify-center bg-[#11131a] ${
+                              className={`flex items-center justify-center overflow-hidden bg-[#11131a] ${
                                 block.kind === "character"
                                   ? "aspect-[3/4]"
                                   : block.kind === "prop"
@@ -540,7 +543,7 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
                                 <img
                                   src={ent.selectedImage.url}
                                   alt=""
-                                  className="max-h-full max-w-full object-contain object-center"
+                                  className="h-full w-full object-cover object-top"
                                 />
                               ) : null}
                             </div>
@@ -713,11 +716,14 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
                     {globalTime.toFixed(1)} / {totalDuration.toFixed(1)}s · {ratio}
                   </span>
                 </div>
-                <div
-                  className={`relative flex items-center justify-center overflow-hidden rounded-xl bg-black ${
-                    ratio === "9:16" ? "mx-auto aspect-[9/16] max-h-[420px]" : "aspect-video"
-                  }`}
-                >
+                <div className="flex justify-center rounded-xl bg-black/40">
+                  <div
+                    className={`relative overflow-hidden rounded-xl bg-black ${
+                      ratio === "9:16"
+                        ? "aspect-[9/16] h-[min(52vh,420px)] w-auto max-w-full"
+                        : "aspect-video w-full"
+                    }`}
+                  >
                   {selectedShot?.selectedVideo?.url ? (
                     <>
                       <video
@@ -726,7 +732,7 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
                         src={selectedShot.selectedVideo.url}
                         muted={muted}
                         playsInline
-                        className="h-full w-full object-contain"
+                        className="absolute inset-0 h-full w-full object-contain"
                         onTimeUpdate={(e) => {
                           const start = Number(selectedClip?.start || 0);
                           const end = Number(selectedClip?.end || e.currentTarget.duration || start + 1);
@@ -747,8 +753,11 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
                       ) : null}
                     </>
                   ) : (
-                    <Film className="h-10 w-10 text-white/15" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Film className="h-10 w-10 text-white/15" />
+                    </div>
                   )}
+                  </div>
                 </div>
 
                 {bgm?.url ? <audio ref={bgmRef} src={bgm.url} loop preload="metadata" /> : null}
@@ -955,16 +964,12 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
                       active ? "border-[var(--projector)] ring-1 ring-[var(--projector)]" : "border-[var(--line)]"
                     }`}
                   >
-                    <div
-                      className={`flex items-center justify-center bg-black ${
-                        ratio === "9:16" ? "aspect-[9/16] max-h-40" : "aspect-video"
-                      }`}
-                    >
+                    <div className="relative aspect-video overflow-hidden bg-black">
                       <video
                         src={shot.selectedVideo.url}
                         muted
                         preload="metadata"
-                        className="max-h-full max-w-full object-contain object-center"
+                        className="absolute inset-0 h-full w-full object-cover object-center"
                       />
                     </div>
                     <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 to-transparent px-1.5 pb-1.5 pt-5">
@@ -984,6 +989,41 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
           </section>
         </>
       )}
+
+      {previewFinalOpen && draft?.outputUrl ? (
+        <ModalOverlay
+          onClose={() => setPreviewFinalOpen(false)}
+          className="bg-black/80"
+          zClass="z-[200]"
+          role="dialog"
+        >
+          <div
+            className="relative my-auto w-fit max-w-[min(92vw,720px)]"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-2 flex items-center justify-between gap-2 px-0.5">
+              <p className="text-sm font-medium text-white/90">成片预览</p>
+              <button
+                type="button"
+                className="rounded-full bg-white/10 p-1.5 text-white hover:bg-white/20"
+                aria-label="关闭"
+                onClick={() => setPreviewFinalOpen(false)}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <video
+              key={draft.outputUrl}
+              src={draft.outputUrl}
+              controls
+              autoPlay
+              playsInline
+              className="block max-h-[min(78dvh,78vh)] w-auto max-w-full rounded-xl bg-black shadow-2xl"
+            />
+          </div>
+        </ModalOverlay>
+      ) : null}
     </div>
   );
 }

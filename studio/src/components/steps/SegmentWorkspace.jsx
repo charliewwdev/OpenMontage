@@ -16,6 +16,7 @@ import {
   Video,
   Volume2,
   VolumeX,
+  X,
 } from "lucide-react";
 import { api } from "../../api";
 import {
@@ -26,12 +27,13 @@ import {
   listEntityQaBlockers,
 } from "../../lib/entityQaGate";
 import { requireCapability, toastMaybeKeys } from "../../lib/keys";
-import { openShareToX } from "../../lib/shareToX";
+import { shareVideoToX } from "../../lib/shareToX";
 import { toast } from "../../lib/toast";
 import { useTimer } from "../../lib/useTimer";
 import { AssetDetailModal } from "../AssetDetailModal";
 import { SkillExpertBadge } from "../SkillExpertBadge";
 import { ConfirmDialog } from "../ConfirmDialog";
+import { ModalOverlay } from "../ModalPortal";
 
 function parseDialogue(raw = "") {
   const text = String(raw || "").trim();
@@ -274,6 +276,7 @@ export function SegmentWorkspace({
   const [savingTrim, setSavingTrim] = useState(false);
   const [clipDraft, setClipDraft] = useState(null); // { id, shotId, start, end, enabled }
   const [inspectEntityId, setInspectEntityId] = useState("");
+  const [previewFinalOpen, setPreviewFinalOpen] = useState(false);
   const [modelPromptBusy, setModelPromptBusy] = useState(false);
   const [modelPromptData, setModelPromptData] = useState(null);
   const videoRef = useRef(null);
@@ -1027,14 +1030,27 @@ export function SegmentWorkspace({
   const ratio = bundle?.project?.ratio || "9:16";
   const editDraft = useMemo(() => {
     const edits = bundle?.edits || [];
-    const byEp = edits.find((e) => e.episodeId === episodeId && (e.outputUrl || e.outputPath));
+    const hasOut = (e) => Boolean(e && (e.outputUrl || e.outputPath));
+    // Prefer any edit that actually has a finished file (never an empty episode stub).
+    const byEp = edits.find((e) => e.episodeId === episodeId && hasOut(e));
     if (byEp) return byEp;
-    // Portrait assemble writes kind=portrait-assemble without episodeId.
-    if (bundle?.project?.workflow === "portrait-match") {
-      return [...edits].reverse().find((e) => e.kind === "portrait-assemble" && (e.outputUrl || e.outputPath));
+    // Portrait assemble writes kind=portrait-assemble (often without episodeId).
+    const assembled = [...edits]
+      .reverse()
+      .find((e) => (e.kind === "portrait-assemble" || e.kind === "assemble") && hasOut(e));
+    if (assembled) return assembled;
+    // Last resort: any edit with output for this project.
+    return [...edits].reverse().find(hasOut) || null;
+  }, [bundle?.edits, episodeId]);
+  const editOutputUrl = useMemo(() => {
+    if (!editDraft) return "";
+    if (editDraft.outputUrl) return String(editDraft.outputUrl);
+    if (editDraft.outputPath && projectId) {
+      const rel = String(editDraft.outputPath).replace(/^\//, "");
+      return `/api/media/${encodeURIComponent(projectId)}/${rel}`;
     }
-    return edits.find((e) => e.episodeId === episodeId) || null;
-  }, [bundle?.edits, bundle?.project?.workflow, episodeId]);
+    return "";
+  }, [editDraft, projectId]);
   const segReady = Boolean(activeSeg?.video?.url);
   const segVideoQa = activeSeg?.video?.qa || {};
   const portraitBypass =
@@ -1161,26 +1177,31 @@ export function SegmentWorkspace({
             {splitting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
             重新拆分
           </button>
-          {editDraft?.outputUrl ? (
+          {editOutputUrl ? (
             <>
-              <a href={editDraft.outputUrl} className="btn-secondary !min-h-7 text-[11px]" target="_blank" rel="noreferrer">
+              <button
+                type="button"
+                className="btn-secondary !min-h-7 text-[11px]"
+                title="弹窗预览成片"
+                onClick={() => setPreviewFinalOpen(true)}
+              >
                 <Film className="h-3 w-3" /> 查看成片
-              </a>
+              </button>
               <button
                 type="button"
                 className="btn-secondary !min-h-7 text-[11px]"
                 title="打开 X，自动填好宣传文案与成片链接"
                 onClick={() => {
-                  const ok = openShareToX({
+                  const res = shareVideoToX({
                     project: bundle?.project,
                     projectId,
-                    outputUrl: editDraft.outputUrl,
-                    outputPath: editDraft.outputPath,
+                    outputUrl: editOutputUrl,
+                    outputPath: editDraft?.outputPath,
                     episodeId: episode?.id,
-                    durationSec: editDraft.visualDur || editDraft.targetDur || null,
+                    durationSec: editDraft?.visualDur || editDraft?.targetDur || null,
                   });
-                  if (ok) toast.success("已打开 X，确认后即可发布");
-                  else toast.error("无法打开 X 分享");
+                  if (res.ok) toast.success(res.message);
+                  else toast.error(res.message || "无法打开 X");
                 }}
               >
                 <Share2 className="h-3 w-3" /> 分享到 X
@@ -1210,10 +1231,10 @@ export function SegmentWorkspace({
         </p>
       ) : null}
 
-      {/* Main 3-column desk — denser columns */}
-      <div className="grid min-h-0 flex-1 gap-1.5 overflow-hidden xl:grid-cols-[188px_minmax(0,1fr)_minmax(220px,280px)]">
+      {/* Desk: stack → main+monitor → assets+main+monitor. Height-driven portrait avoids aspect/max-h squash. */}
+      <div className="grid min-h-0 flex-1 grid-cols-1 gap-1.5 overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(200px,260px)] xl:grid-cols-[176px_minmax(0,1fr)_minmax(200px,260px)]">
         {/* Left: compact asset library — dense grid/list like production desks */}
-        <aside className="scrollbar-thin min-h-0 overflow-y-auto rounded-lg border border-white/10 bg-[#0c0e14] p-1.5 xl:h-full">
+        <aside className="scrollbar-thin order-3 max-h-[36vh] min-h-0 overflow-y-auto rounded-lg border border-white/10 bg-[#0c0e14] p-1.5 lg:col-span-2 lg:max-h-[28vh] xl:order-1 xl:col-span-1 xl:h-full xl:max-h-none">
           <div className="mb-1.5 flex items-center justify-between px-0.5">
             <h4 className="text-[12px] font-semibold text-white">资产库</h4>
             <button
@@ -1268,7 +1289,7 @@ export function SegmentWorkspace({
                           }`}
                         >
                           <div
-                            className={`flex aspect-[3/4] items-center justify-center ${
+                            className={`flex aspect-[3/4] items-center justify-center overflow-hidden ${
                               block.kind === "scene" ? "bg-[#11131a]" : "asset-cutout-bg"
                             }`}
                           >
@@ -1276,7 +1297,7 @@ export function SegmentWorkspace({
                               <img
                                 src={entityThumb(ent)}
                                 alt=""
-                                className="max-h-full max-w-full object-contain object-center"
+                                className="h-full w-full object-cover object-top"
                               />
                             ) : (
                               <span className="text-[9px] text-white/25">无图</span>
@@ -1310,7 +1331,7 @@ export function SegmentWorkspace({
                               <img
                                 src={entityThumb(ent)}
                                 alt=""
-                                className="max-h-full max-w-full object-contain object-center"
+                                className="h-full w-full object-cover object-center"
                               />
                             ) : (
                               <span className="text-[8px] text-white/25">—</span>
@@ -1354,7 +1375,7 @@ export function SegmentWorkspace({
         </aside>
 
         {/* Center: focused segment + beats */}
-        <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-white/10 bg-[#0c0e14] xl:h-full">
+        <section className="order-1 flex min-h-[220px] flex-col overflow-hidden rounded-xl border border-white/10 bg-[#0c0e14] lg:min-h-0 xl:order-2 xl:h-full">
           <div className="flex flex-wrap items-center gap-1.5 border-b border-white/10 px-2 py-1.5">
             <div className="flex items-center gap-0.5 rounded-md bg-white/5 p-0.5">
               <button
@@ -1675,7 +1696,7 @@ export function SegmentWorkspace({
         </section>
 
         {/* Right: preview */}
-        <aside className="scrollbar-thin min-h-0 space-y-2 overflow-y-auto xl:h-full">
+        <aside className="scrollbar-thin order-2 min-h-0 space-y-2 overflow-y-auto xl:order-3 xl:h-full">
           <div ref={monitorRef} className="overflow-hidden rounded-xl bg-[#08090d] p-2 text-white">
             <div className="mb-1 flex items-center justify-between text-[10px] text-white/45">
               <span>
@@ -1685,11 +1706,15 @@ export function SegmentWorkspace({
                 {activeSeg?.duration || 0}s · {ratio}
               </span>
             </div>
-            <div
-              className={`relative flex items-center justify-center overflow-hidden rounded-lg bg-black ${
-                ratio === "9:16" ? "mx-auto aspect-[9/16] max-h-[min(42vh,260px)]" : "aspect-video max-h-[200px]"
-              }`}
-            >
+            {/* Height-led portrait (or width-led landscape): never pair aspect-ratio with a conflicting max-h on the same box. */}
+            <div className="flex justify-center bg-black/40">
+              <div
+                className={`relative overflow-hidden rounded-lg bg-black ${
+                  ratio === "9:16"
+                    ? "aspect-[9/16] h-[min(42vh,300px)] w-auto max-w-full"
+                    : "aspect-video w-full max-w-full"
+                }`}
+              >
               {segReady ? (
                 <>
                   <video
@@ -1698,7 +1723,7 @@ export function SegmentWorkspace({
                     src={activeSeg.video.url}
                     muted={muted}
                     playsInline
-                    className="h-full w-full object-contain"
+                    className="absolute inset-0 h-full w-full object-contain"
                     onEnded={onSegEnded}
                     onClick={togglePlay}
                   />
@@ -1711,7 +1736,7 @@ export function SegmentWorkspace({
                   ) : null}
                 </>
               ) : (
-                <div className="flex flex-col items-center gap-2 px-4 text-center">
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 text-center">
                   <Film className="h-10 w-10 text-white/15" />
                   <p className="text-xs text-white/40">本段尚未出片</p>
                   <button
@@ -1725,6 +1750,7 @@ export function SegmentWorkspace({
                   </button>
                 </div>
               )}
+              </div>
             </div>
             {bgm?.url ? <audio ref={bgmRef} src={bgm.url} loop preload="metadata" /> : null}
             <div className="mt-2 flex flex-wrap items-center justify-center gap-1">
@@ -1936,20 +1962,20 @@ export function SegmentWorkspace({
                   setSegmentOrder(seg.segmentOrder);
                   setPlaying(false);
                 }}
-                className={`w-[100px] shrink-0 overflow-hidden rounded-md border text-left transition ${
+                className={`w-[88px] shrink-0 overflow-hidden rounded-md border text-left transition sm:w-[100px] ${
                   active ? "border-[#7c6cff] ring-1 ring-[#7c6cff]/50" : "border-white/10 hover:border-white/25"
                 }`}
               >
-                <div className="relative flex aspect-video items-center justify-center bg-black">
+                <div className="relative aspect-video overflow-hidden bg-black">
                   {ready ? (
                     <video
                       src={seg.video.url}
                       muted
                       preload="metadata"
-                      className="max-h-full max-w-full object-contain object-center"
+                      className="absolute inset-0 h-full w-full object-cover object-center"
                     />
                   ) : (
-                    <div className="flex h-full items-center justify-center text-[9px] text-white/30">
+                    <div className="absolute inset-0 flex items-center justify-center text-[9px] text-white/30">
                       {seg.shots.some((s) => s.status === "generating") ? "生成中" : "待出片"}
                     </div>
                   )}
@@ -2004,6 +2030,42 @@ export function SegmentWorkspace({
         onRefresh={onRefresh}
         onNeedKeys={onNeedKeys}
       />
+
+      {previewFinalOpen && editOutputUrl ? (
+        <ModalOverlay
+          onClose={() => setPreviewFinalOpen(false)}
+          className="bg-black/80"
+          zClass="z-[200]"
+          role="dialog"
+        >
+          <div
+            className="relative my-auto w-fit max-w-[min(92vw,420px)]"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-2 flex items-center justify-between gap-2 px-0.5">
+              <p className="text-sm font-medium text-white/90">成片预览</p>
+              <button
+                type="button"
+                className="rounded-full bg-white/10 p-1.5 text-white hover:bg-white/20"
+                aria-label="关闭"
+                onClick={() => setPreviewFinalOpen(false)}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <video
+              key={editOutputUrl}
+              src={editOutputUrl}
+              controls
+              autoPlay
+              playsInline
+              className="block max-h-[min(78dvh,78vh)] w-auto max-w-full rounded-xl bg-black shadow-2xl"
+              style={{ aspectRatio: "9 / 16" }}
+            />
+          </div>
+        </ModalOverlay>
+      ) : null}
     </div>
   );
 }

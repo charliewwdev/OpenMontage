@@ -420,25 +420,25 @@ export function InspirePage({ config, onUsePrompt, onStartPortrait }) {
         ) : null}
       </div>
 
-      <div className="mb-3 text-sm font-semibold text-white">{t("inspire_prompts_title")}</div>
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="mb-2 text-[13px] font-semibold text-white">{t("inspire_prompts_title")}</div>
+      <div className="mb-2.5 flex flex-wrap gap-1.5">
         {promptTags.map((tag) => (
           <button
             key={tag}
             type="button"
-            className={promptFilter === tag ? "btn-primary !min-h-9 !px-3" : "btn-secondary !min-h-9 !px-3"}
+            className={promptFilter === tag ? "btn-primary !min-h-8 !px-2.5" : "btn-secondary !min-h-8 !px-2.5"}
             onClick={() => setPromptFilter(tag)}
           >
             {tag}
           </button>
         ))}
       </div>
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
         {promptList.map((item) => (
-          <article key={item.text} className="panel flex flex-col p-5">
+          <article key={item.text} className="panel flex flex-col p-3">
             <span className="label">{item.tag}</span>
-            <p className="mt-2 flex-1 text-sm leading-7 text-white/85">{item.text}</p>
-            <div className="mt-4 flex gap-2">
+            <p className="mt-1.5 flex-1 text-[12px] leading-5 text-white/85">{item.text}</p>
+            <div className="mt-2.5 flex gap-1.5">
               <button
                 type="button"
                 className="btn-secondary flex-1"

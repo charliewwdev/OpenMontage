@@ -107,9 +107,9 @@ export function ChallengePage({ config, onStart }) {
                   </span>
                 </div>
                 <h3 className="mt-2.5 text-[14px] font-semibold">{item.title}</h3>
-                <p className="mt-1 text-xs text-[#fbbf24]">{item.prize}</p>
-                <p className="mt-3 flex-1 text-sm leading-7 text-[var(--muted)]">{item.brief}</p>
-                <div className="mt-4 flex flex-wrap gap-2">
+                <p className="mt-1 text-[11px] text-[#fbbf24]">{item.prize}</p>
+                <p className="mt-1.5 flex-1 text-[12px] leading-5 text-[var(--muted)]">{item.brief}</p>
+                <div className="mt-2.5 flex flex-wrap gap-1.5">
                   <button
                     type="button"
                     className="btn-primary flex-1"

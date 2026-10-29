@@ -689,7 +689,7 @@ export function StoryboardStep({
                 const segGenerating = seg.shots.some((s) => s.status === "generating");
                 const segReady = seg.lead?.status === "success" && seg.lead?.selectedVideoId;
                 return (
-                  <section key={`seg-${seg.segmentOrder}`} className="panel space-y-3 p-4 md:p-5">
+                  <section key={`seg-${seg.segmentOrder}`} className="panel space-y-2 p-2.5 md:p-3">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">

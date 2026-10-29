@@ -294,8 +294,8 @@ button:disabled {
   border-radius: 999px;
   border: 1px solid var(--line-strong);
   background: rgba(255, 255, 255, 0.03);
-  padding: 0.35rem 0.75rem;
-  font-size: 0.75rem;
+  padding: 0.25rem 0.55rem;
+  font-size: 0.7rem;
   font-weight: 600;
   color: var(--muted);
 }
@@ -311,15 +311,15 @@ button:disabled {
   box-shadow: inset 3px 0 0 #8b7cff;
 }
 
-/* Provider list cards — horizontal rows */
+/* Provider list cards — horizontal rows (Operate density) */
 .provider-card {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
+  gap: 0.55rem;
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   background: rgba(255, 255, 255, 0.02);
-  padding: 0.9rem 1rem;
+  padding: 0.55rem 0.7rem;
   transition:
     border-color 0.2s ease,
     background 0.2s ease,
@@ -335,19 +335,19 @@ button:disabled {
 .provider-card-active {
   border: 1px solid rgba(59, 130, 246, 0.45);
   background: rgba(59, 130, 246, 0.12);
-  box-shadow: 0 0 24px rgba(59, 130, 246, 0.18);
+  box-shadow: 0 0 18px rgba(59, 130, 246, 0.14);
 }
 
 .provider-card-icon {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 30px;
+  height: 30px;
   flex-shrink: 0;
-  border-radius: 12px;
+  border-radius: 8px;
   background: linear-gradient(145deg, rgba(59, 130, 246, 0.35), rgba(99, 102, 241, 0.2));
   color: #dbeafe;
-  font-size: 0.78rem;
+  font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.02em;
 }
@@ -356,7 +356,7 @@ button:disabled {
   display: flex;
   flex-shrink: 0;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.25rem;
   margin-left: auto;
 }
 
@@ -364,14 +364,14 @@ button:disabled {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 34px;
-  min-width: 34px;
-  border-radius: 9px;
+  min-height: 28px;
+  min-width: 28px;
+  border-radius: 7px;
   border: 1px solid transparent;
-  padding: 0.35rem 0.55rem;
+  padding: 0.25rem 0.4rem;
   color: var(--muted);
   background: transparent;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 600;
   transition:
     background 0.15s ease,
@@ -427,14 +427,15 @@ button:disabled {
 .provider-add-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  border-radius: 10px;
+  gap: 0.3rem;
+  border-radius: var(--radius-control);
   border: 0;
   background: #ea580c;
   color: #fff;
-  padding: 0.5rem 0.9rem;
-  font-size: 0.85rem;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.75rem;
   font-weight: 650;
+  min-height: var(--btn-min-h);
 }
 
 .provider-add-btn:hover {
@@ -443,25 +444,25 @@ button:disabled {
 
 .usage-hero {
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   background: rgba(255, 255, 255, 0.025);
-  padding: 0.95rem 1rem;
+  padding: 0.55rem 0.7rem;
 }
 
 .usage-seg {
   display: inline-flex;
   gap: 2px;
   border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 3px;
+  border-radius: 10px;
+  padding: 2px;
   background: rgba(0, 0, 0, 0.25);
 }
 
 .usage-seg button {
   border: 0;
-  border-radius: 9px;
-  padding: 0.4rem 0.75rem;
-  font-size: 0.8rem;
+  border-radius: 7px;
+  padding: 0.28rem 0.55rem;
+  font-size: 0.72rem;
   color: var(--muted);
   background: transparent;
 }

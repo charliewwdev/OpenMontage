@@ -575,8 +575,8 @@ export function AssetsPage({ onUsePrompt }) {
             ))}
           </FilterRow>
 
-          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="flex shrink-0 items-center gap-3">
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="flex shrink-0 items-center gap-2">
               <Filter className="h-3.5 w-3.5 text-white/35" aria-hidden />
               {PROMPT_SORTS.map(([value, label]) => (
                 <SortLink key={value} active={promptSort === value} onClick={() => setPromptSort(value)}>
@@ -596,28 +596,28 @@ export function AssetsPage({ onUsePrompt }) {
           </div>
 
           {promptLoading && !prompts.length ? (
-            <div className="panel flex items-center justify-center gap-2 py-20 text-sm text-[var(--muted)]">
+            <div className="panel flex items-center justify-center gap-2 py-10 text-[12px] text-[var(--muted)]">
               <Loader2 className="h-4 w-4 animate-spin" /> 加载提示词…
             </div>
           ) : !prompts.length ? (
-            <div className="panel py-20 text-center text-sm text-[var(--muted)]">还没有提示词，点击新建添加</div>
+            <div className="panel py-10 text-center text-[12px] text-[var(--muted)]">还没有提示词，点击新建添加</div>
           ) : (
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
               {prompts.map((item) => (
-                <article key={item.id} className="panel flex flex-col p-5">
+                <article key={item.id} className="panel flex flex-col p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <span className="label">
                         {PROMPT_CATS.find((c) => c.id === item.category)?.label || item.category || "通用"}
                       </span>
-                      <h3 className="mt-2 text-sm font-semibold text-white">{item.title || "未命名"}</h3>
+                      <h3 className="mt-1 text-[13px] font-semibold text-white">{item.title || "未命名"}</h3>
                     </div>
                     <button type="button" className="btn-secondary !min-h-8 !px-2" onClick={() => void removePrompt(item.id)}>
                       <Trash2 className="h-3 w-3" />
                     </button>
                   </div>
-                  <p className="mt-2 line-clamp-6 flex-1 text-sm leading-7 text-white/80">{item.text}</p>
-                  <div className="mt-4 flex flex-wrap gap-2">
+                  <p className="mt-1.5 line-clamp-5 flex-1 text-[12px] leading-5 text-white/80">{item.text}</p>
+                  <div className="mt-2.5 flex flex-wrap gap-1.5">
                     <button
                       type="button"
                       className="btn-secondary flex-1"

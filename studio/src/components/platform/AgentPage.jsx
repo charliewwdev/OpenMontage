@@ -385,9 +385,9 @@ export function AgentPage({ config, seedPrompt = "", onCreated, onNeedKeys, onRe
           ) : null}
         </section>
 
-        <aside className="space-y-4">
-          <section className="panel space-y-3 p-5 text-sm leading-6">
-            <strong className="block">运行检查</strong>
+        <aside className="space-y-2.5">
+          <section className="panel space-y-1.5 p-3 text-[12px] leading-5">
+            <strong className="block text-[13px]">运行检查</strong>
             <p className="text-[var(--muted)]">文本后端：{backend}</p>
             <p className="text-[var(--muted)]">文本模型：{llmReady ? `就绪（${backend}）` : "未配置"}</p>
             <p className="text-[var(--muted)]">出图：{imageReady ? (caps.comfyui ? "ComfyUI 就绪" : seedreamReady ? "Seedream 就绪" : "就绪") : "未配置（ComfyUI 或 Seedream）"}</p>
@@ -402,9 +402,9 @@ export function AgentPage({ config, seedPrompt = "", onCreated, onNeedKeys, onRe
           </section>
 
           {steps.length ? (
-            <section className="panel p-5">
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <strong className="block text-sm">全流程进度</strong>
+            <section className="panel p-3">
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <strong className="block text-[13px]">全流程进度</strong>
                 {jobElapsed ? <span className="text-[11px] text-white/45">已耗时 {jobElapsed}</span> : null}
               </div>
               <ul className="space-y-2 text-xs">
@@ -456,8 +456,8 @@ export function AgentPage({ config, seedPrompt = "", onCreated, onNeedKeys, onRe
             </section>
           ) : null}
 
-          <section className="panel p-5">
-            <strong className="mb-3 block text-sm">执行日志</strong>
+          <section className="panel p-3">
+            <strong className="mb-2 block text-[13px]">执行日志</strong>
             {!logs.length ? (
               <p className="text-xs text-[var(--muted)]">点击开始后，这里会显示建项与各阶段进度。</p>
             ) : (

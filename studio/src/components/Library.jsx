@@ -395,8 +395,8 @@ export function Library({
           ) : null}
         </section>
 
-        <section className="mt-4">
-          <div className="mb-2 flex items-end justify-between gap-3">
+        <section className="mt-3">
+          <div className="mb-1.5 flex items-end justify-between gap-2">
             <h2 className="text-[13px] font-semibold">选择创作入口</h2>
           </div>
           <div className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
@@ -472,7 +472,7 @@ export function Library({
           ) : visible.length === 0 ? (
             <div className="panel py-16 text-center text-sm text-[var(--muted)]">没有匹配的项目。</div>
           ) : (
-            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+            <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               {visible.map((project) => {
                 const steps = progressSteps(project, stepLabels.length || 6);
                 const doneCount = steps.filter(Boolean).length;
@@ -487,37 +487,37 @@ export function Library({
                       <div className="flex aspect-[16/9] items-center justify-center overflow-hidden bg-black/50">
                         <ProjectCover project={project} className="max-h-full max-w-full object-contain" />
                       </div>
-                      <div className="p-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-full border border-white/10 bg-white/[.04] px-2 py-0.5 text-[10px] text-white/60">
+                      <div className="p-2">
+                      <div className="flex flex-wrap items-center gap-1">
+                        <span className="rounded-full border border-white/10 bg-white/[.04] px-1.5 py-0.5 text-[9px] text-white/60">
                           {project.genre || "未分类"}
                         </span>
-                        <span className="rounded-full border border-white/10 bg-white/[.04] px-2 py-0.5 text-[10px] text-white/60">
+                        <span className="rounded-full border border-white/10 bg-white/[.04] px-1.5 py-0.5 text-[9px] text-white/60">
                           {project.ratio || "9:16"}
                         </span>
                       </div>
-                      <h3 className="mt-2 truncate text-base font-semibold">{project.title}</h3>
-                      <p className="mt-1 line-clamp-2 min-h-8 text-xs leading-4 text-[var(--muted)]">
+                      <h3 className="mt-1 truncate text-[13px] font-semibold">{project.title}</h3>
+                      <p className="mt-0.5 line-clamp-2 text-[11px] leading-4 text-[var(--muted)]">
                         {project.synopsis || project.brief || "尚未生成剧本"}
                       </p>
-                      <div className="mt-3">
-                        <div className="mb-2 flex items-center justify-between text-[10px] text-[var(--muted)]">
+                      <div className="mt-1.5">
+                        <div className="mb-1 flex items-center justify-between text-[9px] text-[var(--muted)]">
                           <span>制作进度</span>
                           <span className="timecode text-[#a5b4fc]">
                             {doneCount}/{stepLabels.length || steps.length}
                           </span>
                         </div>
-                        <div className="grid grid-cols-6 gap-1">
+                        <div className="grid grid-cols-6 gap-0.5">
                           {steps.map((done, index) => (
                             <div
                               key={stepLabels[index] || index}
-                              className={`h-1.5 rounded-full ${done ? "bg-[var(--ok)]" : "bg-white/10"}`}
+                              className={`h-1 rounded-full ${done ? "bg-[var(--ok)]" : "bg-white/10"}`}
                               title={stepLabels[index] || ""}
                             />
                           ))}
                         </div>
                       </div>
-                      <div className="mt-4 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-white/40">
+                      <div className="mt-1.5 flex flex-wrap gap-x-2 gap-y-0.5 text-[10px] text-white/40">
                         <span>{project.progress?.episodes?.total || 0} 集</span>
                         <span>{project.progress?.characters?.total || 0} 角色</span>
                         <span>{project.progress?.scenes?.total || 0} 场景</span>
@@ -528,25 +528,25 @@ export function Library({
                       </div>
                       </div>
                     </button>
-                    <div className="flex items-center justify-between border-t border-[var(--line)] bg-black/20 px-3 py-2">
-                      <span className="timecode text-[10px] text-white/35">
+                    <div className="flex items-center justify-between border-t border-[var(--line)] bg-black/20 px-2 py-1">
+                      <span className="timecode text-[9px] text-white/35">
                         {shotDone}/{shotTotal} SHOTS
                       </span>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-0.5">
                         <button
                           type="button"
-                          className="btn-quiet !min-h-8 !px-2 text-xs"
+                          className="btn-quiet !min-h-7 !px-1.5 text-[11px]"
                           onClick={() => setCoverProjectId(project.id)}
                           title="封面设计"
                         >
-                          <ImagePlus className="h-3.5 w-3.5" /> 封面
+                          <ImagePlus className="h-3 w-3" /> 封面
                         </button>
                         <button
                           type="button"
-                          className="btn-quiet !min-h-8 !px-2 text-xs hover:!text-[var(--danger)]"
+                          className="btn-quiet !min-h-7 !px-1.5 text-[11px] hover:!text-[var(--danger)]"
                           onClick={() => setConfirmId(project.id)}
                         >
-                          <Trash2 className="h-3.5 w-3.5" /> 删除
+                          <Trash2 className="h-3 w-3" /> 删除
                         </button>
                       </div>
                     </div>

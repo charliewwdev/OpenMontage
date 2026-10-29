@@ -55,9 +55,9 @@ function ProgressBar({ pct = 0, tone = "sky", label }) {
 
 function StatCard({ label, value, hint, progress }) {
   return (
-    <div className="panel space-y-2 px-4 py-3">
-      <div className="text-[11px] uppercase tracking-wide text-[var(--muted)]">{label}</div>
-      <div className="text-[1.25rem] font-semibold tabular-nums">{value ?? "—"}</div>
+    <div className="panel space-y-1 px-2.5 py-2">
+      <div className="text-[10px] uppercase tracking-wide text-[var(--muted)]">{label}</div>
+      <div className="text-[1.15rem] font-semibold tabular-nums">{value ?? "—"}</div>
       {hint ? <div className="text-[11px] text-[var(--muted)]">{hint}</div> : null}
       {typeof progress === "number" ? <ProgressBar pct={progress} tone="sky" /> : null}
     </div>
@@ -70,12 +70,12 @@ function JobRow({ job, onOpen }) {
   const prog = job.progress || {};
   const barTone = job.status === "failed" ? "rose" : job.status === "paused" ? "amber" : job.status === "done" ? "emerald" : "sky";
   return (
-    <div className="panel space-y-3 px-4 py-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="panel space-y-2 px-2.5 py-2.5">
+      <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <button
             type="button"
-            className="truncate text-left text-sm font-semibold hover:underline"
+            className="truncate text-left text-[13px] font-semibold hover:underline"
             onClick={() => onOpen?.(job.projectId)}
           >
             {job.title || job.projectId}

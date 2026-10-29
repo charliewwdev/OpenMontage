@@ -306,7 +306,7 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
         <div className="provider-card-icon">{initials || "AI"}</div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="truncate text-[15px] font-semibold tracking-tight">{p.label}</h3>
+            <h3 className="truncate text-[13px] font-semibold tracking-tight">{p.label}</h3>
             {isActive ? <span className="provider-badge-active">使用中</span> : null}
             {!p.configured ? (
               <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] text-[var(--muted)]">
@@ -395,7 +395,7 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
 
   const nvidiaConfigured = Boolean(status?.nvidia?.configured);
   const nvidiaSection = (
-    <section className="provider-card !items-stretch !flex-col gap-3 sm:!flex-row sm:!items-center">
+    <section className="provider-card !items-stretch !flex-col gap-2 sm:!flex-row sm:!items-center">
       <div className="provider-card-icon">N</div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
@@ -427,7 +427,7 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
   );
 
   const volcSection = (
-    <section className="provider-card !items-stretch !flex-col gap-3 sm:!flex-row sm:!items-center">
+    <section className="provider-card !items-stretch !flex-col gap-2 sm:!flex-row sm:!items-center">
       <div className="provider-card-icon">火</div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
@@ -453,7 +453,7 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
   );
 
   const comfySection = (
-    <section className="provider-card !items-stretch !flex-col gap-3 sm:!flex-row sm:!items-start">
+    <section className="provider-card !items-stretch !flex-col gap-2 sm:!flex-row sm:!items-start">
       <div className="provider-card-icon">C</div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">

@@ -439,18 +439,18 @@ export function ScriptStep({
               </div>
             </div>
 
-            <div className="flex flex-col justify-between border-t border-[var(--line)] bg-[var(--navy)] p-6 text-white lg:border-l lg:border-t-0">
+            <div className="flex flex-col justify-between border-t border-[var(--line)] bg-[var(--navy)] p-3 text-white md:p-3.5 lg:border-l lg:border-t-0">
               <div>
-                <div className="timecode text-[10px] text-[var(--timecode)]">TEXT MODEL</div>
-                <div className="mt-2 text-lg font-semibold">{caps.llmBackend || "LLM"} · drama-script</div>
-                <SkillExpertBadge skillId="drama-script" className="mt-3" />
-                <p className="mt-2 text-xs leading-6 text-white/55">
+                <div className="timecode text-[9px] text-[var(--timecode)]">TEXT MODEL</div>
+                <div className="mt-1 text-[13px] font-semibold">{caps.llmBackend || "LLM"} · drama-script</div>
+                <SkillExpertBadge skillId="drama-script" className="mt-2" />
+                <p className="mt-1.5 text-[11px] leading-4 text-white/55">
                   本次生成集数决定当前调用输出多少集；计划总集数用于安排全剧情绪曲线，可以留空。建议先生成 1 集核对大纲，再扩写。
                 </p>
                 {episodes.length > 0 ? (
-                  <div className="mt-5 rounded-xl border border-white/10 bg-white/5 p-4">
-                    <div className="timecode text-[10px] text-white/40">CURRENT PROGRESS</div>
-                    <div className="mt-2 text-xl font-semibold">已生成 {episodes.length} 集</div>
+                  <div className="mt-3 rounded-lg border border-white/10 bg-white/5 p-2.5">
+                    <div className="timecode text-[9px] text-white/40">CURRENT PROGRESS</div>
+                    <div className="mt-1 text-[1.05rem] font-semibold">已生成 {episodes.length} 集</div>
                     <div className="mt-1 text-xs text-white/50">
                       计划 {plannedEpisodes === "" ? "未设定" : `${plannedEpisodes} 集`}
                     </div>
@@ -798,43 +798,43 @@ function EpisodeEditor({ projectId, episode, onRefresh, onBundle }) {
 
   return (
     <div className="panel flex min-h-0 flex-col overflow-hidden">
-      <div className="space-y-3 border-b border-[var(--line)] bg-[var(--panel-muted)] px-4 py-3 sm:px-5">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="timecode shrink-0 text-xs text-[var(--muted)]">
+      <div className="space-y-2 border-b border-[var(--line)] bg-[var(--panel-muted)] px-2.5 py-2 sm:px-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="timecode shrink-0 text-[11px] text-[var(--muted)]">
             EP {String(episode.episodeNumber).padStart(2, "0")}
           </span>
           <input
-            className="field min-w-0 flex-1 !bg-transparent !py-2 font-semibold read-only:cursor-not-allowed read-only:opacity-70"
+            className="field min-w-0 flex-1 !bg-transparent !py-1.5 text-[13px] font-semibold read-only:cursor-not-allowed read-only:opacity-70"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             readOnly={locked}
           />
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button type="button" className="btn-secondary !min-h-9" disabled={saving || locked} onClick={() => void save()}>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button type="button" className="btn-secondary" disabled={saving || locked} onClick={() => void save()}>
             <Save className="h-3.5 w-3.5" /> 保存
           </button>
           <button
             type="button"
-            className={episode.status === "confirmed" ? "btn-secondary !min-h-9" : "btn-primary !min-h-9"}
+            className={episode.status === "confirmed" ? "btn-secondary" : "btn-primary"}
             disabled={saving}
             onClick={() => void save(episode.status === "confirmed" ? "draft" : "confirmed")}
           >
             <Check className="h-3.5 w-3.5" />
             {episode.status === "confirmed" ? "取消定稿" : "定稿"}
           </button>
-          <button type="button" className="btn-danger !min-h-9 !px-2.5" onClick={() => void remove()}>
-            <Trash2 className="h-4 w-4" />
+          <button type="button" className="btn-danger !px-2" onClick={() => void remove()}>
+            <Trash2 className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
       {locked ? (
-        <div className="border-b border-[var(--line)] bg-[var(--ok)]/10 px-5 py-2 text-xs text-[var(--ok)]">
+        <div className="border-b border-[var(--line)] bg-[var(--ok)]/10 px-3 py-1.5 text-[11px] text-[var(--ok)]">
           本集已定稿。需要修改时请先取消定稿。
         </div>
       ) : null}
       <textarea
-        className="min-h-[500px] flex-1 resize-y border-0 bg-transparent p-5 font-mono text-sm leading-7 text-[var(--ink)] outline-none read-only:cursor-not-allowed read-only:bg-black/20 lg:resize-none"
+        className="min-h-[360px] flex-1 resize-y border-0 bg-transparent p-3 font-mono text-[12px] leading-5 text-[var(--ink)] outline-none read-only:cursor-not-allowed read-only:bg-black/20 lg:resize-none"
         value={content}
         onChange={(e) => setContent(e.target.value)}
         placeholder="写下本集场景、动作与对白…"

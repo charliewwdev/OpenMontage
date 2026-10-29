@@ -414,7 +414,7 @@ export function EntityStep({
       {!entities.length ? (
         <button
           type="button"
-          className="panel flex w-full flex-col items-center border-dashed py-24 text-center hover:border-[var(--projector)]"
+          className="panel flex w-full flex-col items-center border-dashed py-10 text-center hover:border-[var(--projector)]"
           disabled={batching}
           onClick={() => setShowAdd(true)}
         >
@@ -450,13 +450,13 @@ export function EntityStep({
               onMouseDown={() => setShowAdd(false)}
             >
               <section
-                className="panel max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl overflow-y-auto p-5 md:p-7"
+                className="panel max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl overflow-y-auto p-3 md:p-4"
                 onMouseDown={(e) => e.stopPropagation()}
               >
                 <header className="flex items-start justify-between gap-4">
                   <div>
                     <div className="label">New {kind}</div>
-                    <h3 className="display-type text-2xl font-semibold">添加{config.title}</h3>
+                    <h3 className="display-type text-[1.15rem] font-semibold">添加{config.title}</h3>
                   </div>
                   <button type="button" className="btn-quiet !min-h-9 !px-2" onClick={() => setShowAdd(false)}>
                     <X className="h-4 w-4" />
@@ -578,16 +578,16 @@ function EntityCard({ entity, accent, working, onGenerate, onUpload, onPunchAlph
         </div>
 
         {cardTab === "prompt" ? (
-          <div className="space-y-3 p-4 text-sm">
+          <div className="space-y-2 p-2.5 text-[12px]">
             {promptBusy ? (
-              <div className="flex items-center justify-center gap-2 py-10 text-[var(--muted)]">
+              <div className="flex items-center justify-center gap-2 py-6 text-[var(--muted)]">
                 <Loader2 className="h-4 w-4 animate-spin" /> 加载提示词…
               </div>
             ) : (
               <>
                 <div>
                   <div className="mb-1 text-[11px] text-[var(--muted)]">将提交给大模型的正向提示词</div>
-                  <pre className="max-h-48 overflow-y-auto whitespace-pre-wrap rounded-xl border border-white/10 bg-black/40 p-3 text-[11px] leading-5 text-white/85">
+                  <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap rounded-lg border border-white/10 bg-black/40 p-2 text-[11px] leading-4 text-white/85">
                     {promptPayload?.prompt || "（无）"}
                   </pre>
                 </div>
@@ -661,10 +661,10 @@ function EntityCard({ entity, accent, working, onGenerate, onUpload, onPunchAlph
                 </span>
               ) : null}
             </div>
-            <div className="p-4">
+            <div className="p-2.5">
               <div className="min-w-0">
                 <input
-                  className="w-full border-0 bg-transparent p-0 font-semibold outline-none"
+                  className="w-full border-0 bg-transparent p-0 text-[13px] font-semibold outline-none"
                   defaultValue={entity.name}
                   disabled={locked}
                   onBlur={(e) => {
@@ -683,8 +683,8 @@ function EntityCard({ entity, accent, working, onGenerate, onUpload, onPunchAlph
                 ) : null}
               </div>
               <textarea
-                className={`mt-3 w-full resize-y rounded-lg border border-transparent bg-[var(--panel-muted)] p-2.5 text-xs leading-5 outline-none focus:border-[var(--projector)] ${
-                  entity.kind === "character" ? "min-h-36" : "min-h-24"
+                className={`mt-2 w-full resize-y rounded-lg border border-transparent bg-[var(--panel-muted)] p-2 text-[11px] leading-4 outline-none focus:border-[var(--projector)] ${
+                  entity.kind === "character" ? "min-h-28" : "min-h-20"
                 }`}
                 defaultValue={entity.description || ""}
                 disabled={locked}

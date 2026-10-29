@@ -206,7 +206,7 @@ styleCategories:
 entryCards:
   - id: drama
     title: 爽剧
-    badge: 9:16
+    badge: "9:16"
     desc: 竖屏爽剧 · 专业爽剧模型
     available: true
     preset:
@@ -214,7 +214,7 @@ entryCards:
       ratio: "9:16"
   - id: portrait-match
     title: 写真对标
-    badge: H3
+    badge: "H3"
     desc: 氛围写真 · 首尾帧身份锁
     available: true
     preset:
@@ -223,7 +223,7 @@ entryCards:
     workflow: portrait-match
   - id: short
     title: 短剧
-    badge: 16:9
+    badge: "16:9"
     desc: 小说改编 / 横屏短剧
     available: true
     preset:
@@ -231,7 +231,7 @@ entryCards:
       ratio: "16:9"
   - id: formal
     title: 正剧
-    badge: 16:9
+    badge: "16:9"
     desc: 现实题材 · 横屏正剧
     available: true
     preset:
@@ -239,7 +239,7 @@ entryCards:
       ratio: "16:9"
   - id: upload
     title: 上传剧本
-    badge: 导入
+    badge: "导入"
     desc: TXT / MD / DOCX 转入七步工坊
     available: true
     mode: upload

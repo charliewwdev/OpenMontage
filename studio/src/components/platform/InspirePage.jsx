@@ -252,10 +252,10 @@ export function InspirePage({ config, onUsePrompt, onStartPortrait }) {
       }
     >
       {scenarios.length ? (
-        <div className="mb-8">
-          <div className="mb-1 text-sm font-semibold text-white">{t("inspire_scenarios_title")}</div>
-          <p className="mb-3 text-xs leading-5 text-white/40">{t("inspire_scenarios_hint")}</p>
-          <div className="mb-4 flex flex-wrap gap-2">
+        <div className="mb-4">
+          <div className="mb-0.5 text-[13px] font-semibold text-white">{t("inspire_scenarios_title")}</div>
+          <p className="mb-2 text-[11px] leading-4 text-white/40">{t("inspire_scenarios_hint")}</p>
+          <div className="mb-2.5 flex flex-wrap gap-1.5">
             {scenarioPlatforms.map((tag) => (
               <button
                 key={tag}
@@ -286,21 +286,21 @@ export function InspirePage({ config, onUsePrompt, onStartPortrait }) {
       ) : null}
 
       {platforms.length ? (
-        <div className="mb-8">
-          <div className="mb-3 text-sm font-semibold text-white">{t("inspire_platforms_title")}</div>
-          <div className="mb-2 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mb-4">
+          <div className="mb-2 text-[13px] font-semibold text-white">{t("inspire_platforms_title")}</div>
+          <div className="mb-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {platforms.map((item) => (
               <article
                 key={item.id}
-                className="panel flex flex-col gap-3 border border-[var(--line)] bg-gradient-to-br from-white/[.04] to-transparent p-4"
+                className="panel flex flex-col gap-2 border border-[var(--line)] bg-gradient-to-br from-white/[.04] to-transparent p-3"
               >
                 <div className="flex items-center gap-2">
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#ff5a3d]/15 text-[#ff8f6b]">
-                    <Flame className="h-4 w-4" />
+                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[#ff5a3d]/15 text-[#ff8f6b]">
+                    <Flame className="h-3.5 w-3.5" />
                   </span>
                   <div>
-                    <div className="text-sm font-semibold text-white">{item.label}</div>
-                    <div className="text-xs text-white/45">{item.blurb}</div>
+                    <div className="text-[13px] font-semibold text-white">{item.label}</div>
+                    <div className="text-[11px] text-white/45">{item.blurb}</div>
                   </div>
                 </div>
                 <div className="mt-auto flex gap-2">
@@ -328,10 +328,10 @@ export function InspirePage({ config, onUsePrompt, onStartPortrait }) {
         </div>
       ) : null}
 
-      <div className="mb-8">
-        <div className="mb-1 text-sm font-semibold text-white">{t("inspire_wall_title")}</div>
-        <p className="mb-4 text-xs leading-5 text-white/40">{t("inspire_wall_hint")}</p>
-        <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="mb-4">
+        <div className="mb-0.5 text-[13px] font-semibold text-white">{t("inspire_wall_title")}</div>
+        <p className="mb-2.5 text-[11px] leading-4 text-white/40">{t("inspire_wall_hint")}</p>
+        <div className="mb-2.5 flex flex-wrap items-center gap-2">
           <label className="relative min-w-[220px] flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
             <input

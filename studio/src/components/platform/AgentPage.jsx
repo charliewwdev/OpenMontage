@@ -244,9 +244,9 @@ export function AgentPage({ config, seedPrompt = "", onCreated, onNeedKeys, onRe
       title="创作 Agent"
       description="一句话或整段剧本，可只生成剧本，也可一键跑通整部短剧：多集剧本 → 角色场景 → 分镜视频 → 配音 → 逐集成片。"
     >
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <section className="panel p-5 md:p-6">
-          <div className="mb-4 flex flex-wrap gap-2">
+      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_300px]">
+        <section className="panel p-3 md:p-3.5">
+          <div className="mb-3 flex flex-wrap gap-1.5">
             <button
               type="button"
               className={mode === "full" ? "btn-primary" : "btn-secondary"}
@@ -273,7 +273,7 @@ export function AgentPage({ config, seedPrompt = "", onCreated, onNeedKeys, onRe
           <label>
             <span className="label">一句话想法 / 粘贴剧本</span>
             <textarea
-              className="field min-h-56 resize-y leading-7"
+              className="field min-h-40 resize-y leading-6"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="例如：都市爽剧一句话钩子；或直接粘贴已有分场剧本…"

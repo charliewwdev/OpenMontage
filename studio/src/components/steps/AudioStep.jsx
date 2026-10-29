@@ -78,13 +78,13 @@ export function AudioStep({
   };
 
   return (
-    <div className="space-y-5">
-      <section className="panel p-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="space-y-3">
+      <section className="panel p-3 md:p-3.5">
+        <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <div className="label">Dubbing</div>
-            <h2 className="text-xl font-semibold">分角色对白 + BGM</h2>
-            <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
+            <h2 className="text-[1.15rem] font-semibold md:text-[1.3rem]">分角色对白 + BGM</h2>
+            <p className="mt-0.5 max-w-2xl text-[12px] text-[var(--muted)]">
               按「角色：台词」抽取对白，用不同音色分角色朗读（不是解说旁白）。同时生成轻量配乐，剪辑导出时与画面混音。场景描写不会进配音。
             </p>
           </div>
@@ -94,10 +94,10 @@ export function AudioStep({
         </div>
 
         {!episodes.length ? (
-          <div className="mt-6 rounded-xl border border-dashed border-[var(--line)] px-4 py-10 text-center text-sm text-[var(--muted)]">
+          <div className="mt-3 rounded-lg border border-dashed border-[var(--line)] px-3 py-6 text-center text-[12px] text-[var(--muted)]">
             还没有分集。请先在「剧本」步生成并确认剧集。
             {typeof setStep === "function" ? (
-              <div className="mt-3">
+              <div className="mt-2">
                 <button type="button" className="btn-primary !min-h-8 !px-3" onClick={() => setStep("script")}>
                   去剧本
                 </button>
@@ -105,12 +105,12 @@ export function AudioStep({
             ) : null}
           </div>
         ) : !episode ? (
-          <div className="mt-6 rounded-xl border border-dashed border-[var(--line)] px-4 py-10 text-center text-sm text-[var(--muted)]">
+          <div className="mt-3 rounded-lg border border-dashed border-[var(--line)] px-3 py-6 text-center text-[12px] text-[var(--muted)]">
             请在左侧选择一个分集。
           </div>
         ) : (
-          <div className="mt-5 rounded-2xl border border-[var(--line)] bg-black/20 p-5">
-            <div className="flex items-center gap-2 text-sm font-semibold">
+          <div className="mt-3 rounded-xl border border-[var(--line)] bg-black/20 p-3">
+            <div className="flex items-center gap-2 text-[13px] font-semibold">
               <Mic2 className="h-4 w-4 text-[#fb923c]" />
               第 {episode.episodeNumber} 集{episode.title ? ` · ${episode.title}` : ""} · 识别到的台词
             </div>

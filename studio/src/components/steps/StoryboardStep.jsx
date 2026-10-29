@@ -546,13 +546,13 @@ export function StoryboardStep({
   const resolutions = selectedModel?.resolutions || ["720p"];
 
   return (
-    <div className="mx-auto max-w-[1500px] space-y-5">
-      <section className="panel p-5 md:p-6">
-        <div className="grid gap-5 min-[1500px]:grid-cols-[480px_minmax(0,1fr)] min-[1500px]:items-end">
+    <div className="mx-auto max-w-[1500px] space-y-3">
+      <section className="panel p-3 md:p-3.5">
+        <div className="grid gap-3 min-[1500px]:grid-cols-[420px_minmax(0,1fr)] min-[1500px]:items-end">
           <div className="min-w-0">
             <div className="label">Shot planning & generation</div>
-            <h3 className="display-type text-2xl font-semibold">分镜导演台</h3>
-            <p className="mt-1 text-sm text-[var(--muted)]">
+            <h3 className="display-type text-[1.15rem] font-semibold md:text-[1.3rem]">分镜导演台</h3>
+            <p className="mt-0.5 text-[12px] text-[var(--muted)]">
               先拆「片段」（约 10–15s），段内 3–4 个分镜节拍；出片按片段合并生成。
             </p>
           </div>

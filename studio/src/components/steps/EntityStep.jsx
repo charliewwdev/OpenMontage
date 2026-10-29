@@ -5,6 +5,7 @@ import { api } from "../../api";
 import { requireCapability, toastMaybeKeys } from "../../lib/keys";
 import { toast } from "../../lib/toast";
 import { Lightbox } from "../Lightbox";
+import { SkillExpertBadge } from "../SkillExpertBadge";
 
 const CONFIG = {
   character: {
@@ -347,22 +348,23 @@ export function EntityStep({
   const missingImages = entities.filter((e) => !e.selectedImage);
 
   return (
-    <div className="mx-auto max-w-[1500px] space-y-5">
-      <section className="panel flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between md:p-6">
+    <div className="mx-auto max-w-[1500px] space-y-3">
+      <section className="panel flex flex-col gap-2.5 p-3 md:flex-row md:items-center md:justify-between md:p-3.5">
         <div>
           <div className="label">{config.eyebrow}</div>
-          <h3 className="display-type text-2xl font-semibold">
+          <h3 className="display-type text-[1.15rem] font-semibold md:text-[1.3rem]">
             {config.title}
             {focusEpisode ? (
-              <span className="ml-2 text-base font-normal text-white/45">
+              <span className="ml-2 text-[12px] font-normal text-white/45">
                 · 第{focusEpisode.episodeNumber}集
                 {focusEpisode.title ? `「${focusEpisode.title}」` : ""}
               </span>
             ) : null}
           </h3>
-          <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
+          <p className="mt-0.5 max-w-2xl text-[12px] text-[var(--muted)]">
             出图后端以顶部模型切换为准（推荐 Seedream）；生成后会做提示词符合度质检。空白「尚无定稿图」表示尚未出图。
           </p>
+          <SkillExpertBadge skillId="drama-entity-still" accent={config.accent} className="mt-2" />
           {focusNote ? <p className="mt-2 text-xs text-[var(--projector)]">{focusNote}</p> : null}
           {missingImages.length ? (
             <p className="mt-2 text-xs text-[#fbbf24]">

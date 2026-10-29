@@ -463,7 +463,7 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
       <section className="panel flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between md:p-4">
         <div className="min-w-0">
           <div className="label">Episode desk</div>
-          <h3 className="display-type truncate text-xl font-semibold md:text-2xl">
+          <h3 className="display-type truncate text-[1.15rem] font-semibold md:text-[1.3rem]">
             第{episode?.episodeNumber || "—"}集 {episode?.title || "成片编辑"}
           </h3>
           <p className="mt-0.5 text-xs text-[var(--muted)]">

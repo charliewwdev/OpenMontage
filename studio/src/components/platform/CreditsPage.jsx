@@ -52,42 +52,42 @@ export function CreditsPage({ config, onNeedKeys }) {
       }
     >
       {loading ? (
-        <div className="panel flex items-center gap-2 px-5 py-10 text-sm text-[var(--muted)]">
+        <div className="panel flex items-center gap-2 px-3 py-6 text-[12px] text-[var(--muted)]">
           <Loader2 className="h-4 w-4 animate-spin" /> 加载积分…
         </div>
       ) : (
         <>
-          <div className="mb-4 grid gap-3 md:grid-cols-3">
-            <article className="panel p-5">
-              <Coins className="h-5 w-5 text-[#fbbf24]" />
-              <strong className="mt-3 block text-2xl">{credits?.balance ?? 0}</strong>
-              <p className="mt-1 text-sm text-[var(--muted)]">创作积分余额</p>
+          <div className="mb-3 grid gap-2 md:grid-cols-3">
+            <article className="panel p-3">
+              <Coins className="h-4 w-4 text-[#fbbf24]" />
+              <strong className="mt-1.5 block text-[1.25rem]">{credits?.balance ?? 0}</strong>
+              <p className="mt-0.5 text-[12px] text-[var(--muted)]">创作积分余额</p>
             </article>
-            <article className="panel p-5">
-              <Zap className="h-5 w-5 text-[#a78bfa]" />
-              <strong className="mt-3 block text-2xl">{fmtUsd(usage?.hero?.cost_usd)}</strong>
-              <p className="mt-1 text-sm text-[var(--muted)]">近 30 天估算 API 费用</p>
+            <article className="panel p-3">
+              <Zap className="h-4 w-4 text-[#a78bfa]" />
+              <strong className="mt-1.5 block text-[1.25rem]">{fmtUsd(usage?.hero?.cost_usd)}</strong>
+              <p className="mt-0.5 text-[12px] text-[var(--muted)]">近 30 天估算 API 费用</p>
             </article>
-            <article className="panel p-5">
-              <Sparkles className="h-5 w-5 text-[#34d399]" />
-              <strong className="mt-3 block text-2xl">{ready}/3</strong>
-              <p className="mt-1 text-sm text-[var(--muted)]">模型能力已就绪</p>
+            <article className="panel p-3">
+              <Sparkles className="h-4 w-4 text-[#34d399]" />
+              <strong className="mt-1.5 block text-[1.25rem]">{ready}/3</strong>
+              <p className="mt-0.5 text-[12px] text-[var(--muted)]">模型能力已就绪</p>
             </article>
           </div>
 
-          <div className="grid gap-3 lg:grid-cols-2">
-            <article className="panel p-5">
-              <h3 className="text-lg font-semibold">自有 Key（推荐）</h3>
-              <p className="mt-2 text-sm text-[var(--muted)]">
+          <div className="grid gap-2 lg:grid-cols-2">
+            <article className="panel p-3">
+              <h3 className="text-[13px] font-semibold">自有 Key（推荐）</h3>
+              <p className="mt-1.5 text-[12px] text-[var(--muted)]">
                 DeepSeek / 火山等费用发生在你的供应商账户。配置后立即热加载，无需充值平台积分。
               </p>
-              <button type="button" className="btn-primary mt-4" onClick={() => onNeedKeys?.()}>
+              <button type="button" className="btn-primary mt-3" onClick={() => onNeedKeys?.()}>
                 去模型配置
               </button>
             </article>
-            <article className="panel p-5">
-              <h3 className="text-lg font-semibold">如何获得创作积分</h3>
-              <ul className="mt-3 space-y-2 text-sm text-white/75">
+            <article className="panel p-3">
+              <h3 className="text-[13px] font-semibold">如何获得创作积分</h3>
+              <ul className="mt-2 space-y-1 text-[12px] text-white/75">
                 <li>· 完成创作挑战（按奖项加分）</li>
                 <li>· 分享推荐链接，对方首次打开可获邀请积分</li>
                 <li>· 积分仅本地展示，不影响 API 调用</li>
@@ -95,8 +95,8 @@ export function CreditsPage({ config, onNeedKeys }) {
             </article>
           </div>
 
-          <section className="panel mt-4 overflow-x-auto p-0">
-            <div className="border-b border-[var(--line)] px-4 py-3 text-sm font-semibold">积分流水</div>
+          <section className="panel mt-3 overflow-x-auto p-0">
+            <div className="border-b border-[var(--line)] px-3 py-2 text-[13px] font-semibold">积分流水</div>
             <table className="min-w-full text-left text-sm">
               <thead className="text-xs text-[var(--muted)]">
                 <tr>

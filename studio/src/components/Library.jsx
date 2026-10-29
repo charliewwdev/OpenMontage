@@ -19,6 +19,13 @@ import { ConfirmDialog } from "./ConfirmDialog";
 
 function progressSteps(project, stepCount = 7) {
   const p = project.progress || {};
+  // Short-video / portrait-match: same card chrome, progress = shot completion across steps.
+  if ((project?.workflow || "") === "portrait-match") {
+    const total = Number(p.shots?.total || 0);
+    const completed = Number(p.shots?.completed || 0);
+    const filled = total > 0 ? Math.round((completed / Math.max(total, 1)) * stepCount) : 0;
+    return Array.from({ length: stepCount }, (_, i) => i < filled);
+  }
   const flags = [
     (p.episodes?.total || 0) > 0,
     (p.characters?.total || 0) > 0,
@@ -296,9 +303,9 @@ export function Library({
   const target = (projects || []).find((p) => p.id === confirmId);
 
   return (
-    <main className="min-h-screen p-2 md:p-3">
-      <div className="yc-frame mx-0 min-h-[calc(100vh-2.5rem)] w-full max-w-none overflow-hidden p-3 md:p-4">
-        <header className="relative overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(135deg,#15182a_0%,#1a1240_45%,#0d1b3a_100%)] px-4 py-3 md:px-6 md:py-4">
+    <main className="min-h-screen p-1.5 md:p-2">
+      <div className="yc-frame mx-0 min-h-[calc(100vh-1.75rem)] w-full max-w-none overflow-hidden p-2.5 md:p-3">
+        <header className="relative overflow-hidden rounded-xl border border-white/10 bg-[linear-gradient(135deg,#15182a_0%,#1a1240_45%,#0d1b3a_100%)] px-3 py-2.5 md:px-4 md:py-3">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(124,108,255,.28),transparent_40%)]" />
           <div className="relative flex flex-wrap items-end justify-between gap-2">
             <div className="min-w-0">
@@ -306,7 +313,7 @@ export function Library({
                 <Clapperboard className="h-3.5 w-3.5 text-[#b7acff]" />
                 影视创作工坊
               </div>
-              <h1 className="mt-1 text-xl font-semibold tracking-tight md:text-2xl">从剧本到成片，一站式 AI 影视生产</h1>
+              <h1 className="mt-0.5 text-[1.05rem] font-semibold tracking-tight md:text-[1.2rem]">从剧本到成片，一站式 AI 影视生产</h1>
               <p className="mt-1 max-w-2xl text-xs text-white/55">
                 剧本创作 → 剧本定稿 → 智能分析 → 素材生成 → 分镜编排 → 视频成片
               </p>
@@ -390,9 +397,9 @@ export function Library({
 
         <section className="mt-4">
           <div className="mb-2 flex items-end justify-between gap-3">
-            <h2 className="text-base font-semibold">选择创作入口</h2>
+            <h2 className="text-[13px] font-semibold">选择创作入口</h2>
           </div>
-          <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
             {entryCards.map((card) => (
               <button
                 key={card.id}
@@ -402,18 +409,18 @@ export function Library({
                   if (!card.available) return toast.info(`${card.title}入口建设中，当前走统一建片场`);
                   onCreate?.(card.id, card);
                 }}
-                className={`group relative overflow-hidden rounded-xl bg-gradient-to-br p-3 text-left text-white shadow-float transition ${card.tone} ${
+                className={`group relative overflow-hidden rounded-lg bg-gradient-to-br p-2.5 text-left text-white shadow-float transition ${card.tone} ${
                   card.available ? "hover:-translate-y-0.5 hover:brightness-110" : "cursor-not-allowed opacity-70"
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <strong className="text-lg font-semibold leading-tight">
+                  <strong className="text-[14px] font-semibold leading-tight">
                     {card.title}
-                    <span className="ml-1 text-base opacity-80">{card.badge}</span>
+                    <span className="ml-1 text-[12px] opacity-80">{card.badge}</span>
                   </strong>
-                  {card.id === "upload" ? <Upload className="h-4 w-4 shrink-0 opacity-80" /> : <Plus className="h-4 w-4 shrink-0 opacity-80" />}
+                  {card.id === "upload" ? <Upload className="h-3.5 w-3.5 shrink-0 opacity-80" /> : <Plus className="h-3.5 w-3.5 shrink-0 opacity-80" />}
                 </div>
-                <p className="mt-2 line-clamp-2 text-xs text-white/85">{card.desc}</p>
+                <p className="mt-1.5 line-clamp-2 text-[11px] text-white/85">{card.desc}</p>
                 {!card.available ? (
                   <span className="mt-1.5 inline-block rounded-full bg-black/25 px-2 py-0.5 text-[10px]">即将上线</span>
                 ) : null}
@@ -422,11 +429,11 @@ export function Library({
           </div>
         </section>
 
-        <section className="mt-5">
-          <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <section className="mt-3">
+          <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-base font-semibold">我的项目</h2>
-              <p className="mt-0.5 text-xs text-[var(--muted)]">
+              <h2 className="text-[13px] font-semibold">我的项目</h2>
+              <p className="mt-0.5 text-[11px] text-[var(--muted)]">
                 供应商 {caps.configured ?? 0}/{caps.total ?? 3}
                 {caps.deepseek || caps.llmReady ? ` · LLM${caps.llmBackend && caps.llmBackend !== "none" ? `/${caps.llmBackend}` : ""}` : ""}
                 {caps.seedream ? " · Seedream" : ""}
@@ -459,8 +466,8 @@ export function Library({
               className="panel group flex w-full flex-col items-center border-dashed border-white/15 py-10 text-center hover:border-[#7c6cff]/50"
             >
               <FolderOpen className="mb-3 h-8 w-8 text-[#a78bfa]" />
-              <strong className="text-lg">还没有项目</strong>
-              <span className="mt-2 text-sm text-[var(--muted)]">从爽剧 / 短剧入口开始第一部作品。</span>
+              <strong className="text-[14px]">还没有项目</strong>
+              <span className="mt-1.5 text-[12px] text-[var(--muted)]">从爽剧 / 短剧入口开始第一部作品。</span>
             </button>
           ) : visible.length === 0 ? (
             <div className="panel py-16 text-center text-sm text-[var(--muted)]">没有匹配的项目。</div>
@@ -469,6 +476,8 @@ export function Library({
               {visible.map((project) => {
                 const steps = progressSteps(project, stepLabels.length || 6);
                 const doneCount = steps.filter(Boolean).length;
+                const shotDone = project.progress?.shots?.completed || 0;
+                const shotTotal = project.progress?.shots?.total || 0;
                 return (
                   <article
                     key={project.id}
@@ -521,7 +530,7 @@ export function Library({
                     </button>
                     <div className="flex items-center justify-between border-t border-[var(--line)] bg-black/20 px-3 py-2">
                       <span className="timecode text-[10px] text-white/35">
-                        {project.progress?.shots?.completed || 0}/{project.progress?.shots?.total || 0} SHOTS
+                        {shotDone}/{shotTotal} SHOTS
                       </span>
                       <div className="flex items-center gap-1">
                         <button

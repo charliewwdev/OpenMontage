@@ -22,6 +22,7 @@ import { ModalOverlay } from "../ModalPortal";
 import { AspectRatioPicker } from "../project-settings/AspectRatioPicker";
 import { GenrePicker } from "../project-settings/GenrePicker";
 import { VideoStylePicker } from "../project-settings/VideoStylePicker";
+import { SkillExpertBadge } from "../SkillExpertBadge";
 
 const MAX_PER_REQUEST = 10;
 
@@ -155,7 +156,8 @@ export function ScriptStep({
   const maxRewriteCount = Math.max(1, Math.min(MAX_PER_REQUEST, maxEpisodeNumber - rewriteStartEpisode + 1));
 
   const apply = (b) => {
-    if (b?.project) onBundle?.(b);
+    const next = b?.bundle?.project ? b.bundle : b;
+    if (next?.project) onBundle?.(next);
     else onRefresh?.();
   };
 
@@ -338,13 +340,13 @@ export function ScriptStep({
   };
 
   return (
-    <div className="mx-auto max-w-[1500px] space-y-5">
+    <div className="mx-auto max-w-[1500px] space-y-3">
       <section className="panel overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--line)] px-4 py-3 md:px-5">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--line)] px-3 py-2 md:px-3.5">
           <div className="min-w-0">
             <div className="label !mb-0">Story brief</div>
             <div className="flex flex-wrap items-baseline gap-2">
-              <h3 className="display-type text-lg font-semibold md:text-xl">创作底稿</h3>
+              <h3 className="display-type text-[1.05rem] font-semibold md:text-[1.2rem]">创作底稿</h3>
               {briefCollapsed ? (
                 <span className="truncate text-xs text-[var(--muted)]">
                   {form.title || "未命名"} · {form.ratio || "9:16"} · {form.genre || "未选题材"} · 已生成 {episodes.length} 集
@@ -372,11 +374,11 @@ export function ScriptStep({
         </div>
         {!briefCollapsed ? (
           <div className="grid lg:grid-cols-[minmax(0,1fr)_360px]">
-            <div className="p-5 md:p-6">
-              <p className="text-sm text-[var(--muted)]">
+            <div className="p-3 md:p-3.5">
+              <p className="text-[12px] text-[var(--muted)]">
                 DeepSeek 按本次集数分批创作，剧本可继续续写或按指定范围重写。
               </p>
-              <div className="mt-5 grid gap-4 md:grid-cols-2">
+              <div className="mt-3 grid gap-3 md:grid-cols-2">
                 <label className="md:col-span-2">
                   <span className="label">片名</span>
                   <input
@@ -441,6 +443,7 @@ export function ScriptStep({
               <div>
                 <div className="timecode text-[10px] text-[var(--timecode)]">TEXT MODEL</div>
                 <div className="mt-2 text-lg font-semibold">{caps.llmBackend || "LLM"} · drama-script</div>
+                <SkillExpertBadge skillId="drama-script" className="mt-3" />
                 <p className="mt-2 text-xs leading-6 text-white/55">
                   本次生成集数决定当前调用输出多少集；计划总集数用于安排全剧情绪曲线，可以留空。建议先生成 1 集核对大纲，再扩写。
                 </p>

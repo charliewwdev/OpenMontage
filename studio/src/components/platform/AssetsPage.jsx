@@ -335,7 +335,7 @@ export function AssetsPage({ onUsePrompt }) {
       />
 
       {/* Row 1: 文件夹图标 + 素材/提示词 | 上传·选择 — 对齐有彩 */}
-      <div className="mb-4 flex items-center justify-between gap-3">
+      <div className="mb-2.5 flex items-center justify-between gap-2">
         <div className="flex min-w-0 items-center gap-2">
           <FolderOpen className="h-4 w-4 shrink-0 text-white/40" aria-hidden />
           <Chip active={tab === "assets"} onClick={() => setTab("assets")}>
@@ -442,8 +442,8 @@ export function AssetsPage({ onUsePrompt }) {
           </FilterRow>
 
           {/* Row 5: 排序文字链 + 搜索 */}
-          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="flex shrink-0 items-center gap-3">
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="flex shrink-0 items-center gap-2">
               <Filter className="h-3.5 w-3.5 text-white/35" aria-hidden />
               {SORT_FILTERS.map(([value, label]) => (
                 <SortLink key={value} active={sort === value} onClick={() => setSort(value)}>
@@ -463,12 +463,12 @@ export function AssetsPage({ onUsePrompt }) {
           </div>
 
           {loading && !assets.length ? (
-            <div className="panel flex items-center justify-center gap-2 py-20 text-sm text-[var(--muted)]">
+            <div className="panel flex items-center justify-center gap-2 py-10 text-[12px] text-[var(--muted)]">
               <Loader2 className="h-4 w-4 animate-spin" /> 加载资产…
             </div>
           ) : !assets.length ? (
-            <div className="panel flex flex-col items-center justify-center gap-4 py-20 text-center">
-              <p className="text-sm text-[var(--muted)]">还没有素材。上传参考图，或去影视工坊生成角色 / 导出成片。</p>
+            <div className="panel flex flex-col items-center justify-center gap-3 py-10 text-center">
+              <p className="text-[12px] text-[var(--muted)]">还没有素材。上传参考图，或去影视工坊生成角色 / 导出成片。</p>
               <button type="button" className="btn-primary" disabled={uploading} onClick={() => fileRef.current?.click()}>
                 <Upload className="h-3.5 w-3.5" /> 上传素材
               </button>

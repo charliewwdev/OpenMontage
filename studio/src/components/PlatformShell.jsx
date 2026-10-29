@@ -136,18 +136,18 @@ export function PlatformShell({
     <div className="flex min-h-screen bg-[var(--stage)] text-[var(--ink)]">
       <aside
         className={`sticky top-0 h-screen shrink-0 flex-col overflow-hidden border-r border-[var(--line)] bg-[#0a0b10] transition-[width] duration-200 ${
-          collapsed ? "w-[72px]" : "w-[220px]"
+          collapsed ? "w-[56px]" : "w-[168px]"
         } ${immersive ? "hidden" : "hidden md:flex"}`}
       >
-        <div className={`shrink-0 ${collapsed ? "px-2 py-4" : "px-4 py-5"}`}>
-          <div className={`flex items-center ${collapsed ? "justify-center gap-1" : "gap-2.5"}`}>
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-[var(--gradient)] text-white shadow-[0_0_24px_rgba(124,108,255,.35)]">
-              <img src="/favicon.svg" alt="" className="h-8 w-8" width={32} height={32} />
+        <div className={`shrink-0 ${collapsed ? "px-1.5 py-2.5" : "px-2.5 py-3"}`}>
+          <div className={`flex items-center ${collapsed ? "justify-center gap-1" : "gap-2"}`}>
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[var(--gradient)] text-white shadow-[0_0_16px_rgba(124,108,255,.3)]">
+              <img src="/favicon.svg" alt="" className="h-7 w-7" width={28} height={28} />
             </span>
             {!collapsed ? (
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1">
-                  <div className="min-w-0 flex-1 truncate text-sm font-semibold tracking-wide">{displayBrand}</div>
+                  <div className="min-w-0 flex-1 truncate text-[12px] font-semibold tracking-wide">{displayBrand}</div>
                   <button
                     type="button"
                     className="shrink-0 rounded-md p-0.5 text-white/40 transition hover:bg-white/[.06] hover:text-white"
@@ -173,17 +173,17 @@ export function PlatformShell({
             )}
           </div>
           {!collapsed ? (
-            <div className="mt-3 flex rounded-lg border border-[var(--line)] p-0.5 text-[10px]">
+            <div className="mt-2 flex rounded-md border border-[var(--line)] p-0.5 text-[9px]">
               <button
                 type="button"
-                className={`flex-1 rounded-md px-2 py-1 ${locale === "zh" ? "bg-white/10 text-white" : "text-white/45"}`}
+                className={`flex-1 rounded px-1.5 py-0.5 ${locale === "zh" ? "bg-white/10 text-white" : "text-white/45"}`}
                 onClick={() => setLocale("zh")}
               >
                 {t("shell_locale_zh")}
               </button>
               <button
                 type="button"
-                className={`flex-1 rounded-md px-2 py-1 ${locale === "en" ? "bg-white/10 text-white" : "text-white/45"}`}
+                className={`flex-1 rounded px-1.5 py-0.5 ${locale === "en" ? "bg-white/10 text-white" : "text-white/45"}`}
                 onClick={() => setLocale("en")}
               >
                 {t("shell_locale_en")}
@@ -192,14 +192,14 @@ export function PlatformShell({
           ) : null}
         </div>
 
-        <nav className={`scrollbar-thin min-h-0 flex-1 space-y-0.5 overflow-y-auto pb-3 ${collapsed ? "px-1.5" : "px-2"}`}>
+        <nav className={`scrollbar-thin min-h-0 flex-1 space-y-0.5 overflow-y-auto pb-2 ${collapsed ? "px-1" : "px-1.5"}`}>
           {nav.map((item) => {
             const Icon = resolveIcon(item.icon);
             const selected = active === item.id;
             const label = navLabel(item);
-            const baseBtn = `flex w-full items-center rounded-xl text-left text-sm transition ${
+            const baseBtn = `flex w-full items-center rounded-lg text-left text-[12px] transition ${
               selected ? "nav-active text-white" : "text-white/70 hover:bg-white/[.04] hover:text-white"
-            } ${collapsed ? "justify-center px-2 py-2.5" : "gap-2.5 px-3 py-2.5"}`;
+            } ${collapsed ? "justify-center px-1.5 py-2" : "gap-2 px-2 py-1.5"}`;
 
             if (item.id === "usage") {
               const cost = usageToday?.hero?.cost_usd;
@@ -212,13 +212,13 @@ export function PlatformShell({
                   title={label}
                   onClick={() => onNavigate?.(item.id, item)}
                 >
-                  <Icon className={`h-4 w-4 shrink-0 ${selected ? "text-[#b7acff]" : ""}`} />
+                  <Icon className={`h-3.5 w-3.5 shrink-0 ${selected ? "text-[#b7acff]" : ""}`} />
                   {!collapsed ? (
                     <>
                       <span className="min-w-0 flex-1 truncate">{label}</span>
                       <div className="flex shrink-0 flex-col items-end gap-0.5">
                         <MiniSpark values={spark.slice(-8).map((v) => Number(v) || 0)} />
-                        <span className="text-[10px] tabular-nums text-white/45">
+                        <span className="text-[9px] tabular-nums text-white/45">
                           {t("shell_nav_usage_today", { cost: cost == null ? "—" : fmtUsd(cost) })}
                         </span>
                       </div>
@@ -236,11 +236,11 @@ export function PlatformShell({
                   title={label}
                   onClick={() => onNavigate?.(item.id, item)}
                 >
-                  <Icon className={`h-4 w-4 shrink-0 ${selected ? "text-[#b7acff]" : ""}`} />
+                  <Icon className={`h-3.5 w-3.5 shrink-0 ${selected ? "text-[#b7acff]" : ""}`} />
                   {!collapsed ? (
                     <>
                       <span className="min-w-0 flex-1 truncate">{label}</span>
-                      <span className="shrink-0 text-[10px] tabular-nums text-white/45">
+                      <span className="shrink-0 text-[9px] tabular-nums text-white/45">
                         {creditsBalance == null ? "—" : creditsBalance}
                       </span>
                     </>
@@ -256,30 +256,30 @@ export function PlatformShell({
                 title={label}
                 onClick={() => onNavigate?.(item.id, item)}
               >
-                <Icon className={`h-4 w-4 shrink-0 ${selected ? "text-[#b7acff]" : ""}`} />
+                <Icon className={`h-3.5 w-3.5 shrink-0 ${selected ? "text-[#b7acff]" : ""}`} />
                 {!collapsed ? <span className="min-w-0 flex-1 truncate">{label}</span> : null}
               </button>
             );
           })}
         </nav>
 
-        <div className={`shrink-0 border-t border-[var(--line)] bg-[#0a0b10] ${collapsed ? "p-2" : "p-3"}`}>
+        <div className={`shrink-0 border-t border-[var(--line)] bg-[#0a0b10] ${collapsed ? "p-1.5" : "p-2"}`}>
           <button
             type="button"
-            className={`mb-2 flex w-full items-center rounded-xl border border-[var(--line)] bg-white/[.03] text-left transition hover:border-[#7c6cff]/40 ${
-              collapsed ? "justify-center px-2 py-2" : "gap-2 px-3 py-2.5"
+            className={`mb-1.5 flex w-full items-center rounded-lg border border-[var(--line)] bg-white/[.03] text-left transition hover:border-[#7c6cff]/40 ${
+              collapsed ? "justify-center px-1.5 py-1.5" : "gap-1.5 px-2 py-1.5"
             }`}
             onClick={() => onNavigate?.("keys")}
             title={displayName}
           >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--gradient)] text-xs font-bold">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[var(--gradient)] text-[10px] font-bold">
               {user?.avatar ? <img src={user.avatar} alt="" className="h-full w-full object-cover" /> : "OM"}
             </span>
             {!collapsed ? (
               <>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-xs font-semibold">{displayName}</div>
-                  <div className="text-[10px] text-[var(--muted)]">{t("shell_nav_keys_ready", { ready })}</div>
+                  <div className="truncate text-[11px] font-semibold">{displayName}</div>
+                  <div className="text-[9px] text-[var(--muted)]">{t("shell_nav_keys_ready", { ready })}</div>
                 </div>
                 <span
                   role="button"

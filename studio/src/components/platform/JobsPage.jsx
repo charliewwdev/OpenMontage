@@ -57,7 +57,7 @@ function StatCard({ label, value, hint, progress }) {
   return (
     <div className="panel space-y-2 px-4 py-3">
       <div className="text-[11px] uppercase tracking-wide text-[var(--muted)]">{label}</div>
-      <div className="text-2xl font-semibold tabular-nums">{value ?? "—"}</div>
+      <div className="text-[1.25rem] font-semibold tabular-nums">{value ?? "—"}</div>
       {hint ? <div className="text-[11px] text-[var(--muted)]">{hint}</div> : null}
       {typeof progress === "number" ? <ProgressBar pct={progress} tone="sky" /> : null}
     </div>
@@ -307,7 +307,7 @@ export function JobsPage({ onOpenProject }) {
         </div>
       }
     >
-      <div className="space-y-5">
+      <div className="space-y-3">
         {data?.note ? <p className="text-xs text-[var(--muted)]">{data.note}</p> : null}
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -335,11 +335,11 @@ export function JobsPage({ onOpenProject }) {
         <section className="space-y-3">
           <h2 className="text-sm font-semibold">一键全流程</h2>
           {loading && !data ? (
-            <div className="panel flex items-center gap-2 px-5 py-10 text-sm text-[var(--muted)]">
+            <div className="panel flex items-center gap-2 px-3 py-6 text-[12px] text-[var(--muted)]">
               <Loader2 className="h-4 w-4 animate-spin" /> 加载任务…
             </div>
           ) : jobs.length === 0 ? (
-            <div className="panel px-5 py-10 text-sm text-[var(--muted)]">当前没有可见的全流程任务。</div>
+            <div className="panel px-3 py-6 text-[12px] text-[var(--muted)]">当前没有可见的全流程任务。</div>
           ) : (
             <div className="space-y-3">
               {jobs.map((job) => (

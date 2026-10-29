@@ -56,16 +56,16 @@ export function ReferPage({ config }) {
 
   return (
     <PageShell eyebrow="Refer" title="推荐计划" description="分享影视工坊，邀请伙伴一起用六步流程做短剧。">
-      <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
-        <div className="panel p-6">
-          <Gift className="h-8 w-8 text-[#a78bfa]" />
-          <h3 className="mt-4 text-lg font-semibold">分享工作台地址</h3>
-          <p className="mt-2 text-sm text-[var(--muted)]">链接含你的邀请码。对方首次打开时本地记邀请奖励。</p>
-          <code className="mt-4 block break-all rounded-xl bg-black/30 px-4 py-3 text-sm">{link || "（加载中）"}</code>
-          <div className="mt-3 text-xs text-[var(--muted)]">
+      <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr]">
+        <div className="panel p-3.5">
+          <Gift className="h-6 w-6 text-[#a78bfa]" />
+          <h3 className="mt-2.5 text-[14px] font-semibold">分享工作台地址</h3>
+          <p className="mt-1.5 text-[12px] text-[var(--muted)]">链接含你的邀请码。对方首次打开时本地记邀请奖励。</p>
+          <code className="mt-2.5 block break-all rounded-lg bg-black/30 px-3 py-2 text-[12px]">{link || "（加载中）"}</code>
+          <div className="mt-2 text-[11px] text-[var(--muted)]">
             已邀请 {credits?.referrals ?? 0} 次 · 积分余额 {credits?.balance ?? 0}
           </div>
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-3 flex flex-wrap gap-1.5">
             <button
               type="button"
               className="btn-primary"
@@ -94,14 +94,14 @@ export function ReferPage({ config }) {
           </div>
         </div>
 
-        <aside className="panel space-y-4 p-5">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <Users className="h-4 w-4 text-[#a78bfa]" /> 推荐玩法
+        <aside className="panel space-y-2.5 p-3">
+          <div className="flex items-center gap-2 text-[13px] font-semibold">
+            <Users className="h-3.5 w-3.5 text-[#a78bfa]" /> 推荐玩法
           </div>
           {TIERS.map((tier) => (
             <div key={tier.title}>
-              <strong className="block text-sm">{tier.title}</strong>
-              <p className="mt-1 text-sm text-[var(--muted)]">{tier.desc}</p>
+              <strong className="block text-[12px]">{tier.title}</strong>
+              <p className="mt-0.5 text-[12px] text-[var(--muted)]">{tier.desc}</p>
             </div>
           ))}
         </aside>

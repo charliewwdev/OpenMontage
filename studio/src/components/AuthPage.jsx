@@ -178,15 +178,15 @@ export function AuthPage({ brand, tagline, authConfig, onAuthed, onClose, mode =
       {!isModal ? (
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(124,108,255,.22),_transparent_55%),radial-gradient(ellipse_at_bottom,_rgba(56,189,248,.12),_transparent_50%)]" />
       ) : null}
-      <div className="relative w-full max-w-md rounded-3xl border border-[var(--line)] bg-[#0c0d14]/95 p-6 text-[var(--ink)] shadow-[0_30px_80px_rgba(0,0,0,.45)] backdrop-blur">
-        <div className="mb-6 flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--gradient)] text-white shadow-[0_0_28px_rgba(124,108,255,.4)]">
-              <Clapperboard className="h-5 w-5" />
+      <div className="relative w-full max-w-md rounded-2xl border border-[var(--line)] bg-[#0c0d14]/95 p-4 text-[var(--ink)] shadow-[0_24px_60px_rgba(0,0,0,.45)] backdrop-blur md:p-5">
+        <div className="mb-4 flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--gradient)] text-white shadow-[0_0_20px_rgba(124,108,255,.35)]">
+              <Clapperboard className="h-4 w-4" />
             </span>
             <div>
-              <div className="text-base font-semibold tracking-wide">{brand || "OpenMontage"}</div>
-              <div className="text-xs text-[var(--muted)]">{tagline || t("shell_brand_tagline")}</div>
+              <div className="text-[13px] font-semibold tracking-wide">{brand || "OpenMontage"}</div>
+              <div className="text-[11px] text-[var(--muted)]">{tagline || t("shell_brand_tagline")}</div>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -218,10 +218,10 @@ export function AuthPage({ brand, tagline, authConfig, onAuthed, onClose, mode =
           </div>
         </div>
 
-        <h1 className="text-xl font-semibold">{t("auth_page_welcome")}</h1>
-        <p className="mt-1 text-sm text-white/55">{isModal ? t("auth_page_subtitle_modal") : t("auth_page_subtitle")}</p>
+        <h1 className="text-[1.1rem] font-semibold">{t("auth_page_welcome")}</h1>
+        <p className="mt-1 text-[12px] text-white/55">{isModal ? t("auth_page_subtitle_modal") : t("auth_page_subtitle")}</p>
 
-        <form className="mt-5 space-y-3" onSubmit={onSubmit}>
+        <form className="mt-4 space-y-2.5" onSubmit={onSubmit}>
           <Field label={t("auth_page_username")}>
             <input
               className={inputClass}

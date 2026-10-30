@@ -99,27 +99,27 @@ export function ToolsPage({ config, onOpenTool, onNavigate, onStartCreate }) {
       description={page.description || "直接描述创意，或选择专业分类开始创作"}
     >
       {/* Hero band — 对齐有彩顶部氛围条 */}
-      <div className="relative mb-3 overflow-hidden rounded-xl border border-white/10">
+      <div className="relative mb-6 overflow-hidden rounded-2xl border border-white/10">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_20%,rgba(124,108,255,.35),transparent_50%),radial-gradient(ellipse_at_80%_0%,rgba(56,189,248,.2),transparent_45%),linear-gradient(135deg,#0b1020,#12182c_55%,#1a1030)]" />
-        <div className="relative px-3.5 py-5 md:px-5 md:py-6">
-          <div className="label !mb-1 !text-white/50">OPENMONTAGE</div>
-          <h2 className="max-w-xl text-[1.2rem] font-semibold text-white md:text-[1.45rem]">从一句话灵感到可拍成片</h2>
-          <p className="mt-1 max-w-lg text-[12px] text-white/60">文本 · 视觉 · 音频 · 视频 · 工坊 · 画布，按导演流程组织创作入口</p>
+        <div className="relative px-5 py-10 md:px-8 md:py-14">
+          <div className="label !mb-2 !text-white/50">OPENMONTAGE</div>
+          <h2 className="max-w-xl text-2xl font-semibold text-white md:text-3xl">从一句话灵感到可拍成片</h2>
+          <p className="mt-2 max-w-lg text-sm text-white/60">文本 · 视觉 · 音频 · 视频 · 工坊 · 画布，按导演流程组织创作入口</p>
         </div>
       </div>
 
       {/* Prompt composer */}
-      <section className="panel mb-4 p-3 md:p-3.5">
-        <div className="mb-2 flex items-center gap-2">
-          <Sparkles className="h-3.5 w-3.5 text-[#a78bfa]" />
-          <h3 className="text-[13px] font-semibold">说出灵感，让创意成为作品</h3>
+      <section className="panel mb-8 p-5 md:p-6">
+        <div className="mb-3 flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-[#a78bfa]" />
+          <h3 className="text-base font-semibold">说出灵感，让创意成为作品</h3>
           <span className="rounded-full bg-[#7c6cff]/15 px-2 py-0.5 text-[10px] text-[#c4b5fd]">创作 Agent</span>
         </div>
-        <p className="mb-2.5 text-[12px] text-[var(--muted)]">描述你的想法，Agent 会调用专业技能，并直接生成图片、音乐、音频或视频。</p>
+        <p className="mb-4 text-sm text-[var(--muted)]">描述你的想法，Agent 会调用专业技能，并直接生成图片、音乐、音频或视频。</p>
         <label className="block">
           <span className="sr-only">描述你的创作需求</span>
           <textarea
-            className="field min-h-[88px] resize-y !py-2"
+            className="field min-h-[120px] resize-y !py-3"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             placeholder="例如：为国风茶饮品牌创作一张夏日海报，再配一段轻快的古筝音乐"
@@ -139,29 +139,29 @@ export function ToolsPage({ config, onOpenTool, onNavigate, onStartCreate }) {
       </section>
 
       {/* Category cards 2×3 */}
-      <div className="mb-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mb-10 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {categories.map((cat) => {
           const Icon = ICONS[cat.id] || Sparkles;
           return (
             <button
               key={cat.id}
               type="button"
-              className={`relative overflow-hidden rounded-xl border border-white/10 bg-gradient-to-br ${cat.accent || "from-[#312e81] to-[#7c6cff]"} p-3 text-left text-white shadow-lg transition hover:-translate-y-0.5 hover:brightness-110`}
+              className={`relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br ${cat.accent || "from-[#312e81] to-[#7c6cff]"} p-5 text-left text-white shadow-lg transition hover:-translate-y-0.5 hover:brightness-110`}
               onClick={() => openCategory(cat)}
             >
-              <Icon className="mb-3 h-5 w-5 opacity-90" />
-              <strong className="block text-[14px]">{cat.title}</strong>
-              <p className="mt-1 text-[11px] leading-4 text-white/80">{cat.desc}</p>
+              <Icon className="mb-6 h-7 w-7 opacity-90" />
+              <strong className="block text-lg">{cat.title}</strong>
+              <p className="mt-2 text-sm leading-6 text-white/80">{cat.desc}</p>
             </button>
           );
         })}
       </div>
 
       {/* Workflow */}
-      <section className="mb-4">
-        <h3 className="text-[13px] font-semibold">{workflow.title}</h3>
-        <p className="mt-1 max-w-3xl text-[12px] text-[var(--muted)]">{workflow.description}</p>
-        <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+      <section className="mb-8">
+        <h3 className="text-lg font-semibold">{workflow.title}</h3>
+        <p className="mt-2 max-w-3xl text-sm text-[var(--muted)]">{workflow.description}</p>
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           {(workflow.steps || []).map((step, index) => {
             const stepMap = {
               定剧本: "script",
@@ -175,14 +175,14 @@ export function ToolsPage({ config, onOpenTool, onNavigate, onStartCreate }) {
               <button
                 key={step.title}
                 type="button"
-                className="panel p-2.5 text-left transition hover:-translate-y-0.5 hover:border-white/20"
+                className="panel p-4 text-left transition hover:-translate-y-0.5 hover:border-white/20"
                 onClick={() => onOpenTool?.({ nav: "workshop", step: workshopStep })}
               >
-                <div className="mb-2 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--gradient)] text-[11px] font-bold text-white">
+                <div className="mb-3 flex h-8 w-8 items-center justify-center rounded-full bg-[var(--gradient)] text-sm font-bold text-white">
                   {index + 1}
                 </div>
-                <strong className="block text-[12px]">{step.title}</strong>
-                <p className="mt-1 text-[11px] leading-4 text-[var(--muted)]">{step.desc}</p>
+                <strong className="block text-sm">{step.title}</strong>
+                <p className="mt-2 text-xs leading-5 text-[var(--muted)]">{step.desc}</p>
               </button>
             );
           })}
@@ -190,11 +190,11 @@ export function ToolsPage({ config, onOpenTool, onNavigate, onStartCreate }) {
       </section>
 
       {/* Workshop CTA */}
-      <section className="overflow-hidden rounded-xl border border-white/10 bg-gradient-to-r from-[#1e1b4b] via-[#312e81] to-[#4c1d95] p-3.5 md:flex md:items-center md:justify-between md:gap-4 md:p-4">
+      <section className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-[#1e1b4b] via-[#312e81] to-[#4c1d95] p-6 md:flex md:items-center md:justify-between md:gap-6">
         <div>
-          <h3 className="text-[13px] font-semibold text-white">影视创作工坊</h3>
-          <p className="mt-1 text-[12px] text-white/70">从剧本到成片，全流程 AI 辅助创作</p>
-          <p className="mt-0.5 text-[11px] text-white/45">剧本AI创作 · 素材一键生成 · 智能分镜脚本</p>
+          <h3 className="text-lg font-semibold text-white">影视创作工坊</h3>
+          <p className="mt-2 text-sm text-white/70">从剧本到成片，全流程 AI 辅助创作</p>
+          <p className="mt-1 text-xs text-white/45">剧本AI创作 · 素材一键生成 · 智能分镜脚本</p>
         </div>
         <button
           type="button"

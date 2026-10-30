@@ -3,7 +3,7 @@ import { ArrowLeft, Clapperboard, Film, Loader2, Play, RefreshCw, Share2, Sparkl
 import { api } from "../../api";
 import { toast } from "../../lib/toast";
 import { requireCapability, toastMaybeKeys } from "../../lib/keys";
-import { shareVideoToX } from "../../lib/shareToX";
+import { openShareToX } from "../../lib/shareToX";
 import { SkillExpertBadge } from "../SkillExpertBadge";
 import { PageShell } from "./PageShell";
 
@@ -259,7 +259,7 @@ export function PortraitMatchPage({
         </button>
       }
     >
-      <div className="mb-2.5 flex flex-wrap items-center gap-2">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
         <SkillExpertBadge skillId="portrait-idlock" accent="#f472b6" />
         {matchMode === "gen-likeness" ? (
           <span
@@ -282,21 +282,21 @@ export function PortraitMatchPage({
         )}
       </div>
       {!projectId ? (
-        <section className="space-y-3">
-          <div className="grid gap-1.5 sm:grid-cols-2">
+        <section className="space-y-4">
+          <div className="grid gap-2 sm:grid-cols-2">
             {Object.entries(matchModes).map(([id, meta]) => (
               <button
                 key={id}
                 type="button"
                 onClick={() => setMatchMode(id)}
-                className={`rounded-lg border px-2.5 py-2.5 text-left transition ${
+                className={`rounded-xl border px-3 py-3 text-left transition ${
                   matchMode === id
                     ? "border-[#7c6cff]/70 bg-[#7c6cff]/15"
                     : "border-white/10 bg-white/[.03] hover:bg-white/[.06]"
                 }`}
               >
-                <p className="text-[13px] font-semibold text-white">{meta.label || id}</p>
-                <p className="mt-0.5 text-[11px] leading-relaxed text-white/55">{meta.summary}</p>
+                <p className="text-sm font-semibold text-white">{meta.label || id}</p>
+                <p className="mt-1 text-[11px] leading-relaxed text-white/55">{meta.summary}</p>
               </button>
             ))}
           </div>
@@ -315,18 +315,18 @@ export function PortraitMatchPage({
               <Loader2 className="h-4 w-4 animate-spin" /> 加载模板…
             </div>
           ) : (
-            <div className="grid gap-2 md:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-3">
               {templates.map((t) => (
                 <article
                   key={t.id}
-                  className={`panel flex flex-col gap-2 border p-3 ${
+                  className={`panel flex flex-col gap-3 border p-4 ${
                     t.id === preferred ? "border-[#7c6cff]/60" : "border-[var(--line)]"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <h3 className="text-[13px] font-semibold text-white">{t.title}</h3>
-                      <p className="mt-0.5 text-[11px] text-white/50">{t.desc}</p>
+                      <h3 className="text-base font-semibold text-white">{t.title}</h3>
+                      <p className="mt-1 text-xs text-white/50">{t.desc}</p>
                     </div>
                     <span className="rounded-full bg-white/[.06] px-2 py-0.5 text-[10px] text-white/50">
                       {t.shotCount} 镜
@@ -412,15 +412,15 @@ export function PortraitMatchPage({
                       className="btn-secondary !min-h-7 text-[11px]"
                       title="打开 X，自动填好宣传文案与成片链接"
                       onClick={() => {
-                        const res = shareVideoToX({
+                        const ok = openShareToX({
                           project,
                           projectId,
                           outputUrl: assembled.outputUrl,
                           outputPath: assembled.outputPath,
                           durationSec: assembled.visualDur || assembled.targetDur || null,
                         });
-                        if (res.ok) toast.success(res.message);
-                        else toast.error(res.message || "无法打开 X");
+                        if (ok) toast.success("已打开 X，确认后即可发布");
+                        else toast.error("无法打开 X 分享");
                       }}
                     >
                       <Share2 className="h-3 w-3" /> 分享到 X

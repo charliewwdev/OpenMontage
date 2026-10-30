@@ -5,7 +5,6 @@ import { api } from "../../api";
 import { requireCapability, toastMaybeKeys } from "../../lib/keys";
 import { toast } from "../../lib/toast";
 import { Lightbox } from "../Lightbox";
-import { SkillExpertBadge } from "../SkillExpertBadge";
 
 const CONFIG = {
   character: {
@@ -348,23 +347,22 @@ export function EntityStep({
   const missingImages = entities.filter((e) => !e.selectedImage);
 
   return (
-    <div className="mx-auto max-w-[1500px] space-y-3">
-      <section className="panel flex flex-col gap-2.5 p-3 md:flex-row md:items-center md:justify-between md:p-3.5">
+    <div className="mx-auto max-w-[1500px] space-y-5">
+      <section className="panel flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between md:p-6">
         <div>
           <div className="label">{config.eyebrow}</div>
-          <h3 className="display-type text-[1.15rem] font-semibold md:text-[1.3rem]">
+          <h3 className="display-type text-2xl font-semibold">
             {config.title}
             {focusEpisode ? (
-              <span className="ml-2 text-[12px] font-normal text-white/45">
+              <span className="ml-2 text-base font-normal text-white/45">
                 · 第{focusEpisode.episodeNumber}集
                 {focusEpisode.title ? `「${focusEpisode.title}」` : ""}
               </span>
             ) : null}
           </h3>
-          <p className="mt-0.5 max-w-2xl text-[12px] text-[var(--muted)]">
+          <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
             出图后端以顶部模型切换为准（推荐 Seedream）；生成后会做提示词符合度质检。空白「尚无定稿图」表示尚未出图。
           </p>
-          <SkillExpertBadge skillId="drama-entity-still" accent={config.accent} className="mt-2" />
           {focusNote ? <p className="mt-2 text-xs text-[var(--projector)]">{focusNote}</p> : null}
           {missingImages.length ? (
             <p className="mt-2 text-xs text-[#fbbf24]">
@@ -414,7 +412,7 @@ export function EntityStep({
       {!entities.length ? (
         <button
           type="button"
-          className="panel flex w-full flex-col items-center border-dashed py-10 text-center hover:border-[var(--projector)]"
+          className="panel flex w-full flex-col items-center border-dashed py-24 text-center hover:border-[var(--projector)]"
           disabled={batching}
           onClick={() => setShowAdd(true)}
         >
@@ -450,13 +448,13 @@ export function EntityStep({
               onMouseDown={() => setShowAdd(false)}
             >
               <section
-                className="panel max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl overflow-y-auto p-3 md:p-4"
+                className="panel max-h-[calc(100dvh-1.5rem)] w-full max-w-4xl overflow-y-auto p-5 md:p-7"
                 onMouseDown={(e) => e.stopPropagation()}
               >
                 <header className="flex items-start justify-between gap-4">
                   <div>
                     <div className="label">New {kind}</div>
-                    <h3 className="display-type text-[1.15rem] font-semibold">添加{config.title}</h3>
+                    <h3 className="display-type text-2xl font-semibold">添加{config.title}</h3>
                   </div>
                   <button type="button" className="btn-quiet !min-h-9 !px-2" onClick={() => setShowAdd(false)}>
                     <X className="h-4 w-4" />
@@ -578,16 +576,16 @@ function EntityCard({ entity, accent, working, onGenerate, onUpload, onPunchAlph
         </div>
 
         {cardTab === "prompt" ? (
-          <div className="space-y-2 p-2.5 text-[12px]">
+          <div className="space-y-3 p-4 text-sm">
             {promptBusy ? (
-              <div className="flex items-center justify-center gap-2 py-6 text-[var(--muted)]">
+              <div className="flex items-center justify-center gap-2 py-10 text-[var(--muted)]">
                 <Loader2 className="h-4 w-4 animate-spin" /> 加载提示词…
               </div>
             ) : (
               <>
                 <div>
                   <div className="mb-1 text-[11px] text-[var(--muted)]">将提交给大模型的正向提示词</div>
-                  <pre className="max-h-40 overflow-y-auto whitespace-pre-wrap rounded-lg border border-white/10 bg-black/40 p-2 text-[11px] leading-4 text-white/85">
+                  <pre className="max-h-48 overflow-y-auto whitespace-pre-wrap rounded-xl border border-white/10 bg-black/40 p-3 text-[11px] leading-5 text-white/85">
                     {promptPayload?.prompt || "（无）"}
                   </pre>
                 </div>
@@ -661,10 +659,10 @@ function EntityCard({ entity, accent, working, onGenerate, onUpload, onPunchAlph
                 </span>
               ) : null}
             </div>
-            <div className="p-2.5">
+            <div className="p-4">
               <div className="min-w-0">
                 <input
-                  className="w-full border-0 bg-transparent p-0 text-[13px] font-semibold outline-none"
+                  className="w-full border-0 bg-transparent p-0 font-semibold outline-none"
                   defaultValue={entity.name}
                   disabled={locked}
                   onBlur={(e) => {
@@ -683,8 +681,8 @@ function EntityCard({ entity, accent, working, onGenerate, onUpload, onPunchAlph
                 ) : null}
               </div>
               <textarea
-                className={`mt-2 w-full resize-y rounded-lg border border-transparent bg-[var(--panel-muted)] p-2 text-[11px] leading-4 outline-none focus:border-[var(--projector)] ${
-                  entity.kind === "character" ? "min-h-28" : "min-h-20"
+                className={`mt-3 w-full resize-y rounded-lg border border-transparent bg-[var(--panel-muted)] p-2.5 text-xs leading-5 outline-none focus:border-[var(--projector)] ${
+                  entity.kind === "character" ? "min-h-36" : "min-h-24"
                 }`}
                 defaultValue={entity.description || ""}
                 disabled={locked}

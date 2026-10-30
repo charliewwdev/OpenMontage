@@ -319,36 +319,10 @@ export function StudioShell({
   );
   const counts = stepCounts(bundle, focusEpisode);
   const caps = config?.capabilities || {};
-  const portraitMode = bundle?.project?.workflow === "portrait-match";
-  const portraitMatchMode = bundle?.project?.portraitMatchMode || "gen-likeness";
-  const steps = NAV_STEPS.map((s) => {
-    let label = s.label;
-    let note = s.note;
-    if (portraitMode) {
-      if (s.key === "script") {
-        label = portraitMatchMode === "reshoot" ? "重拍企划" : "对标说明";
-        note = portraitMatchMode === "reshoot" ? "妆造·场地·卡点" : "路径与质量边界";
-      } else if (s.key === "character") {
-        label = "妆造参考";
-        note = "非出片主锁（首尾帧才是）";
-      } else if (s.key === "scene") {
-        label = "场地参考";
-        note = "环境裁切参考";
-      } else if (s.key === "prop") {
-        label = "道具";
-        note = portraitMatchMode === "reshoot" ? "现场道具清单" : "本路径通常不用";
-      } else if (s.key === "workspace") {
-        label = portraitMatchMode === "reshoot" ? "卡点参考" : "工作台";
-        note = portraitMatchMode === "reshoot" ? "首尾帧现场对位" : "极像出片";
-      }
-    }
-    return {
-      ...s,
-      label,
-      note,
-      icon: STEP_ICONS[s.key] || s.icon || Clapperboard,
-    };
-  });
+  const steps = NAV_STEPS.map((s) => ({
+    ...s,
+    icon: STEP_ICONS[s.key] || s.icon || Clapperboard,
+  }));
   const navStep = WORKSPACE_KEYS.has(step) ? "workspace" : step;
   const activeMeta =
     steps.find((s) => s.key === navStep) || steps[0] || { key: step, label: step, note: "", icon: Clapperboard };
@@ -454,19 +428,19 @@ export function StudioShell({
           setMobileEpOpen(false);
           if (confirmed) setStep("workspace");
         }}
-        className={`w-full rounded-lg border px-2 py-1.5 text-left transition ${
+        className={`w-full rounded-xl border px-3 py-2.5 text-left transition ${
           active
-            ? "border-[#7c6cff]/55 bg-[#7c6cff]/15 shadow-[0_0_14px_rgba(124,108,255,.18)]"
+            ? "border-[#7c6cff]/55 bg-[#7c6cff]/15 shadow-[0_0_20px_rgba(124,108,255,.2)]"
             : "border-transparent hover:border-white/10 hover:bg-white/[.04]"
         }`}
       >
-        <div className="flex items-start justify-between gap-1.5">
+        <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <span className="timecode text-[9px] text-white/40">
+            <div className="flex items-center gap-2">
+              <span className="timecode text-[10px] text-white/40">
                 {String(episode.episodeNumber).padStart(2, "0")}
               </span>
-              <span className={`truncate text-[12px] font-semibold ${active ? "text-white" : "text-white/80"}`}>
+              <span className={`truncate text-sm font-semibold ${active ? "text-white" : "text-white/80"}`}>
                 {formatEpisodeLabel(episode.episodeNumber, episode.title) ||
                   t("studio_episode_item_title", {
                     n: episode.episodeNumber,
@@ -474,7 +448,7 @@ export function StudioShell({
                   })}
               </span>
             </div>
-            <div className="mt-0.5 flex flex-wrap items-center gap-1 text-[9px]">
+            <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[10px]">
               <span className={confirmed ? "text-[var(--ok)]" : "text-white/40"}>
                 {confirmed ? t("studio_episode_status_confirmed") : t("studio_episode_status_draft")}
               </span>
@@ -486,11 +460,11 @@ export function StudioShell({
               {dur ? <span className="text-white/35">{dur}</span> : null}
             </div>
           </div>
-          <span className="shrink-0 text-[9px] tabular-nums text-white/35">
+          <span className="shrink-0 text-[10px] tabular-nums text-white/35">
             {prepDone.length + (deskDone ? 1 : 0)}/5
           </span>
         </div>
-        <div className="mt-1.5 flex gap-0.5">
+        <div className="mt-2 flex gap-1">
           {steps.map((s) => {
             const done =
               s.key === "workspace"
@@ -502,7 +476,7 @@ export function StudioShell({
               <span
                 key={s.key}
                 title={s.label}
-                className={`h-1 flex-1 rounded-full ${done ? "bg-[var(--ok)]" : "bg-white/10"}`}
+                className={`h-1.5 flex-1 rounded-full ${done ? "bg-[var(--ok)]" : "bg-white/10"}`}
               />
             );
           })}
@@ -513,27 +487,27 @@ export function StudioShell({
 
   return (
     <main className="min-h-screen lg:h-screen lg:overflow-hidden">
-      <div className="grid min-h-screen lg:h-screen lg:grid-cols-[168px_1fr]">
+      <div className="grid min-h-screen lg:h-screen lg:grid-cols-[220px_1fr]">
         <aside className="hidden border-r border-[var(--line)] bg-[#0a0b10] lg:flex lg:h-screen lg:flex-col">
-          <div className="border-b border-[var(--line)] p-2">
+          <div className="border-b border-[var(--line)] p-3">
             <button
               type="button"
               onClick={onBack}
-              className="btn-secondary flex w-full !min-h-8 items-center justify-center gap-1.5 !px-2 text-[11px]"
+              className="btn-secondary flex w-full !min-h-9 items-center justify-center gap-1.5 !px-2 text-xs"
               aria-label={t("studio_action_back")}
               title={t("studio_action_back")}
             >
-              <ArrowLeft className="h-3.5 w-3.5 shrink-0" />
+              <ArrowLeft className="h-4 w-4 shrink-0" />
               <span className="truncate">{t("studio_action_back")}</span>
             </button>
-            <div className="mt-2">
-              <div className="timecode text-[8px] text-white/35">{t("studio_episode_rail_label")}</div>
-              <div className="mt-0.5 text-[12px] font-semibold text-white/85">
+            <div className="mt-3">
+              <div className="timecode text-[9px] text-white/35">{t("studio_episode_rail_label")}</div>
+              <div className="mt-0.5 text-sm font-semibold text-white/85">
                 {t("studio_episode_rail_count", { count: episodes.length })}
               </div>
             </div>
           </div>
-          <div className="scrollbar-thin min-h-0 flex-1 space-y-0.5 overflow-y-auto p-1.5">
+          <div className="scrollbar-thin min-h-0 flex-1 space-y-1 overflow-y-auto p-2">
             {episodes.length ? (
               episodes.map(renderEpisodeButton)
             ) : (
@@ -571,32 +545,32 @@ export function StudioShell({
             </div>
           ) : null}
           <header className="sticky top-0 z-30 border-b border-[var(--line)] bg-[#0c0e14]/95 backdrop-blur">
-            <div className="flex min-h-11 items-center justify-between gap-2 px-2.5 py-1.5 md:px-3">
-              <div className="flex min-w-0 items-center gap-2">
+            <div className="flex min-h-14 items-center justify-between gap-3 px-4 py-2 md:px-6">
+              <div className="flex min-w-0 items-center gap-3">
                 <button
                   type="button"
                   onClick={onBack}
-                  className="btn-secondary !min-h-8 shrink-0 !px-2.5 lg:hidden"
+                  className="btn-secondary !min-h-9 shrink-0 !px-3 lg:hidden"
                   aria-label={t("studio_action_back")}
                 >
-                  <ArrowLeft className="h-3.5 w-3.5" />
+                  <ArrowLeft className="h-4 w-4" />
                 </button>
                 <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <h1 className="truncate text-[14px] font-semibold leading-tight">{project.title || projectId}</h1>
-                    <span className="rounded-full border border-white/10 bg-white/[.04] px-1.5 py-0.5 text-[9px] text-white/55">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1 className="truncate text-lg font-semibold">{project.title || projectId}</h1>
+                    <span className="rounded-full border border-white/10 bg-white/[.04] px-2 py-0.5 text-[10px] text-white/55">
                       {project.genre || t("studio_meta_genre_unset")}
                     </span>
-                    <span className="rounded-full border border-white/10 bg-white/[.04] px-1.5 py-0.5 text-[9px] text-white/55">
+                    <span className="rounded-full border border-white/10 bg-white/[.04] px-2 py-0.5 text-[10px] text-white/55">
                       {project.ratio || "9:16"}
                     </span>
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  className="btn-secondary !min-h-8 lg:hidden"
+                  className="btn-secondary !min-h-9 lg:hidden"
                   onClick={() => setMobileEpOpen((v) => !v)}
                 >
                   {focusEpisode
@@ -610,11 +584,11 @@ export function StudioShell({
                   }}
                 />
                 {keysMissing ? (
-                  <button type="button" className="btn-secondary !min-h-8" onClick={() => onNeedKeys?.()}>
+                  <button type="button" className="btn-secondary !min-h-9" onClick={() => onNeedKeys?.()}>
                     <KeyRound className="h-3.5 w-3.5" /> {t("studio_action_keys")}
                   </button>
                 ) : null}
-                <button type="button" className="btn-secondary !min-h-8" onClick={onRefresh} disabled={loading}>
+                <button type="button" className="btn-secondary !min-h-9" onClick={onRefresh} disabled={loading}>
                   <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} /> {t("studio_action_refresh")}
                 </button>
               </div>
@@ -628,7 +602,7 @@ export function StudioShell({
               </div>
             ) : null}
 
-            <nav className="scrollbar-thin flex gap-0.5 overflow-x-auto border-t border-[var(--line)] px-1.5 py-1 md:px-2">
+            <nav className="scrollbar-thin flex gap-1 overflow-x-auto border-t border-[var(--line)] px-2 py-1.5 md:px-3">
               {steps.map((item, index) => {
                 const Icon = item.icon;
                 const active = item.key === navStep;
@@ -647,23 +621,23 @@ export function StudioShell({
                     key={item.key}
                     type="button"
                     onClick={() => setStep(item.key)}
-                    className={`flex min-w-[4.75rem] shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-left transition ${
+                    className={`flex min-w-[5.75rem] shrink-0 items-center gap-1.5 rounded-lg border px-2 py-1 text-left transition ${
                       active
-                        ? "border-transparent bg-[var(--gradient)] text-white shadow-[0_0_10px_rgba(124,108,255,.28)]"
+                        ? "border-transparent bg-[var(--gradient)] text-white shadow-[0_0_14px_rgba(124,108,255,.3)]"
                         : done
                           ? "border-[var(--ok)]/30 bg-[var(--ok)]/10 text-white/85 hover:bg-[var(--ok)]/15"
                           : "border-white/10 bg-white/[.03] text-white/65 hover:bg-white/[.06] hover:text-white"
                     }`}
                   >
-                    <span className="relative flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-black/20">
-                      {done && !active ? <Check className="h-2.5 w-2.5" /> : <Icon className="h-2.5 w-2.5" />}
-                      <span className="timecode absolute -right-1 -top-1 rounded-full bg-black/70 px-0.5 text-[6px] text-white/50">
+                    <span className="relative flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-black/20">
+                      {done && !active ? <Check className="h-3 w-3" /> : <Icon className="h-3 w-3" />}
+                      <span className="timecode absolute -right-1 -top-1 rounded-full bg-black/70 px-0.5 text-[7px] text-white/50">
                         {index + 1}
                       </span>
                     </span>
                     <span className="min-w-0">
-                      <span className="block truncate text-[10px] font-semibold leading-tight">{item.label}</span>
-                      <span className={`block truncate text-[8px] leading-tight ${active ? "text-white/70" : "text-white/35"}`}>
+                      <span className="block truncate text-[11px] font-semibold leading-tight">{item.label}</span>
+                      <span className={`block truncate text-[9px] leading-tight ${active ? "text-white/70" : "text-white/35"}`}>
                         {countLabel}
                       </span>
                     </span>
@@ -674,10 +648,10 @@ export function StudioShell({
           </header>
 
           {keysMissing ? (
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#f59e0b]/30 bg-[#f59e0b]/10 px-2.5 py-1.5 text-[11px] text-[#fde68a] md:px-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#f59e0b]/30 bg-[#f59e0b]/10 px-4 py-2.5 text-xs text-[#fde68a] md:px-6">
               <span>{t("studio_banner_keys_hint")}</span>
-              <button type="button" className="btn-primary !min-h-7 !px-2.5 text-[11px]" onClick={() => onNeedKeys?.()}>
-                <KeyRound className="h-3 w-3" /> {t("studio_action_keys")}
+              <button type="button" className="btn-primary !min-h-8 !px-3" onClick={() => onNeedKeys?.()}>
+                <KeyRound className="h-3.5 w-3.5" /> {t("studio_action_keys")}
               </button>
             </div>
           ) : null}
@@ -762,14 +736,14 @@ export function StudioShell({
 
           {/* Workspace owns its own toolbar title — avoid duplicating「工作台 · 第N集」. */}
           {navStep !== "workspace" ? (
-            <div className="border-b border-[var(--line)] bg-black/20 px-2.5 py-1.5 md:px-3">
+            <div className="border-b border-[var(--line)] bg-black/20 px-4 py-2 md:px-6">
               <div className="label !mb-0">
                 {t("studio_stage_label", { n: String(stageIndex).padStart(2, "0") })}
               </div>
-              <h2 className="text-[13px] font-semibold leading-tight">
+              <h2 className="text-base font-semibold">
                 {activeMeta.label}
                 {focusEpisode ? (
-                  <span className="ml-1.5 text-[11px] font-normal text-white/45">
+                  <span className="ml-2 text-sm font-normal text-white/45">
                     · {t("studio_stage_focus_episode", {
                       n: focusEpisode.episodeNumber,
                       title: focusEpisode.title || t("studio_episode_untitled"),
@@ -783,8 +757,8 @@ export function StudioShell({
           <div
             className={
               navStep === "workspace"
-                ? "flex min-h-0 flex-1 flex-col overflow-hidden p-1.5 md:p-2 lg:h-[calc(100vh-5.75rem)]"
-                : "scrollbar-thin min-h-[calc(100vh-8rem)] overflow-y-auto p-2 md:p-2.5 lg:h-[calc(100vh-8rem)]"
+                ? "flex min-h-0 flex-1 flex-col overflow-hidden p-2 md:p-2.5 lg:h-[calc(100vh-6.75rem)]"
+                : "scrollbar-thin min-h-[calc(100vh-9rem)] overflow-y-auto p-3 md:p-4 lg:h-[calc(100vh-9rem)]"
             }
           >
             {navStep === "script" && <ScriptStep {...common} />}

@@ -306,7 +306,7 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
         <div className="provider-card-icon">{initials || "AI"}</div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="truncate text-[13px] font-semibold tracking-tight">{p.label}</h3>
+            <h3 className="truncate text-[15px] font-semibold tracking-tight">{p.label}</h3>
             {isActive ? <span className="provider-badge-active">使用中</span> : null}
             {!p.configured ? (
               <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] text-[var(--muted)]">
@@ -395,7 +395,7 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
 
   const nvidiaConfigured = Boolean(status?.nvidia?.configured);
   const nvidiaSection = (
-    <section className="provider-card !items-stretch !flex-col gap-2 sm:!flex-row sm:!items-center">
+    <section className="provider-card !items-stretch !flex-col gap-3 sm:!flex-row sm:!items-center">
       <div className="provider-card-icon">N</div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
@@ -427,7 +427,7 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
   );
 
   const volcSection = (
-    <section className="provider-card !items-stretch !flex-col gap-2 sm:!flex-row sm:!items-center">
+    <section className="provider-card !items-stretch !flex-col gap-3 sm:!flex-row sm:!items-center">
       <div className="provider-card-icon">火</div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
@@ -453,7 +453,7 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
   );
 
   const comfySection = (
-    <section className="provider-card !items-stretch !flex-col gap-2 sm:!flex-row sm:!items-start">
+    <section className="provider-card !items-stretch !flex-col gap-3 sm:!flex-row sm:!items-start">
       <div className="provider-card-icon">C</div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
@@ -491,7 +491,7 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
   );
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-[var(--muted)]">
           已配置项置顶；火山与 ComfyUI 归入「媒体」分组。已保存的 Key 仍在服务端，不会因页面改版丢失。
@@ -1234,7 +1234,7 @@ export function UsageSettings() {
 
   return (
     <PageShell eyebrow="Settings" title="用量统计" description="查看调用次数、Token、费用与请求日志。">
-      <div className="space-y-3">
+      <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3">
         <div className="usage-seg">
           {[
@@ -1275,7 +1275,7 @@ export function UsageSettings() {
       </div>
 
       {loading && !data ? (
-        <div className="panel flex items-center gap-2 px-3 py-6 text-[12px] text-[var(--muted)]">
+        <div className="panel flex items-center gap-2 px-5 py-10 text-sm text-[var(--muted)]">
           <Loader2 className="h-4 w-4 animate-spin" /> 加载用量…
         </div>
       ) : (
@@ -1290,7 +1290,7 @@ export function UsageSettings() {
             ].map(([label, value]) => (
               <div key={label} className="usage-hero">
                 <div className="text-[11px] uppercase tracking-[0.08em] text-[var(--muted)]">{label}</div>
-                <div className="mt-1 text-[1.25rem] font-semibold tracking-tight">{value}</div>
+                <div className="mt-1.5 text-2xl font-semibold tracking-tight">{value}</div>
               </div>
             ))}
           </div>
@@ -1474,8 +1474,7 @@ export function KeysSettings({ config, onUpdated }) {
   const refresh = async () => {
     setLoading(true);
     try {
-      // Live-probe Comfy so reachable is honest (configured ≠ connected).
-      const data = await api("/api/settings/keys?probe=1");
+      const data = await api("/api/settings/keys");
       setStatus(data.keys);
       onUpdated?.(data);
     } catch (error) {
@@ -1524,7 +1523,7 @@ export function KeysSettings({ config, onUpdated }) {
       description={`管理文本与媒体供应商。当前文本后端：${activeLabel}`}
     >
       {loading && !status ? (
-        <div className="panel flex items-center gap-2 px-3 py-6 text-[12px] text-[var(--muted)]">
+        <div className="panel flex items-center gap-2 px-5 py-10 text-sm text-[var(--muted)]">
           <Loader2 className="h-4 w-4 animate-spin" /> 读取配置…
         </div>
       ) : (

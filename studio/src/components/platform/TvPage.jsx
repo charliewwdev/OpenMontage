@@ -53,7 +53,7 @@ export function TvPage({ onOpenProject }) {
       title="作品频道"
       description="只展示已成功导出的成片，支持搜索与排序，方便回看与继续剪辑。"
     >
-      <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
         {[
           ["latest", "最新"],
           ["oldest", "最早"],
@@ -62,20 +62,20 @@ export function TvPage({ onOpenProject }) {
             {label}
           </button>
         ))}
-        <label className="relative min-w-[180px] flex-1">
+        <label className="relative min-w-[200px] flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted)]" />
           <input className="field !pl-10" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="搜索成片或项目…" />
         </label>
       </div>
 
       {loading ? (
-        <div className="panel flex items-center justify-center gap-2 py-10 text-[12px] text-[var(--muted)]">
+        <div className="panel flex items-center justify-center gap-2 py-20 text-sm text-[var(--muted)]">
           <Loader2 className="h-4 w-4 animate-spin" /> 加载成片…
         </div>
       ) : !visible.length ? (
-        <div className="panel flex flex-col items-center justify-center gap-3 py-10 text-center">
-          <Clapperboard className="h-6 w-6 text-[var(--muted)]" />
-          <p className="text-[12px] text-[var(--muted)]">
+        <div className="panel flex flex-col items-center justify-center gap-4 py-20 text-center">
+          <Clapperboard className="h-8 w-8 text-[var(--muted)]" />
+          <p className="text-sm text-[var(--muted)]">
             {items.length ? "没有匹配的成片" : "还没有导出成片。完成剪辑步骤后会出现在这里。"}
           </p>
           <p className="max-w-md text-xs text-white/35">

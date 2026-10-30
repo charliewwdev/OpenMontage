@@ -244,9 +244,9 @@ export function AgentPage({ config, seedPrompt = "", onCreated, onNeedKeys, onRe
       title="创作 Agent"
       description="一句话或整段剧本，可只生成剧本，也可一键跑通整部短剧：多集剧本 → 角色场景 → 分镜视频 → 配音 → 逐集成片。"
     >
-      <div className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_300px]">
-        <section className="panel p-3 md:p-3.5">
-          <div className="mb-3 flex flex-wrap gap-1.5">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <section className="panel p-5 md:p-6">
+          <div className="mb-4 flex flex-wrap gap-2">
             <button
               type="button"
               className={mode === "full" ? "btn-primary" : "btn-secondary"}
@@ -273,7 +273,7 @@ export function AgentPage({ config, seedPrompt = "", onCreated, onNeedKeys, onRe
           <label>
             <span className="label">一句话想法 / 粘贴剧本</span>
             <textarea
-              className="field min-h-40 resize-y leading-6"
+              className="field min-h-56 resize-y leading-7"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="例如：都市爽剧一句话钩子；或直接粘贴已有分场剧本…"
@@ -385,9 +385,9 @@ export function AgentPage({ config, seedPrompt = "", onCreated, onNeedKeys, onRe
           ) : null}
         </section>
 
-        <aside className="space-y-2.5">
-          <section className="panel space-y-1.5 p-3 text-[12px] leading-5">
-            <strong className="block text-[13px]">运行检查</strong>
+        <aside className="space-y-4">
+          <section className="panel space-y-3 p-5 text-sm leading-6">
+            <strong className="block">运行检查</strong>
             <p className="text-[var(--muted)]">文本后端：{backend}</p>
             <p className="text-[var(--muted)]">文本模型：{llmReady ? `就绪（${backend}）` : "未配置"}</p>
             <p className="text-[var(--muted)]">出图：{imageReady ? (caps.comfyui ? "ComfyUI 就绪" : seedreamReady ? "Seedream 就绪" : "就绪") : "未配置（ComfyUI 或 Seedream）"}</p>
@@ -402,9 +402,9 @@ export function AgentPage({ config, seedPrompt = "", onCreated, onNeedKeys, onRe
           </section>
 
           {steps.length ? (
-            <section className="panel p-3">
-              <div className="mb-2 flex items-center justify-between gap-2">
-                <strong className="block text-[13px]">全流程进度</strong>
+            <section className="panel p-5">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <strong className="block text-sm">全流程进度</strong>
                 {jobElapsed ? <span className="text-[11px] text-white/45">已耗时 {jobElapsed}</span> : null}
               </div>
               <ul className="space-y-2 text-xs">
@@ -456,8 +456,8 @@ export function AgentPage({ config, seedPrompt = "", onCreated, onNeedKeys, onRe
             </section>
           ) : null}
 
-          <section className="panel p-3">
-            <strong className="mb-2 block text-[13px]">执行日志</strong>
+          <section className="panel p-5">
+            <strong className="mb-3 block text-sm">执行日志</strong>
             {!logs.length ? (
               <p className="text-xs text-[var(--muted)]">点击开始后，这里会显示建项与各阶段进度。</p>
             ) : (

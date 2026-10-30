@@ -1113,17 +1113,17 @@ export function SegmentWorkspace({
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-1 text-[11px] leading-snug">
+    <div className="flex h-full min-h-0 flex-col gap-1.5 text-[12px] leading-snug">
       {/* Compact toolbar — compact density */}
-      <div className="flex shrink-0 flex-wrap items-center gap-1.5 rounded-lg border border-white/10 bg-[#0c0e14] px-1.5 py-1">
+      <div className="flex shrink-0 flex-wrap items-center gap-2 rounded-lg border border-white/10 bg-[#0c0e14] px-2 py-1.5">
         <div className="min-w-0 shrink">
-          <h2 className="truncate text-[12px] font-semibold text-white">
+          <h2 className="truncate text-[13px] font-semibold text-white">
             工作台
-            <span className="ml-1 text-[10px] font-normal text-white/45">
+            <span className="ml-1.5 text-[11px] font-normal text-white/45">
               · 第{episode.episodeNumber}集「{episode.title || "未命名"}」
             </span>
           </h2>
-          <p className="text-[9px] text-white/40">
+          <p className="text-[10px] text-white/40">
             {segments.length} 片段 · {readyCount}/{segments.length} 已出片 · 约 {Math.round(totalDur)}s
           </p>
           <SkillExpertBadge skillId="drama-shot-prompt" className="mt-1" />
@@ -1711,7 +1711,7 @@ export function SegmentWorkspace({
               <div
                 className={`relative overflow-hidden rounded-lg bg-black ${
                   ratio === "9:16"
-                    ? "aspect-[9/16] h-[min(36vh,240px)] w-auto max-w-full"
+                    ? "aspect-[9/16] h-[min(42vh,300px)] w-auto max-w-full"
                     : "aspect-video w-full max-w-full"
                 }`}
               >

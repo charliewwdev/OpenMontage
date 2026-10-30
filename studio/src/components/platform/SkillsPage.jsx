@@ -136,7 +136,7 @@ export function SkillsPage({ config, onUsePrompt, onUseSkill }) {
         </>
       }
     >
-      <label className="relative mb-2.5 block">
+      <label className="relative mb-4 block">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted)]" />
         <input
           className="field !pl-10"
@@ -160,7 +160,7 @@ export function SkillsPage({ config, onUsePrompt, onUseSkill }) {
           </Chip>
         ))}
       </div>
-      <div className="mb-3 flex flex-wrap gap-1.5">
+      <div className="mb-6 flex flex-wrap gap-2">
         {tagOptions.map((item) => (
           <Chip key={item} active={tag === item} onClick={() => setTag(item)}>
             {item}
@@ -168,24 +168,24 @@ export function SkillsPage({ config, onUsePrompt, onUseSkill }) {
         ))}
       </div>
 
-      <div className="mb-2.5 flex items-center gap-2 text-[12px] text-white/70">
+      <div className="mb-4 flex items-center gap-2 text-sm text-white/70">
         <CheckCircle2 className="h-4 w-4 text-[#60a5fa]" />
         <span className="font-medium">官方精选</span>
         <span className="rounded-full bg-[#60a5fa]/15 px-2 py-0.5 text-[11px] text-[#93c5fd]">{officialCount} 个可用</span>
       </div>
 
       {loading ? (
-        <div className="panel flex items-center justify-center gap-2 py-10 text-[12px] text-[var(--muted)]">
+        <div className="panel flex items-center justify-center gap-2 py-20 text-sm text-[var(--muted)]">
           <Loader2 className="h-4 w-4 animate-spin" /> 加载 Skill…
         </div>
       ) : !filtered.length ? (
-        <div className="panel py-10 text-center text-[12px] text-[var(--muted)]">没有匹配的 Skill</div>
+        <div className="panel py-20 text-center text-sm text-[var(--muted)]">没有匹配的 Skill</div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((skill) => (
             <article
               key={skill.id}
-              className="panel flex flex-col p-3 transition hover:-translate-y-0.5 hover:border-white/20"
+              className="panel flex flex-col p-5 transition hover:-translate-y-0.5 hover:border-white/20"
             >
               <button type="button" className="flex flex-1 flex-col text-left" onClick={() => setActive(skill)}>
                 <span
@@ -315,7 +315,7 @@ export function SkillsPage({ config, onUsePrompt, onUseSkill }) {
             <div className="flex items-start justify-between gap-3 border-b border-white/10 p-5">
               <div>
                 <div className="label">{active.slash || `/${active.id}`}</div>
-                <h2 className="text-[1.1rem] font-semibold">{active.title}</h2>
+                <h2 className="text-xl font-semibold">{active.title}</h2>
                 <p className="mt-2 text-sm text-[var(--muted)]">{active.summary}</p>
               </div>
               <button type="button" className="btn-secondary !min-h-8 !px-2" onClick={() => setActive(null)}>

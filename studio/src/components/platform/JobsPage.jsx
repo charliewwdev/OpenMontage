@@ -55,9 +55,9 @@ function ProgressBar({ pct = 0, tone = "sky", label }) {
 
 function StatCard({ label, value, hint, progress }) {
   return (
-    <div className="panel space-y-1 px-2.5 py-2">
-      <div className="text-[10px] uppercase tracking-wide text-[var(--muted)]">{label}</div>
-      <div className="text-[1.15rem] font-semibold tabular-nums">{value ?? "—"}</div>
+    <div className="panel space-y-2 px-4 py-3">
+      <div className="text-[11px] uppercase tracking-wide text-[var(--muted)]">{label}</div>
+      <div className="text-2xl font-semibold tabular-nums">{value ?? "—"}</div>
       {hint ? <div className="text-[11px] text-[var(--muted)]">{hint}</div> : null}
       {typeof progress === "number" ? <ProgressBar pct={progress} tone="sky" /> : null}
     </div>
@@ -70,12 +70,12 @@ function JobRow({ job, onOpen }) {
   const prog = job.progress || {};
   const barTone = job.status === "failed" ? "rose" : job.status === "paused" ? "amber" : job.status === "done" ? "emerald" : "sky";
   return (
-    <div className="panel space-y-2 px-2.5 py-2.5">
-      <div className="flex flex-wrap items-start justify-between gap-2">
+    <div className="panel space-y-3 px-4 py-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <button
             type="button"
-            className="truncate text-left text-[13px] font-semibold hover:underline"
+            className="truncate text-left text-sm font-semibold hover:underline"
             onClick={() => onOpen?.(job.projectId)}
           >
             {job.title || job.projectId}
@@ -307,7 +307,7 @@ export function JobsPage({ onOpenProject }) {
         </div>
       }
     >
-      <div className="space-y-3">
+      <div className="space-y-5">
         {data?.note ? <p className="text-xs text-[var(--muted)]">{data.note}</p> : null}
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -335,11 +335,11 @@ export function JobsPage({ onOpenProject }) {
         <section className="space-y-3">
           <h2 className="text-sm font-semibold">一键全流程</h2>
           {loading && !data ? (
-            <div className="panel flex items-center gap-2 px-3 py-6 text-[12px] text-[var(--muted)]">
+            <div className="panel flex items-center gap-2 px-5 py-10 text-sm text-[var(--muted)]">
               <Loader2 className="h-4 w-4 animate-spin" /> 加载任务…
             </div>
           ) : jobs.length === 0 ? (
-            <div className="panel px-3 py-6 text-[12px] text-[var(--muted)]">当前没有可见的全流程任务。</div>
+            <div className="panel px-5 py-10 text-sm text-[var(--muted)]">当前没有可见的全流程任务。</div>
           ) : (
             <div className="space-y-3">
               {jobs.map((job) => (

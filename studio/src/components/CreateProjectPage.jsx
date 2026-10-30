@@ -181,36 +181,36 @@ export function CreateProjectPage({ config, entryMode = null, onBack, onCreated,
   };
 
   return (
-    <main className="min-h-screen p-1.5 md:p-2">
-      <div className="yc-frame mx-0 w-full max-w-none p-2.5 md:p-3">
-      <header className="overflow-hidden rounded-xl border border-white/10 bg-[linear-gradient(135deg,#15182a_0%,#1a1240_45%,#0d1b3a_100%)] text-white shadow-float">
-        <div className="grid lg:grid-cols-[1fr_280px]">
-          <div className="p-4 md:p-5">
+    <main className="min-h-screen p-2 md:p-3">
+      <div className="yc-frame mx-0 w-full max-w-none p-3 md:p-4">
+      <header className="overflow-hidden rounded-[22px] border border-white/10 bg-[linear-gradient(135deg,#15182a_0%,#1a1240_45%,#0d1b3a_100%)] text-white shadow-float">
+        <div className="grid lg:grid-cols-[1fr_360px]">
+          <div className="p-6 md:p-9">
             <button
               type="button"
               onClick={onBack}
-              className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-white/55 transition hover:text-white"
+              className="inline-flex items-center gap-2 text-xs font-semibold text-white/55 transition hover:text-white"
             >
-              <ArrowLeft className="h-3.5 w-3.5" /> 返回影视工坊
+              <ArrowLeft className="h-4 w-4" /> 返回影视工坊
             </button>
-            <div className="mt-4 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.16em] text-white/45">
-              <Clapperboard className="h-3.5 w-3.5 text-[#b7acff]" /> New production
+            <div className="mt-10 flex items-center gap-3 text-xs font-bold uppercase tracking-[.2em] text-white/45">
+              <Clapperboard className="h-4 w-4 text-[#b7acff]" /> New production
             </div>
-            <h1 className="mt-2 text-[1.45rem] font-semibold leading-tight md:text-[1.75rem]">
+            <h1 className="mt-3 text-4xl font-semibold md:text-5xl">
               {isUpload ? "上传剧本建项" : entryMode?.id === "formal" ? "正剧项目" : "建立新项目"}
             </h1>
-            <p className="mt-2 max-w-3xl text-[12px] leading-5 text-white/60 md:text-[13px]">
+            <p className="mt-4 max-w-3xl text-sm leading-7 text-white/60 md:text-base">
               {isUpload
                 ? "支持 TXT / MD / DOCX。导入后可再改片名、题材与风格，再进入六步生产线。"
                 : "先确定故事方向与统一画面语言。建立后从专业剧本开始，继续整理角色、场景和道具，再进入分镜与成片。"}
             </p>
           </div>
-          <div className="relative border-t border-white/10 bg-black/20 p-4 lg:border-l lg:border-t-0 md:p-5">
-            <div className="timecode text-[9px] text-[#b7acff]">PROJECT SETUP / 01</div>
-            <p className="mt-2 text-[12px] leading-5 text-white/65">
+          <div className="relative border-t border-white/10 bg-black/20 p-6 lg:border-l lg:border-t-0 md:p-8">
+            <div className="timecode text-[10px] text-[#b7acff]">PROJECT SETUP / 01</div>
+            <p className="mt-4 text-sm leading-7 text-white/65">
               这里保存的是创作底稿，不必一开始就写得完美。一句话也能交给 AI 补全，所有结果仍可继续编辑。
             </p>
-            <ol className="mt-3 space-y-1 text-[12px] text-white/70">
+            <ol className="mt-6 space-y-2 text-sm text-white/70">
               {creationSteps.map((step, i) => (
                 <li key={step} className="flex gap-3 border-b border-white/10 py-2">
                   <span className="timecode text-[10px] text-[#b7acff]">{String(i + 1).padStart(2, "0")}</span>
@@ -223,10 +223,10 @@ export function CreateProjectPage({ config, entryMode = null, onBack, onCreated,
       </header>
 
       {!config?.capabilities?.deepseek ? (
-        <section className="mt-3 flex flex-col gap-2 rounded-xl border border-[#f59e0b]/40 bg-[linear-gradient(90deg,rgba(245,158,11,.16),rgba(239,68,68,.1))] px-3 py-2.5 md:flex-row md:items-center md:justify-between md:px-3.5">
-          <div className="text-[12px] text-white/85">
+        <section className="mt-4 flex flex-col gap-3 rounded-2xl border border-[#f59e0b]/40 bg-[linear-gradient(90deg,rgba(245,158,11,.16),rgba(239,68,68,.1))] px-4 py-4 md:flex-row md:items-center md:justify-between md:px-5">
+          <div className="text-sm text-white/85">
             <strong className="block">AI 优化需求需要文本大模型 Key</strong>
-            <span className="mt-0.5 block text-white/60">可先建项目，生成剧本前请一键配置密钥。</span>
+            <span className="mt-1 block text-white/60">可先建项目，生成剧本前请一键配置密钥。</span>
           </div>
           <button type="button" className="btn-primary shrink-0" onClick={() => onNeedKeys?.()}>
             <KeyRound className="h-4 w-4" /> 一键配置密钥
@@ -234,13 +234,13 @@ export function CreateProjectPage({ config, entryMode = null, onBack, onCreated,
         </section>
       ) : null}
 
-      <div className="mt-3 grid gap-3 xl:grid-cols-[minmax(0,1fr)_280px]">
-        <div className="space-y-3">
+      <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="space-y-6">
           {isUpload ? (
-            <section className="panel p-3 md:p-3.5">
+            <section className="panel p-5 md:p-7">
               <div className="label">Script upload</div>
-              <h2 className="display-type text-[1.15rem] font-semibold md:text-[1.3rem]">上传剧本文件</h2>
-              <p className="mt-0.5 text-[12px] leading-5 text-[var(--muted)]">TXT / Markdown / Word（.docx）。内容会填入创作想法，可继续编辑。</p>
+              <h2 className="display-type text-2xl font-semibold">上传剧本文件</h2>
+              <p className="mt-1 text-sm leading-6 text-[var(--muted)]">TXT / Markdown / Word（.docx）。内容会填入创作想法，可继续编辑。</p>
               <input
                 ref={fileRef}
                 type="file"
@@ -264,11 +264,11 @@ export function CreateProjectPage({ config, entryMode = null, onBack, onCreated,
               {uploadName ? <p className="mt-3 text-xs text-[var(--muted)]">已导入：{uploadName}</p> : null}
             </section>
           ) : null}
-          <section className="panel p-3 md:p-3.5">
+          <section className="panel p-5 md:p-7">
             <div className="label">Basic setup</div>
-            <h2 className="display-type text-[1.15rem] font-semibold md:text-[1.3rem]">故事身份</h2>
-            <p className="mt-0.5 text-[12px] leading-5 text-[var(--muted)]">先给项目一个可识别的名字，再选择最接近的题材方向。</p>
-            <div className="mt-3 space-y-3">
+            <h2 className="display-type text-2xl font-semibold">故事身份</h2>
+            <p className="mt-1 text-sm leading-6 text-[var(--muted)]">先给项目一个可识别的名字，再选择最接近的题材方向。</p>
+            <div className="mt-5 space-y-5">
               <label>
                 <span className="label">片名</span>
                 <input
@@ -292,14 +292,14 @@ export function CreateProjectPage({ config, entryMode = null, onBack, onCreated,
             </div>
           </section>
 
-          <section className="panel p-3 md:p-3.5">
-            <div className="flex flex-wrap items-start justify-between gap-2">
+          <section className="panel p-5 md:p-7">
+            <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <div className="label">Story brief</div>
-                <label htmlFor="project-brief" className="display-type block text-[1.15rem] font-semibold md:text-[1.3rem]">
+                <label htmlFor="project-brief" className="display-type block text-2xl font-semibold">
                   创作想法 / 原始故事
                 </label>
-                <p className="mt-0.5 text-[12px] leading-5 text-[var(--muted)]">
+                <p className="mt-1 text-sm leading-6 text-[var(--muted)]">
                   写一句话、详细大纲或粘贴已有素材。AI 优化会保存当前版本，随时可以恢复。
                 </p>
               </div>
@@ -323,7 +323,7 @@ export function CreateProjectPage({ config, entryMode = null, onBack, onCreated,
             </div>
             <textarea
               id="project-brief"
-              className="field mt-3 min-h-[280px] resize-y leading-6 md:min-h-[360px]"
+              className="field mt-5 min-h-[420px] resize-y leading-7 md:min-h-[520px]"
               value={form.brief}
               onChange={(event) => setForm({ ...form, brief: event.target.value })}
               placeholder={BRIEF_PLACEHOLDER}
@@ -338,10 +338,10 @@ export function CreateProjectPage({ config, entryMode = null, onBack, onCreated,
             </div>
           </section>
 
-          <section className="panel p-3 md:p-3.5">
+          <section className="panel p-5 md:p-7">
             <div className="label">Visual language</div>
-            <h2 className="display-type text-[1.15rem] font-semibold md:text-[1.3rem]">视觉风格</h2>
-            <p className="mb-3 mt-0.5 text-[12px] leading-5 text-[var(--muted)]">
+            <h2 className="display-type text-2xl font-semibold">视觉风格</h2>
+            <p className="mb-5 mt-1 text-sm leading-6 text-[var(--muted)]">
               统一角色、场景、道具和所有分镜的材质、色彩、光线与构图语言。
             </p>
             <VideoStylePicker
@@ -354,11 +354,11 @@ export function CreateProjectPage({ config, entryMode = null, onBack, onCreated,
           </section>
         </div>
 
-        <aside className="space-y-3 xl:sticky xl:top-3 xl:self-start">
-          <section className="panel p-3">
+        <aside className="space-y-5 xl:sticky xl:top-6 xl:self-start">
+          <section className="panel p-5">
             <div className="label">Frame</div>
-            <h2 className="display-type text-[1.05rem] font-semibold">画面比例</h2>
-            <div className="mt-2.5">
+            <h2 className="display-type text-xl font-semibold">画面比例</h2>
+            <div className="mt-4">
               <AspectRatioPicker
                 value={form.ratio}
                 onChange={(ratio) => setForm({ ...form, ratio })}
@@ -366,21 +366,21 @@ export function CreateProjectPage({ config, entryMode = null, onBack, onCreated,
                 ratios={ratios}
               />
             </div>
-            <div className="panel-muted mt-2.5 p-2.5">
-              <div className="timecode text-[9px] text-[var(--muted)]">PRODUCTION LOCK</div>
-              <p className="mt-1 text-[11px] leading-4 text-[var(--muted)]">
+            <div className="panel-muted mt-4 p-4">
+              <div className="timecode text-[10px] text-[var(--muted)]">PRODUCTION LOCK</div>
+              <p className="mt-2 text-xs leading-6 text-[var(--muted)]">
                 画幅会贯穿角色、场景、道具、分镜与最终成片，建立后仍可在剧本页调整。
               </p>
             </div>
           </section>
 
-          <section className="panel p-3">
+          <section className="panel p-5">
             <div className="label">Ready</div>
-            <h2 className="display-type text-[1.05rem] font-semibold">进入剧本台</h2>
-            <p className="mt-1.5 text-[12px] leading-5 text-[var(--muted)]">
+            <h2 className="display-type text-xl font-semibold">进入剧本台</h2>
+            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
               可只建项进六步工坊，或一句话/剧本直接后台跑通到成片。
             </p>
-            <button type="button" className="btn-primary mt-3 w-full" disabled={formLocked} onClick={() => void createAndAutoProduce()}>
+            <button type="button" className="btn-primary mt-5 w-full" disabled={formLocked} onClick={() => void createAndAutoProduce()}>
               {autoRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
               {autoRunning ? "全流程启动中…" : "一键全流程成片"}
             </button>

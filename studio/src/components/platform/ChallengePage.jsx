@@ -67,49 +67,49 @@ export function ChallengePage({ config, onStart }) {
       title={page.title || "创作挑战"}
       description={page.description || "限时主题任务，练熟六步工坊节奏；接受后会把 brief 带入创作 Agent。完成可获得本地创作积分。"}
     >
-      <div className="mb-3 grid gap-2 sm:grid-cols-4">
-        <article className="panel p-2.5">
-          <div className="text-[11px] text-[var(--muted)]">全部挑战</div>
-          <strong className="mt-0.5 block text-[1.2rem]">{challenges.length}</strong>
+      <div className="mb-5 grid gap-3 sm:grid-cols-4">
+        <article className="panel p-4">
+          <div className="text-xs text-[var(--muted)]">全部挑战</div>
+          <strong className="mt-1 block text-2xl">{challenges.length}</strong>
         </article>
-        <article className="panel p-2.5">
-          <div className="text-[11px] text-[var(--muted)]">进行中</div>
-          <strong className="mt-0.5 block text-[1.2rem]">
+        <article className="panel p-4">
+          <div className="text-xs text-[var(--muted)]">进行中</div>
+          <strong className="mt-1 block text-2xl">
             {Object.values(progress).filter((p) => p.status === "accepted").length}
           </strong>
         </article>
-        <article className="panel p-2.5">
-          <div className="text-[11px] text-[var(--muted)]">已完成</div>
-          <strong className="mt-0.5 block text-[1.2rem]">
+        <article className="panel p-4">
+          <div className="text-xs text-[var(--muted)]">已完成</div>
+          <strong className="mt-1 block text-2xl">
             {Object.values(progress).filter((p) => p.status === "done").length}
           </strong>
         </article>
-        <article className="panel p-2.5">
-          <div className="text-[11px] text-[var(--muted)]">创作积分</div>
-          <strong className="mt-0.5 block text-[1.2rem]">{balance ?? "—"}</strong>
+        <article className="panel p-4">
+          <div className="text-xs text-[var(--muted)]">创作积分</div>
+          <strong className="mt-1 block text-2xl">{balance ?? "—"}</strong>
         </article>
       </div>
 
       {!challenges.length ? (
-        <div className="panel py-10 text-center text-[12px] text-[var(--muted)]">暂无挑战，稍后再来</div>
+        <div className="panel py-20 text-center text-sm text-[var(--muted)]">暂无挑战，稍后再来</div>
       ) : (
-        <div className="grid gap-2 lg:grid-cols-3">
+        <div className="grid gap-3 lg:grid-cols-3">
           {challenges.map((item, index) => {
             const state = progress[item.id]?.status || "open";
             return (
-              <article key={item.id} className="panel flex flex-col p-3">
+              <article key={item.id} className="panel flex flex-col p-5">
                 <div className="flex items-start justify-between gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#f59e0b]/15 text-[#fbbf24]">
-                    <Trophy className="h-4 w-4" />
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#f59e0b]/15 text-[#fbbf24]">
+                    <Trophy className="h-5 w-5" />
                   </span>
                   <span className="rounded-full bg-white/[.06] px-2 py-0.5 text-[10px] text-white/45">
                     {state === "done" ? "已完成" : state === "accepted" ? "进行中" : `#${index + 1}`}
                   </span>
                 </div>
-                <h3 className="mt-2.5 text-[14px] font-semibold">{item.title}</h3>
-                <p className="mt-1 text-[11px] text-[#fbbf24]">{item.prize}</p>
-                <p className="mt-1.5 flex-1 text-[12px] leading-5 text-[var(--muted)]">{item.brief}</p>
-                <div className="mt-2.5 flex flex-wrap gap-1.5">
+                <h3 className="mt-4 text-lg font-semibold">{item.title}</h3>
+                <p className="mt-1 text-xs text-[#fbbf24]">{item.prize}</p>
+                <p className="mt-3 flex-1 text-sm leading-7 text-[var(--muted)]">{item.brief}</p>
+                <div className="mt-4 flex flex-wrap gap-2">
                   <button
                     type="button"
                     className="btn-primary flex-1"

@@ -268,7 +268,7 @@ export function PlatformShell({
       >
         <div className={`shrink-0 ${collapsed ? "px-1.5 py-2.5" : "px-2.5 py-3"}`}>
           <div className={`flex items-center ${collapsed ? "justify-center gap-1" : "gap-2"}`}>
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[var(--gradient)] text-white shadow-[0_6px_16px_rgba(225,29,72,.22)]">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[var(--gradient)] text-white shadow-[0_6px_16px_rgba(124,108,255,.22)]">
               <img src="/favicon.svg" alt="" className="h-7 w-7" width={28} height={28} />
             </span>
             {!collapsed ? (

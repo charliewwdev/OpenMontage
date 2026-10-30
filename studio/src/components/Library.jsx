@@ -307,12 +307,12 @@ export function Library({
   return (
     <main className="min-h-screen p-1.5 md:p-2">
       <div className="yc-frame mx-0 min-h-[calc(100vh-1.75rem)] w-full max-w-none overflow-hidden p-2.5 md:p-3">
-        <header className="relative overflow-hidden rounded-xl border border-white/10 bg-[#12141a] px-3 py-2.5 md:px-4 md:py-3">
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_88%_12%,rgba(225,29,72,.16),transparent_42%),radial-gradient(circle_at_12%_80%,rgba(196,165,116,.08),transparent_45%)]" />
+        <header className="relative overflow-hidden rounded-xl border border-white/10 bg-[linear-gradient(135deg,#15182a_0%,#1a1240_45%,#0d1b3a_100%)] px-3 py-2.5 md:px-4 md:py-3">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(124,108,255,.28),transparent_40%)]" />
           <div className="relative flex flex-wrap items-end justify-between gap-2">
             <div className="min-w-0">
               <div className="flex items-center gap-2 text-[11px] font-semibold text-white/55">
-                <Clapperboard className="h-3.5 w-3.5 text-[var(--accent-2)]" />
+                <Clapperboard className="h-3.5 w-3.5 text-[#b7acff]" />
                 影视工坊
               </div>
               <h1 className="mt-0.5 text-[1.05rem] font-semibold tracking-tight md:text-[1.2rem]">从剧本到成片，七步生产线</h1>
@@ -342,14 +342,14 @@ export function Library({
           </section>
         ) : null}
 
-        <section className="mt-3 rounded-xl border border-[var(--accent)]/30 bg-[var(--gradient-soft)] px-3 py-2 md:px-4">
+        <section className="mt-3 rounded-xl border border-[#7c6cff]/35 bg-[linear-gradient(90deg,rgba(124,108,255,.18),rgba(79,140,255,.12))] px-3 py-2 md:px-4">
           <div className="flex flex-wrap items-center gap-2 text-xs text-white/80">
-            <Sparkles className="h-3.5 w-3.5 shrink-0 text-[var(--accent-2)]" />
+            <Sparkles className="h-3.5 w-3.5 shrink-0 text-[#c4b5fd]" />
             <span className="font-semibold">七步生产线</span>
             <span className="text-white/35">|</span>
             {stepLabels.map((label, i) => (
               <span key={`${label}-${i}`} className="inline-flex items-center gap-1 text-white/70">
-                <span className="timecode text-[10px] text-[var(--metal)]">{i + 1}</span>
+                <span className="timecode text-[10px] text-[#a5b4fc]">{i + 1}</span>
                 {label}
                 {i < stepLabels.length - 1 ? <span className="text-white/25">→</span> : null}
               </span>

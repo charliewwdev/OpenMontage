@@ -176,12 +176,12 @@ export function AuthPage({ brand, tagline, authConfig, onAuthed, onClose, mode =
       onClick={isModal && onClose ? (e) => { if (e.target === e.currentTarget) onClose(); } : undefined}
     >
       {!isModal ? (
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(225,29,72,.22),_transparent_55%),radial-gradient(ellipse_at_bottom,_rgba(56,189,248,.12),_transparent_50%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(124,108,255,.22),_transparent_55%),radial-gradient(ellipse_at_bottom,_rgba(56,189,248,.12),_transparent_50%)]" />
       ) : null}
       <div className="relative w-full max-w-md rounded-2xl border border-[var(--line)] bg-[#0c0d14]/95 p-4 text-[var(--ink)] shadow-[0_24px_60px_rgba(0,0,0,.45)] backdrop-blur md:p-5">
         <div className="mb-4 flex items-start justify-between gap-2">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--gradient)] text-white shadow-[0_0_20px_rgba(225,29,72,.35)]">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--gradient)] text-white shadow-[0_0_20px_rgba(124,108,255,.35)]">
               <Clapperboard className="h-4 w-4" />
             </span>
             <div>

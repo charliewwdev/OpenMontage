@@ -456,7 +456,7 @@ export function StudioShell({
         }}
         className={`w-full rounded-lg border px-2 py-1.5 text-left transition ${
           active
-            ? "border-[var(--accent)]/55 bg-[var(--accent)]/15 shadow-[0_0_14px_rgba(225,29,72,.18)]"
+            ? "border-[var(--accent)]/55 bg-[var(--accent)]/15 shadow-[0_0_14px_rgba(124,108,255,.18)]"
             : "border-transparent hover:border-white/10 hover:bg-white/[.04]"
         }`}
       >
@@ -649,7 +649,7 @@ export function StudioShell({
                     onClick={() => setStep(item.key)}
                     className={`flex min-w-[4.75rem] shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-left transition ${
                       active
-                        ? "border-transparent bg-[var(--gradient)] text-white shadow-[0_0_10px_rgba(225,29,72,.28)]"
+                        ? "border-transparent bg-[var(--gradient)] text-white shadow-[0_0_10px_rgba(124,108,255,.28)]"
                         : done
                           ? "border-[var(--ok)]/30 bg-[var(--ok)]/10 text-white/85 hover:bg-[var(--ok)]/15"
                           : "border-white/10 bg-white/[.03] text-white/65 hover:bg-white/[.06] hover:text-white"

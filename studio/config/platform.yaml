@@ -150,8 +150,6 @@ coverFormats:
     ratio: "4:5"
     description: 信息流
 
-# Canonical workshop pipeline (PRODUCT: 七步). Progress UI + marketing strips must use this list.
-# StudioShell still collapses 分镜/配音/剪辑 into one「工作台」tab for Operate density.
 sixSteps:
   - id: script
     label: 剧本
@@ -165,6 +163,10 @@ sixSteps:
   - id: prop
     label: 道具
     note: 关键物件
+  - id: workspace
+    label: 工作台
+    note: 片段内聚制作
+  # legacy aliases kept for older clients / deep-links
   - id: storyboard
     label: 分镜
     note: 镜头与视频
@@ -176,22 +178,20 @@ sixSteps:
     note: 排序与成片
 
 pipelineLabels:
-  - 剧本
-  - 角色
-  - 场景
-  - 道具
-  - 分镜
-  - 配音
-  - 剪辑
+  - 剧本创作
+  - 剧本定稿
+  - 智能分析
+  - 素材生成
+  - 分镜编排
+  - 视频成片
 
 creationSteps:
-  - 剧本
-  - 角色
-  - 场景
-  - 道具
-  - 分镜
-  - 配音
-  - 剪辑
+  - 专业剧本
+  - 角色造型
+  - 空镜场景
+  - 关键道具
+  - 分镜视频
+  - 剪辑成片
 
 styleCategories:
   - value: all
@@ -206,8 +206,9 @@ styleCategories:
 entryCards:
   - id: drama
     title: 爽剧
-    badge: "9:16"
-    desc: 竖屏爽剧 · 专业爽剧模型
+    badge: "+"
+    desc: 专业爽剧模型 · 竖屏 9:16
+    tone: from-[#ef4444] via-[#f97316] to-[#fb7185]
     available: true
     preset:
       genre: 赘婿逆袭
@@ -215,7 +216,8 @@ entryCards:
   - id: portrait-match
     title: 写真对标
     badge: "H3"
-    desc: 氛围写真 · 首尾帧身份锁
+    desc: 抖音氛围写真 · 首尾帧身份锁 · 竖屏 9:16
+    tone: from-[#0ea5e9] via-[#6366f1] to-[#a855f7]
     available: true
     preset:
       genre: 氛围写真
@@ -223,93 +225,79 @@ entryCards:
     workflow: portrait-match
   - id: short
     title: 短剧
-    badge: "16:9"
-    desc: 小说改编 / 横屏短剧
+    badge: "+"
+    desc: 小说改编 / 横屏 16:9
+    tone: from-[#3b82f6] via-[#6366f1] to-[#8b5cf6]
     available: true
     preset:
       genre: 都市情感
       ratio: "16:9"
   - id: formal
     title: 正剧
-    badge: "16:9"
-    desc: 现实题材 · 横屏正剧
+    badge: "+"
+    desc: 现实题材 · 横屏 16:9
+    tone: from-[#475569] to-[#334155]
     available: true
     preset:
       genre: 都市情感
       ratio: "16:9"
   - id: upload
     title: 上传剧本
-    badge: "导入"
-    desc: TXT / MD / DOCX 转入七步工坊
+    badge: "+"
+    desc: TXT / MD / DOCX 转制作
+    tone: from-[#eab308] via-[#f59e0b] to-[#f97316]
     available: true
     mode: upload
 
-# Nav groups: stage / create / assets / system (PlatformShell collapses create+system by default).
 nav:
-  - id: workshop
-    label: 影视工坊
-    icon: Film
-    group: stage
-  - id: canvas
-    label: 无限画布
-    icon: Workflow
-    group: stage
   - id: tv
     label: 作品频道
     icon: Tv
-    group: stage
-  - id: inspire
-    label: 爆款内容广场
-    icon: Flame
-    group: create
-  - id: tools
-    label: 创作中心
-    icon: Wand2
-    group: create
-  - id: agent
-    label: 创作 Agent
-    icon: Sparkles
-    group: create
-  - id: skills
-    label: Skill 专家
-    icon: BookOpen
-    group: create
-  - id: cup
-    label: 创作挑战
-    icon: Trophy
-    group: create
   - id: assets
     label: 个人资产
     icon: Images
-    group: assets
-  - id: keys
-    label: 模型配置
-    icon: KeyRound
-    group: system
-  - id: jobs
-    label: 任务队列
-    icon: ListTodo
-    group: system
-  - id: usage
-    label: 用量统计
-    icon: Activity
-    group: system
-  - id: help
-    label: 帮助中心
-    icon: HelpCircle
-    group: system
-  - id: credits
-    label: 积分充值
-    icon: CreditCard
-    group: system
-  - id: refer
-    label: 推荐计划
-    icon: Gift
-    group: system
+  - id: skills
+    label: Skill 专家
+    icon: BookOpen
+  - id: tools
+    label: 创作中心
+    icon: Wand2
+  - id: agent
+    label: 创作 Agent
+    icon: Sparkles
+  - id: workshop
+    label: 影视工坊
+    icon: Film
+  - id: canvas
+    label: 无限画布
+    icon: Workflow
+  - id: inspire
+    label: 爆款内容广场
+    icon: Flame
+  - id: cup
+    label: 创作挑战
+    icon: Trophy
   - id: nav
     label: 资源导航
     icon: Globe
-    group: system
+  - id: keys
+    label: 模型配置
+    icon: KeyRound
+  - id: usage
+    label: 用量统计
+    icon: Activity
+  - id: jobs
+    label: 任务队列
+    icon: ListTodo
+  - id: help
+    label: 帮助中心
+    icon: HelpCircle
+  - id: credits
+    label: 积分充值
+    icon: CreditCard
+  - id: refer
+    label: 推荐计划
+    icon: Gift
 
 tools:
   - id: script
@@ -630,7 +618,7 @@ resources:
     icon: FileText
     external: false
     group: docs
-  - title: 七步工坊说明
+  - title: 六步工坊说明
     desc: 剧本 → 角色 → 场景 → 道具 → 分镜 → 剪辑
     href: help
     icon: Film
@@ -681,9 +669,9 @@ resources:
 
 helpSections:
   - title: 快速开始
-    body: 1. 登录账号。2. 打开「模型配置」，填入文本大模型与火山 ARK Key（BYOK，密钥仅你可见）。3. 在「影视工坊」新建项目后走七步生产线；需要自动化时再用创作 Agent 一键跑通后局部重跑。
-  - title: 七步工坊
-    body: 剧本（文本大模型）→ 角色/场景/道具（Seedream）→ 分镜（Seedance）→ 配音 → 剪辑（FFmpeg）。也可用创作 Agent「一键全流程」后台自动跑通；每一步仍可单独重跑或换版本。
+    body: 1. 登录账号。2. 打开「模型配置」，填入文本大模型与火山 ARK Key（BYOK，密钥仅你可见）。3. 用创作 Agent「一键全流程成片」，或新建项目后逐步走六步工坊。
+  - title: 六步工坊
+    body: 剧本（文本大模型）→ 角色/场景/道具（Seedream）→ 分镜（Seedance）→ 配音 → 剪辑（FFmpeg）。也可用「一键全流程」后台自动跑通；每一步仍可单独重跑或换版本。
   - title: 模型配置与能力
     body: 支持智川云 Token（tokens.gpuhome.cc）、算桥/算家云（api.suanjiayun.com）、DeepSeek、OpenAI、Claude、Gemini、通义、Kimi、豆包、智谱、Grok、MiniMax、OpenRouter、Cursor Auto 等。出图/出片可用火山方舟，或在智川云租 GPU 后填写 ComfyUI 地址。密钥按账号隔离保存，热加载无需重启。
   - title: 资产与画布
@@ -901,7 +889,7 @@ skillCatalog:
     category: productivity
     tags: [创作工作流, 短剧漫剧, 对话创作]
     accent: "#fbbf24"
-    prompt: 请按导演工作流 Skill：帮我规划从剧本到成片的七步计划（剧本→角色→场景→道具→分镜→配音→剪辑），并指出每步验收标准。
+    prompt: 请按导演工作流 Skill：帮我规划从剧本到成片的六步计划，并指出每步验收标准。
     workshop:
       route: agent
   - id: voice-guide
@@ -929,57 +917,57 @@ skillCatalog:
 toolHub:
   categories:
     - id: text
-      title: 文本 · 剧本
-      desc: 进入工坊「剧本」步
+      title: 文本创作
+      desc: AI剧本创作、短剧脚本、影视分镜、叙事构思
+      accent: "from-[#1d4ed8] to-[#60a5fa]"
       nav: workshop
       step: script
     - id: visual
-      title: 视觉 · 定妆
-      desc: 进入工坊「角色 / 场景 / 道具」
+      title: 视觉创作
+      desc: 概念设计、角色原画、场景绘制、视觉分镜
+      accent: "from-[#9d174d] to-[#f472b6]"
       nav: workshop
       step: character
-    - id: video
-      title: 分镜 · 视频
-      desc: 进入工坊「分镜」工作台
-      nav: workshop
-      step: storyboard
     - id: audio
-      title: 配音
-      desc: 进入工坊「配音」工作台
+      title: 音频创作
+      desc: 配音合成、音效设计、背景音乐、角色语音
+      accent: "from-[#c2410c] to-[#fb923c]"
       nav: workshop
       step: audio
+    - id: video
+      title: 视频创作
+      desc: AI视频生成、动态分镜、影像合成、特效制作
+      accent: "from-[#047857] to-[#34d399]"
+      nav: workshop
+      step: storyboard
     - id: workshop
       title: 影视工坊
-      desc: 七步生产线主入口
+      desc: 面向短剧、MV、广告等成片目标的专业场景化工作流
+      accent: "from-[#4c1d95] to-[#8b5cf6]"
       nav: workshop
     - id: canvas
-      title: 无限画布
-      desc: 七步进度节点图（次级视图）
+      title: 画布创作
+      desc: 可视化工作流编排，连接多个AI节点，创造无限可能
+      accent: "from-[#a16207] to-[#fbbf24]"
       nav: canvas
   workflow:
-    title: 七步生产线
-    description: 与影视工坊同一套步骤：剧本 → 角色 → 场景 → 道具 → 分镜 → 配音 → 剪辑
+    title: AI短剧创作完整流程
+    description: 用导演思维驾驭AI创作：平台提供AI创作能力，你是导演——生成素材、把控品质、剪辑成片
     steps:
-      - title: 剧本
-        desc: 故事与分集定稿
+      - title: 定剧本
+        desc: AI生成分镜剧本，包含场景描述、角色对话、动作指示
         step: script
-      - title: 角色
-        desc: 人物造型定妆
+      - title: 选演员
+        desc: AI生成虚拟角色形象和场景概念图
         step: character
-      - title: 场景
-        desc: 空间与光线
-        step: scene
-      - title: 道具
-        desc: 关键物件
-        step: prop
-      - title: 分镜
-        desc: 镜头与视频
+      - title: 拍画面
+        desc: AI图生视频，让静态角色和场景动起来
         step: storyboard
-      - title: 配音
-        desc: 旁白与对白
+      - title: 做配音
+        desc: AI生成旁白与对白配音，剪辑时可混入音轨
         step: audio
-      - title: 剪辑
-        desc: 排序与成片导出
+      - title: 剪成片
+        desc: 把素材剪辑成完整短剧并导出
         step: edit
 
 pages:
@@ -990,11 +978,11 @@ pages:
   challenge:
     eyebrow: Challenge
     title: 创作挑战
-    description: 限时主题任务，帮你练熟七步工坊节奏。完成进度会计入项目备注。
+    description: 限时主题任务，帮你练熟六步工坊节奏。完成进度会计入项目备注。
   tools:
-    eyebrow: Workshop shortcuts
-    title: 创作捷径
-    description: 次级入口：一句话交给 Agent，或跳进工坊某一步。主创作请回影视工坊。
+    eyebrow: Creation center
+    title: AI创作中心
+    description: 直接描述创意，或选择专业分类开始创作
   skills:
     eyebrow: Skills
     title: Skill 专家 × 影视工坊

@@ -55,7 +55,7 @@ export function ReferPage({ config }) {
   }, [origin, credits?.refCode]);
 
   return (
-    <PageShell eyebrow="Refer" title="推荐计划" description="分享影视工坊，邀请伙伴一起用七步流程做短剧。">
+    <PageShell eyebrow="Refer" title="推荐计划" description="分享影视工坊，邀请伙伴一起用六步流程做短剧。">
       <div className="grid gap-3 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="panel p-3.5">
           <Gift className="h-6 w-6 text-[#a78bfa]" />

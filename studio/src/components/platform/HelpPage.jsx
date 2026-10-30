@@ -18,7 +18,7 @@ export function HelpPage({ config, onNeedKeys, onNavigate }) {
     },
     {
       title: "作品频道与画布",
-      body: "作品频道汇总导出成片；无限画布可视化七步节点进度，可拖拽查看后回到工坊继续制作。",
+      body: "作品频道汇总导出成片；无限画布可视化六步节点进度，可拖拽查看后回到工坊继续制作。",
     },
   ];
   const all = [...sections, ...extras];

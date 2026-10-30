@@ -201,7 +201,7 @@ export function CreateProjectPage({ config, entryMode = null, onBack, onCreated,
             </h1>
             <p className="mt-2 max-w-3xl text-[12px] leading-5 text-white/60 md:text-[13px]">
               {isUpload
-                ? "支持 TXT / MD / DOCX。导入后可再改片名、题材与风格，再进入七步生产线。"
+                ? "支持 TXT / MD / DOCX。导入后可再改片名、题材与风格，再进入六步生产线。"
                 : "先确定故事方向与统一画面语言。建立后从专业剧本开始，继续整理角色、场景和道具，再进入分镜与成片。"}
             </p>
           </div>
@@ -378,7 +378,7 @@ export function CreateProjectPage({ config, entryMode = null, onBack, onCreated,
             <div className="label">Ready</div>
             <h2 className="display-type text-[1.05rem] font-semibold">进入剧本台</h2>
             <p className="mt-1.5 text-[12px] leading-5 text-[var(--muted)]">
-              可只建项进七步工坊，或一句话/剧本直接后台跑通到成片。
+              可只建项进六步工坊，或一句话/剧本直接后台跑通到成片。
             </p>
             <button type="button" className="btn-primary mt-3 w-full" disabled={formLocked} onClick={() => void createAndAutoProduce()}>
               {autoRunning ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}

@@ -211,7 +211,7 @@ export function CanvasPage({ projects, config, onOpenProject }) {
     >
       {!projects?.length ? (
         <div className="panel flex flex-col items-center justify-center gap-4 py-24 text-center">
-          <p className="text-sm text-[var(--muted)]">还没有项目。先用创作 Agent 或影视工坊新建一个，再回来查看七步图谱。</p>
+          <p className="text-sm text-[var(--muted)]">还没有项目。先用创作 Agent 或影视工坊新建一个，再回来查看六步图谱。</p>
         </div>
       ) : (
         <>

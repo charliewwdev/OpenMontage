@@ -28,8 +28,6 @@ html[data-theme="dark"] {
   --navy-soft: #151822;
   --accent: #7c6cff;
   --accent-2: #4f8cff;
-  --accent-soft: #b7acff;
-  --metal: #a5b4fc;
   --projector: #7c6cff;
   --timecode: #f2b84b;
   --danger: #f07178;
@@ -55,8 +53,6 @@ html[data-theme="light"] {
   --navy-soft: #e4e7f0;
   --accent: #5b4fd6;
   --accent-2: #3b82f6;
-  --accent-soft: #6366f1;
-  --metal: #818cf8;
   --projector: #5b4fd6;
   --timecode: #b45309;
   --danger: #dc2626;

@@ -260,9 +260,7 @@ export function Library({
   const [query, setQuery] = useState("");
   const caps = config?.capabilities || {};
   const keysReady = (caps.configured ?? 0) >= 1;
-  const stepLabels =
-    (config?.pipelineLabels?.length && config.pipelineLabels) ||
-    (config?.six_steps || []).map((s) => s.label);
+  const stepLabels = (config?.six_steps || []).map((s) => s.label);
   const entryCards = config?.entryCards || [];
   const coverFormats = config?.coverFormats?.length
     ? config.coverFormats
@@ -313,11 +311,11 @@ export function Library({
             <div className="min-w-0">
               <div className="flex items-center gap-2 text-[11px] font-semibold text-white/55">
                 <Clapperboard className="h-3.5 w-3.5 text-[#b7acff]" />
-                影视工坊
+                影视创作工坊
               </div>
-              <h1 className="mt-0.5 text-[1.05rem] font-semibold tracking-tight md:text-[1.2rem]">从剧本到成片，七步生产线</h1>
+              <h1 className="mt-0.5 text-[1.05rem] font-semibold tracking-tight md:text-[1.2rem]">从剧本到成片，一站式 AI 影视生产</h1>
               <p className="mt-1 max-w-2xl text-xs text-white/55">
-                {stepLabels.length ? stepLabels.join(" → ") : "剧本 → 角色 → 场景 → 道具 → 分镜 → 配音 → 剪辑"}
+                剧本创作 → 剧本定稿 → 智能分析 → 素材生成 → 分镜编排 → 视频成片
               </p>
             </div>
           </div>
@@ -345,10 +343,10 @@ export function Library({
         <section className="mt-3 rounded-xl border border-[#7c6cff]/35 bg-[linear-gradient(90deg,rgba(124,108,255,.18),rgba(79,140,255,.12))] px-3 py-2 md:px-4">
           <div className="flex flex-wrap items-center gap-2 text-xs text-white/80">
             <Sparkles className="h-3.5 w-3.5 shrink-0 text-[#c4b5fd]" />
-            <span className="font-semibold">七步生产线</span>
+            <span className="font-semibold">六步生产线</span>
             <span className="text-white/35">|</span>
             {stepLabels.map((label, i) => (
-              <span key={`${label}-${i}`} className="inline-flex items-center gap-1 text-white/70">
+              <span key={label} className="inline-flex items-center gap-1 text-white/70">
                 <span className="timecode text-[10px] text-[#a5b4fc]">{i + 1}</span>
                 {label}
                 {i < stepLabels.length - 1 ? <span className="text-white/25">→</span> : null}
@@ -398,13 +396,10 @@ export function Library({
         </section>
 
         <section className="mt-3">
-          <div className="mb-1.5 flex flex-wrap items-end justify-between gap-2">
-            <div>
-              <h2 className="text-[13px] font-semibold">开拍类型</h2>
-              <p className="mt-0.5 text-[11px] text-[var(--muted)]">选类型进工坊建项目；Agent 一键成片在侧栏「创作」分组</p>
-            </div>
+          <div className="mb-1.5 flex items-end justify-between gap-2">
+            <h2 className="text-[13px] font-semibold">选择创作入口</h2>
           </div>
-          <div className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-4">
             {entryCards.map((card) => (
               <button
                 key={card.id}
@@ -414,30 +409,20 @@ export function Library({
                   if (!card.available) return toast.info(`${card.title}入口建设中，当前走统一建片场`);
                   onCreate?.(card.id, card);
                 }}
-                className={`panel group p-2.5 text-left transition ${
-                  card.available
-                    ? "hover:border-[var(--accent)]/40 hover:bg-white/[.04]"
-                    : "cursor-not-allowed opacity-55"
+                className={`group relative overflow-hidden rounded-lg bg-gradient-to-br p-2.5 text-left text-white shadow-float transition ${card.tone} ${
+                  card.available ? "hover:-translate-y-0.5 hover:brightness-110" : "cursor-not-allowed opacity-70"
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <strong className="text-[13px] font-semibold leading-tight text-white">
+                  <strong className="text-[14px] font-semibold leading-tight">
                     {card.title}
+                    <span className="ml-1 text-[12px] opacity-80">{card.badge}</span>
                   </strong>
-                  {card.id === "upload" ? (
-                    <Upload className="h-3.5 w-3.5 shrink-0 text-[var(--muted)]" />
-                  ) : (
-                    <Plus className="h-3.5 w-3.5 shrink-0 text-[var(--muted)]" />
-                  )}
+                  {card.id === "upload" ? <Upload className="h-3.5 w-3.5 shrink-0 opacity-80" /> : <Plus className="h-3.5 w-3.5 shrink-0 opacity-80" />}
                 </div>
-                {card.badge ? (
-                  <span className="mt-1.5 inline-block rounded border border-white/10 bg-white/[.04] px-1.5 py-0.5 text-[10px] text-white/55">
-                    {card.badge}
-                  </span>
-                ) : null}
-                <p className="mt-1.5 line-clamp-2 text-[11px] leading-4 text-[var(--muted)]">{card.desc}</p>
+                <p className="mt-1.5 line-clamp-2 text-[11px] text-white/85">{card.desc}</p>
                 {!card.available ? (
-                  <span className="mt-1.5 inline-block text-[10px] text-white/40">即将上线</span>
+                  <span className="mt-1.5 inline-block rounded-full bg-black/25 px-2 py-0.5 text-[10px]">即将上线</span>
                 ) : null}
               </button>
             ))}
@@ -478,11 +463,11 @@ export function Library({
             <button
               type="button"
               onClick={onCreate}
-              className="panel group flex w-full flex-col items-center border-dashed border-white/15 py-10 text-center hover:border-[var(--accent)]/45"
+              className="panel group flex w-full flex-col items-center border-dashed border-white/15 py-10 text-center hover:border-[#7c6cff]/50"
             >
-              <FolderOpen className="mb-3 h-8 w-8 text-[var(--accent-2)]" />
+              <FolderOpen className="mb-3 h-8 w-8 text-[#a78bfa]" />
               <strong className="text-[14px]">还没有项目</strong>
-              <span className="mt-1.5 text-[12px] text-[var(--muted)]">从上方开拍类型进入七步工坊。</span>
+              <span className="mt-1.5 text-[12px] text-[var(--muted)]">从爽剧 / 短剧入口开始第一部作品。</span>
             </button>
           ) : visible.length === 0 ? (
             <div className="panel py-16 text-center text-sm text-[var(--muted)]">没有匹配的项目。</div>

@@ -19,7 +19,7 @@ function Field({ label, children }) {
 }
 
 const inputClass =
-  "w-full rounded-xl border border-[var(--line)] bg-white/[.04] px-3 py-2.5 text-sm text-white outline-none focus:border-[var(--accent)]/60";
+  "w-full rounded-xl border border-[var(--line)] bg-white/[.04] px-3 py-2.5 text-sm text-white outline-none focus:border-[#7c6cff]/60";
 
 function demoPrefill(authConfig) {
   const demo = authConfig?.demo || {};

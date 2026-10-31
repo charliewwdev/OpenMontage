@@ -1,5 +1,7 @@
 # Deploy Drama Studio to Coolify (`cicd.dtok.io`)
 
+> **Self-hosting without DTok?** This file is for the hosted Coolify / `openmontage.dtok.io` path (DTok account API + shared MinIO). For a fully standalone deploy — local demo auth, owner-controlled storage and model endpoints, and which stages need paid Seedream/Seedance — see **[docs/SELF_HOSTING.md](../docs/SELF_HOSTING.md)** ([中文](../docs/SELF_HOSTING_zh-CN.md)).
+
 Product UI learns from short-drama workspaces (六步工作流 + 编导台 / 画布 / 剪辑室) and serves a single container: React SPA + **FastAPI** (`uvicorn`) API.
 
 ## Coolify settings

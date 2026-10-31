@@ -155,12 +155,17 @@ Model settings
 | Image + video generation | ❌ **you provide**: a Volcengine Ark key for **Seedream** (images) and **Seedance** (video). These are **paid third-party APIs**. Images can instead go to your own ComfyUI server. |
 | TTS | edge-tts by default (no key); optional OpenAI-compatible speech endpoint |
 
-Other things to know:
+**Fully self-hosted (no DTok account):** `studio/.env.example` still ships sample values for the public demo
+(`openmontage.dtok.io`, its MinIO host, and `API_BASE_URL` → DTok auth). For a private deployment, use **local
+demo auth** (`STUDIO_DEMO_ENABLED=true`, sign in with the Demo button — `POST /api/auth/demo`, no call to DTok),
+point `MINIO_*` / `OSS_*` at storage you control, and put your own LLM / Seedream / Seedance (or ComfyUI) keys in
+env or *Model settings*. Password / Google login still proxy to whatever `API_BASE_URL` is set; leave that path
+unused, or point it at an account API you own.
 
-- `studio/.env.example` ships with defaults for the hosted instance (`openmontage.dtok.io`, its MinIO host and the
-  DTok account API in `API_BASE_URL`). Replace them with your own values. By default sign-in is proxied to the
-  account API in `API_BASE_URL`; see `STUDIO_AUTH_REQUIRED` and the demo-user settings in the same file.
-- The hosted instance has a credits / top-up page. Self-hosted, you pay your model providers directly.
+Step-by-step standalone guide (auth modes, MinIO example, which stages need paid APIs):
+**[docs/SELF_HOSTING.md](docs/SELF_HOSTING.md)** · [中文](docs/SELF_HOSTING_zh-CN.md).
+
+The hosted instance has a credits / top-up page. Self-hosted, you pay your model providers directly.
 
 ## Quick start
 
@@ -168,9 +173,10 @@ Docker (Compose reads `.env` from the repo root):
 
 ```bash
 cp studio/.env.example .env
-# fill in DATABASE_URL (or keep the bundled drama-db default), your S3/MinIO settings, and model API keys
+# Standalone: set STUDIO_PUBLIC_URL, STUDIO_DEMO_ENABLED=true, your MINIO_*/OSS_*, and model keys.
+# See docs/SELF_HOSTING.md — do not keep the DTok sample API_BASE_URL/MinIO hosts if you want zero DTok dependency.
 docker compose -f docker-compose.studio.yml up --build
-# open http://localhost:8787 · health check: GET /api/health (Postgres + object storage)
+# open http://localhost:8787 · sign in with Demo · health: GET /api/health
 ```
 
 Local development:

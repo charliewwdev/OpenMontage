@@ -198,10 +198,12 @@ OpenMontage Drama Studio 是面向短剧 / 短视频制作的 **产品化工坊*
 | 出图 + 出视频 | ❌ **需自备**：火山方舟 Key，用于 **Seedream**（出图）和 **Seedance**（出视频），二者均为**付费第三方 API**；出图也可改用自有 ComfyUI |
 | 配音 TTS | 默认 edge-tts（无需密钥）；可选 OpenAI 兼容语音接口 |
 
-另外：
+**完全自托管（不依赖 DTok 账号）：** `studio/.env.example` 里仍带有线上体验站示例值（`openmontage.dtok.io`、其 MinIO，以及 `API_BASE_URL` → DTok 账号接口）。私有部署请改用 **本地 Demo 鉴权**（`STUDIO_DEMO_ENABLED=true`，登录页点 Demo → `POST /api/auth/demo`，不访问 DTok），把 `MINIO_*` / `OSS_*` 指到自管存储，并在环境变量或「模型配置」中填写自备 LLM / Seedream / Seedance（或 ComfyUI）密钥。密码登录与 Google 仍会代理到当前 `API_BASE_URL`；独立部署可不用这两条路径，或改指向自有账号接口。
 
-- `studio/.env.example` 里的默认值指向线上实例（`openmontage.dtok.io`、其 MinIO 地址，以及 `API_BASE_URL` 中的 DTok 账号接口），自部署时请换成自己的。默认登录会代理到 `API_BASE_URL` 的账号接口，相关开关见同文件中的 `STUDIO_AUTH_REQUIRED` 与 Demo 用户配置。
-- 线上实例有积分充值页面；自部署时直接向各模型供应商付费。
+独立部署步骤（鉴权模式、MinIO 示例、各阶段是否依赖付费 API）：
+**[docs/SELF_HOSTING_zh-CN.md](docs/SELF_HOSTING_zh-CN.md)** · [English](docs/SELF_HOSTING.md)。
+
+线上实例有积分充值页面；自部署时直接向各模型供应商付费。
 
 ## 快速开始
 
@@ -209,9 +211,10 @@ Docker（Compose 读取仓库根目录的 `.env`）：
 
 ```bash
 cp studio/.env.example .env
-# 填写 DATABASE_URL（或保留内置 drama-db 默认值）、S3/MinIO 配置、各供应商密钥
+# 独立部署：设置 STUDIO_PUBLIC_URL、STUDIO_DEMO_ENABLED=true、自管 MINIO_*/OSS_*、模型密钥
+# 详见 docs/SELF_HOSTING_zh-CN.md — 若要不依赖 DTok，勿保留示例中的 DTok API_BASE_URL / MinIO 地址
 docker compose -f docker-compose.studio.yml up --build
-# 打开 http://localhost:8787 · 健康检查：GET /api/health（Postgres + 对象存储状态）
+# 打开 http://localhost:8787 · 用 Demo 登录 · 健康检查：GET /api/health
 ```
 
 本地开发：

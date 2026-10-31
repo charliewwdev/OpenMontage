@@ -200,14 +200,9 @@ Python · FastAPI · React · PostgreSQL · Redis · MinIO / S3 · Seedream · S
 ## About the name
 
 OpenMontage Drama Studio is an independent product by [@charliewwdev](https://github.com/charliewwdev).
-It started from the AGPL-3.0 [charliewwdev/OpenMontage](https://github.com/charliewwdev/OpenMontage) codebase and has
-since been rebuilt into a separate short-drama studio. It is **not affiliated with or endorsed by** the upstream
-project. The repository keeps the upstream git history, so upstream authors appear in the contributor list.
 
-## License and attribution
+## License
 
-Licensed under the **GNU AGPL-3.0**; see [`LICENSE`](LICENSE).
-
-This is a modified version of [charliewwdev/OpenMontage](https://github.com/charliewwdev/OpenMontage). Original code is
-copyright its respective authors; modifications are by @charliewwdev (see the git history for what changed and when).
+Licensed under the **GNU AGPL-3.0**; see [`LICENSE`](LICENSE). Copyright notices of all contributors are retained
+in the source files, and the git history records what changed and when.
 If you run a modified version as a network service, AGPL-3.0 §13 requires you to offer its source to your users.

@@ -241,10 +241,8 @@ Python · FastAPI · React · PostgreSQL · Redis · MinIO / S3 · Seedream · S
 
 ## 关于名字
 
-OpenMontage Drama Studio 是 [@charliewwdev](https://github.com/charliewwdev) 独立开发的产品。早期基于 AGPL-3.0 的 [charliewwdev/OpenMontage](https://github.com/charliewwdev/OpenMontage) 代码起步，现已重构为独立的短剧工坊，**与上游项目无隶属关系，也未获其背书**。仓库保留了上游的 git 历史，因此贡献者列表中会出现上游作者。
+OpenMontage Drama Studio 是 [@charliewwdev](https://github.com/charliewwdev) 独立开发的产品。
 
-## 许可证与署名
+## 许可证
 
-采用 **GNU AGPL-3.0** 许可，见 [`LICENSE`](LICENSE)。
-
-本项目是 [charliewwdev/OpenMontage](https://github.com/charliewwdev/OpenMontage) 的修改版本：原始代码版权归其各自作者所有，修改部分由 @charliewwdev 完成（具体改动与时间见 git 历史）。如果你把修改后的版本作为网络服务提供，AGPL-3.0 第 13 条要求向用户提供对应源码。
+采用 **GNU AGPL-3.0** 许可，见 [`LICENSE`](LICENSE)。源码文件中保留了所有贡献者的版权声明，具体改动与时间见 git 历史。如果你把修改后的版本作为网络服务提供，AGPL-3.0 第 13 条要求向用户提供对应源码。

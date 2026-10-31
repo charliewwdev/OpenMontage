@@ -197,12 +197,12 @@ Agent / CLI pipeline notes: [`AGENT_GUIDE.md`](AGENT_GUIDE.md).
 
 Python · FastAPI · React · PostgreSQL · Redis · MinIO / S3 · Seedream · Seedance · edge-tts · FFmpeg · Docker / Coolify
 
-## About the name
+## About
 
 OpenMontage Drama Studio is an independent product by [@charliewwdev](https://github.com/charliewwdev).
 
 ## License
 
-Licensed under the **GNU AGPL-3.0**; see [`LICENSE`](LICENSE). Copyright notices of all contributors are retained
-in the source files, and the git history records what changed and when.
+Licensed under the **GNU AGPL-3.0**; see [`LICENSE`](LICENSE).
+
 If you run a modified version as a network service, AGPL-3.0 §13 requires you to offer its source to your users.

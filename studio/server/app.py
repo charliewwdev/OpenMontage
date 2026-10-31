@@ -1690,6 +1690,81 @@ def portrait_match_assemble(project_id: str) -> dict[str, Any]:
         raise _http_error(400, str(exc)) from exc
 
 
+@app.get("/api/share/x/status")
+def share_x_status() -> dict[str, Any]:
+    """X share via browser UI (no Post API)."""
+    import x_share_browser as xsb
+
+    return {"ok": True, **xsb.status(PROJECTS_ROOT)}
+
+
+@app.post("/api/share/x/session")
+async def share_x_session_upload(request: Request) -> dict[str, Any]:
+    """Upload Playwright storage_state JSON (from local `python -m x_share_browser login`)."""
+    import x_share_browser as xsb
+
+    ctype = (request.headers.get("content-type") or "").lower()
+    try:
+        if "application/json" in ctype:
+            body = await request.json()
+            if isinstance(body, dict) and isinstance(body.get("storageState"), (dict, str)):
+                st = xsb.save_session_json(PROJECTS_ROOT, body["storageState"])
+            else:
+                st = xsb.save_session_json(PROJECTS_ROOT, body if isinstance(body, dict) else {})
+        else:
+            raw = (await request.body()).decode("utf-8", errors="replace")
+            st = xsb.save_session_json(PROJECTS_ROOT, raw)
+    except (ValueError, json.JSONDecodeError) as exc:
+        raise _http_error(400, str(exc)) from exc
+    return {"ok": True, **st}
+
+
+@app.delete("/api/share/x/session")
+def share_x_session_clear() -> dict[str, Any]:
+    import x_share_browser as xsb
+
+    return {"ok": True, **xsb.clear_session(PROJECTS_ROOT)}
+
+
+@app.post("/api/share/x/login")
+def share_x_login() -> dict[str, Any]:
+    """Open headed Chromium for one-time X login (needs a display — local studio only)."""
+    import x_share_browser as xsb
+
+    try:
+        st = xsb.interactive_login(PROJECTS_ROOT)
+    except RuntimeError as exc:
+        raise _http_error(400, str(exc)) from exc
+    return {"ok": True, **st}
+
+
+@app.post("/api/share/x")
+async def share_x_post(request: Request) -> dict[str, Any]:
+    """Publish assembled mp4 to X by driving the compose UI (not the Post API)."""
+    import x_share_browser as xsb
+
+    body = await request.json()
+    if not isinstance(body, dict):
+        body = {}
+    project_id = str(body.get("projectId") or "").strip()
+    text = str(body.get("text") or "").strip()
+    output_url = str(body.get("outputUrl") or "").strip()
+    output_path = str(body.get("outputPath") or "").strip()
+    headless = body.get("headless", True) is not False
+    if not text:
+        raise _http_error(400, "缺少文案 text")
+    try:
+        video = xsb.resolve_project_video(STORE, project_id, output_url=output_url, output_path=output_path)
+        result = xsb.post_video(PROJECTS_ROOT, video_path=video, text=text, headless=headless)
+    except FileNotFoundError as exc:
+        raise _http_error(404, str(exc)) from exc
+    except (ValueError, RuntimeError) as exc:
+        raise _http_error(400, str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        raise _http_error(500, f"浏览器发帖失败: {exc}") from exc
+    return result
+
+
 @app.get("/api/projects")
 def list_projects() -> dict[str, Any]:
     items = STORE.list_items()

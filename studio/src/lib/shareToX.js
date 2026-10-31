@@ -1,18 +1,10 @@
 /**
- * X (Twitter) Web Intent share — promo copy tuned to current open-source AI
- * launch patterns on X (short hook + number + what it is + OSS proof + link).
- *
- * Research-backed habits (2025–26 launch posts):
- * - Lead with a concrete result / number (not "excited to announce")
- * - Say what it does in one breath
- * - Name open-source / self-host / BYOK as proof
- * - Keep under ~260 chars (URL expansion headroom)
- * - Prefer one link in-body; video URL first, product page second if room
+ * One-click share to X: promo copy + video URL (Web Intent).
+ * Does not attach the video file — paste the media link in the tweet.
  */
 
 const GITHUB_URL = "https://github.com/charliewwdev/OpenMontage";
 
-/** One concrete hook per portrait template (English — X AI feed default). */
 const TEMPLATE_HOOKS = {
   ref1: "night portrait look-back, warm bokeh, beat-locked to the original track",
   ref2: "sakura lolita dance, sheer sleeves, beat-locked to the original track",
@@ -28,25 +20,12 @@ function absoluteUrl(pathOrUrl) {
   return raw.startsWith("/") ? `${origin}${raw}` : `${origin}/${raw}`;
 }
 
-function mediaPublicUrl(projectId, outputUrlOrPath) {
+export function mediaPublicUrl(projectId, outputUrlOrPath) {
   const raw = String(outputUrlOrPath || "").trim();
   if (!raw) return "";
   if (/^https?:\/\//i.test(raw) || raw.startsWith("/api/")) return absoluteUrl(raw);
   if (!projectId) return absoluteUrl(raw);
   return absoluteUrl(`/api/media/${encodeURIComponent(projectId)}/${raw.replace(/^\//, "")}`);
-}
-
-function projectPageUrl(projectId, opts = {}) {
-  if (!projectId || typeof window === "undefined") return absoluteUrl("/");
-  const u = new URL(window.location.origin);
-  u.searchParams.set("project", projectId);
-  if (opts.workflow === "portrait-match" || opts.screen === "portrait") {
-    u.searchParams.set("screen", "portrait");
-  } else if (opts.episodeId) {
-    u.searchParams.set("step", "workspace");
-    u.searchParams.set("ep", opts.episodeId);
-  }
-  return u.toString();
 }
 
 function formatSeconds(sec) {
@@ -56,14 +35,8 @@ function formatSeconds(sec) {
 }
 
 /**
- * @param {{
- *   project?: { id?: string, title?: string, workflow?: string, portraitTemplate?: string },
- *   projectId?: string,
- *   outputUrl?: string,
- *   outputPath?: string,
- *   episodeId?: string,
- *   durationSec?: number | null,
- * }} opts
+ * Promo copy with video URL front-loaded so it always fits.
+ * X Intent ~280 chars — keep short; video URL is required when present.
  */
 export function buildXShareText(opts = {}) {
   const project = opts.project || {};
@@ -72,17 +45,9 @@ export function buildXShareText(opts = {}) {
   const tid = String(project.portraitTemplate || "").trim();
   const hook = TEMPLATE_HOOKS[tid] || "";
   const isPortrait = project.workflow === "portrait-match";
-  const videoUrl = mediaPublicUrl(projectId, opts.outputUrl || opts.outputPath);
-  const pageUrl = projectPageUrl(projectId, {
-    workflow: project.workflow,
-    screen: isPortrait ? "portrait" : "",
-    episodeId: opts.episodeId,
-  });
+  const videoUrl = mediaPublicUrl(projectId, opts.outputUrl || opts.outputPath || opts.videoUrl);
   const dur = formatSeconds(opts.durationSec);
 
-  // Pattern: [number] + one-sentence result → what OSS product → proof → link
-  // Avoid: "Excited to announce", emoji spam, "thread ↓", vague "AI magic".
-  // Compact formula (Karos / OSS launch posts): number-first hook → name product → proof → link.
   let line1;
   if (isPortrait && dur) {
     line1 = `Douyin-style portrait edit in ${dur} — open-source AI.`;
@@ -95,33 +60,56 @@ export function buildXShareText(opts = {}) {
   }
 
   const line2 = isPortrait
-    ? `OpenMontage: match looks + original audio beats (${title}).`
-    : `OpenMontage: short-drama AI video studio (${title}).`;
+    ? `OpenMontage · ${title}`
+    : `OpenMontage short-drama AI · ${title}`;
 
-  const line3 = "Open source · self-hostable · BYOK.";
-  const lineHook = hook ? `${hook.charAt(0).toUpperCase()}${hook.slice(1)}.` : "";
+  // Video URL first after hook lines so the link is never dropped for length.
+  const parts = [line1, line2];
+  if (videoUrl) parts.push(videoUrl);
+  parts.push(GITHUB_URL);
 
-  // Must-fit: hook + product + GitHub. Optional: scene line, page, video.
-  const required = [line1, line2, GITHUB_URL];
-  const optional = [lineHook, line3, pageUrl || "", videoUrl || ""];
-
-  let text = required.join("\n\n");
-  for (const part of optional) {
-    if (!part) continue;
-    const next = `${text}\n\n${part}`;
-    if (next.length > 260) continue;
-    text = next;
+  let text = parts.join("\n\n");
+  if (hook) {
+    const withHook = `${text}\n\n${hook.charAt(0).toUpperCase()}${hook.slice(1)}.`;
+    if (withHook.length <= 280) text = withHook;
+  }
+  if (text.length > 280) {
+    // Keep video URL + github at the end; trim middle.
+    const must = [line1, videoUrl || "", GITHUB_URL].filter(Boolean).join("\n\n");
+    text = must.length <= 280 ? must : [videoUrl || line1, GITHUB_URL].filter(Boolean).join("\n\n").slice(0, 280);
   }
   return text;
 }
 
-export function openShareToX(opts = {}) {
-  const text = buildXShareText(opts);
-  if (!text) return false;
+function openIntent(text) {
   const intent = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
   const win = window.open(intent, "_blank", "noopener,noreferrer");
-  if (!win) {
-    window.location.assign(intent);
-  }
+  if (!win) window.location.assign(intent);
   return true;
+}
+
+/**
+ * One-click: open X compose with copy + video URL.
+ * @returns {{ ok: boolean, mode: string, message: string, text: string, videoUrl: string }}
+ */
+export function shareVideoToX(opts = {}) {
+  const project = opts.project || {};
+  const projectId = String(opts.projectId || project.id || "").trim();
+  const videoUrl = mediaPublicUrl(projectId, opts.outputUrl || opts.outputPath || opts.videoUrl);
+  const text = buildXShareText(opts);
+  openIntent(text);
+  return {
+    ok: true,
+    mode: "intent",
+    text,
+    videoUrl: videoUrl || "",
+    message: videoUrl
+      ? "已打开 X，文案与成片链接已填好，确认后即可发布"
+      : "已打开 X（未找到成片链接，仅文案）",
+  };
+}
+
+/** @deprecated alias */
+export function openShareToX(opts = {}) {
+  return shareVideoToX(opts);
 }

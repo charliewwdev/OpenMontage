@@ -125,7 +125,7 @@
   "studio_auto_failed": "一键全流程失败：{error}",
   "studio_auto_cta_hint": "已有创作需求时，可一键后台跑通到成片（首集、12–30 镜 / 约 3–6 分钟）。",
   "studio_auto_cta": "一键全流程",
-  "studio_model_switcher_title": "生成模型",
+  "studio_model_switcher_title": "模型配置",
   "studio_model_switcher_hint": "列出已启用的出图、出视频和配音型号。自动模式：出图优先商业模型，配音用 Edge 按角色分音色。",
   "studio_model_image_label": "出图",
   "studio_model_video_label": "出视频",

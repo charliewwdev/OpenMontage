@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, Image as ImageIcon, Mic2, ShieldCheck, Video } from "lucide-react";
 import { api } from "../api";
 import { toast } from "../lib/toast";
@@ -81,6 +81,7 @@ export function StudioModelBar({ config, onChanged }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [keys, setKeys] = useState(null);
+  const rootRef = useRef(null);
 
   const load = async () => {
     try {
@@ -97,6 +98,30 @@ export function StudioModelBar({ config, onChanged }) {
     window.addEventListener("studio-keys-changed", onKeys);
     return () => window.removeEventListener("studio-keys-changed", onKeys);
   }, [caps.imageBackend, caps.videoBackend]);
+
+  // Header has overflow-hidden ancestors, so a fixed inset backdrop cannot receive
+  // clicks on the page body — listen on document instead.
+  const onDocPointerDown = useEffectEvent((event) => {
+    if (!open) return;
+    const root = rootRef.current;
+    if (root && event.target instanceof Node && root.contains(event.target)) return;
+    setOpen(false);
+  });
+
+  const onDocKeyDown = useEffectEvent((event) => {
+    if (!open) return;
+    if (event.key === "Escape") setOpen(false);
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    document.addEventListener("pointerdown", onDocPointerDown, true);
+    document.addEventListener("keydown", onDocKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", onDocPointerDown, true);
+      document.removeEventListener("keydown", onDocKeyDown);
+    };
+  }, [open]);
 
   const imageModels = useMemo(() => {
     if (keys?.imageModels?.length) return keys.imageModels;
@@ -256,34 +281,43 @@ export function StudioModelBar({ config, onChanged }) {
       ? `${t("studio_model_auto")} · Edge`
       : labelFor(audioModels, audioValue, keys?.ttsBackendPref || "—");
 
+  const imageLabel = imageValue === "auto" ? t("studio_model_auto") : imageTrigger;
+  const videoLabel = videoValue === "auto" ? t("studio_model_auto") : videoTrigger;
+  const audioLabel = audioValue === "auto" ? t("studio_model_auto") : audioTrigger;
+  const triggerTitle = `${t("studio_model_switcher_title")}: ${imageLabel} / ${videoLabel} / ${audioLabel}`;
+
   return (
-    <div className="relative">
+    <div className="relative shrink-0" ref={rootRef}>
       <button
         type="button"
-        className="btn-secondary !min-h-9 max-w-[340px] gap-1.5 !px-2.5 text-[11px]"
+        className="btn-secondary !min-h-9 w-auto max-w-none shrink-0 gap-1.5 !px-2.5 text-[11px] whitespace-nowrap"
+        aria-expanded={open}
+        aria-haspopup="dialog"
         onClick={() => {
           setOpen((v) => {
             if (!v) void load();
             return !v;
           });
         }}
-        title={t("studio_model_switcher_title")}
+        title={triggerTitle}
       >
         <ImageIcon className="h-3.5 w-3.5 shrink-0 opacity-70" />
-        <span className="truncate">{imageValue === "auto" ? t("studio_model_auto") : imageTrigger}</span>
+        <span>{imageLabel}</span>
         <span className="text-white/25">/</span>
         <Video className="h-3.5 w-3.5 shrink-0 opacity-70" />
-        <span className="truncate">{videoValue === "auto" ? t("studio_model_auto") : videoTrigger}</span>
+        <span>{videoLabel}</span>
         <span className="text-white/25">/</span>
         <Mic2 className="h-3.5 w-3.5 shrink-0 opacity-70" />
-        <span className="truncate">{audioValue === "auto" ? t("studio_model_auto") : audioTrigger}</span>
+        <span>{audioLabel}</span>
         <ChevronDown className="h-3 w-3 shrink-0 opacity-50" />
       </button>
 
       {open ? (
-        <>
-          <button type="button" className="fixed inset-0 z-40 cursor-default" aria-label="close" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full z-50 mt-2 w-[340px] rounded-2xl border border-white/10 bg-[#12141c] p-3 shadow-[0_20px_60px_rgba(0,0,0,.55)]">
+          <div
+            className="absolute right-0 top-full z-50 mt-2 w-[340px] rounded-2xl border border-white/10 bg-[#12141c] p-3 shadow-[0_20px_60px_rgba(0,0,0,.55)]"
+            role="dialog"
+            aria-label={t("studio_model_switcher_title")}
+          >
             <div className="mb-2 text-[11px] font-semibold text-white/80">{t("studio_model_switcher_title")}</div>
             <p className="mb-3 text-[10px] leading-4 text-white/40">{t("studio_model_switcher_hint")}</p>
 
@@ -395,7 +429,6 @@ export function StudioModelBar({ config, onChanged }) {
             </button>
             <p className="mt-1.5 text-[10px] leading-4 text-white/35">{t("studio_model_qa_hint")}</p>
           </div>
-        </>
       ) : null}
     </div>
   );

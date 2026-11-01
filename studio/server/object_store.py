@@ -5,7 +5,7 @@ Reads the same OSS_* names as dtok-app, plus Studio-specific overrides:
   OSS_API_BASE_URL / MINIO_ENDPOINT / S3_ENDPOINT
   OSS_CONSOLE_USERNAME / MINIO_ACCESS_KEY / S3_ACCESS_KEY
   OSS_CONSOLE_PASSWORD / MINIO_SECRET_KEY / S3_SECRET_KEY
-  MINIO_BUCKET / S3_BUCKET          (default: dtok-app)
+  MINIO_BUCKET / S3_BUCKET          (default: openmontage)
   MINIO_PREFIX / S3_PREFIX          (default: openmontage)
   MINIO_PUBLIC_BASE / S3_PUBLIC_BASE (default: OSS_API_BASE_URL)
 
@@ -47,7 +47,7 @@ def secret_key() -> str:
 
 
 def bucket() -> str:
-    return _first("MINIO_BUCKET", "S3_BUCKET", default="dtok-app")
+    return _first("MINIO_BUCKET", "S3_BUCKET", default="openmontage")
 
 
 def prefix() -> str:

@@ -52,11 +52,15 @@ The image ships with `midnight-sms-ep01` as a demo; mounting an empty volume hid
 
 ## Local Docker
 
+One-shot (Postgres + Redis + MinIO + Studio). Defaults use local Demo auth and in-stack MinIO — see [`docs/SELF_HOSTING.md`](../docs/SELF_HOSTING.md).
+
 ```bash
 # from repo root
+cp studio/.env.example .env
 docker compose -f docker-compose.studio.yml up --build
-# open http://127.0.0.1:8787
+# open http://127.0.0.1:8787 → Demo
 curl -s http://127.0.0.1:8787/api/health
+# MinIO console: http://127.0.0.1:9001 (minioadmin / minioadmin)
 ```
 
 ## Local without Docker

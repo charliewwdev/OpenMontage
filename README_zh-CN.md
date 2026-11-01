@@ -193,29 +193,27 @@ OpenMontage Drama Studio 是面向短剧 / 短视频制作的 **产品化工坊*
 | Studio 应用（前端 + API）与媒体 worker | ✅ 从本仓库构建 |
 | PostgreSQL 16 | ✅ 已内置 |
 | Redis 7（媒体任务队列） | ✅ 已内置 |
-| S3 兼容对象存储（MinIO / S3） | ❌ **需自备**：endpoint、access key、secret、bucket（`OSS_*` / `MINIO_*` / `S3_*`） |
-| 文本大模型密钥 | ❌ **需自备**：DeepSeek、OpenAI、Claude、Gemini、通义、豆包、Kimi、智谱、MiniMax、OpenRouter 或其他 OpenAI 兼容接口 |
-| 出图 + 出视频 | ❌ **需自备**：火山方舟 Key，用于 **Seedream**（出图）和 **Seedance**（出视频），二者均为**付费第三方 API**；出图也可改用自有 ComfyUI |
-| 配音 TTS | 默认 edge-tts（无需密钥）；可选 OpenAI 兼容语音接口 |
+| MinIO（S3 兼容对象存储） | ✅ 已内置（`drama-minio`，自动建桶） |
+| 文本大模型密钥 | ❌ 生成剧本等时**需自备** |
+| 出图 + 出视频 | ❌ **需自备**：火山方舟 Seedream / Seedance（付费），或自有 ComfyUI 出图 |
+| 配音 TTS | 默认 edge-tts（无需密钥） |
 
-**完全自托管（不依赖 DTok 账号）：** `studio/.env.example` 里仍带有线上体验站示例值（`openmontage.dtok.io`、其 MinIO，以及 `API_BASE_URL` → DTok 账号接口）。私有部署请改用 **本地 Demo 鉴权**（`STUDIO_DEMO_ENABLED=true`，登录页点 Demo → `POST /api/auth/demo`，不访问 DTok），把 `MINIO_*` / `OSS_*` 指到自管存储，并在环境变量或「模型配置」中填写自备 LLM / Seedream / Seedance（或 ComfyUI）密钥。密码登录与 Google 仍会代理到当前 `API_BASE_URL`；独立部署可不用这两条路径，或改指向自有账号接口。
+Compose 默认使用 **本地 Demo 鉴权** + 栈内 MinIO，无需外部账号服务即可启动。生成能力在 `.env` 或「模型配置」里补密钥。托管覆盖项见 **[docs/SELF_HOSTING_zh-CN.md](docs/SELF_HOSTING_zh-CN.md)** · [English](docs/SELF_HOSTING.md)。
 
-独立部署步骤（鉴权模式、MinIO 示例、各阶段是否依赖付费 API）：
-**[docs/SELF_HOSTING_zh-CN.md](docs/SELF_HOSTING_zh-CN.md)** · [English](docs/SELF_HOSTING.md)。
-
-线上实例有积分充值页面；自部署时直接向各模型供应商付费。
+线上实例有积分充值页面；自托管时直接向各模型供应商付费。
 
 ## 快速开始
 
-Docker（Compose 读取仓库根目录的 `.env`）：
+Docker 一键（Postgres + Redis + MinIO + Studio）：
 
 ```bash
 cp studio/.env.example .env
-# 独立部署：设置 STUDIO_PUBLIC_URL、STUDIO_DEMO_ENABLED=true、自管 MINIO_*/OSS_*、模型密钥
-# 详见 docs/SELF_HOSTING_zh-CN.md — 若要不依赖 DTok，勿保留示例中的 DTok API_BASE_URL / MinIO 地址
 docker compose -f docker-compose.studio.yml up --build
-# 打开 http://localhost:8787 · 用 Demo 登录 · 健康检查：GET /api/health
+# 打开 http://localhost:8787 → 点 Demo
+# 健康检查：GET http://localhost:8787/api/health
+# MinIO 控制台：http://localhost:9001（minioadmin / minioadmin）
 ```
+
 
 本地开发：
 

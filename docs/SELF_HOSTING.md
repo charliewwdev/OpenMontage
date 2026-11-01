@@ -13,7 +13,7 @@ Related: [`studio/.env.example`](../studio/.env.example) · [`docker-compose.stu
 | Studio UI + API + media worker | Yes | Built from this repo |
 | PostgreSQL 16 | Yes | Project / secrets / metadata |
 | Redis 7 | Yes | Media job queue |
-| S3-compatible object storage | **No — you provide** | MinIO, AWS S3, or any S3 API (`MINIO_*` / `OSS_*` / `S3_*`) |
+| MinIO (S3-compatible object storage) | **Yes (bundled)** | Service `drama-minio` + `drama-minio-init` (bucket auto-created). Override `MINIO_*` for hosted/external S3. |
 | Account / login service | **No DTok required** | Use **local demo auth** (built in), or point `API_BASE_URL` at your own compatible account API |
 | Text LLM | You provide | Any OpenAI-compatible key (DeepSeek, OpenAI, Qwen, …) |
 | Image generation | You provide | **Seedream** via Volcengine Ark (**paid**), **or** your own ComfyUI server |
@@ -54,13 +54,13 @@ STUDIO_GOOGLE_ENABLED=false
 # (shipped default is the DTok account API). With demo auth you never need that path.
 # API_BASE_URL=
 
-# Your object storage (replace the dtok MinIO sample values)
-MINIO_ENDPOINT=http://127.0.0.1:9000
-MINIO_ACCESS_KEY=minioadmin
-MINIO_SECRET_KEY=minioadmin
-MINIO_BUCKET=openmontage
-MINIO_PREFIX=openmontage
-# Or the OSS_* aliases used by dtok-app — same fields.
+# Object storage: Compose defaults point at in-stack drama-minio.
+# Override only when using external MinIO / S3:
+# MINIO_ENDPOINT=https://minio-api.example.com
+# MINIO_ACCESS_KEY=...
+# MINIO_SECRET_KEY=...
+# MINIO_BUCKET=openmontage
+# MINIO_PUBLIC_BASE=https://minio-api.example.com
 
 # Text LLM (pick one family you have a key for)
 DEEPSEEK_API_KEY=sk-...
@@ -76,25 +76,22 @@ VOLCENGINE_API_KEY=...   # or ARK_API_KEY
 
 Postgres / Redis: keep the Compose defaults (`drama-db`, `drama-redis`) unless you already run your own.
 
-### 2. Object storage example (optional local MinIO)
+### 2. Object storage
 
-Compose does **not** start MinIO. One common local option:
+**Default:** `docker compose … up --build` starts `drama-minio` and creates bucket `openmontage`. Console: http://localhost:9001 (`minioadmin` / `minioadmin`). Studio talks to `http://drama-minio:9000` inside the network; browsers use `MINIO_PUBLIC_BASE` (default `http://127.0.0.1:9000`).
 
-```bash
-docker run -d --name om-minio -p 9000:9000 -p 9001:9001 \
-  -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin \
-  minio/minio server /data --console-address ":9001"
-# Create bucket `openmontage` in the console (http://127.0.0.1:9001), then point MINIO_* at it.
-```
+**External S3 / hosted MinIO:** set `MINIO_ENDPOINT`, keys, bucket, and `MINIO_PUBLIC_BASE` (or `OSS_*`). The bundled MinIO container can stay unused, or remove/stop it in your override compose.
 
-Any S3-compatible endpoint works the same way. Health: `GET /api/health` reports object-store reachability.
+Health: `GET /api/health` reports object-store reachability.
 
 ### 3. Start
 
 ```bash
+cp studio/.env.example .env
 docker compose -f docker-compose.studio.yml up --build
-# UI: http://localhost:8787
+# UI: http://localhost:8787 → Demo
 # Health: GET /api/health
+# MinIO console: http://localhost:9001
 ```
 
 ### 4. Sign in without DTok
@@ -156,6 +153,6 @@ There is no requirement to use DTok-billed credits when self-hosting.
 
 - [ ] `STUDIO_PUBLIC_URL` is your host, not `openmontage.dtok.io`
 - [ ] Sign-in works via **Demo** (or your own `API_BASE_URL`), without creating a DTok account
-- [ ] `MINIO_*` / `OSS_*` point at storage you control (not `minio-api.dtok.io` unless you intend to)
+- [ ] Object storage OK: bundled MinIO (default) or your own `MINIO_*` / `OSS_*` (not `minio-api.dtok.io` unless you intend to)
 - [ ] LLM key set; image path (Seedream or ComfyUI) set; Seedance key set if you need video shots
 - [ ] `GET /api/health` shows Postgres + object storage OK

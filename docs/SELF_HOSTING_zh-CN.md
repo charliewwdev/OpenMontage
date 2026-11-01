@@ -13,7 +13,7 @@
 | Studio 前端 + API + media worker | 是 | 本仓库构建 |
 | PostgreSQL 16 | 是 | 项目 / 密钥 / 元数据 |
 | Redis 7 | 是 | 媒体任务队列 |
-| S3 兼容对象存储 | **否 — 需自备** | MinIO / AWS S3 等（`MINIO_*` / `OSS_*` / `S3_*`） |
+| MinIO（S3 兼容对象存储） | **是（已内置）** | `drama-minio` + `drama-minio-init`（自动建桶）。托管/外部 S3 时覆盖 `MINIO_*`。 |
 | 账号 / 登录服务 | **不需要 DTok** | 用内置 **本地 Demo 鉴权**，或把 `API_BASE_URL` 指到自有兼容账号接口 |
 | 文本大模型 | 需自备 | 任意 OpenAI 兼容 Key |
 | 出图 | 需自备 | 火山方舟 **Seedream**（**付费**），**或**自有 ComfyUI |
@@ -49,11 +49,12 @@ STUDIO_GOOGLE_ENABLED=false
 # 只用 Demo 登录时不需要那条路径。
 # API_BASE_URL=
 
-MINIO_ENDPOINT=http://127.0.0.1:9000
-MINIO_ACCESS_KEY=minioadmin
-MINIO_SECRET_KEY=minioadmin
-MINIO_BUCKET=openmontage
-MINIO_PREFIX=openmontage
+# 对象存储：Compose 默认指向栈内 drama-minio。
+# 仅在使用外部 MinIO / S3 时覆盖：
+# MINIO_ENDPOINT=https://minio-api.example.com
+# MINIO_ACCESS_KEY=...
+# MINIO_SECRET_KEY=...
+# MINIO_PUBLIC_BASE=https://minio-api.example.com
 
 DEEPSEEK_API_KEY=sk-...
 VOLCENGINE_API_KEY=...   # 或 ARK_API_KEY；Seedance（及可选 Seedream）
@@ -62,22 +63,22 @@ VOLCENGINE_API_KEY=...   # 或 ARK_API_KEY；Seedance（及可选 Seedream）
 
 Postgres / Redis 可沿用 Compose 默认服务。
 
-### 2. 对象存储示例（可选本地 MinIO）
+### 2. 对象存储
 
-Compose **不会**启动 MinIO。本地常见做法：
+**默认：** `docker compose … up --build` 会启动 `drama-minio` 并创建桶 `openmontage`。控制台：http://localhost:9001（`minioadmin` / `minioadmin`）。容器内 Studio 访问 `http://drama-minio:9000`；浏览器侧用 `MINIO_PUBLIC_BASE`（默认 `http://127.0.0.1:9000`）。
 
-```bash
-docker run -d --name om-minio -p 9000:9000 -p 9001:9001 \
-  -e MINIO_ROOT_USER=minioadmin -e MINIO_ROOT_PASSWORD=minioadmin \
-  minio/minio server /data --console-address ":9001"
-# 在控制台创建 bucket `openmontage`，再配置 MINIO_*。
-```
+**外部 S3 / 托管 MinIO：** 设置 `MINIO_ENDPOINT`、密钥、桶与 `MINIO_PUBLIC_BASE`（或 `OSS_*`）。栈内 MinIO 可闲置，或在覆盖 compose 中去掉。
+
+健康检查：`GET /api/health` 会报告对象存储可达性。
 
 ### 3. 启动
 
 ```bash
+cp studio/.env.example .env
 docker compose -f docker-compose.studio.yml up --build
-# http://localhost:8787 · GET /api/health
+# http://localhost:8787 → Demo
+# GET /api/health
+# MinIO 控制台：http://localhost:9001
 ```
 
 ### 4. 不经过 DTok 登录
@@ -124,6 +125,6 @@ docker compose -f docker-compose.studio.yml up --build
 
 - [ ] `STUDIO_PUBLIC_URL` 是你的地址，不是 `openmontage.dtok.io`
 - [ ] 能用 **Demo**（或自有 `API_BASE_URL`）登录，且未注册 DTok 账号
-- [ ] `MINIO_*` / `OSS_*` 指向自管存储（除非你有意使用 dtok MinIO）
+- [ ] 对象存储正常：默认栈内 MinIO，或自管 `MINIO_*` / `OSS_*`（除非有意使用 dtok MinIO）
 - [ ] 已配置 LLM；出图路径（Seedream 或 ComfyUI）；需要视频时已配置 Seedance
 - [ ] `GET /api/health` 中 Postgres 与对象存储正常

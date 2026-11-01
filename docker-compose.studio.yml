@@ -1,7 +1,8 @@
 # Local / Coolify-compatible Drama Studio stack
-# Usage:
+# One-shot (no extra services required):
 #   docker compose -f docker-compose.studio.yml up --build
-# Coolify: docker-compose build pack → this file (or Dockerfile-only + DATABASE_URL)
+# Then open http://localhost:8787 and click Demo.
+# Coolify: docker-compose build pack → this file (override MINIO_*/API_BASE_URL for hosted).
 
 services:
   drama-db:
@@ -45,6 +46,45 @@ services:
       timeout: 3s
       retries: 6
 
+  # Bundled S3-compatible store so `docker compose up --build` works without
+  # a separate MinIO / AWS account. Override MINIO_ENDPOINT for hosted MinIO.
+  drama-minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - drama_minio:/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      start_period: 10s
+
+  drama-minio-init:
+    image: minio/mc:latest
+    depends_on:
+      drama-minio:
+        condition: service_healthy
+    restart: "no"
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        mc alias set local http://drama-minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"
+        mc mb --ignore-existing "local/$${MINIO_BUCKET}"
+        echo "minio bucket ready: $${MINIO_BUCKET}"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_BUCKET: ${MINIO_BUCKET:-openmontage}
+
   drama-studio:
     build:
       context: .
@@ -56,6 +96,8 @@ services:
         condition: service_healthy
       drama-redis:
         condition: service_healthy
+      drama-minio-init:
+        condition: service_completed_successfully
     ports:
       - "${PORT:-8787}:8787"
     environment:
@@ -78,12 +120,14 @@ services:
       STUDIO_DIST: /app/studio/dist
       STUDIO_PUBLIC_URL: ${STUDIO_PUBLIC_URL:-http://localhost:8787}
       STUDIO_CORS_ORIGINS: ${STUDIO_CORS_ORIGINS:-${STUDIO_PUBLIC_URL:-http://localhost:8787}}
-      API_BASE_URL: ${API_BASE_URL:-https://api-app.dtok.io/api/v1}
+      # Empty = local Demo-only auth (no external account API). Set for hosted password/Google.
+      API_BASE_URL: ${API_BASE_URL:-}
       STUDIO_AUTH_REQUIRED: ${STUDIO_AUTH_REQUIRED:-true}
       STUDIO_DEMO_ENABLED: ${STUDIO_DEMO_ENABLED:-true}
       STUDIO_DEMO_AUTO_ENTER: ${STUDIO_DEMO_AUTO_ENTER:-false}
       STUDIO_DEMO_SECRET: ${STUDIO_DEMO_SECRET:-}
       STUDIO_OPS_TOKEN: ${STUDIO_OPS_TOKEN:-}
+      STUDIO_GOOGLE_ENABLED: ${STUDIO_GOOGLE_ENABLED:-false}
       # Optional generation keys (same names as repo .env.example / dtok-style secrets)
       FAL_KEY: ${FAL_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
@@ -103,14 +147,21 @@ services:
       ARK_API_KEY: ${ARK_API_KEY:-}
       DASHSCOPE_API_KEY: ${DASHSCOPE_API_KEY:-}
       ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:-}
+      NVIDIA_API_KEY: ${NVIDIA_API_KEY:-}
+      NVIDIA_NIM_API_KEY: ${NVIDIA_NIM_API_KEY:-}
+      COMFYUI_SERVER_URL: ${COMFYUI_SERVER_URL:-}
+      COMFYUI_VIDEO_SERVER_URL: ${COMFYUI_VIDEO_SERVER_URL:-}
+      COMFY_API_KEY: ${COMFY_API_KEY:-}
       OSS_API_BASE_URL: ${OSS_API_BASE_URL:-}
       OSS_CONSOLE_USERNAME: ${OSS_CONSOLE_USERNAME:-}
       OSS_CONSOLE_PASSWORD: ${OSS_CONSOLE_PASSWORD:-}
-      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-}
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
-      MINIO_BUCKET: ${MINIO_BUCKET:-dtok-app}
+      # Default: in-compose MinIO. Hosted stacks override these.
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://drama-minio:9000}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-${MINIO_ROOT_USER:-minioadmin}}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-${MINIO_ROOT_PASSWORD:-minioadmin}}
+      MINIO_BUCKET: ${MINIO_BUCKET:-openmontage}
       MINIO_PREFIX: ${MINIO_PREFIX:-openmontage}
+      MINIO_PUBLIC_BASE: ${MINIO_PUBLIC_BASE:-http://127.0.0.1:9000}
     volumes:
       - drama_projects:/data/projects
     healthcheck:
@@ -118,7 +169,7 @@ services:
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 20s
+      start_period: 40s
 
   # Edge media worker: run on a host that can reach ComfyUI (e.g. Mac / GPU LAN)
   # when Coolify egress to 智川云 is blocked. API stays on Coolify; this only consumes Redis.
@@ -151,10 +202,10 @@ services:
       STUDIO_MEDIA_WORKERS: ${STUDIO_MEDIA_WORKERS:-2}
       STUDIO_VIDEO_PARALLEL: ${STUDIO_VIDEO_PARALLEL:-2}
       STUDIO_IMAGE_WORKERS: ${STUDIO_IMAGE_WORKERS:-1}
-      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-}
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
-      MINIO_BUCKET: ${MINIO_BUCKET:-dtok-app}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://drama-minio:9000}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-${MINIO_ROOT_USER:-minioadmin}}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-${MINIO_ROOT_PASSWORD:-minioadmin}}
+      MINIO_BUCKET: ${MINIO_BUCKET:-openmontage}
       MINIO_PREFIX: ${MINIO_PREFIX:-openmontage}
     volumes:
       - drama_projects:/data/projects
@@ -163,3 +214,4 @@ volumes:
   drama_projects:
   drama_pg:
   drama_redis:
+  drama_minio:

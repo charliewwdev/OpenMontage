@@ -1,5 +1,7 @@
 # OpenMontage Drama Studio
 
+English: [`README.en.md`](README.en.md) · Self-hosting: [`../docs/SELF_HOSTING.md`](../docs/SELF_HOSTING.md) · Examples: [`../docs/examples.md`](../docs/examples.md)
+
 可部署的 AI 短剧制片台。界面吸收行业产品优点：
 
 | 借鉴 | 落地 |

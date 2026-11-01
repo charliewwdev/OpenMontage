@@ -137,5 +137,11 @@
   "studio_model_saved": "生成模型已更新",
   "studio_model_empty_hint": "暂无可用型号。请先在「模型配置」保存火山 Key 或连通 ComfyUI。",
   "studio_model_qa_toggle": "生成后提示词质检",
-  "studio_model_qa_hint": "用视觉模型核对是否符合提示词；不合格会自动重试一次。"
+  "studio_model_qa_hint": "用视觉模型核对是否符合提示词；不合格会自动重试一次。",
+  "resources_page_title": "资源导航",
+  "resources_page_description": "文档、站内入口、模型控制台与制作参考。",
+  "resources_filter_all": "全部",
+  "resources_filter_docs": "文档",
+  "resources_filter_studio": "站内入口",
+  "resources_filter_providers": "模型与工具"
 }

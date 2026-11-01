@@ -137,5 +137,11 @@
   "studio_model_saved": "Generation models updated",
   "studio_model_empty_hint": "No models yet. Save a Volcengine key or connect ComfyUI in Keys settings.",
   "studio_model_qa_toggle": "Prompt-fit QA after generate",
-  "studio_model_qa_hint": "Vision check vs prompt; failed stills get one automatic retry."
+  "studio_model_qa_hint": "Vision check vs prompt; failed stills get one automatic retry.",
+  "resources_page_title": "Resources",
+  "resources_page_description": "Docs, in-app entry points, model consoles, and production references.",
+  "resources_filter_all": "All",
+  "resources_filter_docs": "Docs",
+  "resources_filter_studio": "In-app",
+  "resources_filter_providers": "Models & tools"
 }

@@ -23,12 +23,10 @@
 
 <p align="center"><b>English</b> · <a href="README_zh-CN.md">简体中文</a></p>
 
-<!--
-  DEMO GIF PLACEHOLDER (TODO before launch)
-  Record a 20–30 s capture: type one line → walk through the 7 stages → play the exported clip.
-  Save as docs/demo.gif (< 10 MB) or upload an MP4 to a GitHub issue/release, then replace this comment with:
-  <p align="center"><img src="docs/demo.gif" alt="One line in, short drama out" width="720"/></p>
--->
+<p align="center">
+  <a href="https://openmontage.dtok.io/"><img src="docs/demo.gif" alt="OpenMontage Drama Studio — inspire → workshop → storyboard" width="720"/></a>
+</p>
+<p align="center"><em>One-line ideas → 7-stage workshop. Try the <a href="https://openmontage.dtok.io/">live demo</a> · starter prompts in <a href="docs/examples.md">docs/examples.md</a>.</em></p>
 
 ---
 
@@ -45,7 +43,7 @@ become reference images that feed the video shots, so you can redo a single char
 - **Step by step or one click.** Run each stage yourself, or let the agent run the whole pipeline in the background
   and then re-run any stage or swap a version.
 
-Try the hosted instance: **[openmontage.dtok.io](https://openmontage.dtok.io/)**
+Try the hosted instance: **[openmontage.dtok.io](https://openmontage.dtok.io/)** · Starter prompts: [`docs/examples.md`](docs/examples.md) · Studio docs: [`studio/README.en.md`](studio/README.en.md)
 
 ## The 7-stage workshop
 

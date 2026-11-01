@@ -43,7 +43,7 @@ OpenMontage Drama Studio 是可自部署的 AI 短剧工坊：一句话描述需
 - **外观延续（非换皮）：** 沿用现有 Drama Studio 深色工坊感与玫瑰强调色；后续设计以精修为主，不借机整站换视觉身份。操作清晰优先于装饰。
 - **独立产品：** OpenMontage Drama Studio 是独立产品。面向用户的文案、品牌与产品叙事只讲本产品自身。
 - **已有栈：** React 前端 + FastAPI + Postgres（及 Docker Compose 部署路径）；init 不再另选 Stack。
-- **未决（不发明）：** 公开定价、客户证言、演示 GIF、与竞品的量化对比 — 未来工作不得编造。
+- **未决（不发明）：** 公开定价、客户证言、成片级演示录屏、与竞品的量化对比 — 未来工作不得编造。
 
 ## Brand Commitments
 
@@ -56,7 +56,8 @@ OpenMontage Drama Studio 是可自部署的 AI 短剧工坊：一句话描述需
 ## Evidence on Hand
 
 - 在线实例与截图：`docs/screenshots/`（灵感、创作中心、Agent、工坊各步、资产、技能、画布、模型配置）
-- README 中演示 GIF 仍为占位 — 未提供前不得假装已有成片演示
+- README 已嵌入 `docs/demo.gif`（工坊截图走查；不是成片录屏）
+- 开箱提示词：`docs/examples.md`
 - 无已确认的客户证言或媒体报道可引用
 
 ## Product Principles

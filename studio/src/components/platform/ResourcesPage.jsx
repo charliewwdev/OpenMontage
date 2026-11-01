@@ -1,18 +1,23 @@
 import { useMemo, useState } from "react";
 import { resolveIcon } from "../../lib/icons";
+import { useLocale } from "../../lib/i18n";
 import { PageShell } from "./PageShell";
 
-const GROUPS = [
-  { id: "all", label: "全部" },
-  { id: "docs", label: "文档" },
-  { id: "studio", label: "站内入口" },
-  { id: "providers", label: "模型与工具" },
-];
-
 export function ResourcesPage({ config, onNavigate }) {
+  const { t } = useLocale();
   const links = config?.resources || [];
   const page = config?.pages?.resources || {};
   const [group, setGroup] = useState("all");
+
+  const groups = useMemo(
+    () => [
+      { id: "all", label: t("resources_filter_all") },
+      { id: "docs", label: t("resources_filter_docs") },
+      { id: "studio", label: t("resources_filter_studio") },
+      { id: "providers", label: t("resources_filter_providers") },
+    ],
+    [t],
+  );
 
   const visible = useMemo(() => {
     if (group === "all") return links;
@@ -22,11 +27,11 @@ export function ResourcesPage({ config, onNavigate }) {
   return (
     <PageShell
       eyebrow={page.eyebrow || "Resources"}
-      title={page.title || "资源导航"}
-      description={page.description || "文档、站内入口、模型控制台与制作参考。"}
+      title={page.title || t("resources_page_title")}
+      description={page.description || t("resources_page_description")}
     >
       <div className="mb-4 flex flex-wrap gap-2">
-        {GROUPS.map((g) => (
+        {groups.map((g) => (
           <button key={g.id} type="button" className={group === g.id ? "chip-active" : "chip"} onClick={() => setGroup(g.id)}>
             {g.label}
           </button>

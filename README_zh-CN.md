@@ -22,18 +22,18 @@
 
 <p align="center"><a href="README.md">English</a> · <b>简体中文</b></p>
 
-<!--
-  演示 GIF 占位（发布前补上）
-  录 20–30 秒：输入一句话 → 走完七步 → 播放导出的成片。
-  存为 docs/demo.gif（< 10 MB），或把 MP4 上传到 GitHub issue / release，然后把这段注释替换为：
-  <p align="center"><img src="docs/demo.gif" alt="一句话出片" width="720"/></p>
--->
+<p align="center">
+  <a href="https://openmontage.dtok.io/"><img src="docs/demo.gif" alt="OpenMontage Drama Studio — 灵感 → 工坊 → 分镜" width="720"/></a>
+</p>
+<p align="center"><em>一句话灵感 → 七步工坊。试玩 <a href="https://openmontage.dtok.io/">在线体验</a> · 开箱提示词见 <a href="docs/examples.md">docs/examples.md</a>。</em></p>
 
 ---
 
 ## 项目简介
 
 OpenMontage Drama Studio 是面向短剧 / 短视频制作的 **产品化工坊**。一句话描述需求（例如「10 集复仇爽剧，9:16，前 3 秒强钩子」），系统先生成剧本，再按七步生产线推进；每一步都可编辑，角色、场景、道具会作为参考图带入镜头生成，所以可以只重做某个角色或某个镜头，不必从头再来。
+
+英文 Studio 说明：[`studio/README.en.md`](studio/README.en.md)。开箱提示词：[`docs/examples.md`](docs/examples.md)。
 
 - **自带密钥（BYOK）**：文本、出图、出视频模型都在「模型配置」里按账号配置，密钥按账号隔离保存。
 - **先逛逛**：灵感、技能、资产页面无需登录即可浏览；调用大模型与写入项目时再鉴权。

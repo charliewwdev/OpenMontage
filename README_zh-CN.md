@@ -22,10 +22,33 @@
 
 <p align="center"><a href="README.md">English</a> · <b>简体中文</b></p>
 
+## 演示
+
 <p align="center">
-  <a href="https://openmontage.dtok.io/"><img src="docs/demo.gif" alt="OpenMontage Drama Studio — 灵感 → 工坊 → 分镜" width="720"/></a>
+  <a href="https://github.com/charliewwdev/OpenMontage/releases/download/v0.1.0/drama-studio-promo-1080p.mp4"><img src="docs/media/drama-studio-demo.gif" alt="OpenMontage Drama Studio 演示：一句话起稿、剧本、角色与场景参考图、分镜工作台、成片镜头" width="880"/></a>
 </p>
-<p align="center"><em>一句话灵感 → 七步工坊。试玩 <a href="https://openmontage.dtok.io/">在线体验</a> · 开箱提示词见 <a href="docs/examples.md">docs/examples.md</a>。</em></p>
+<p align="center"><em>一句话灵感 → 剧本 → 角色 / 场景设定 → 分镜工作台 → 成片镜头（截自宣传片）</em></p>
+
+<p align="center">
+  ▶️ <a href="https://github.com/charliewwdev/OpenMontage/releases/download/v0.1.0/drama-studio-promo-1080p.mp4"><b>观看完整宣传片（1080p，1 分 41 秒）</b></a> ·
+  <a href="https://github.com/charliewwdev/OpenMontage/releases/download/v0.1.0/drama-studio-promo-60s-vertical.mp4">60 秒竖版</a> ·
+  🌐 <a href="https://openmontage.dtok.io/"><b>在线体验</b></a> ·
+  💡 <a href="docs/examples.md">开箱提示词</a>
+</p>
+<p align="center"><sub>Docker Compose 自部署 · 自带 LLM Key · 出图 / 出视频用 Seedream / Seedance（火山方舟，付费） · edge-tts 配音 · FFmpeg 剪辑 · AGPL-3.0 开源</sub></p>
+
+<table>
+  <tr>
+    <td align="center" width="33%"><img src="docs/screenshots/04-workshop.png" alt="影视工坊项目库"/><br/><sub>影视工坊项目库</sub></td>
+    <td align="center" width="33%"><img src="docs/screenshots/05-workshop-script.png" alt="剧本工作台"/><br/><sub>剧本工作台</sub></td>
+    <td align="center" width="33%"><img src="docs/screenshots/06-workshop-character.png" alt="角色造型"/><br/><sub>角色造型</sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="33%"><img src="docs/screenshots/07-workshop-storyboard.png" alt="分镜导演台"/><br/><sub>分镜导演台</sub></td>
+    <td align="center" width="33%"><img src="docs/screenshots/03-agent.png" alt="创作 Agent"/><br/><sub>创作 Agent</sub></td>
+    <td align="center" width="33%"><img src="docs/screenshots/10-canvas.png" alt="无限画布（七步节点图）"/><br/><sub>无限画布（七步节点图）</sub></td>
+  </tr>
+</table>
 
 ---
 
@@ -131,8 +154,6 @@ OpenMontage Drama Studio 是面向短剧 / 短视频制作的 **产品化工坊*
 ### 模型配置
 
 管理文本与媒体供应商：OpenAI / DeepSeek / Claude / Gemini / 通义 / 豆包 / Kimi / 智谱 / MiniMax / OpenRouter 等；启用后立即用于剧本与分镜；可检测连通，热加载无需重启。
-
-![模型配置](docs/screenshots/11-keys.png)
 
 ### 其他模块
 

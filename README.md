@@ -23,10 +23,33 @@
 
 <p align="center"><b>English</b> · <a href="README_zh-CN.md">简体中文</a></p>
 
+## Demo
+
 <p align="center">
-  <a href="https://openmontage.dtok.io/"><img src="docs/demo.gif" alt="OpenMontage Drama Studio — inspire → workshop → storyboard" width="720"/></a>
+  <a href="https://github.com/charliewwdev/OpenMontage/releases/download/v0.1.0/drama-studio-promo-1080p.mp4"><img src="docs/media/drama-studio-demo.gif" alt="OpenMontage Drama Studio demo: one-line idea, script, character and scene references, storyboard workspace, rendered shots" width="880"/></a>
 </p>
-<p align="center"><em>One-line ideas → 7-stage workshop. Try the <a href="https://openmontage.dtok.io/">live demo</a> · starter prompts in <a href="docs/examples.md">docs/examples.md</a>.</em></p>
+<p align="center"><em>One-line idea → script → characters &amp; scenes → storyboard workspace → rendered shots (clips from the promo video).</em></p>
+
+<p align="center">
+  ▶️ <a href="https://github.com/charliewwdev/OpenMontage/releases/download/v0.1.0/drama-studio-promo-1080p.mp4"><b>Watch the full promo (1080p, 1:41)</b></a> ·
+  <a href="https://github.com/charliewwdev/OpenMontage/releases/download/v0.1.0/drama-studio-promo-60s-vertical.mp4">60 s vertical cut</a> ·
+  🌐 <a href="https://openmontage.dtok.io/"><b>Try the live demo</b></a> ·
+  💡 <a href="docs/examples.md">Starter prompts</a>
+</p>
+<p align="center"><sub>Self-host with Docker Compose · bring your own LLM key · Seedream / Seedance (paid, Volcengine Ark) for images and video shots · edge-tts voice · FFmpeg edit · AGPL-3.0</sub></p>
+
+<table>
+  <tr>
+    <td align="center" width="33%"><img src="docs/screenshots/04-workshop.png" alt="Workshop project library"/><br/><sub>Workshop project library</sub></td>
+    <td align="center" width="33%"><img src="docs/screenshots/05-workshop-script.png" alt="Script desk"/><br/><sub>Script desk</sub></td>
+    <td align="center" width="33%"><img src="docs/screenshots/06-workshop-character.png" alt="Character looks"/><br/><sub>Character looks</sub></td>
+  </tr>
+  <tr>
+    <td align="center" width="33%"><img src="docs/screenshots/07-workshop-storyboard.png" alt="Storyboard desk"/><br/><sub>Storyboard desk</sub></td>
+    <td align="center" width="33%"><img src="docs/screenshots/03-agent.png" alt="Creation agent"/><br/><sub>Creation agent</sub></td>
+    <td align="center" width="33%"><img src="docs/screenshots/10-canvas.png" alt="Infinite canvas (7-stage node graph)"/><br/><sub>Infinite canvas (7-stage node graph)</sub></td>
+  </tr>
+</table>
 
 ---
 
@@ -116,9 +139,6 @@ Skill market
 
 Infinite canvas
 ![Canvas](docs/screenshots/10-canvas.png)
-
-Model settings
-![Model settings](docs/screenshots/11-keys.png)
 
 </details>
 

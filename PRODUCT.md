@@ -56,7 +56,7 @@ OpenMontage Drama Studio 是可自部署的 AI 短剧工坊：一句话描述需
 ## Evidence on Hand
 
 - 在线实例与截图：`docs/screenshots/`（灵感、创作中心、Agent、工坊各步、资产、技能、画布、模型配置）
-- README 已嵌入 `docs/demo.gif`（工坊截图走查；不是成片录屏）
+- README 已嵌入 `docs/media/drama-studio-demo.gif`（截自宣传片的工作流片段），完整宣传片在 v0.1.0 Release 附件
 - 开箱提示词：`docs/examples.md`
 - 无已确认的客户证言或媒体报道可引用
 

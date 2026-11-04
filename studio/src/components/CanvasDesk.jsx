@@ -12,7 +12,10 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 
+import { tr, useLocale } from "../lib/i18n";
+
 function StageNode({ data }) {
+  useLocale();
   return (
     <div className="node-card stage">
       <Handle type="target" position={Position.Left} className="handle" />
@@ -28,6 +31,7 @@ function StageNode({ data }) {
 }
 
 function ShotNode({ data }) {
+  useLocale();
   return (
     <div className={`node-card shot status-${data.status || "pending"}`}>
       <Handle type="target" position={Position.Left} className="handle" />
@@ -43,6 +47,7 @@ function ShotNode({ data }) {
 }
 
 function SubgraphNode({ data }) {
+  useLocale();
   return (
     <div className="node-card">
       <Handle type="target" position={Position.Left} className="handle" />
@@ -77,6 +82,7 @@ export function CanvasDesk({
   view,
   onSelectShot,
 }) {
+  useLocale();
   const storyboard = view?.storyboard;
   const ledger = view?.ledger;
 
@@ -148,8 +154,8 @@ export function CanvasDesk({
       <aside className="panel h-full space-y-1 p-3">
         <div className="label px-1">Canvas source</div>
         {[
-          ["shots", "镜头 DAG"],
-          ["pipeline", "short-drama 主链"],
+          ["shots", tr("ui_canvas_desk_shot_dag")],
+          ["pipeline", tr("ui_canvas_desk_short_drama_main_chain")],
         ].map(([id, label]) => (
           <button
             key={id}

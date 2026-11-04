@@ -4,6 +4,8 @@ import { api } from "../../api";
 import { toast } from "../../lib/toast";
 import { PageShell } from "./PageShell";
 
+import { tr, useLocale } from "../../lib/i18n";
+
 const STORAGE_KEY = "om.challenges.v1";
 
 function loadProgress() {
@@ -20,6 +22,7 @@ function prizePoints(prize) {
 }
 
 export function ChallengePage({ config, onStart }) {
+  useLocale();
   const challenges = config?.challenges || [];
   const page = config?.pages?.challenge || {};
   const [progress, setProgress] = useState(() => loadProgress());
@@ -54,8 +57,10 @@ export function ChallengePage({ config, onStart }) {
       });
       const next = res.credits?.balance;
       if (typeof next === "number") setBalance(next);
-      if (res.already) toast.info("该挑战积分已发放过");
-      else toast.success(`已完成，创作积分 +${prizePoints(item.prize)}`);
+      if (res.already) toast.info(tr("ui_challenge_credits_for_this_challenge_were_already"));
+      else toast.success(tr("ui_challenge_done_creator_credits", {
+        0: prizePoints(item.prize)
+      }));
     } catch (error) {
       toast.error(String(error.message || error));
     }
@@ -64,34 +69,34 @@ export function ChallengePage({ config, onStart }) {
   return (
     <PageShell
       eyebrow={page.eyebrow || "Challenge"}
-      title={page.title || "创作挑战"}
-      description={page.description || "限时主题任务，练熟六步工坊节奏；接受后会把 brief 带入创作 Agent。完成可获得本地创作积分。"}
+      title={page.title || tr("ui_challenge_creative_challenges")}
+      description={page.description || tr("ui_challenge_time_limited_themed_tasks_to_get")}
     >
       <div className="mb-5 grid gap-3 sm:grid-cols-4">
         <article className="panel p-4">
-          <div className="text-xs text-[var(--muted)]">全部挑战</div>
+          <div className="text-xs text-[var(--muted)]">{tr("ui_challenge_all_challenges")}</div>
           <strong className="mt-1 block text-2xl">{challenges.length}</strong>
         </article>
         <article className="panel p-4">
-          <div className="text-xs text-[var(--muted)]">进行中</div>
+          <div className="text-xs text-[var(--muted)]">{tr("ui_challenge_in_progress")}</div>
           <strong className="mt-1 block text-2xl">
             {Object.values(progress).filter((p) => p.status === "accepted").length}
           </strong>
         </article>
         <article className="panel p-4">
-          <div className="text-xs text-[var(--muted)]">已完成</div>
+          <div className="text-xs text-[var(--muted)]">{tr("ui_challenge_completed")}</div>
           <strong className="mt-1 block text-2xl">
             {Object.values(progress).filter((p) => p.status === "done").length}
           </strong>
         </article>
         <article className="panel p-4">
-          <div className="text-xs text-[var(--muted)]">创作积分</div>
+          <div className="text-xs text-[var(--muted)]">{tr("ui_challenge_creator_credits")}</div>
           <strong className="mt-1 block text-2xl">{balance ?? "—"}</strong>
         </article>
       </div>
 
       {!challenges.length ? (
-        <div className="panel py-20 text-center text-sm text-[var(--muted)]">暂无挑战，稍后再来</div>
+        <div className="panel py-20 text-center text-sm text-[var(--muted)]">{tr("ui_challenge_no_challenges_yet_check_back_later")}</div>
       ) : (
         <div className="grid gap-3 lg:grid-cols-3">
           {challenges.map((item, index) => {
@@ -103,7 +108,7 @@ export function ChallengePage({ config, onStart }) {
                     <Trophy className="h-5 w-5" />
                   </span>
                   <span className="rounded-full bg-white/[.06] px-2 py-0.5 text-[10px] text-white/45">
-                    {state === "done" ? "已完成" : state === "accepted" ? "进行中" : `#${index + 1}`}
+                    {state === "done" ? tr("ui_challenge_completed") : state === "accepted" ? tr("ui_challenge_in_progress") : `#${index + 1}`}
                   </span>
                 </div>
                 <h3 className="mt-4 text-lg font-semibold">{item.title}</h3>
@@ -118,18 +123,16 @@ export function ChallengePage({ config, onStart }) {
                       onStart?.(item);
                     }}
                   >
-                    {state === "accepted" ? "继续挑战" : "接受挑战"}
+                    {state === "accepted" ? tr("ui_challenge_continue_challenge") : tr("ui_challenge_accept_challenge")}
                   </button>
                   <button
                     type="button"
                     className="btn-secondary flex-1"
                     onClick={async () => {
                       await navigator.clipboard.writeText(item.brief || "");
-                      toast.success("brief 已复制");
+                      toast.success(tr("ui_challenge_brief_copied"));
                     }}
-                  >
-                    复制 brief
-                  </button>
+                  >{tr("ui_challenge_copy_brief")}</button>
                 </div>
                 {state !== "done" ? (
                   <button
@@ -137,10 +140,9 @@ export function ChallengePage({ config, onStart }) {
                     className="mt-2 inline-flex items-center justify-center gap-1 text-xs text-white/45 hover:text-white/80"
                     onClick={() => void complete(item)}
                   >
-                    <CheckCircle2 className="h-3.5 w-3.5" /> 标记完成并领取积分
-                  </button>
+                    <CheckCircle2 className="h-3.5 w-3.5" />{" "}{tr("ui_challenge_mark_done_and_claim_credits")}</button>
                 ) : (
-                  <div className="mt-2 text-center text-xs text-[var(--ok)]">已完成</div>
+                  <div className="mt-2 text-center text-xs text-[var(--ok)]">{tr("ui_challenge_completed")}</div>
                 )}
               </article>
             );

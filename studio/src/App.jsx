@@ -3,7 +3,8 @@ import { api } from "./api";
 import { AuthPage, SKIP_AUTO_DEMO_KEY } from "./components/AuthPage";
 import { MaintenancePage } from "./components/MaintenancePage";
 import { clearSession, getStoredUser, getToken, setSession } from "./lib/auth";
-import { LocaleProvider } from "./lib/i18n";
+import { LocaleProvider, tr, useLocale } from "./lib/i18n";
+import { localizeConfig } from "./lib/configI18n";
 import { toast } from "./lib/toast";
 import { Library } from "./components/Library";
 import { CreateProjectPage } from "./components/CreateProjectPage";
@@ -85,6 +86,7 @@ function writeAppRoute({ projectId = "", step = "", episodeId = "", nav = "", sc
 }
 
 export default function App() {
+  const { locale } = useLocale();
   const bootRoute = useMemo(() => readAppRoute(), []);
   const [screen, setScreen] = useState("library");
   const [projects, setProjects] = useState([]);
@@ -93,7 +95,8 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(() => bootRoute.step || "workspace");
   const [focusEpisodeId, setFocusEpisodeId] = useState(() => bootRoute.episodeId || "");
-  const [config, setConfig] = useState(null);
+  const [rawConfig, setConfig] = useState(null);
+  const config = useMemo(() => localizeConfig(rawConfig, locale), [rawConfig, locale]);
   const [busyMsg, setBusyMsg] = useState("");
   const [nav, setNav] = useState("workshop");
   const [agentSeed, setAgentSeed] = useState("");
@@ -122,8 +125,8 @@ export default function App() {
     });
   }, []);
 
-  const messages = useMemo(() => config?.i18n?.messages || { zh: {}, en: {} }, [config]);
-  const defaultLocale = config?.i18n?.defaultLocale || "zh";
+  const messages = useMemo(() => rawConfig?.i18n?.messages || { zh: {}, en: {} }, [rawConfig]);
+  const defaultLocale = rawConfig?.i18n?.defaultLocale || "zh";
   const gateApp = config?.auth?.gateApp === true;
   const authRequired = config?.auth?.required !== false;
 
@@ -154,14 +157,14 @@ export default function App() {
   const requireAuth = useCallback(() => {
     if (authed) return true;
     setShowAuth(true);
-    toast.info(messages?.zh?.auth_page_need_login || "请先登录后再继续");
+    toast.info(tr("auth_page_need_login"));
     return false;
   }, [authed, messages]);
 
   useEffect(() => {
     const onNeedAuth = () => {
       setShowAuth(true);
-      toast.info(messages?.zh?.auth_page_need_login || "请先登录后再继续");
+      toast.info(tr("auth_page_need_login"));
     };
     window.addEventListener("om:need-auth", onNeedAuth);
     return () => window.removeEventListener("om:need-auth", onNeedAuth);
@@ -560,7 +563,9 @@ export default function App() {
               setScreen("portrait");
               setNav("workshop");
               writeAppRoute({ screen: "portrait", nav: "workshop" });
-              toast.success(`选择模板后进入影视工坊（/${skill.id}）`);
+              toast.success(tr("ui_app_pick_a_template_to_open_the", {
+                id: skill.id
+              }));
               return;
             }
 
@@ -571,14 +576,20 @@ export default function App() {
                 setScreen("studio");
                 setNav("workshop");
                 writeAppRoute({ projectId, step: stepName, nav: "workshop" });
-                toast.success(`已进入工坊「${stepName}」· /${skill.id}`);
+                toast.success(tr("ui_app_opened_workshop_step", {
+                  stepName: stepName,
+                  id: skill.id
+                }));
                 return;
               }
               setStep(stepName);
               setNav("workshop");
               setScreen("library");
               writeAppRoute({ nav: "workshop", step: stepName });
-              toast.info(`请打开或新建项目，将进入「${stepName}」步骤（Skill /${skill.id}）`);
+              toast.info(tr("ui_app_open_or_create_a_project_to", {
+                stepName: stepName,
+                id: skill.id
+              }));
               return;
             }
 
@@ -663,7 +674,9 @@ export default function App() {
           config={config}
           onStart={(challenge) => {
             setAgentSeed(challenge.brief);
-            toast.info(`已载入挑战：${challenge.title}`);
+            toast.info(tr("ui_app_challenge_loaded", {
+              title: challenge.title
+            }));
             onNavigate("agent");
           }}
         />

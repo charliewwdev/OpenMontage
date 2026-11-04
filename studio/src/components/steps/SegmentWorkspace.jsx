@@ -35,6 +35,8 @@ import { SkillExpertBadge } from "../SkillExpertBadge";
 import { ConfirmDialog } from "../ConfirmDialog";
 import { ModalOverlay } from "../ModalPortal";
 
+import { tr, useLocale } from "../../lib/i18n";
+
 function parseDialogue(raw = "") {
   const text = String(raw || "").trim();
   if (!text) return null;
@@ -152,6 +154,7 @@ function buildSegments(shots) {
 }
 
 function PromptWithChips({ prompt, entityByName, activeNames, onOpenEntity }) {
+  useLocale();
   const parts = String(prompt || "").split(/(@[^\s@,，。；;（）()]+)/g);
   return (
     <p className="text-[11px] leading-snug text-white/85">
@@ -180,6 +183,7 @@ function PromptWithChips({ prompt, entityByName, activeNames, onOpenEntity }) {
 }
 
 function DialogueCard({ dialogue, entityByName, onOpenEntity }) {
+  useLocale();
   const parsed = parseDialogue(dialogue);
   if (!parsed?.line) return null;
   const ent = parsed.speaker ? entityByName.get(parsed.speaker) : null;
@@ -192,7 +196,9 @@ function DialogueCard({ dialogue, entityByName, onOpenEntity }) {
         className={`h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-black/40 ${
           ent && onOpenEntity ? "cursor-pointer ring-offset-2 hover:ring-2 hover:ring-[#7c6cff]/60" : ""
         }`}
-        title={ent ? `查看 ${ent.name}` : undefined}
+        title={ent ? tr("ui_segment_workspace_view", {
+          name: ent.name
+        }) : undefined}
       >
         {entityThumb(ent) ? (
           <img src={entityThumb(ent)} alt="" className="h-full w-full object-contain object-center bg-black/60" />
@@ -210,12 +216,12 @@ function DialogueCard({ dialogue, entityByName, onOpenEntity }) {
               className="font-semibold text-white/85 hover:text-[#c4b5fd] hover:underline"
               onClick={() => onOpenEntity(ent)}
             >
-              {parsed.speaker || "对白"}
+              {parsed.speaker || tr("ui_segment_workspace_dialogue")}
             </button>
           ) : (
-            <span className="font-semibold text-white/85">{parsed.speaker || "对白"}</span>
+            <span className="font-semibold text-white/85">{parsed.speaker || tr("ui_segment_workspace_dialogue")}</span>
           )}
-          <span>台词</span>
+          <span>{tr("ui_segment_workspace_line")}</span>
         </div>
         <p className="text-[12px] font-medium leading-snug text-white/90">「{parsed.line.replace(/^「|」$/g, "")}」</p>
       </div>
@@ -240,6 +246,7 @@ export function SegmentWorkspace({
   focusEpisodeId,
   setStep,
 }) {
+  useLocale();
   const caps = config?.capabilities || {};
   // Video model comes from top StudioModelBar (ComfyUI H3 / Seedance) — do not force Seedance.
   const videoReady = Boolean(caps.videoReady || caps.seedance || caps.comfyui);
@@ -497,7 +504,7 @@ export function SegmentWorkspace({
   const checkConsistency = async () => {
     if (onRequireAuth && !onRequireAuth()) return;
     if (!episode) return;
-    setBusyMsg?.("正在核对提示词与对白、资产…");
+    setBusyMsg?.(tr("ui_segment_workspace_checking_prompts_against_dialogue_and_assets"));
     try {
       const res = await api(`/api/projects/${encodeURIComponent(projectId)}/storyboard`, {
         method: "POST",
@@ -507,9 +514,13 @@ export function SegmentWorkspace({
       apply(res);
       const fail = Number(res?.fail || 0);
       const repaired = (res?.results || []).filter((r) => r.repaired).length;
-      if (!fail && !repaired) toast.success("本集提示词与对白、角色、场景、道具一致");
-      else if (!fail) toast.success(`已按对白修正 ${repaired} 条提示词`);
-      else toast.error(`仍有 ${fail} 条对不齐，已标在分镜上`);
+      if (!fail && !repaired) toast.success(tr("ui_segment_workspace_prompts_in_this_episode_match_the"));
+      else if (!fail) toast.success(tr("ui_segment_workspace_fixed_prompts_to_match_the_dialogue", {
+        repaired: repaired
+      }));
+      else toast.error(tr("ui_segment_workspace_still_don_t_line_up_marked", {
+        fail: fail
+      }));
     } catch (error) {
       toast.error(String(error.message || error));
     } finally {
@@ -521,17 +532,17 @@ export function SegmentWorkspace({
     if (onRequireAuth && !onRequireAuth()) return;
     if (!episode) return;
     if (shots.some((s) => s.status === "generating")) {
-      toast.info("请等待视频任务完成后再重新拆分");
+      toast.info(tr("ui_segment_workspace_wait_for_video_jobs_to_finish"));
       return;
     }
     if (shots.length && !confirmSplit) {
       setConfirmSplit(true);
       return;
     }
-    if (!requireCapability(caps, "deepseek", onNeedKeys, "文本大模型 Key")) return;
+    if (!requireCapability(caps, "deepseek", onNeedKeys, tr("ui_segment_workspace_text_llm_key"))) return;
     setConfirmSplit(false);
     setSplitting(true);
-    setBusyMsg?.("AI 按片段拆镜中…");
+    setBusyMsg?.(tr("ui_segment_workspace_ai_is_splitting_shots_into_segments"));
     try {
       const res = await api(`/api/projects/${encodeURIComponent(projectId)}/storyboard`, {
         method: "POST",
@@ -540,7 +551,7 @@ export function SegmentWorkspace({
       });
       apply(res);
       setSegmentOrder(1);
-      toast.success("本集已拆成片段");
+      toast.success(tr("ui_segment_workspace_episode_split_into_segments"));
     } catch (error) {
       toastMaybeKeys(error, onNeedKeys);
       toast.error(String(error.message || error));
@@ -584,7 +595,7 @@ export function SegmentWorkspace({
     if (!episodeId || !activeSeg) return;
     if (onRequireAuth && !onRequireAuth()) return;
     setFillingStills(true);
-    setBusyMsg?.(`按 drama-entity-still 统一本段角色全身构图并补场景…`);
+    setBusyMsg?.(tr("ui_segment_workspace_unifying_full_body_character_framing_for"));
     try {
       const res = await api(`/api/projects/${encodeURIComponent(projectId)}/entities`, {
         method: "POST",
@@ -603,7 +614,7 @@ export function SegmentWorkspace({
       const queued = res?.queued ?? 0;
       const attempted = res?.attempted ?? 0;
       if (res?.async || res?.queued) {
-        toast.success("补图任务已提交后台队列（有界池限流，页面可继续浏览）");
+        toast.success(tr("ui_segment_workspace_image_fill_jobs_submitted_to_the"));
         const started = Date.now();
         while (Date.now() - started < 20 * 60 * 1000) {
           await new Promise((r) => setTimeout(r, 5000));
@@ -613,16 +624,20 @@ export function SegmentWorkspace({
             (e) => !e.deletedAt && e.imageStatus === "generating",
           );
           if (!still.length) {
-            toast.success("本段补图任务已结束，请核对质检结果");
+            toast.success(tr("ui_segment_workspace_image_fill_for_this_segment_finished"));
             break;
           }
-          setBusyMsg?.(`补图进行中…剩余 ${still.length} 项`);
+          setBusyMsg?.(tr("ui_segment_workspace_filling_images_left", {
+            length: still.length
+          }));
         }
         return;
       }
-      if (!attempted) toast.success("本段角色/场景图已齐");
+      if (!attempted) toast.success(tr("ui_segment_workspace_character_scene_images_for_this_segment"));
       else if (queued > 0) {
-        toast.success(`已排队统一构图 ${queued || attempted} 项（角色强制全身重出）`);
+        toast.success(tr("ui_segment_workspace_queued_for_unified_framing_characters_re", {
+          0: queued || attempted
+        }));
         // Light poll until no segment asset stays generating.
         const started = Date.now();
         while (Date.now() - started < 20 * 60 * 1000) {
@@ -633,16 +648,23 @@ export function SegmentWorkspace({
             (e) => !e.deletedAt && e.imageStatus === "generating",
           );
           if (!still.length) {
-            toast.success("本段补图任务已结束，请核对质检结果");
+            toast.success(tr("ui_segment_workspace_image_fill_for_this_segment_finished"));
             break;
           }
-          setBusyMsg?.(`补图进行中…剩余 ${still.length} 项`);
+          setBusyMsg?.(tr("ui_segment_workspace_filling_images_left", {
+            length: still.length
+          }));
         }
       } else {
         const ok = res?.pass ?? 0;
         const fail = res?.fail ?? 0;
-        if (fail === 0) toast.success(`已补齐 ${ok} 张定妆图（质检通过）`);
-        else toast.error(`补图完成：${ok} 通过，${fail} 未过质检（可点卡片重试）`);
+        if (fail === 0) toast.success(tr("ui_segment_workspace_filled_look_images_qa_passed", {
+          ok: ok
+        }));
+        else toast.error(tr("ui_segment_workspace_image_fill_done_passed_failed_qa", {
+          ok: ok,
+          fail: fail
+        }));
       }
     } catch (error) {
       toastMaybeKeys(error, onNeedKeys);
@@ -662,7 +684,7 @@ export function SegmentWorkspace({
     if (!activeSeg) return;
     if (onRequireAuth && !onRequireAuth()) return;
     if (!videoReady) {
-      toast.error("请先在顶部选择可用的视频模型（ComfyUI / Seedance）");
+      toast.error(tr("ui_segment_workspace_select_an_available_video_model_at"));
       onNeedKeys?.();
       return;
     }
@@ -674,10 +696,16 @@ export function SegmentWorkspace({
     setGenerating(true);
     setBusyMsg?.(
       instruction
-        ? `按调整重生片段 ${activeSeg.segmentOrder}…`
+        ? tr("ui_segment_workspace_regenerating_segment_with_changes", {
+        segmentOrder: activeSeg.segmentOrder
+      })
         : forceEntityQa
-          ? `强制出片片段 ${activeSeg.segmentOrder}…`
-          : `生成片段 ${activeSeg.segmentOrder}…`,
+          ? tr("ui_segment_workspace_force_rendering_segment", {
+        segmentOrder: activeSeg.segmentOrder
+      })
+          : tr("ui_segment_workspace_generating_segment", {
+        segmentOrder: activeSeg.segmentOrder
+      }),
     );
     try {
       const useRevise = Boolean(instruction) || pendingRegen || syncOnly;
@@ -710,10 +738,16 @@ export function SegmentWorkspace({
       setForceQaDialog(null);
       toast.success(
         instruction
-          ? `片段 ${activeSeg.segmentOrder} 已按调整提交重生`
+          ? tr("ui_segment_workspace_segment_submitted_for_regeneration_with_changes", {
+          segmentOrder: activeSeg.segmentOrder
+        })
           : forceEntityQa
-            ? `片段 ${activeSeg.segmentOrder} 已强制出片（未过检素材仍作参考）`
-            : `片段 ${activeSeg.segmentOrder} 出片已提交`,
+            ? tr("ui_segment_workspace_segment_force_rendered_assets_that_failed", {
+          segmentOrder: activeSeg.segmentOrder
+        })
+            : tr("ui_segment_workspace_segment_render_submitted", {
+          segmentOrder: activeSeg.segmentOrder
+        }),
       );
     } catch (error) {
       if (isEntityQaBlockedError(error) && !forceEntityQa) {
@@ -721,7 +755,7 @@ export function SegmentWorkspace({
           blockers: blockersFromError(error).length ? blockersFromError(error) : segEntityQaBlockers,
           opts,
         });
-        toast.error("素材质检未过，已阻断出片");
+        toast.error(tr("ui_segment_workspace_assets_failed_qa_rendering_blocked"));
       } else {
         toastMaybeKeys(error, onNeedKeys);
         toast.error(String(error.message || error));
@@ -736,7 +770,7 @@ export function SegmentWorkspace({
     if (!episode) return;
     if (onRequireAuth && !onRequireAuth()) return;
     setAudioBusy(true);
-    setBusyMsg?.("正在合成配音…");
+    setBusyMsg?.(tr("ui_segment_workspace_synthesizing_voice_over"));
     try {
       const res = await api(`/api/projects/${encodeURIComponent(projectId)}/audio`, {
         method: "POST",
@@ -744,7 +778,7 @@ export function SegmentWorkspace({
         body: JSON.stringify({ action: "generate", episodeId: episode.id }),
       });
       apply(res);
-      toast.success("本集配音已生成（导出时混入）");
+      toast.success(tr("ui_segment_workspace_episode_voice_over_generated_mixed_in"));
     } catch (error) {
       toast.error(String(error.message || error));
       if (/Key|TTS|edge-tts|配置/i.test(String(error.message || error))) onNeedKeys?.();
@@ -758,7 +792,7 @@ export function SegmentWorkspace({
     if (!episode) return;
     if (onRequireAuth && !onRequireAuth()) return;
     setExporting(true);
-    setBusyMsg?.("导出成片中…");
+    setBusyMsg?.(tr("ui_segment_workspace_exporting_cut"));
     try {
       const isPortrait = bundle?.project?.workflow === "portrait-match";
       // Portrait idlock: use end-of-clip × gap assemble so adjacent beats share the junction pose.
@@ -776,8 +810,8 @@ export function SegmentWorkspace({
         res?.edit?.outputUrl ||
         res?.bundle?.edits?.slice(-1)?.[0]?.outputUrl ||
         res?.bundle?.edits?.find((e) => e.episodeId === episode.id)?.outputUrl;
-      if (url) toast.success(isPortrait ? "对标合片已导出（v3 片头卡点 + 原曲）" : "成片已导出");
-      else toast.success("导出任务已完成");
+      if (url) toast.success(isPortrait ? tr("ui_segment_workspace_benchmark_cut_exported_v3_intro_beat") : tr("ui_segment_workspace_cut_exported"));
+      else toast.success(tr("ui_segment_workspace_export_job_finished"));
     } catch (error) {
       toast.error(String(error.message || error));
     } finally {
@@ -825,7 +859,7 @@ export function SegmentWorkspace({
         return;
       }
       setPendingRegen(true);
-      toast.success("台词已保存 · 可重生本段让口型生效");
+      toast.success(tr("ui_segment_workspace_lines_saved_regenerate_the_segment_to"));
     } catch (error) {
       toast.error(String(error.message || error));
     } finally {
@@ -913,7 +947,7 @@ export function SegmentWorkspace({
 
   const saveTrim = async () => {
     if (!episode || !clipDraft) {
-      return toast.info("本段还没有可裁剪的成片，请先生成本段");
+      return toast.info(tr("ui_segment_workspace_this_segment_has_no_cut_to"));
     }
     setSavingTrim(true);
     try {
@@ -940,7 +974,7 @@ export function SegmentWorkspace({
       });
       apply(res);
       setClipDraft((prev) => (prev ? { ...prev, start: trimStart, end: trimEnd } : prev));
-      toast.success("裁剪已保存（导出成片时生效）");
+      toast.success(tr("ui_segment_workspace_trim_saved_applied_when_exporting"));
     } catch (error) {
       toast.error(String(error.message || error));
     } finally {
@@ -1074,13 +1108,9 @@ export function SegmentWorkspace({
 
   if (!episode || !confirmedEpisodes.some((e) => e.id === episodeId)) {
     return (
-      <div className="panel py-24 text-center text-sm text-white/50">
-        请先在「剧本」定稿分集，再进入片段工作台。
-        {typeof setStep === "function" ? (
+      <div className="panel py-24 text-center text-sm text-white/50">{tr("ui_segment_workspace_lock_episodes_in_the_script_step")}{typeof setStep === "function" ? (
           <div className="mt-4">
-            <button type="button" className="btn-primary" onClick={() => setStep("script")}>
-              去剧本
-            </button>
+            <button type="button" className="btn-primary" onClick={() => setStep("script")}>{tr("ui_segment_workspace_go_to_script")}</button>
           </div>
         ) : null}
       </div>
@@ -1091,20 +1121,20 @@ export function SegmentWorkspace({
     return (
       <div className="panel flex flex-col items-center border-dashed py-24 text-center">
         <Clapperboard className="mb-4 h-10 w-10 text-[#7c6cff]" />
-        <strong className="text-lg">本集还没有片段</strong>
-        <p className="mt-2 max-w-md text-sm text-white/50">
-          将本集拆成约 10–15 秒的片段，每段含 3–4 个分镜节拍；角色、道具、台词都挂在段上。
-        </p>
+        <strong className="text-lg">{tr("ui_segment_workspace_no_segments_in_this_episode_yet")}</strong>
+        <p className="mt-2 max-w-md text-sm text-white/50">{tr("ui_segment_workspace_splits_the_episode_into_segments_of")}</p>
         <SkillExpertBadge skillId="drama-shot-prompt" className="mt-4" />
         <button type="button" className="btn-primary mt-5" disabled={splitting} onClick={() => void split()}>
           {splitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-          {splitting ? `拆分中 · ${splitElapsedTime}` : "AI 拆成片段"}
+          {splitting ? tr("ui_segment_workspace_splitting", {
+            splitElapsedTime: splitElapsedTime
+          }) : tr("ui_segment_workspace_ai_split_into_segments")}
         </button>
         <ConfirmDialog
           open={confirmSplit}
-          title="重新拆分本集？"
-          message="现有镜头与视频版本记录将被替换。"
-          confirmLabel="重新拆分"
+          title={tr("ui_segment_workspace_re_split_this_episode")}
+          message={tr("ui_segment_workspace_existing_shots_and_video_version_history")}
+          confirmLabel={tr("ui_segment_workspace_re_split")}
           onCancel={() => setConfirmSplit(false)}
           onConfirm={() => void split()}
         />
@@ -1117,19 +1147,21 @@ export function SegmentWorkspace({
       {/* Compact toolbar — compact density */}
       <div className="flex shrink-0 flex-wrap items-center gap-2 rounded-lg border border-white/10 bg-[#0c0e14] px-2 py-1.5">
         <div className="min-w-0 shrink">
-          <h2 className="truncate text-[13px] font-semibold text-white">
-            工作台
-            <span className="ml-1.5 text-[11px] font-normal text-white/45">
-              · 第{episode.episodeNumber}集「{episode.title || "未命名"}」
-            </span>
+          <h2 className="truncate text-[13px] font-semibold text-white">{tr("ui_segment_workspace_workspace")}<span className="ml-1.5 text-[11px] font-normal text-white/45">{tr("ui_segment_workspace_ep", {
+                episodeNumber: episode.episodeNumber
+              })}{episode.title || tr("ui_segment_workspace_untitled")}」
+                          </span>
           </h2>
-          <p className="text-[10px] text-white/40">
-            {segments.length} 片段 · {readyCount}/{segments.length} 已出片 · 约 {Math.round(totalDur)}s
-          </p>
+          <p className="text-[10px] text-white/40">{tr("ui_segment_workspace_segments_rendered_about_s", {
+              length: segments.length,
+              readyCount: readyCount,
+              length2: segments.length,
+              3: Math.round(totalDur)
+            })}</p>
           <SkillExpertBadge skillId="drama-shot-prompt" className="mt-1" />
         </div>
         {segments.length ? (
-          <div className="flex min-w-0 items-center gap-0.5" aria-label="片段导航">
+          <div className="flex min-w-0 items-center gap-0.5" aria-label={tr("ui_segment_workspace_segment_nav")}>
             <button
               type="button"
               className="btn-quiet !min-h-7 !px-1.5"
@@ -1152,7 +1184,9 @@ export function SegmentWorkspace({
                     className={`flex h-6 min-w-6 items-center justify-center rounded-full px-2 text-[11px] font-semibold transition ${
                       active ? "bg-[#7c6cff] text-white" : "bg-white/5 text-white/50 hover:bg-white/10 hover:text-white"
                     }`}
-                    title={`片段 ${seg.segmentOrder}`}
+                    title={tr("ui_segment_workspace_segment_3", {
+                      segmentOrder: seg.segmentOrder
+                    })}
                   >
                     {seg.segmentOrder}
                   </button>
@@ -1170,27 +1204,22 @@ export function SegmentWorkspace({
           </div>
         ) : null}
         <div className="ml-auto flex flex-wrap items-center gap-1.5">
-          <button type="button" className="btn-secondary !min-h-7 text-[11px]" disabled={splitting || generating} onClick={() => void checkConsistency()}>
-            校验提示词
-          </button>
+          <button type="button" className="btn-secondary !min-h-7 text-[11px]" disabled={splitting || generating} onClick={() => void checkConsistency()}>{tr("ui_segment_workspace_check_prompts")}</button>
           <button type="button" className="btn-secondary !min-h-7 text-[11px]" disabled={splitting || generating} onClick={() => void split()}>
-            {splitting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-            重新拆分
-          </button>
+            {splitting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}{tr("ui_segment_workspace_re_split")}</button>
           {editOutputUrl ? (
             <>
               <button
                 type="button"
                 className="btn-secondary !min-h-7 text-[11px]"
-                title="弹窗预览成片"
+                title={tr("ui_segment_workspace_preview_cut_in_a_popup")}
                 onClick={() => setPreviewFinalOpen(true)}
               >
-                <Film className="h-3 w-3" /> 查看成片
-              </button>
+                <Film className="h-3 w-3" />{" "}{tr("ui_segment_workspace_view_cut")}</button>
               <button
                 type="button"
                 className="btn-secondary !min-h-7 text-[11px]"
-                title="打开 X，自动填好宣传文案与成片链接"
+                title={tr("ui_segment_workspace_open_x_with_promo_copy_and")}
                 onClick={() => {
                   const res = shareVideoToX({
                     project: bundle?.project,
@@ -1201,17 +1230,14 @@ export function SegmentWorkspace({
                     durationSec: editDraft?.visualDur || editDraft?.targetDur || null,
                   });
                   if (res.ok) toast.success(res.message);
-                  else toast.error(res.message || "无法打开 X");
+                  else toast.error(res.message || tr("ui_segment_workspace_couldn_t_open_x"));
                 }}
               >
-                <Share2 className="h-3 w-3" /> 分享到 X
-              </button>
+                <Share2 className="h-3 w-3" />{" "}{tr("ui_segment_workspace_share_to_x")}</button>
             </>
           ) : (
             <button type="button" className="btn-secondary !min-h-7 text-[11px]" disabled={exporting || !readyCount} onClick={() => void exportEpisode()}>
-              {exporting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Film className="h-3 w-3" />}
-              导出成片
-            </button>
+              {exporting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Film className="h-3 w-3" />}{tr("ui_segment_workspace_export_cut")}</button>
           )}
         </div>
       </div>
@@ -1219,14 +1245,9 @@ export function SegmentWorkspace({
       {bundle?.project?.workflow === "portrait-match" ? (
         <p className="shrink-0 rounded-md border border-amber-400/20 bg-amber-400/5 px-2.5 py-1.5 text-[11px] leading-relaxed text-amber-100/80">
           {bundle?.project?.portraitMatchMode === "reshoot" ? (
-            <>
-              原片重拍：按「重拍企划」真机拍。角色/场景/卡点表仍须可读达标；本路径不跑 H3。
-            </>
+            <>{tr("ui_segment_workspace_original_reshoot_shoot_with_a_real")}</>
           ) : (
-            <>
-              极像质量堆叠：门禁过后再堆 H3——原片关键帧定妆、1080p、非 turbo、强化帧间提示、合片锐化+原曲。
-              角色/场景/提示词未达标会拦截出片；目标抖音划过「极像」。
-            </>
+            <>{tr("ui_segment_workspace_look_alike_quality_stack_h3_is")}</>
           )}
         </p>
       ) : null}
@@ -1236,36 +1257,36 @@ export function SegmentWorkspace({
         {/* Left: compact asset library — dense grid/list like production desks */}
         <aside className="scrollbar-thin order-3 max-h-[36vh] min-h-0 overflow-y-auto rounded-lg border border-white/10 bg-[#0c0e14] p-1.5 lg:col-span-2 lg:max-h-[28vh] xl:order-1 xl:col-span-1 xl:h-full xl:max-h-none">
           <div className="mb-1.5 flex items-center justify-between px-0.5">
-            <h4 className="text-[12px] font-semibold text-white">资产库</h4>
+            <h4 className="text-[12px] font-semibold text-white">{tr("ui_segment_workspace_asset_library")}</h4>
             <button
               type="button"
               className="inline-flex items-center gap-1 text-[10px] text-[#a78bfa] hover:underline disabled:opacity-40"
               disabled={fillingStills || generating || splitting}
-              title="补齐无图；本段角色强制按全身构图重出定妆"
+              title={tr("ui_segment_workspace_fill_missing_images_characters_in_this")}
               onClick={() => void fillSegmentStills()}
             >
               {fillingStills ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
-              {fillingStills ? "补图中…" : "统一构图"}
+              {fillingStills ? tr("ui_segment_workspace_filling_images") : tr("ui_segment_workspace_unify_framing")}
             </button>
           </div>
           {[
             {
               kind: "character",
-              label: "角色",
+              label: tr("ui_segment_workspace_characters"),
               list: segAssets.characters.length
                 ? segAssets.characters
                 : episodeEntities.filter((e) => e.kind === "character").slice(0, 9),
             },
             {
               kind: "scene",
-              label: "场景",
+              label: tr("ui_segment_workspace_scenes"),
               list: segAssets.scenes.length
                 ? segAssets.scenes
                 : episodeEntities.filter((e) => e.kind === "scene").slice(0, 6),
             },
             {
               kind: "prop",
-              label: "道具",
+              label: tr("ui_segment_workspace_props"),
               list: segAssets.props.length
                 ? segAssets.props
                 : episodeEntities.filter((e) => e.kind === "prop").slice(0, 8),
@@ -1300,7 +1321,7 @@ export function SegmentWorkspace({
                                 className="h-full w-full object-cover object-top"
                               />
                             ) : (
-                              <span className="text-[9px] text-white/25">无图</span>
+                              <span className="text-[9px] text-white/25">{tr("ui_segment_workspace_no_image")}</span>
                             )}
                           </div>
                           <div className="truncate px-0.5 py-0.5 text-center text-[9px] text-white/75">{ent.name}</div>
@@ -1347,15 +1368,13 @@ export function SegmentWorkspace({
             ) : null,
           )}
           {!segAssets.all.length && !allEntities.length ? (
-            <p className="text-xs text-white/40">
-              本集尚无资产。可先去补角色/场景图，或直接按提示词出片。
-            </p>
+            <p className="text-xs text-white/40">{tr("ui_segment_workspace_no_assets_in_this_episode_yet")}</p>
           ) : null}
 
           {/* Inline dubbing for this episode, scoped next to segment dialogues */}
           <div className="mt-2 border-t border-white/10 pt-3">
             <div className="mb-2 flex items-center justify-between">
-              <span className="text-[11px] font-medium text-white/45">本集配音</span>
+              <span className="text-[11px] font-medium text-white/45">{tr("ui_segment_workspace_episode_voice_over")}</span>
               <button
                 type="button"
                 className="btn-secondary !min-h-7 !px-2 text-[10px]"
@@ -1363,13 +1382,13 @@ export function SegmentWorkspace({
                 onClick={() => void generateAudio()}
               >
                 {audioBusy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Mic2 className="h-3 w-3" />}
-                {episodeAudio ? "重生成" : "生成"}
+                {episodeAudio ? tr("ui_segment_workspace_regenerate") : tr("ui_segment_workspace_generate")}
               </button>
             </div>
             {episodeAudio?.url ? (
               <audio controls src={episodeAudio.url} className="w-full" preload="metadata" />
             ) : (
-              <p className="text-[10px] leading-4 text-white/35">对白跟在分镜里；点生成后整集 TTS 会挂到成片。</p>
+              <p className="text-[10px] leading-4 text-white/35">{tr("ui_segment_workspace_dialogue_follows_the_storyboard_after_you")}</p>
             )}
           </div>
         </aside>
@@ -1382,55 +1401,49 @@ export function SegmentWorkspace({
                 type="button"
                 className={`rounded px-2 py-0.5 text-[11px] ${scriptTab === "lens" ? "bg-white/10 font-semibold text-white" : "text-white/45"}`}
                 onClick={() => setScriptTab("lens")}
-              >
-                镜头
-              </button>
+              >{tr("ui_segment_workspace_shot")}</button>
               <button
                 type="button"
                 className={`rounded px-2 py-0.5 text-[11px] ${scriptTab === "line" ? "bg-white/10 font-semibold text-white" : "text-white/45"}`}
                 onClick={() => setScriptTab("line")}
-              >
-                台词
-              </button>
+              >{tr("ui_segment_workspace_line")}</button>
               <button
                 type="button"
                 className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] ${
                   scriptTab === "prompt" ? "bg-white/10 font-semibold text-white" : "text-white/45"
                 }`}
                 onClick={() => void openModelPromptTab()}
-                title="查看本段实际发给视频大模型的合并提示词"
+                title={tr("ui_segment_workspace_see_the_merged_prompt_this_segment")}
               >
-                <FileText className="h-3 w-3" /> 提示词
-              </button>
+                <FileText className="h-3 w-3" />{" "}{tr("ui_segment_workspace_prompt")}</button>
             </div>
           </div>
 
           <div className="border-b border-white/10 px-2.5 py-2">
             <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-              <span className="rounded bg-black/60 px-1.5 py-0.5 font-medium text-white">
-                片段 {activeSeg?.segmentOrder ?? "—"}
-              </span>
-              <span className="text-white/45">{activeSeg?.duration || 0}s · {activeSeg?.shots?.length || 0} 镜</span>
+              <span className="rounded bg-black/60 px-1.5 py-0.5 font-medium text-white">{tr("ui_segment_workspace_segment", {
+                  0: activeSeg?.segmentOrder ?? "—"
+                })}</span>
+              <span className="text-white/45">{tr("ui_segment_workspace_s_shots", {
+                  0: activeSeg?.duration || 0,
+                  1: activeSeg?.shots?.length || 0
+                })}</span>
               {segGenerating ? (
-                <span className="rounded-full bg-[#7c6cff]/20 px-2 py-0.5 text-[10px] font-medium text-[#c4b5fd]">生成中</span>
+                <span className="rounded-full bg-[#7c6cff]/20 px-2 py-0.5 text-[10px] font-medium text-[#c4b5fd]">{tr("ui_segment_workspace_generating")}</span>
               ) : segQaFail ? (
                 <span
                   className="rounded-full bg-rose-500/15 px-2 py-0.5 text-[10px] font-medium text-rose-300"
-                  title={activeSeg?.lead?.error || activeSeg?.video?.qa?.reason || "质检未达标"}
-                >
-                  质检未过
-                </span>
+                  title={activeSeg?.lead?.error || activeSeg?.video?.qa?.reason || tr("ui_segment_workspace_qa_not_passed")}
+                >{tr("ui_segment_workspace_qa_failed")}</span>
               ) : segReady && segQaPass ? (
-                <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-300">已完成</span>
+                <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-300">{tr("ui_segment_workspace_done")}</span>
               ) : segReady ? (
-                <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-200">已出片·待复核</span>
+                <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-medium text-amber-200">{tr("ui_segment_workspace_rendered_needs_review")}</span>
               ) : (
-                <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/45">待出片</span>
+                <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/45">{tr("ui_segment_workspace_not_rendered")}</span>
               )}
               {bundle?.project?.portraitMatchMode === "reshoot" ? (
-                <span className="ml-auto rounded-full bg-sky-500/15 px-2 py-0.5 text-[10px] text-sky-100">
-                  重拍参考 · 不生成
-                </span>
+                <span className="ml-auto rounded-full bg-sky-500/15 px-2 py-0.5 text-[10px] text-sky-100">{tr("ui_segment_workspace_reshoot_reference_not_generated")}</span>
               ) : (
                 <button
                   type="button"
@@ -1439,15 +1452,15 @@ export function SegmentWorkspace({
                   onClick={() => void generateSegment(pendingRegen ? { syncOnly: true } : {})}
                 >
                   {generating || segGenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Video className="h-3 w-3" />}
-                  {pendingRegen ? "重生本段" : segReady ? "再生成" : "生成本段"}
+                  {pendingRegen ? tr("ui_segment_workspace_regenerate_segment") : segReady ? tr("ui_segment_workspace_generate_again") : tr("ui_segment_workspace_generate_segment")}
                 </button>
               )}
             </div>
             {segEntityQaBlockers.length ? (
               <div className="mt-1.5 rounded-md border border-rose-500/35 bg-rose-500/10 px-2 py-1.5 text-[10px] leading-snug text-rose-100">
-                <div className="font-medium">
-                  本段有 {segEntityQaBlockers.length} 项素材未过质检，默认禁止出片
-                </div>
+                <div className="font-medium">{tr("ui_segment_workspace_assets_in_this_segment_failed_qa", {
+                    length: segEntityQaBlockers.length
+                  })}</div>
                 <ul className="mt-1 space-y-0.5 text-rose-100/80">
                   {segEntityQaBlockers.slice(0, 4).map((b) => (
                     <li key={b.entityId}>
@@ -1455,40 +1468,40 @@ export function SegmentWorkspace({
                     </li>
                   ))}
                   {segEntityQaBlockers.length > 4 ? (
-                    <li>…另有 {segEntityQaBlockers.length - 4} 项</li>
+                    <li>{tr("ui_segment_workspace_and_more", {
+                        0: segEntityQaBlockers.length - 4
+                      })}</li>
                   ) : null}
                 </ul>
-                <p className="mt-1 text-rose-100/65">可先回素材步重生/复核；紧急时可在确认框选择「强制出片」。</p>
+                <p className="mt-1 text-rose-100/65">{tr("ui_segment_workspace_go_back_to_the_assets_step")}</p>
               </div>
             ) : null}
             {pendingRegen ? (
               <div className="mt-2 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-100">
-                <span>台词或画面已改，成片可能过期。</span>
+                <span>{tr("ui_segment_workspace_lines_or_visuals_changed_the_cut")}</span>
                 <button
                   type="button"
                   className="btn-primary !min-h-7 !px-2.5 text-[10px]"
                   disabled={generating || segGenerating}
                   onClick={() => void generateSegment({ syncOnly: true })}
-                >
-                  一键重生本段
-                </button>
+                >{tr("ui_segment_workspace_regenerate_this_segment")}</button>
               </div>
             ) : null}
             <div className="mt-1.5 grid gap-0.5 text-[11px] leading-snug text-white/50 sm:grid-cols-2">
               <div>
-                <span className="text-white/30">地点：</span>
+                <span className="text-white/30">{tr("ui_segment_workspace_location")}</span>
                 {activeSeg?.lead?.location || activeSeg?.lead?.sceneName || "—"}
               </div>
               <div>
-                <span className="text-white/30">时间：</span>
+                <span className="text-white/30">{tr("ui_segment_workspace_time")}</span>
                 {activeSeg?.lead?.timeOfDay || "—"}
               </div>
               <div>
-                <span className="text-white/30">天气：</span>
+                <span className="text-white/30">{tr("ui_segment_workspace_weather")}</span>
                 {activeSeg?.lead?.weather || "—"}
               </div>
               <div className="sm:col-span-2 line-clamp-2">
-                <span className="text-white/30">起始状态：</span>
+                <span className="text-white/30">{tr("ui_segment_workspace_starting_state")}</span>
                 {activeSeg?.lead?.openingState || "—"}
               </div>
             </div>
@@ -1499,31 +1512,30 @@ export function SegmentWorkspace({
               <div className="space-y-2 rounded-xl border border-white/10 bg-white/[.03] p-2.5 text-[11px] leading-snug">
                 {modelPromptBusy ? (
                   <div className="flex items-center justify-center gap-2 py-16 text-white/50">
-                    <Loader2 className="h-4 w-4 animate-spin" /> 加载发给模型的提示词…
-                  </div>
+                    <Loader2 className="h-4 w-4 animate-spin" />{" "}{tr("ui_segment_workspace_loading_the_prompt_sent_to_the")}</div>
                 ) : (
                   <>
                     <p className="text-[11px] leading-5 text-white/45">
                       {modelPromptData?.note ||
-                        "以下为合并后提交给 Seedance / Comfy 的正文；参考图按 references 列表另附。"}
+                        tr("ui_segment_workspace_below_is_the_merged_text_sent")}
                     </p>
                     <div>
-                      <div className="mb-1 text-[11px] font-medium text-white/40">合并视频提示词</div>
+                      <div className="mb-1 text-[11px] font-medium text-white/40">{tr("ui_segment_workspace_merged_video_prompt")}</div>
                       <pre className="whitespace-pre-wrap rounded-xl border border-white/10 bg-black/40 p-3 text-[12px] leading-5 text-white/85">
-                        {modelPromptData?.videoPrompt || "（无）"}
+                        {modelPromptData?.videoPrompt || tr("ui_segment_workspace_none")}
                       </pre>
                     </div>
                     {(modelPromptData?.references || []).length ? (
                       <div>
-                        <div className="mb-1 text-[11px] font-medium text-white/40">
-                          参考资产 · {modelPromptData.references.length}
-                        </div>
+                        <div className="mb-1 text-[11px] font-medium text-white/40">{tr("ui_segment_workspace_reference_assets", {
+                            length: modelPromptData.references.length
+                          })}</div>
                         <ul className="space-y-1.5 rounded-xl border border-white/10 bg-white/[.03] p-3 text-[12px] text-white/75">
                           {modelPromptData.references.map((r) => (
                             <li key={r.id}>
                               <span className="text-white/40">[{r.kind}]</span> {r.name}
                               {r.variant ? ` / ${r.variant}` : ""}
-                              {r.hasImage ? "" : " · 无图"}
+                              {r.hasImage ? "" : ` ${tr("ui_segment_workspace_no_image_2")}`}
                               {r.description ? (
                                 <div className="mt-0.5 text-[11px] text-white/40">{r.description}</div>
                               ) : null}
@@ -1534,18 +1546,20 @@ export function SegmentWorkspace({
                     ) : null}
                     {(modelPromptData?.shots || []).length ? (
                       <div>
-                        <div className="mb-1 text-[11px] font-medium text-white/40">分镜原文 / 台词</div>
+                        <div className="mb-1 text-[11px] font-medium text-white/40">{tr("ui_segment_workspace_storyboard_source_lines")}</div>
                         <div className="space-y-2">
                           {modelPromptData.shots.map((s) => (
                             <div key={s.shotId} className="rounded-xl border border-white/10 bg-black/30 p-3">
-                              <div className="mb-1 text-[10px] font-semibold text-white/50">分镜 {s.beatIndex}</div>
+                              <div className="mb-1 text-[10px] font-semibold text-white/50">{tr("ui_segment_workspace_shot_2", {
+                                  beatIndex: s.beatIndex
+                                })}</div>
                               <pre className="whitespace-pre-wrap text-[12px] leading-5 text-white/80">
-                                {s.prompt || "（无镜头词）"}
+                                {s.prompt || tr("ui_segment_workspace_no_shot_words")}
                               </pre>
                               {s.dialogue ? (
-                                <p className="mt-2 border-t border-white/10 pt-2 text-[12px] text-[#c4b5fd]">
-                                  台词：{s.dialogue}
-                                </p>
+                                <p className="mt-2 border-t border-white/10 pt-2 text-[12px] text-[#c4b5fd]">{tr("ui_segment_workspace_line_2", {
+                                    dialogue: s.dialogue
+                                  })}</p>
                               ) : null}
                             </div>
                           ))}
@@ -1563,9 +1577,10 @@ export function SegmentWorkspace({
               return (
                 <article key={shot.id} className="rounded-lg border border-white/10 bg-white/[.03] p-2.5">
                   <div className="mb-1 flex flex-wrap items-center gap-1.5">
-                    <span className="rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                      分镜{shot.beatIndex || shot.shotOrder} · {shot.duration || 3}s
-                    </span>
+                    <span className="rounded bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold text-white">{tr("ui_segment_workspace_shot_s", {
+                        0: shot.beatIndex || shot.shotOrder,
+                        1: shot.duration || 3
+                      })}</span>
                     {dlg?.speaker ? (
                       <button
                         type="button"
@@ -1574,7 +1589,9 @@ export function SegmentWorkspace({
                           const ent = entityByName.get(dlg.speaker);
                           if (ent) openEntity(ent);
                         }}
-                        title={`查看 ${dlg.speaker}`}
+                        title={tr("ui_segment_workspace_view_2", {
+                          speaker: dlg.speaker
+                        })}
                       >
                         {entityThumb(entityByName.get(dlg.speaker)) ? (
                           <img src={entityThumb(entityByName.get(dlg.speaker))} alt="" className="h-3.5 w-3.5 rounded-full object-cover" />
@@ -1586,36 +1603,30 @@ export function SegmentWorkspace({
                       <span
                         className="rounded bg-amber-400/15 px-2 py-0.5 text-[10px] text-amber-200"
                         title={(shot.promptConsistency.issues || []).map((i) => i.detail).join("；")}
-                      >
-                        提示词不一致
-                      </span>
+                      >{tr("ui_segment_workspace_prompt_mismatch")}</span>
                     ) : null}
                     <button
                       type="button"
                       className="ml-auto text-[10px] text-[#a78bfa] hover:underline"
                       onClick={() => startEditDialogue(shot)}
-                    >
-                      改台词
-                    </button>
+                    >{tr("ui_segment_workspace_edit_line")}</button>
                   </div>
                   {scriptTab === "lens" ? (
                     <>
                       {bundle?.project?.workflow === "portrait-match" ? (
                         <div className="mb-2 flex flex-wrap gap-1.5 text-[10px]">
-                          <span className="rounded bg-white/8 px-1.5 py-0.5 text-white/70">
-                            动作 · {shot.actionZh || shot.action || "—"}
+                          <span className="rounded bg-white/8 px-1.5 py-0.5 text-white/70">{tr("ui_segment_workspace_action", {
+                              0: shot.actionZh || shot.action || "—"
+                            })}</span>
+                          <span className="rounded bg-white/8 px-1.5 py-0.5 text-white/70">{tr("ui_segment_workspace_camera")}{" "}{shot.camera || tr("ui_segment_workspace_lock_slight_follow")}
                           </span>
-                          <span className="rounded bg-white/8 px-1.5 py-0.5 text-white/70">
-                            运镜 · {shot.camera || "锁定/微跟"}
-                          </span>
-                          <span className="rounded bg-white/8 px-1.5 py-0.5 text-white/70">
-                            转镜 · {shot.transition || "硬切卡点"}
+                          <span className="rounded bg-white/8 px-1.5 py-0.5 text-white/70">{tr("ui_segment_workspace_transition")}{" "}{shot.transition || tr("ui_segment_workspace_hard_cut_on_beat")}
                           </span>
                         </div>
                       ) : null}
-                      <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-white/35">镜头提示词</div>
+                      <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-white/35">{tr("ui_segment_workspace_shot_prompt")}</div>
                       <PromptWithChips
-                        prompt={shot.prompt || shot.action || "（无镜头提示词）"}
+                        prompt={shot.prompt || shot.action || tr("ui_segment_workspace_no_shot_prompt")}
                         entityByName={entityByName}
                         activeNames={segAssets.names}
                         onOpenEntity={openEntity}
@@ -1626,9 +1637,9 @@ export function SegmentWorkspace({
                     </>
                   ) : !editing ? (
                     <>
-                      <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-white/35">台词</div>
+                      <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-white/35">{tr("ui_segment_workspace_line")}</div>
                       <DialogueCard
-                        dialogue={shot.dialogue || "（本镜无台词）"}
+                        dialogue={shot.dialogue || tr("ui_segment_workspace_no_lines_in_this_shot")}
                         entityByName={entityByName}
                         onOpenEntity={openEntity}
                       />
@@ -1640,7 +1651,7 @@ export function SegmentWorkspace({
                         className="field min-h-20 resize-y text-sm"
                         value={draftDialogue}
                         onChange={(e) => setDraftDialogue(e.target.value)}
-                        placeholder="角色名：台词内容"
+                        placeholder={tr("ui_segment_workspace_character_line")}
                       />
                       <div className="flex flex-wrap gap-2">
                         <button
@@ -1649,21 +1660,15 @@ export function SegmentWorkspace({
                           disabled={savingLine || generating}
                           onClick={() => void saveDialogue(shot.id)}
                         >
-                          {savingLine ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                          仅保存
-                        </button>
+                          {savingLine ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}{tr("ui_segment_workspace_save_only")}</button>
                         <button
                           type="button"
                           className="btn-primary !min-h-8 text-xs"
                           disabled={savingLine || generating || segGenerating}
                           onClick={() => void saveDialogue(shot.id, { regenerate: true })}
                         >
-                          {savingLine || generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Video className="h-3.5 w-3.5" />}
-                          保存并重生本段
-                        </button>
-                        <button type="button" className="btn-quiet !min-h-8 text-xs" onClick={() => setEditingShotId("")}>
-                          取消
-                        </button>
+                          {savingLine || generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Video className="h-3.5 w-3.5" />}{tr("ui_segment_workspace_save_and_regenerate_segment")}</button>
+                        <button type="button" className="btn-quiet !min-h-8 text-xs" onClick={() => setEditingShotId("")}>{tr("ui_segment_workspace_cancel")}</button>
                       </div>
                     </div>
                   ) : null}
@@ -1678,11 +1683,13 @@ export function SegmentWorkspace({
                             type="button"
                             onClick={() => openEntity(ent)}
                             className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-black/30 px-1.5 py-0.5 text-[10px] text-white/70 hover:border-[#7c6cff]/50 hover:text-white"
-                            title={`查看 ${ent.name}`}
+                            title={tr("ui_segment_workspace_view", {
+                              name: ent.name
+                            })}
                           >
                             {entityThumb(ent) ? <img src={entityThumb(ent)} alt="" className="h-4 w-4 rounded object-cover" /> : null}
                             {ent.name}
-                            <span className="text-white/30">{ent.kind === "character" ? "角" : ent.kind === "prop" ? "道" : "景"}</span>
+                            <span className="text-white/30">{ent.kind === "character" ? tr("ui_segment_workspace_c") : ent.kind === "prop" ? tr("ui_segment_workspace_p") : tr("ui_segment_workspace_s")}</span>
                           </button>
                         );
                       })}
@@ -1699,9 +1706,10 @@ export function SegmentWorkspace({
         <aside className="scrollbar-thin order-2 min-h-0 space-y-2 overflow-y-auto xl:order-3 xl:h-full">
           <div ref={monitorRef} className="overflow-hidden rounded-xl bg-[#08090d] p-2 text-white">
             <div className="mb-1 flex items-center justify-between text-[10px] text-white/45">
-              <span>
-                片段 {activeSeg?.segmentOrder ?? "—"} / {segments.length}
-              </span>
+              <span>{tr("ui_segment_workspace_segment_2", {
+                  0: activeSeg?.segmentOrder ?? "—",
+                  length: segments.length
+                })}</span>
               <span>
                 {activeSeg?.duration || 0}s · {ratio}
               </span>
@@ -1738,7 +1746,7 @@ export function SegmentWorkspace({
               ) : (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-4 text-center">
                   <Film className="h-10 w-10 text-white/15" />
-                  <p className="text-xs text-white/40">本段尚未出片</p>
+                  <p className="text-xs text-white/40">{tr("ui_segment_workspace_this_segment_hasn_t_been_rendered")}</p>
                   <button
                     type="button"
                     className="btn-primary !min-h-8 text-xs"
@@ -1746,7 +1754,7 @@ export function SegmentWorkspace({
                     onClick={() => void generateSegment(pendingRegen ? { syncOnly: true } : {})}
                   >
                     {generating || segGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Video className="h-3.5 w-3.5" />}
-                    {pendingRegen ? "重生本段" : "生成本段"}
+                    {pendingRegen ? tr("ui_segment_workspace_regenerate_segment") : tr("ui_segment_workspace_generate_segment")}
                   </button>
                 </div>
               )}
@@ -1759,7 +1767,7 @@ export function SegmentWorkspace({
               </button>
               <button type="button" className="btn-primary !min-h-7 !rounded-full !px-3 text-[11px]" disabled={!segReady} onClick={togglePlay}>
                 {playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-                {playing ? "暂停" : "播放"}
+                {playing ? tr("ui_segment_workspace_pause") : tr("ui_segment_workspace_play")}
               </button>
               <button type="button" className="btn-quiet !min-h-7 !px-2 text-white/80" onClick={() => goSeg(1)}>
                 <ChevronRight className="h-3.5 w-3.5" />
@@ -1782,13 +1790,9 @@ export function SegmentWorkspace({
             </div>
             <div className="mt-1.5 flex flex-wrap items-center justify-center gap-3 text-[10px] text-white/55">
               <label className="flex items-center gap-1.5">
-                <input type="checkbox" checked={continuous} onChange={(e) => setContinuous(e.target.checked)} />
-                连续播放
-              </label>
+                <input type="checkbox" checked={continuous} onChange={(e) => setContinuous(e.target.checked)} />{tr("ui_segment_workspace_continuous_play")}</label>
               <label className={`flex items-center gap-1.5 ${bgm?.url ? "" : "opacity-40"}`}>
-                <input type="checkbox" checked={bgmOn && !!bgm?.url} disabled={!bgm?.url} onChange={(e) => setBgmOn(e.target.checked)} />
-                配乐
-              </label>
+                <input type="checkbox" checked={bgmOn && !!bgm?.url} disabled={!bgm?.url} onChange={(e) => setBgmOn(e.target.checked)} />{tr("ui_segment_workspace_score")}</label>
             </div>
           </div>
 
@@ -1796,9 +1800,9 @@ export function SegmentWorkspace({
           <div className="rounded-xl border border-white/10 bg-[#0c0e14] p-3">
             <div className="mb-2 flex flex-wrap gap-1.5">
               {[
-                { id: "visual", label: "AI 改画面" },
-                { id: "line", label: "改台词" },
-                { id: "trim", label: "剪一刀" },
+                { id: "visual", label: tr("ui_segment_workspace_ai_repaint") },
+                { id: "line", label: tr("ui_segment_workspace_edit_line") },
+                { id: "trim", label: tr("ui_segment_workspace_trim") },
               ].map((m) => (
                 <button
                   key={m.id}
@@ -1815,17 +1819,15 @@ export function SegmentWorkspace({
 
             {editMode === "visual" ? (
               <div className="space-y-2">
-                <p className="text-[11px] leading-4 text-white/45">
-                  用自然语言描述要改的画面（光影、天气、动作、情绪等），会改写本段分镜并重新出片。
-                </p>
+                <p className="text-[11px] leading-4 text-white/45">{tr("ui_segment_workspace_describe_the_visual_change_in_plain")}</p>
                 <textarea
                   className="field min-h-24 resize-y text-sm"
                   value={visualNote}
                   onChange={(e) => setVisualNote(e.target.value)}
-                  placeholder="例：雨再大一点，霓虹偏冷青；林晚推门时肩膀更湿、更急"
+                  placeholder={tr("ui_segment_workspace_e_g_heavier_rain_cooler_cyan")}
                 />
                 <div className="flex flex-wrap gap-1.5">
-                  {["雨更大、霓虹更冷", "动作更急促", "灯光更暖更柔", "表情更克制"].map((hint) => (
+                  {[tr("ui_segment_workspace_heavier_rain_colder_neon"), tr("ui_segment_workspace_more_urgent_action"), tr("ui_segment_workspace_warmer_softer_light"), tr("ui_segment_workspace_more_restrained_expression")].map((hint) => (
                     <button
                       key={hint}
                       type="button"
@@ -1842,20 +1844,20 @@ export function SegmentWorkspace({
                   disabled={!visualNote.trim() || generating || segGenerating}
                   onClick={() => void generateSegment({ instruction: visualNote.trim() })}
                 >
-                  {generating || segGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                  应用并重生本段
-                </button>
+                  {generating || segGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}{tr("ui_segment_workspace_apply_and_regenerate_segment")}</button>
               </div>
             ) : editMode === "line" ? (
               <>
-                <div className="mb-2 text-[11px] font-medium text-white/45">本段台词 · {segmentDialogues.length} 句</div>
+                <div className="mb-2 text-[11px] font-medium text-white/45">{tr("ui_segment_workspace_segment_lines", {
+                    length: segmentDialogues.length
+                  })}</div>
                 {segmentDialogues.length ? (
                   <ul className="max-h-44 space-y-2 overflow-y-auto text-xs leading-5">
                     {segmentDialogues.map(({ shot, parsed }) => (
                       <li key={shot.id} className="rounded-lg border border-white/5 bg-black/20 px-2.5 py-2">
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <span className="font-semibold text-white/80">{parsed.speaker || "旁白"}</span>
+                            <span className="font-semibold text-white/80">{parsed.speaker || tr("ui_segment_workspace_narrator")}</span>
                             <span className="text-white/50"> · </span>
                             <span className="text-white/70">{parsed.line}</span>
                           </div>
@@ -1863,26 +1865,24 @@ export function SegmentWorkspace({
                             type="button"
                             className="shrink-0 text-[10px] text-[#a78bfa] hover:underline"
                             onClick={() => startEditDialogue(shot)}
-                          >
-                            编辑
-                          </button>
+                          >{tr("ui_segment_workspace_edit")}</button>
                         </div>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-[11px] text-white/35">本段无对白。可在中栏分镜点「改台词」添加。</p>
+                  <p className="text-[11px] text-white/35">{tr("ui_segment_workspace_no_dialogue_in_this_segment_add")}</p>
                 )}
               </>
             ) : (
               <div className="space-y-2 text-xs">
                 {!segReady ? (
-                  <p className="py-4 text-center text-white/35">先生成本段视频，再裁剪入点出点。</p>
+                  <p className="py-4 text-center text-white/35">{tr("ui_segment_workspace_generate_this_segment_s_video_first")}</p>
                 ) : (
                   <>
                     <label className="block">
                       <span className="mb-1 flex justify-between text-white/45">
-                        <span>起点</span>
+                        <span>{tr("ui_segment_workspace_in")}</span>
                         <span className="timecode">{trimStart.toFixed(2)}s</span>
                       </span>
                       <input
@@ -1897,7 +1897,7 @@ export function SegmentWorkspace({
                     </label>
                     <label className="block">
                       <span className="mb-1 flex justify-between text-white/45">
-                        <span>终点</span>
+                        <span>{tr("ui_segment_workspace_out")}</span>
                         <span className="timecode">{trimEnd.toFixed(2)}s</span>
                       </span>
                       <input
@@ -1911,31 +1911,19 @@ export function SegmentWorkspace({
                       />
                     </label>
                     <div className="grid grid-cols-2 gap-1.5">
-                      <button type="button" className="btn-quiet !min-h-8 text-xs" onClick={() => setTrimStart((v) => Math.max(0, v - 0.5))}>
-                        起点 −0.5s
-                      </button>
-                      <button type="button" className="btn-quiet !min-h-8 text-xs" onClick={() => setTrimStart((v) => Math.min(v + 0.5, trimEnd - 0.1))}>
-                        起点 +0.5s
-                      </button>
-                      <button type="button" className="btn-quiet !min-h-8 text-xs" onClick={() => setTrimEnd((v) => Math.max(trimStart + 0.1, v - 0.5))}>
-                        终点 −0.5s
-                      </button>
-                      <button type="button" className="btn-quiet !min-h-8 text-xs" onClick={() => setTrimEnd((v) => Math.min(mediaMax, v + 0.5))}>
-                        终点 +0.5s
-                      </button>
+                      <button type="button" className="btn-quiet !min-h-8 text-xs" onClick={() => setTrimStart((v) => Math.max(0, v - 0.5))}>{tr("ui_segment_workspace_in_0_5s")}</button>
+                      <button type="button" className="btn-quiet !min-h-8 text-xs" onClick={() => setTrimStart((v) => Math.min(v + 0.5, trimEnd - 0.1))}>{tr("ui_segment_workspace_in_0_5s_2")}</button>
+                      <button type="button" className="btn-quiet !min-h-8 text-xs" onClick={() => setTrimEnd((v) => Math.max(trimStart + 0.1, v - 0.5))}>{tr("ui_segment_workspace_out_0_5s")}</button>
+                      <button type="button" className="btn-quiet !min-h-8 text-xs" onClick={() => setTrimEnd((v) => Math.min(mediaMax, v + 0.5))}>{tr("ui_segment_workspace_out_0_5s_2")}</button>
                     </div>
-                    <button type="button" className="btn-secondary w-full !min-h-9 text-xs" onClick={previewTrim}>
-                      预览留下的部分
-                    </button>
+                    <button type="button" className="btn-secondary w-full !min-h-9 text-xs" onClick={previewTrim}>{tr("ui_segment_workspace_preview_the_kept_part")}</button>
                     <button
                       type="button"
                       className="btn-primary w-full !min-h-9 text-xs"
                       disabled={savingTrim}
                       onClick={() => void saveTrim()}
                     >
-                      {savingTrim ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                      保存裁剪
-                    </button>
+                      {savingTrim ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}{tr("ui_segment_workspace_save_trim")}</button>
                   </>
                 )}
               </div>
@@ -1947,8 +1935,11 @@ export function SegmentWorkspace({
       {/* Bottom filmstrip — short landscape thumbs (full frame via contain, no tall empty pillars) */}
       <div className="z-20 shrink-0 rounded-xl border border-white/10 bg-[#0c0e14] px-2.5 py-2 shadow-[0_-8px_24px_rgba(0,0,0,.35)]">
         <div className="mb-1.5 flex items-center justify-between text-[10px] text-white/45">
-          <span>全集时间轴 · {segments.length} 片段 · {Math.round(totalDur)}s</span>
-          <span>{hasSegmentLayout ? "按片段出片" : "迁移中…"}</span>
+          <span>{tr("ui_segment_workspace_episode_timeline_segments_s", {
+              length: segments.length,
+              1: Math.round(totalDur)
+            })}</span>
+          <span>{hasSegmentLayout ? tr("ui_segment_workspace_render_by_segment") : tr("ui_segment_workspace_migrating")}</span>
         </div>
         <div className="scrollbar-thin flex gap-1.5 overflow-x-auto pb-0.5">
           {segments.map((seg) => {
@@ -1976,16 +1967,17 @@ export function SegmentWorkspace({
                     />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center text-[9px] text-white/30">
-                      {seg.shots.some((s) => s.status === "generating") ? "生成中" : "待出片"}
+                      {seg.shots.some((s) => s.status === "generating") ? tr("ui_segment_workspace_generating") : tr("ui_segment_workspace_not_rendered")}
                     </div>
                   )}
                   <span className="absolute left-1 top-1 rounded bg-black/70 px-1 py-0.5 text-[9px] font-semibold text-white">
                     {seg.segmentOrder}
                   </span>
                 </div>
-                <div className="px-1 py-0.5 text-[9px] text-white/55">
-                  {seg.duration}s · {seg.shots.length}镜
-                </div>
+                <div className="px-1 py-0.5 text-[9px] text-white/55">{tr("ui_segment_workspace_s_shots_2", {
+                    duration: seg.duration,
+                    length: seg.shots.length
+                  })}</div>
               </button>
             );
           })}
@@ -1994,23 +1986,25 @@ export function SegmentWorkspace({
 
       <ConfirmDialog
         open={confirmSplit}
-        title="重新拆分本集？"
-        message="现有镜头与视频版本记录将被替换；本地文件仍保留。"
-        confirmLabel="重新拆分"
+        title={tr("ui_segment_workspace_re_split_this_episode")}
+        message={tr("ui_segment_workspace_existing_shots_and_video_version_history_2")}
+        confirmLabel={tr("ui_segment_workspace_re_split")}
         onCancel={() => setConfirmSplit(false)}
         onConfirm={() => void split()}
       />
 
       <ConfirmDialog
         open={Boolean(forceQaDialog)}
-        title="素材质检未过，已阻断出片"
+        title={tr("ui_segment_workspace_assets_failed_qa_rendering_blocked")}
         message={
           forceQaDialog
-            ? `${formatEntityQaBlockers(forceQaDialog.blockers)}\n\n建议先重生/复核上述素材。若仍要出片，将继续使用未过检参考图，成片质量可能更差。`
+            ? tr("ui_segment_workspace_regenerate_review_the_assets_above_first", {
+            0: formatEntityQaBlockers(forceQaDialog.blockers)
+          })
             : ""
         }
-        confirmLabel="强制出片"
-        cancelLabel="先去修素材"
+        confirmLabel={tr("ui_segment_workspace_force_render")}
+        cancelLabel={tr("ui_segment_workspace_fix_assets_first")}
         danger
         maxWidthClass="max-w-lg"
         onCancel={() => setForceQaDialog(null)}
@@ -2044,11 +2038,11 @@ export function SegmentWorkspace({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-2 flex items-center justify-between gap-2 px-0.5">
-              <p className="text-sm font-medium text-white/90">成片预览</p>
+              <p className="text-sm font-medium text-white/90">{tr("ui_segment_workspace_cut_preview")}</p>
               <button
                 type="button"
                 className="rounded-full bg-white/10 p-1.5 text-white hover:bg-white/20"
-                aria-label="关闭"
+                aria-label={tr("ui_segment_workspace_close")}
                 onClick={() => setPreviewFinalOpen(false)}
               >
                 <X className="h-4 w-4" />

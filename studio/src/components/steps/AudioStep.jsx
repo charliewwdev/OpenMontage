@@ -4,6 +4,16 @@ import { api } from "../../api";
 import { extractDialogueLines } from "../../lib/dialogue";
 import { toast } from "../../lib/toast";
 
+import { tr, useLocale } from "../../lib/i18n";
+
+// Speaker names come from the script parser (lib/dialogue.js); only its two
+// generic placeholders are display-mapped, real character names stay as written.
+const SPEAKER_LABEL_KEYS = { 旁白: "ui_audio_speaker_narration", 对白: "ui_audio_speaker_dialogue" };
+function speakerLabel(speaker) {
+  const key = SPEAKER_LABEL_KEYS[speaker];
+  return key ? tr(key) : speaker;
+}
+
 export function AudioStep({
   projectId,
   bundle,
@@ -14,6 +24,7 @@ export function AudioStep({
   focusEpisodeId,
   setStep,
 }) {
+  useLocale();
   const episodes = useMemo(
     () => [...(bundle?.episodes || [])].sort((a, b) => a.episodeNumber - b.episodeNumber),
     [bundle?.episodes],
@@ -52,12 +63,12 @@ export function AudioStep({
   }, [bundle?.shots, episode?.id]);
 
   const generate = async () => {
-    if (!episode) return toast.error("请先在剧本步生成分集");
+    if (!episode) return toast.error(tr("ui_audio_generate_episodes_in_the_script_step"));
     if (!dialogueLines.length && !shotDialogues.length) {
-      return toast.error("本集未识别到对白。请在剧本中使用「角色：台词」或「…」格式，或在分镜填写 dialogue。");
+      return toast.error(tr("ui_audio_no_dialogue_detected_in_this_episode"));
     }
     setBusy(true);
-    setBusyMsg?.("正在合成配音…");
+    setBusyMsg?.(tr("ui_audio_synthesizing_voice_over"));
     try {
       const res = await api(`/api/projects/${encodeURIComponent(projectId)}/audio`, {
         method: "POST",
@@ -66,7 +77,7 @@ export function AudioStep({
       });
       if (res.bundle) onBundle?.(res.bundle);
       else onRefresh?.();
-      toast.success("分角色对白已生成，导出时会混入 BGM");
+      toast.success(tr("ui_audio_per_character_dialogue_generated_bgm_is"));
     } catch (error) {
       const msg = String(error.message || error);
       toast.error(msg);
@@ -83,65 +94,57 @@ export function AudioStep({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="label">Dubbing</div>
-            <h2 className="text-xl font-semibold">分角色对白 + BGM</h2>
-            <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-              按「角色：台词」抽取对白，用不同音色分角色朗读（不是解说旁白）。同时生成轻量配乐，剪辑导出时与画面混音。场景描写不会进配音。
-            </p>
+            <h2 className="text-xl font-semibold">{tr("ui_audio_per_character_dialogue_bgm")}</h2>
+            <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{tr("ui_audio_extracts_dialogue_in_character_line_form")}</p>
           </div>
-          <button type="button" className="btn-secondary" onClick={() => toast.info("已跳过配音，可直接去剪辑")}>
-            <SkipForward className="h-4 w-4" /> 跳过本步
-          </button>
+          <button type="button" className="btn-secondary" onClick={() => toast.info(tr("ui_audio_voice_over_skipped_you_can_go"))}>
+            <SkipForward className="h-4 w-4" />{" "}{tr("ui_audio_skip_this_step")}</button>
         </div>
 
         {!episodes.length ? (
-          <div className="mt-6 rounded-xl border border-dashed border-[var(--line)] px-4 py-10 text-center text-sm text-[var(--muted)]">
-            还没有分集。请先在「剧本」步生成并确认剧集。
-            {typeof setStep === "function" ? (
+          <div className="mt-6 rounded-xl border border-dashed border-[var(--line)] px-4 py-10 text-center text-sm text-[var(--muted)]">{tr("ui_audio_no_episodes_yet_generate_and_confirm")}{typeof setStep === "function" ? (
               <div className="mt-3">
-                <button type="button" className="btn-primary !min-h-8 !px-3" onClick={() => setStep("script")}>
-                  去剧本
-                </button>
+                <button type="button" className="btn-primary !min-h-8 !px-3" onClick={() => setStep("script")}>{tr("ui_audio_go_to_script")}</button>
               </div>
             ) : null}
           </div>
         ) : !episode ? (
-          <div className="mt-6 rounded-xl border border-dashed border-[var(--line)] px-4 py-10 text-center text-sm text-[var(--muted)]">
-            请在左侧选择一个分集。
-          </div>
+          <div className="mt-6 rounded-xl border border-dashed border-[var(--line)] px-4 py-10 text-center text-sm text-[var(--muted)]">{tr("ui_audio_select_an_episode_on_the_left")}</div>
         ) : (
           <div className="mt-5 rounded-2xl border border-[var(--line)] bg-black/20 p-5">
             <div className="flex items-center gap-2 text-sm font-semibold">
-              <Mic2 className="h-4 w-4 text-[#fb923c]" />
-              第 {episode.episodeNumber} 集{episode.title ? ` · ${episode.title}` : ""} · 识别到的台词
-            </div>
+              <Mic2 className="h-4 w-4 text-[#fb923c]" />{tr("ui_audio_episode_detected_lines", {
+                episodeNumber: episode.episodeNumber,
+                1: episode.title ? ` · ${episode.title}` : ""
+              })}</div>
 
             {dialogueLines.length || shotDialogues.length ? (
               <ul className="mt-3 max-h-56 space-y-2 overflow-auto text-xs leading-6">
                 {dialogueLines.map((line, i) => (
                   <li key={`d-${i}`} className="rounded-lg bg-white/[.04] px-3 py-2 text-white/80">
-                    <span className="font-semibold text-[#fb923c]">{line.speaker}</span>
+                    <span className="font-semibold text-[#fb923c]">{speakerLabel(line.speaker)}</span>
                     <span className="text-white/40"> · </span>
                     {line.text}
                   </li>
                 ))}
                 {shotDialogues.map((line) => (
                   <li key={`s-${line.shotOrder}`} className="rounded-lg bg-white/[.04] px-3 py-2 text-white/70">
-                    <span className="font-semibold text-white/45">镜 {line.shotOrder}</span>
+                    <span className="font-semibold text-white/45">{tr("ui_audio_shot", {
+                        shotOrder: line.shotOrder
+                      })}</span>
                     <span className="text-white/40"> · </span>
                     {line.text}
                   </li>
                 ))}
               </ul>
             ) : (
-              <div className="mt-3 rounded-xl border border-dashed border-white/15 px-3 py-6 text-xs leading-6 text-white/45">
-                未识别到对白。请在剧本使用「角色名：台词」或中文引号「…」，不要只写场景描写。
-              </div>
+              <div className="mt-3 rounded-xl border border-dashed border-white/15 px-3 py-6 text-xs leading-6 text-white/45">{tr("ui_audio_no_dialogue_detected_in_the_script")}</div>
             )}
 
             <div className="mt-5 flex flex-wrap items-center gap-2">
               <button type="button" className="btn-primary" disabled={busy || !episode} onClick={() => void generate()}>
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Volume2 className="h-4 w-4" />}
-                {busy ? "合成中…" : audio ? "重新生成配音" : "生成配音"}
+                {busy ? tr("ui_audio_synthesizing") : audio ? tr("ui_audio_regenerate_voice_over") : tr("ui_audio_generate_voice_over")}
               </button>
               {audio?.url ? (
                 <audio controls className="h-9 max-w-full" src={audio.url} preload="metadata">
@@ -151,11 +154,13 @@ export function AudioStep({
             </div>
             {audio ? (
               <p className="mt-3 text-[11px] text-[var(--muted)]">
-                {audio.mode === "dialogue" ? "分角色对白" : "配音"} · {audio.provider || "tts"}
-                {audio.lines ? ` · ${audio.lines} 句` : ""}
+                {audio.mode === "dialogue" ? tr("ui_audio_per_character_dialogue") : tr("ui_audio_voice_over")} · {audio.provider || "tts"}
+                {audio.lines ? ` ${tr("ui_audio_lines", {
+  lines: audio.lines
+})}` : ""}
                 {audio.bytes ? ` · ${(audio.bytes / 1024).toFixed(1)} KB` : ""}
-                {bgm ? " · 已生成 BGM" : ""}
-                {" · 导出时自动混音"}
+                {bgm ? ` ${tr("ui_audio_bgm_generated")}` : ""}
+                {` ${tr("ui_audio_auto_mixed_on_export")}`}
               </p>
             ) : null}
             {bgm?.url ? (

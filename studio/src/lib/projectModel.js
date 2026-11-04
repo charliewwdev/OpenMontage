@@ -1,3 +1,4 @@
+import { tr } from "./i18n";
 /** @deprecated Use config.six_steps / platform.yaml via /api/config */
 export const STEPS = [];
 /** @deprecated Desk labels belong in platform config when re-enabled */
@@ -84,12 +85,17 @@ export function deriveProjectView(bundle) {
     steps: bundle.steps || [],
     status: bundle.status || {},
     counts: {
-      script: `${episodes.length} 集`,
+      script: tr("ui_lib_project_model_ep", {
+        length: episodes.length
+      }),
       characters: String(characters.length),
       locations: String(locations.length),
       props: String(props.length),
-      storyboard: `${ready}/${shots.length} 镜`,
-      edit: hasExport ? "已成片" : shots.length ? (ready ? "可导出" : "待生成") : "未开始",
+      storyboard: tr("ui_lib_project_model_shots", {
+        ready: ready,
+        length: shots.length
+      }),
+      edit: hasExport ? tr("ui_lib_project_model_cut_ready") : shots.length ? (ready ? tr("ui_lib_project_model_ready_to_export") : tr("ui_lib_project_model_not_generated")) : tr("ui_lib_project_model_not_started"),
     },
     progress: STEPS.map((step) => {
       const meta = (bundle.steps || []).find((s) => s.id === step.id);
@@ -105,7 +111,7 @@ export function libraryCardFromListItem(name, bundleHint) {
     title: view?.title || titleFromName(name),
     genre: view?.genre || "短剧",
     ratio: view?.ratio || "9:16",
-    synopsis: view?.synopsis || "打开后加载剧本与素材档案",
+    synopsis: view?.synopsis || tr("ui_lib_project_model_loading_the_script_and_asset_profiles"),
     progress: view?.progress || STEPS.map(() => false),
     shotsReady: view
       ? `${view.jobs.filter((j) => ["needs_review", "succeeded", "approved"].includes(j.status)).length}/${view.shots.length}`

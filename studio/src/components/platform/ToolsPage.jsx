@@ -2,6 +2,8 @@ import { useState } from "react";
 import { ArrowUp, Clapperboard, Film, Mic2, Palette, PenLine, Sparkles, Workflow } from "lucide-react";
 import { PageShell } from "./PageShell";
 
+import { tr, useLocale } from "../../lib/i18n";
+
 const ICONS = {
   text: PenLine,
   visual: Palette,
@@ -14,64 +16,153 @@ const ICONS = {
 const DEFAULT_CATEGORIES = [
   {
     id: "text",
-    title: "文本创作",
-    desc: "AI剧本创作、短剧脚本、影视分镜、叙事构思",
+
+    get title() {
+      return tr("ui_tools_text_creation");
+    },
+
+    get desc() {
+      return tr("ui_tools_ai_scripts_short_drama_scripts_film");
+    },
+
     accent: "from-[#1d4ed8] to-[#60a5fa]",
     nav: "workshop",
-    step: "script",
+    step: "script"
   },
   {
     id: "visual",
-    title: "视觉创作",
-    desc: "概念设计、角色原画、场景绘制、视觉分镜",
+
+    get title() {
+      return tr("ui_tools_visual_creation");
+    },
+
+    get desc() {
+      return tr("ui_tools_concept_design_character_art_scene_painting");
+    },
+
     accent: "from-[#9d174d] to-[#f472b6]",
     nav: "workshop",
-    step: "character",
+    step: "character"
   },
   {
     id: "audio",
-    title: "音频创作",
-    desc: "配音合成、音效设计、背景音乐、角色语音",
+
+    get title() {
+      return tr("ui_tools_audio_creation");
+    },
+
+    get desc() {
+      return tr("ui_tools_voice_synthesis_sound_design_background_music");
+    },
+
     accent: "from-[#c2410c] to-[#fb923c]",
-    nav: "help",
+    nav: "help"
   },
   {
     id: "video",
-    title: "视频创作",
-    desc: "AI视频生成、动态分镜、影像合成、特效制作",
+
+    get title() {
+      return tr("ui_tools_video_creation");
+    },
+
+    get desc() {
+      return tr("ui_tools_ai_video_generation_motion_storyboards_compositing");
+    },
+
     accent: "from-[#047857] to-[#34d399]",
     nav: "workshop",
-    step: "storyboard",
+    step: "storyboard"
   },
   {
     id: "workshop",
-    title: "影视工坊",
-    desc: "面向短剧、MV、广告等成片目标的专业场景化工作流",
+
+    get title() {
+      return tr("ui_tools_film_workshop");
+    },
+
+    get desc() {
+      return tr("ui_tools_professional_scenario_workflows_for_short_dramas");
+    },
+
     accent: "from-[#4c1d95] to-[#8b5cf6]",
-    nav: "workshop",
+    nav: "workshop"
   },
   {
     id: "canvas",
-    title: "画布创作",
-    desc: "可视化工作流编排，连接多个AI节点，创造无限可能",
+
+    get title() {
+      return tr("ui_tools_canvas_creation");
+    },
+
+    get desc() {
+      return tr("ui_tools_visual_workflow_builder_connect_multiple_ai");
+    },
+
     accent: "from-[#a16207] to-[#fbbf24]",
-    nav: "canvas",
+    nav: "canvas"
   },
 ];
 
 const DEFAULT_WORKFLOW = {
-  title: "AI短剧创作完整流程",
-  description: "用导演思维驾驭AI创作：平台提供AI创作能力，你是导演——生成素材、把控品质、剪辑成片",
+  get title() {
+    return tr("ui_tools_the_complete_ai_short_drama_workflow");
+  },
+
+  get description() {
+    return tr("ui_tools_direct_your_ai_production_the_platform");
+  },
+
   steps: [
-    { title: "定剧本", desc: "AI生成分镜剧本，包含场景描述、角色对话、动作指示" },
-    { title: "选演员", desc: "AI生成虚拟角色形象和场景概念图" },
-    { title: "拍画面", desc: "AI图生视频，让静态角色和场景动起来" },
-    { title: "做配音", desc: "AI生成背景音乐、音效，以及角色配音" },
-    { title: "剪成片", desc: "把素材剪辑成完整短剧并导出" },
-  ],
+    {
+      get title() {
+        return tr("ui_tools_script");
+      },
+
+      get desc() {
+        return tr("ui_tools_ai_writes_a_shooting_script_with");
+      }
+    },
+    {
+      get title() {
+        return tr("ui_tools_casting");
+      },
+
+      get desc() {
+        return tr("ui_tools_ai_generates_virtual_character_looks_and");
+      }
+    },
+    {
+      get title() {
+        return tr("ui_tools_shoot");
+      },
+
+      get desc() {
+        return tr("ui_tools_ai_image_to_video_brings_still");
+      }
+    },
+    {
+      get title() {
+        return tr("ui_tools_voice");
+      },
+
+      get desc() {
+        return tr("ui_tools_ai_generates_background_music_sound_effects");
+      }
+    },
+    {
+      get title() {
+        return tr("ui_tools_edit");
+      },
+
+      get desc() {
+        return tr("ui_tools_cut_the_material_into_a_complete");
+      }
+    },
+  ]
 };
 
 export function ToolsPage({ config, onOpenTool, onNavigate, onStartCreate }) {
+  useLocale();
   const page = config?.pages?.tools || {};
   const hub = config?.toolHub || {};
   const categories = hub.categories?.length ? hub.categories : DEFAULT_CATEGORIES;
@@ -95,16 +186,16 @@ export function ToolsPage({ config, onOpenTool, onNavigate, onStartCreate }) {
   return (
     <PageShell
       eyebrow={page.eyebrow || "Creation center"}
-      title={page.title || "AI创作中心"}
-      description={page.description || "直接描述创意，或选择专业分类开始创作"}
+      title={page.title || tr("ui_tools_ai_creation_hub")}
+      description={page.description || tr("ui_tools_describe_your_idea_directly_or_pick")}
     >
       {/* Hero band — 对齐有彩顶部氛围条 */}
       <div className="relative mb-6 overflow-hidden rounded-2xl border border-white/10">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_20%,rgba(124,108,255,.35),transparent_50%),radial-gradient(ellipse_at_80%_0%,rgba(56,189,248,.2),transparent_45%),linear-gradient(135deg,#0b1020,#12182c_55%,#1a1030)]" />
         <div className="relative px-5 py-10 md:px-8 md:py-14">
           <div className="label !mb-2 !text-white/50">OPENMONTAGE</div>
-          <h2 className="max-w-xl text-2xl font-semibold text-white md:text-3xl">从一句话灵感到可拍成片</h2>
-          <p className="mt-2 max-w-lg text-sm text-white/60">文本 · 视觉 · 音频 · 视频 · 工坊 · 画布，按导演流程组织创作入口</p>
+          <h2 className="max-w-xl text-2xl font-semibold text-white md:text-3xl">{tr("ui_tools_from_a_one_line_idea_to")}</h2>
+          <p className="mt-2 max-w-lg text-sm text-white/60">{tr("ui_tools_text_visual_audio_video_workshop_canvas")}</p>
         </div>
       </div>
 
@@ -112,17 +203,17 @@ export function ToolsPage({ config, onOpenTool, onNavigate, onStartCreate }) {
       <section className="panel mb-8 p-5 md:p-6">
         <div className="mb-3 flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-[#a78bfa]" />
-          <h3 className="text-base font-semibold">说出灵感，让创意成为作品</h3>
-          <span className="rounded-full bg-[#7c6cff]/15 px-2 py-0.5 text-[10px] text-[#c4b5fd]">创作 Agent</span>
+          <h3 className="text-base font-semibold">{tr("ui_tools_say_your_idea_and_turn_it")}</h3>
+          <span className="rounded-full bg-[#7c6cff]/15 px-2 py-0.5 text-[10px] text-[#c4b5fd]">{tr("ui_tools_creation_agent")}</span>
         </div>
-        <p className="mb-4 text-sm text-[var(--muted)]">描述你的想法，Agent 会调用专业技能，并直接生成图片、音乐、音频或视频。</p>
+        <p className="mb-4 text-sm text-[var(--muted)]">{tr("ui_tools_describe_your_idea_the_agent_calls")}</p>
         <label className="block">
-          <span className="sr-only">描述你的创作需求</span>
+          <span className="sr-only">{tr("ui_tools_describe_what_you_want_to_create")}</span>
           <textarea
             className="field min-h-[120px] resize-y !py-3"
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            placeholder="例如：为国风茶饮品牌创作一张夏日海报，再配一段轻快的古筝音乐"
+            placeholder={tr("ui_tools_e_g_a_summer_poster_for")}
             onKeyDown={(e) => {
               if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault();
@@ -133,8 +224,7 @@ export function ToolsPage({ config, onOpenTool, onNavigate, onStartCreate }) {
         </label>
         <div className="mt-3 flex justify-end">
           <button type="button" className="btn-primary" disabled={!prompt.trim()} onClick={startCreate}>
-            <ArrowUp className="h-3.5 w-3.5" /> 开始创作
-          </button>
+            <ArrowUp className="h-3.5 w-3.5" />{" "}{tr("ui_tools_start_creating")}</button>
         </div>
       </section>
 
@@ -192,17 +282,15 @@ export function ToolsPage({ config, onOpenTool, onNavigate, onStartCreate }) {
       {/* Workshop CTA */}
       <section className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-r from-[#1e1b4b] via-[#312e81] to-[#4c1d95] p-6 md:flex md:items-center md:justify-between md:gap-6">
         <div>
-          <h3 className="text-lg font-semibold text-white">影视创作工坊</h3>
-          <p className="mt-2 text-sm text-white/70">从剧本到成片，全流程 AI 辅助创作</p>
-          <p className="mt-1 text-xs text-white/45">剧本AI创作 · 素材一键生成 · 智能分镜脚本</p>
+          <h3 className="text-lg font-semibold text-white">{tr("ui_tools_film_creation_workshop")}</h3>
+          <p className="mt-2 text-sm text-white/70">{tr("ui_tools_from_script_to_final_cut_ai")}</p>
+          <p className="mt-1 text-xs text-white/45">{tr("ui_tools_ai_scripts_one_click_assets_smart")}</p>
         </div>
         <button
           type="button"
           className="btn-primary mt-4 shrink-0 md:mt-0"
           onClick={() => onOpenTool?.({ nav: "workshop" })}
-        >
-          进入影视工坊
-        </button>
+        >{tr("ui_tools_open_film_workshop")}</button>
       </section>
     </PageShell>
   );

@@ -618,8 +618,8 @@ resources:
     icon: FileText
     external: false
     group: docs
-  - title: 六步工坊说明
-    desc: 剧本 → 角色 → 场景 → 道具 → 分镜 → 剪辑
+  - title: 分步工坊说明
+    desc: 剧本 → 角色 → 场景 → 道具 → 工作台 → 分镜 → 配音 → 剪辑
     href: help
     icon: Film
     external: false
@@ -669,9 +669,9 @@ resources:
 
 helpSections:
   - title: 快速开始
-    body: 1. 登录账号。2. 打开「模型配置」，填入文本大模型与火山 ARK Key（BYOK，密钥仅你可见）。3. 用创作 Agent「一键全流程成片」，或新建项目后逐步走六步工坊。
-  - title: 六步工坊
-    body: 剧本（文本大模型）→ 角色/场景/道具（Seedream）→ 分镜（Seedance）→ 配音 → 剪辑（FFmpeg）。也可用「一键全流程」后台自动跑通；每一步仍可单独重跑或换版本。
+    body: 1. 登录账号。2. 打开「模型配置」，填入文本大模型与火山 ARK Key（BYOK，密钥仅你可见）。3. 用创作 Agent「一键全流程成片」，或新建项目后逐步走分步工坊。
+  - title: 分步工坊
+    body: 剧本（文本大模型）→ 角色/场景/道具（Seedream）→ 工作台（片段）→ 分镜（Seedance）→ 配音 → 剪辑（FFmpeg）。也可用「一键全流程」后台自动跑通；每一步仍可单独重跑或换版本。
   - title: 模型配置与能力
     body: 支持智川云 Token（tokens.gpuhome.cc）、算桥/算家云（api.suanjiayun.com）、DeepSeek、OpenAI、Claude、Gemini、通义、Kimi、豆包、智谱、Grok、MiniMax、OpenRouter、Cursor Auto 等。出图/出片可用火山方舟，或在智川云租 GPU 后填写 ComfyUI 地址。密钥按账号隔离保存，热加载无需重启。
   - title: 资产与画布
@@ -978,7 +978,7 @@ pages:
   challenge:
     eyebrow: Challenge
     title: 创作挑战
-    description: 限时主题任务，帮你练熟六步工坊节奏。完成进度会计入项目备注。
+    description: 限时主题任务，帮你练熟分步工坊节奏。完成进度会计入项目备注。
   tools:
     eyebrow: Creation center
     title: AI创作中心

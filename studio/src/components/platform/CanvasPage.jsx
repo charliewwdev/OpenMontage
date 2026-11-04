@@ -14,6 +14,8 @@ import { api } from "../../api";
 import { toast } from "../../lib/toast";
 import { PageShell } from "./PageShell";
 
+import { tr, useLocale } from "../../lib/i18n";
+
 const LAYOUT_KEY = "om.canvas.layout.v1";
 
 function progressFor(project) {
@@ -130,6 +132,7 @@ function saveLayout(projectId, nodes) {
 }
 
 export function CanvasPage({ projects, config, onOpenProject }) {
+  useLocale();
   const stepMeta = config?.canvasSteps || [];
   const [projectId, setProjectId] = useState(projects?.[0]?.id || "");
   const [loading, setLoading] = useState(false);
@@ -188,12 +191,12 @@ export function CanvasPage({ projects, config, onOpenProject }) {
   return (
     <PageShell
       eyebrow="Canvas"
-      title="无限画布"
-      description="把当前项目的生产线可视化为可拖拽节点图。节点按进度着色，点击进入对应工坊步骤。"
+      title={tr("ui_canvas_infinite_canvas")}
+      description={tr("ui_canvas_shows_the_current_project_s_pipeline")}
       actions={
         <>
           <select className="field !w-56" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
-            {!projects?.length ? <option value="">暂无项目</option> : null}
+            {!projects?.length ? <option value="">{tr("ui_canvas_no_projects")}</option> : null}
             {(projects || []).map((project) => (
               <option key={project.id} value={project.id}>
                 {project.title}
@@ -201,17 +204,14 @@ export function CanvasPage({ projects, config, onOpenProject }) {
             ))}
           </select>
           <button type="button" className="btn-secondary" disabled={!projectId || loading} onClick={() => void load(projectId)}>
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} 刷新图谱
-          </button>
-          <button type="button" className="btn-primary" disabled={!projectId} onClick={() => onOpenProject?.(projectId)}>
-            打开工坊
-          </button>
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}{" "}{tr("ui_canvas_refresh_graph")}</button>
+          <button type="button" className="btn-primary" disabled={!projectId} onClick={() => onOpenProject?.(projectId)}>{tr("ui_canvas_open_workshop")}</button>
         </>
       }
     >
       {!projects?.length ? (
         <div className="panel flex flex-col items-center justify-center gap-4 py-24 text-center">
-          <p className="text-sm text-[var(--muted)]">还没有项目。先用创作 Agent 或影视工坊新建一个，再回来查看六步图谱。</p>
+          <p className="text-sm text-[var(--muted)]">{tr("ui_canvas_no_projects_yet_create_one_with")}</p>
         </div>
       ) : (
         <>
@@ -235,13 +235,12 @@ export function CanvasPage({ projects, config, onOpenProject }) {
           </div>
           {bundle?.project ? (
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--muted)]">
-              <p>
-                当前项目：{bundle.project.title} · {bundle.project.ratio} · {bundle.project.genre}
-                · 绿色节点表示已有产出 · 布局已自动保存
-              </p>
-              <button type="button" className="btn-secondary !min-h-8 !px-3" onClick={() => onOpenProject?.(projectId, "script")}>
-                从剧本步骤进入
-              </button>
+              <p>{tr("ui_canvas_current_project_green_nodes_have_output", {
+                  title: bundle.project.title,
+                  ratio: bundle.project.ratio,
+                  genre: bundle.project.genre
+                })}</p>
+              <button type="button" className="btn-secondary !min-h-8 !px-3" onClick={() => onOpenProject?.(projectId, "script")}>{tr("ui_canvas_enter_from_the_script_step")}</button>
             </div>
           ) : null}
         </>

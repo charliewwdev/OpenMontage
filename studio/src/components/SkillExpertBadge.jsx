@@ -2,12 +2,28 @@ import { useEffect, useState } from "react";
 import { Sparkles } from "lucide-react";
 import { api } from "../api";
 
+import { tr, useLocale } from "../lib/i18n";
+
 const LABELS = {
-  "script-brief": "爽剧创作需求优化",
-  "drama-script": "分集剧本生成",
-  "drama-entity-still": "资产定妆图",
-  "drama-shot-prompt": "影视分镜提示词",
-  "portrait-idlock": "写真对标 · 首尾帧身份锁",
+  get "script-brief"() {
+    return tr("ui_skill_expert_badge_hit_drama_brief_optimization");
+  },
+
+  get "drama-script"() {
+    return tr("ui_skill_expert_badge_episode_script_generation");
+  },
+
+  get "drama-entity-still"() {
+    return tr("ui_skill_expert_badge_asset_look_images");
+  },
+
+  get "drama-shot-prompt"() {
+    return tr("ui_skill_expert_badge_film_storyboard_prompts");
+  },
+
+  get "portrait-idlock"() {
+    return tr("ui_skill_expert_badge_portrait_benchmark_first_last_frame_identity");
+  }
 };
 
 /**
@@ -15,6 +31,7 @@ const LABELS = {
  * Fetches experience summary from the skills catalog (cacheable, non-blocking).
  */
 export function SkillExpertBadge({ skillId, title, accent = "#7c6cff", className = "" }) {
+  useLocale();
   const [exp, setExp] = useState(null);
   const label = title || LABELS[skillId] || skillId;
 
@@ -43,7 +60,9 @@ export function SkillExpertBadge({ skillId, title, accent = "#7c6cff", className
   return (
     <div
       className={`inline-flex max-w-full flex-wrap items-center gap-1.5 rounded-lg border border-white/10 bg-white/[.04] px-2.5 py-1.5 text-[11px] text-white/75 ${className}`}
-      title={`当前步骤由 Skill「${skillId}」驱动`}
+      title={tr("ui_skill_expert_badge_this_step_is_driven_by_skill", {
+        skillId: skillId
+      })}
     >
       <span
         className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md"
@@ -54,11 +73,12 @@ export function SkillExpertBadge({ skillId, title, accent = "#7c6cff", className
       <span className="font-medium text-white/90">{label}</span>
       <span className="font-mono text-[10px] text-white/35">/{skillId}</span>
       {patches > 0 || hits > 0 ? (
-        <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-emerald-200/90">
-          经验 {patches} · 命中 {hits}
-        </span>
+        <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-emerald-200/90">{tr("ui_skill_expert_badge_experience_hits", {
+            patches: patches,
+            hits: hits
+          })}</span>
       ) : (
-        <span className="text-[10px] text-white/35">工坊运行时已绑定</span>
+        <span className="text-[10px] text-white/35">{tr("ui_skill_expert_badge_bound_to_workshop_runtime")}</span>
       )}
     </div>
   );

@@ -23,6 +23,8 @@ import { AspectRatioPicker } from "../project-settings/AspectRatioPicker";
 import { GenrePicker } from "../project-settings/GenrePicker";
 import { VideoStylePicker } from "../project-settings/VideoStylePicker";
 
+import { tr, useLocale } from "../../lib/i18n";
+
 const MAX_PER_REQUEST = 10;
 
 function parseCount(value, max = MAX_PER_REQUEST) {
@@ -43,6 +45,7 @@ export function ScriptStep({
   focusEpisodeId,
   onFocusEpisode,
 }) {
+  useLocale();
   const project = bundle?.project || {};
   const caps = config?.capabilities || {};
   const episodes = useMemo(
@@ -97,11 +100,11 @@ export function ScriptStep({
   const creativeBusy = generating || continuing || rewriting;
   const { formatted: elapsedTime } = useTimer(creativeBusy);
   const creativeStatus = generating
-    ? "正在创作剧本与整理素材档案"
+    ? tr("ui_script_writing_the_script_and_organizing_asset")
     : continuing
-      ? "正在续写后续分集"
+      ? tr("ui_script_continuing_with_the_next_episodes")
       : rewriting
-        ? "正在重写指定分集"
+        ? tr("ui_script_rewriting_the_selected_episodes")
         : "";
 
   useEffect(() => {
@@ -161,11 +164,11 @@ export function ScriptStep({
 
   const saveProject = async (quiet = false) => {
     if (!form.genre.trim()) {
-      toast.error("请选择题材或填写自定义题材");
+      toast.error(tr("ui_script_pick_a_genre_or_enter_a"));
       return false;
     }
     setSaving(true);
-    setBusyMsg?.(quiet ? "" : "保存设定…");
+    setBusyMsg?.(quiet ? "" : tr("ui_script_saving_settings"));
     try {
       const planned =
         plannedEpisodes === "" || plannedEpisodes === null
@@ -185,7 +188,7 @@ export function ScriptStep({
         }),
       });
       apply(b);
-      if (!quiet) toast.success("项目设定已保存");
+      if (!quiet) toast.success(tr("ui_script_project_settings_saved"));
       return true;
     } catch (e) {
       toast.error(String(e.message || e));
@@ -204,13 +207,17 @@ export function ScriptStep({
 
   const runGenerate = async () => {
     if (onRequireAuth && !onRequireAuth()) return;
-    if (!requireCapability(caps, "deepseek", onNeedKeys, "文本大模型 Key")) return;
-    if (!form.brief.trim()) return toast.error("先填写创作需求或粘贴原始故事");
-    if (!form.genre.trim()) return toast.error("请选择题材或填写自定义题材");
+    if (!requireCapability(caps, "deepseek", onNeedKeys, tr("ui_script_text_llm_key"))) return;
+    if (!form.brief.trim()) return toast.error(tr("ui_script_fill_in_the_brief_or_paste"));
+    if (!form.genre.trim()) return toast.error(tr("ui_script_pick_a_genre_or_enter_a"));
     const episodeCount = parseCount(generationEpisodeCount);
-    if (episodeCount === null) return toast.error(`本次生成集数必须是 1–${MAX_PER_REQUEST} 的整数`);
+    if (episodeCount === null) return toast.error(tr("ui_script_episodes_this_run_must_be_a", {
+      MAX_PER_REQUEST: MAX_PER_REQUEST
+    }));
     if (plannedCount !== null && episodeCount > plannedCount) {
-      return toast.error(`本次生成集数不能超过计划总集数（${plannedCount}）`);
+      return toast.error(tr("ui_script_episodes_this_run_can_t_exceed", {
+        plannedCount: plannedCount
+      }));
     }
     if (episodes.length > 0 && !confirmRegen) {
       setConfirmRegen(true);
@@ -218,7 +225,7 @@ export function ScriptStep({
     }
     setConfirmRegen(false);
     setGenerating(true);
-    setBusyMsg("正在创作剧本…");
+    setBusyMsg(tr("ui_script_writing_script"));
     try {
       if (!(await saveProject(true))) return;
       const b = await api(`/api/projects/${encodeURIComponent(projectId)}/script`, {
@@ -236,7 +243,10 @@ export function ScriptStep({
       setSelectedId(firstId);
       if (firstId) onFocusEpisode?.(firstId);
       const backend = caps.llmBackend || "LLM";
-      toast.success(`${backend} 已完成第 1–${nextEps.length} 集剧本与素材档案`);
+      toast.success(tr("ui_script_finished_the_script_and_asset_profiles", {
+        backend: backend,
+        length: nextEps.length
+      }));
     } catch (e) {
       toastMaybeKeys(e, onNeedKeys);
     } finally {
@@ -246,12 +256,14 @@ export function ScriptStep({
   };
 
   const runContinue = async () => {
-    if (!requireCapability(caps, "deepseek", onNeedKeys, "文本大模型 Key")) return;
+    if (!requireCapability(caps, "deepseek", onNeedKeys, tr("ui_script_text_llm_key"))) return;
     const episodeCount = parseCount(continueEpisodeCount);
-    if (episodeCount === null) return toast.error(`本次续写集数必须是 1–${MAX_PER_REQUEST} 的整数`);
+    if (episodeCount === null) return toast.error(tr("ui_script_episodes_to_continue_must_be_a", {
+      MAX_PER_REQUEST: MAX_PER_REQUEST
+    }));
     setContinuing(true);
     setShowContinue(false);
-    setBusyMsg("续写中…");
+    setBusyMsg(tr("ui_script_continuing"));
     try {
       if (!(await saveProject(true))) return;
       const b = await api(`/api/projects/${encodeURIComponent(projectId)}/script`, {
@@ -266,7 +278,7 @@ export function ScriptStep({
         }),
       });
       apply(b);
-      toast.success("续写完成");
+      toast.success(tr("ui_script_continuation_done"));
     } catch (e) {
       toastMaybeKeys(e, onNeedKeys);
     } finally {
@@ -276,13 +288,13 @@ export function ScriptStep({
   };
 
   const runRewrite = async () => {
-    if (!requireCapability(caps, "deepseek", onNeedKeys, "文本大模型 Key")) return;
+    if (!requireCapability(caps, "deepseek", onNeedKeys, tr("ui_script_text_llm_key"))) return;
     const episodeCount = parseCount(rewriteEpisodeCount, maxRewriteCount);
-    if (episodeCount === null) return toast.error("重写集数无效");
-    if (!rewriteInstruction.trim()) return toast.error("请填写重写要求");
+    if (episodeCount === null) return toast.error(tr("ui_script_invalid_number_of_episodes_to_rewrite"));
+    if (!rewriteInstruction.trim()) return toast.error(tr("ui_script_please_enter_rewrite_notes"));
     setRewriting(true);
     setShowRewrite(false);
-    setBusyMsg("重写中…");
+    setBusyMsg(tr("ui_script_rewriting"));
     try {
       const b = await api(`/api/projects/${encodeURIComponent(projectId)}/script`, {
         method: "POST",
@@ -295,7 +307,10 @@ export function ScriptStep({
         }),
       });
       apply(b);
-      toast.success(`已重写第 ${rewriteStartEpisode}–${rewriteStartEpisode + episodeCount - 1} 集`);
+      toast.success(tr("ui_script_rewrote_episodes", {
+        rewriteStartEpisode: rewriteStartEpisode,
+        1: rewriteStartEpisode + episodeCount - 1
+      }));
     } catch (e) {
       toastMaybeKeys(e, onNeedKeys);
     } finally {
@@ -305,10 +320,10 @@ export function ScriptStep({
   };
 
   const confirmAllDrafts = async () => {
-    if (!draftEpisodes.length) return toast.info("没有待定稿分集");
+    if (!draftEpisodes.length) return toast.info(tr("ui_script_no_episodes_waiting_to_be_locked"));
     setConfirmBatch(false);
     setBatchConfirming(true);
-    setBusyMsg("批量定稿…");
+    setBusyMsg(tr("ui_script_locking_in_bulk"));
     try {
       const b = await api(`/api/projects/${encodeURIComponent(projectId)}/episodes`, {
         method: "PATCH",
@@ -316,7 +331,9 @@ export function ScriptStep({
         body: JSON.stringify({ episodeIds: draftEpisodes.map((e) => e.id), status: "confirmed" }),
       });
       apply(b);
-      toast.success(`已定稿 ${draftEpisodes.length} 集`);
+      toast.success(tr("ui_script_locked_episodes", {
+        length: draftEpisodes.length
+      }));
     } catch (e) {
       toast.error(String(e.message || e));
     } finally {
@@ -327,13 +344,15 @@ export function ScriptStep({
 
   const copyAll = async () => {
     const text = episodes
-      .map((ep) => `${ep.title || `第${ep.episodeNumber}集`}\n\n${ep.content || ""}`)
+      .map((ep) => `${ep.title || tr("ui_script_ep_2", {
+      episodeNumber: ep.episodeNumber
+    })}\n\n${ep.content || ""}`)
       .join("\n\n");
     try {
       await navigator.clipboard.writeText(text);
-      toast.success("已复制全部分集剧本");
+      toast.success(tr("ui_script_copied_all_episode_scripts"));
     } catch {
-      toast.error("复制失败");
+      toast.error(tr("ui_script_copy_failed"));
     }
   };
 
@@ -344,11 +363,12 @@ export function ScriptStep({
           <div className="min-w-0">
             <div className="label !mb-0">Story brief</div>
             <div className="flex flex-wrap items-baseline gap-2">
-              <h3 className="display-type text-lg font-semibold md:text-xl">创作底稿</h3>
+              <h3 className="display-type text-lg font-semibold md:text-xl">{tr("ui_script_working_draft")}</h3>
               {briefCollapsed ? (
                 <span className="truncate text-xs text-[var(--muted)]">
-                  {form.title || "未命名"} · {form.ratio || "9:16"} · {form.genre || "未选题材"} · 已生成 {episodes.length} 集
-                </span>
+                  {form.title || tr("ui_script_untitled")}· {form.ratio || "9:16"}· {form.genre || tr("ui_script_no_genre")}{" "}{tr("ui_script_episodes_generated", {
+                    length: episodes.length
+                  })}</span>
               ) : null}
             </div>
           </div>
@@ -356,7 +376,7 @@ export function ScriptStep({
             {!briefCollapsed ? (
               <button type="button" className="btn-secondary !min-h-9" disabled={operationBusy} onClick={() => void saveProject()}>
                 <Save className="h-4 w-4" />
-                {saving ? "保存中…" : "保存设定"}
+                {saving ? tr("ui_script_saving") : tr("ui_script_save_settings")}
               </button>
             ) : null}
             <button
@@ -366,19 +386,17 @@ export function ScriptStep({
               aria-expanded={!briefCollapsed}
             >
               {briefCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-              {briefCollapsed ? "展开公共设定" : "折叠公共设定"}
+              {briefCollapsed ? tr("ui_script_show_shared_settings") : tr("ui_script_hide_shared_settings")}
             </button>
           </div>
         </div>
         {!briefCollapsed ? (
           <div className="grid lg:grid-cols-[minmax(0,1fr)_360px]">
             <div className="p-5 md:p-6">
-              <p className="text-sm text-[var(--muted)]">
-                DeepSeek 按本次集数分批创作，剧本可继续续写或按指定范围重写。
-              </p>
+              <p className="text-sm text-[var(--muted)]">{tr("ui_script_deepseek_writes_in_batches_of_this")}</p>
               <div className="mt-5 grid gap-4 md:grid-cols-2">
                 <label className="md:col-span-2">
-                  <span className="label">片名</span>
+                  <span className="label">{tr("ui_script_title")}</span>
                   <input
                     className="field"
                     value={form.title}
@@ -387,7 +405,7 @@ export function ScriptStep({
                   />
                 </label>
                 <div className="min-w-0 md:col-span-2">
-                  <span className="label">画面比例</span>
+                  <span className="label">{tr("ui_script_aspect_ratio")}</span>
                   <AspectRatioPicker
                     value={form.ratio}
                     disabled={operationBusy}
@@ -396,7 +414,7 @@ export function ScriptStep({
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <span className="label">题材</span>
+                  <span className="label">{tr("ui_script_genre")}</span>
                   <GenrePicker
                     value={form.genre}
                     disabled={operationBusy}
@@ -405,7 +423,7 @@ export function ScriptStep({
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <span className="label">视觉风格</span>
+                  <span className="label">{tr("ui_script_visual_style")}</span>
                   <VideoStylePicker
                     value={form.visualStyle}
                     disabled={operationBusy}
@@ -415,23 +433,23 @@ export function ScriptStep({
                   />
                 </div>
                 <label className="md:col-span-2">
-                  <span className="label">故事梗概</span>
+                  <span className="label">{tr("ui_script_synopsis")}</span>
                   <textarea
                     className="field min-h-20 resize-y"
                     value={form.synopsis}
                     disabled={operationBusy}
                     onChange={(e) => setForm({ ...form, synopsis: e.target.value })}
-                    placeholder="生成后会自动写入，也可以先给出已有梗概。"
+                    placeholder={tr("ui_script_filled_in_automatically_after_generation_or")}
                   />
                 </label>
                 <label className="md:col-span-2">
-                  <span className="label">创作需求 / 原始素材</span>
+                  <span className="label">{tr("ui_script_brief_source_material")}</span>
                   <textarea
                     className="field min-h-52 resize-y leading-7"
                     value={form.brief}
                     disabled={operationBusy}
                     onChange={(e) => setForm({ ...form, brief: e.target.value })}
-                    placeholder="粘贴故事、小说片段或写下人物、核心冲突与结局要求…"
+                    placeholder={tr("ui_script_paste_a_story_or_novel_excerpt")}
                   />
                 </label>
               </div>
@@ -441,15 +459,16 @@ export function ScriptStep({
               <div>
                 <div className="timecode text-[10px] text-[var(--timecode)]">TEXT MODEL</div>
                 <div className="mt-2 text-lg font-semibold">{caps.llmBackend || "LLM"} · drama-script</div>
-                <p className="mt-2 text-xs leading-6 text-white/55">
-                  本次生成集数决定当前调用输出多少集；计划总集数用于安排全剧情绪曲线，可以留空。建议先生成 1 集核对大纲，再扩写。
-                </p>
+                <p className="mt-2 text-xs leading-6 text-white/55">{tr("ui_script_episodes_this_run_sets_how_many")}</p>
                 {episodes.length > 0 ? (
                   <div className="mt-5 rounded-xl border border-white/10 bg-white/5 p-4">
                     <div className="timecode text-[10px] text-white/40">CURRENT PROGRESS</div>
-                    <div className="mt-2 text-xl font-semibold">已生成 {episodes.length} 集</div>
-                    <div className="mt-1 text-xs text-white/50">
-                      计划 {plannedEpisodes === "" ? "未设定" : `${plannedEpisodes} 集`}
+                    <div className="mt-2 text-xl font-semibold">{tr("ui_script_episodes_generated_2", {
+                        length: episodes.length
+                      })}</div>
+                    <div className="mt-1 text-xs text-white/50">{tr("ui_script_planned")}{" "}{plannedEpisodes === "" ? tr("ui_script_not_set") : tr("ui_script_ep_3", {
+                        plannedEpisodes: plannedEpisodes
+                      })}
                     </div>
                   </div>
                 ) : null}
@@ -469,8 +488,7 @@ export function ScriptStep({
               <div className="mt-8 space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <label className="min-w-0">
-                    <span className="mb-2 flex items-center gap-2 text-xs text-white/60">
-                      本次生成 <b className="text-[var(--timecode)]">必填</b>
+                    <span className="mb-2 flex items-center gap-2 text-xs text-white/60">{tr("ui_script_this_run")}{" "}<b className="text-[var(--timecode)]">{tr("ui_script_required")}</b>
                     </span>
                     <input
                       type="number"
@@ -492,8 +510,7 @@ export function ScriptStep({
                     />
                   </label>
                   <label className="min-w-0">
-                    <span className="mb-2 flex items-center gap-2 text-xs text-white/60">
-                      计划总集数 <b className="font-normal text-white/35">可选</b>
+                    <span className="mb-2 flex items-center gap-2 text-xs text-white/60">{tr("ui_script_planned_total")}{" "}<b className="font-normal text-white/35">{tr("ui_script_optional")}</b>
                     </span>
                     <input
                       type="number"
@@ -513,12 +530,14 @@ export function ScriptStep({
                           });
                         }
                       }}
-                      placeholder="开放式可留空"
+                      placeholder={tr("ui_script_leave_empty_for_open_ended")}
                     />
                   </label>
                 </div>
                 {plannedCount !== null && Number(generationEpisodeCount) > plannedCount ? (
-                  <p className="text-xs text-amber-300/90">本次生成不能超过计划总集数 {plannedCount}。</p>
+                  <p className="text-xs text-amber-300/90">{tr("ui_script_this_run_can_t_exceed_the", {
+                      plannedCount: plannedCount
+                    })}</p>
                 ) : null}
                 <button
                   type="button"
@@ -527,7 +546,9 @@ export function ScriptStep({
                   onClick={() => void runGenerate()}
                 >
                   {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                  {generating ? `正在创作… ${elapsedTime}` : episodes.length ? "按本次集数重新生成" : "生成剧本与素材档案"}
+                  {generating ? tr("ui_script_writing", {
+                    elapsedTime: elapsedTime
+                  }) : episodes.length ? tr("ui_script_regenerate_with_this_episode_count") : tr("ui_script_generate_script_and_asset_profiles")}
                 </button>
               </div>
             </div>
@@ -540,7 +561,9 @@ export function ScriptStep({
           <div className="panel flex flex-wrap items-center justify-between gap-3 px-4 py-3">
             <div>
               <div className="label !mb-0">Episodes</div>
-              <strong className="text-sm">{episodes.length} 集 · 左侧切换当前集</strong>
+              <strong className="text-sm">{tr("ui_script_episodes_switch_on_the_left", {
+                  length: episodes.length
+                })}</strong>
             </div>
             <div className="flex flex-wrap gap-2">
               <button
@@ -549,18 +572,16 @@ export function ScriptStep({
                 disabled={operationBusy || !draftEpisodes.length}
                 onClick={() => setConfirmBatch(true)}
               >
-                {batchConfirming ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <Check className="h-3.5 w-3.5 shrink-0" />}
-                定稿{draftEpisodes.length ? ` ${draftEpisodes.length}` : ""}
-              </button>
+                {batchConfirming ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <Check className="h-3.5 w-3.5 shrink-0" />}{tr("ui_script_lock", {
+                  0: draftEpisodes.length ? ` ${draftEpisodes.length}` : ""
+                })}</button>
               <button
                 type="button"
                 className="btn-secondary !min-h-9 !justify-center !gap-1 !px-2.5 text-[11px]"
                 disabled={operationBusy}
                 onClick={() => void copyAll()}
               >
-                <Copy className="h-3.5 w-3.5 shrink-0" />
-                复制
-              </button>
+                <Copy className="h-3.5 w-3.5 shrink-0" />{tr("ui_script_copy")}</button>
               <button
                 type="button"
                 className="btn-secondary !min-h-9 !justify-center !gap-1 !px-2.5 text-[11px]"
@@ -568,7 +589,7 @@ export function ScriptStep({
                 onClick={() => setShowContinue(true)}
               >
                 {continuing ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <Forward className="h-3.5 w-3.5 shrink-0" />}
-                {continuing ? elapsedTime : "续写"}
+                {continuing ? elapsedTime : tr("ui_script_continue")}
               </button>
               <button
                 type="button"
@@ -580,7 +601,7 @@ export function ScriptStep({
                 }}
               >
                 {rewriting ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <FilePenLine className="h-3.5 w-3.5 shrink-0" />}
-                {rewriting ? elapsedTime : "重写"}
+                {rewriting ? elapsedTime : tr("ui_script_rewrite")}
               </button>
             </div>
           </div>
@@ -597,31 +618,33 @@ export function ScriptStep({
         ) : (
           <div className="panel flex min-h-[320px] items-center justify-center px-6 text-center text-sm text-[var(--muted)]">
             {episodes.length
-              ? "在左侧选择一个分集开始编辑。"
-              : "生成剧本后，分集会出现在左侧导航。"}
+              ? tr("ui_script_select_an_episode_on_the_left")
+              : tr("ui_script_after_the_script_is_generated_episodes")}
           </div>
         )}
       </section>
 
       {showContinue ? (
-        <Modal title="续写剧本" label="Continue script" onClose={() => setShowContinue(false)}>
-          <p className="text-sm text-[var(--muted)]">从第 {maxEpisodeNumber + 1} 集继续，已有分集不会被覆盖。</p>
+        <Modal title={tr("ui_script_continue_script")} label="Continue script" onClose={() => setShowContinue(false)}>
+          <p className="text-sm text-[var(--muted)]">{tr("ui_script_continues_from_episode_existing_episodes_won", {
+              0: maxEpisodeNumber + 1
+            })}</p>
           <label className="mt-5 block">
-            <span className="label">新的创作需求（可选）</span>
+            <span className="label">{tr("ui_script_new_brief_optional")}</span>
             <textarea className="field min-h-28 resize-y" value={continueBrief} onChange={(e) => setContinueBrief(e.target.value)} />
           </label>
           <label className="mt-4 block">
-            <span className="label">续写指导（可选）</span>
+            <span className="label">{tr("ui_script_continuation_notes_optional")}</span>
             <textarea
               className="field min-h-24 resize-y"
               value={continueInstruction}
               onChange={(e) => setContinueInstruction(e.target.value)}
-              placeholder="例如：反派升级、加强感情线…"
+              placeholder={tr("ui_script_e_g_villain_escalates_stronger_romance")}
             />
           </label>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <label>
-              <span className="label">本次续写集数</span>
+              <span className="label">{tr("ui_script_episodes_to_continue")}</span>
               <input
                 className="field"
                 type="number"
@@ -639,38 +662,34 @@ export function ScriptStep({
                 onChange={(e) => setContinueAsFinale(e.target.checked)}
               />
               <span>
-                <strong className="block text-sm">本次续写后剧终</strong>
-                <span className="mt-1 block text-xs text-[var(--muted)]">最后一集完整收尾。</span>
+                <strong className="block text-sm">{tr("ui_script_end_the_series_after_this_continuation")}</strong>
+                <span className="mt-1 block text-xs text-[var(--muted)]">{tr("ui_script_the_last_episode_wraps_everything_up")}</span>
               </span>
             </label>
           </div>
           <div className="mt-6 flex justify-end gap-3 border-t border-[var(--line)] pt-4">
-            <button type="button" className="btn-secondary" onClick={() => setShowContinue(false)}>
-              取消
-            </button>
+            <button type="button" className="btn-secondary" onClick={() => setShowContinue(false)}>{tr("ui_script_cancel")}</button>
             <button type="button" className="btn-primary" onClick={() => void runContinue()}>
-              <Forward className="h-4 w-4" />
-              确认续写
-            </button>
+              <Forward className="h-4 w-4" />{tr("ui_script_confirm_continue")}</button>
           </div>
         </Modal>
       ) : null}
 
       {showRewrite ? (
-        <Modal title="重写指定分集" label="Rewrite episodes" onClose={() => setShowRewrite(false)}>
+        <Modal title={tr("ui_script_rewrite_selected_episodes")} label="Rewrite episodes" onClose={() => setShowRewrite(false)}>
           <label className="block">
-            <span className="label">重写要求</span>
+            <span className="label">{tr("ui_script_rewrite_notes")}</span>
             <textarea
               className="field min-h-32 resize-y"
               value={rewriteInstruction}
               onChange={(e) => setRewriteInstruction(e.target.value)}
-              placeholder="例如：保留人物关系，重写冲突过程…"
+              placeholder={tr("ui_script_e_g_keep_the_relationships_rewrite")}
               autoFocus
             />
           </label>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <label>
-              <span className="label">从第几集开始</span>
+              <span className="label">{tr("ui_script_start_from_episode")}</span>
               <select
                 className="field"
                 value={rewriteStartEpisode}
@@ -680,14 +699,15 @@ export function ScriptStep({
                 }}
               >
                 {episodes.map((ep) => (
-                  <option key={ep.id} value={ep.episodeNumber}>
-                    第 {ep.episodeNumber} 集 · {ep.title}
-                  </option>
+                  <option key={ep.id} value={ep.episodeNumber}>{tr("ui_script_ep", {
+                      episodeNumber: ep.episodeNumber,
+                      title: ep.title
+                    })}</option>
                 ))}
               </select>
             </label>
             <label>
-              <span className="label">连续重写集数</span>
+              <span className="label">{tr("ui_script_episodes_to_rewrite")}</span>
               <input
                 className="field"
                 type="number"
@@ -699,36 +719,34 @@ export function ScriptStep({
             </label>
           </div>
           <div className="mt-6 flex justify-end gap-3 border-t border-[var(--line)] pt-4">
-            <button type="button" className="btn-secondary" onClick={() => setShowRewrite(false)}>
-              取消
-            </button>
+            <button type="button" className="btn-secondary" onClick={() => setShowRewrite(false)}>{tr("ui_script_cancel")}</button>
             <button
               type="button"
               className="btn-primary"
               disabled={!rewriteInstruction.trim()}
               onClick={() => void runRewrite()}
             >
-              <FilePenLine className="h-4 w-4" />
-              确认重写
-            </button>
+              <FilePenLine className="h-4 w-4" />{tr("ui_script_confirm_rewrite")}</button>
           </div>
         </Modal>
       ) : null}
 
       <ConfirmDialog
         open={confirmRegen}
-        title="重新生成整套剧本？"
-        message="现有分集与素材档案将被新结果替换。"
-        confirmLabel="重新生成"
+        title={tr("ui_script_regenerate_the_whole_script")}
+        message={tr("ui_script_existing_episodes_and_asset_profiles_will")}
+        confirmLabel={tr("ui_script_regenerate")}
         danger
         onCancel={() => setConfirmRegen(false)}
         onConfirm={() => void runGenerate()}
       />
       <ConfirmDialog
         open={confirmBatch}
-        title={`批量定稿 ${draftEpisodes.length} 集？`}
-        message="定稿后这些分集才能进入分镜制作。"
-        confirmLabel="全部定稿"
+        title={tr("ui_script_lock_episodes_in_bulk", {
+          length: draftEpisodes.length
+        })}
+        message={tr("ui_script_only_locked_episodes_can_move_on")}
+        confirmLabel={tr("ui_script_lock_all")}
         onCancel={() => setConfirmBatch(false)}
         onConfirm={() => void confirmAllDrafts()}
       />
@@ -737,6 +755,7 @@ export function ScriptStep({
 }
 
 function Modal({ title, label, onClose, children }) {
+  useLocale();
   return (
     <ModalOverlay onClose={onClose} className="bg-[#09101d]/80 backdrop-blur-sm">
       <section
@@ -761,6 +780,7 @@ function Modal({ title, label, onClose, children }) {
 }
 
 function EpisodeEditor({ projectId, episode, onRefresh, onBundle }) {
+  useLocale();
   const [title, setTitle] = useState(episode.title || "");
   const [content, setContent] = useState(episode.content || "");
   const [saving, setSaving] = useState(false);
@@ -775,7 +795,7 @@ function EpisodeEditor({ projectId, episode, onRefresh, onBundle }) {
         body: JSON.stringify({ episodeId: episode.id, title, content, status }),
       });
       await onRefresh?.();
-      toast.success(status === "confirmed" ? "本集已定稿" : "本集已保存");
+      toast.success(status === "confirmed" ? tr("ui_script_episode_locked") : tr("ui_script_episode_saved"));
     } catch (e) {
       toast.error(String(e.message || e));
     } finally {
@@ -784,10 +804,12 @@ function EpisodeEditor({ projectId, episode, onRefresh, onBundle }) {
   };
 
   const remove = async () => {
-    if (!window.confirm(`删除第 ${episode.episodeNumber} 集？`)) return;
+    if (!window.confirm(tr("ui_script_delete_episode", {
+      episodeNumber: episode.episodeNumber
+    }))) return;
     try {
       // soft: mark draft empty via rewrite range not available — keep confirm only for status for now
-      toast.info("请使用重写覆盖；单集删除将在下一版补齐");
+      toast.info(tr("ui_script_use_rewrite_to_overwrite_it_single"));
     } catch (e) {
       toast.error(String(e.message || e));
     }
@@ -809,8 +831,7 @@ function EpisodeEditor({ projectId, episode, onRefresh, onBundle }) {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" className="btn-secondary !min-h-9" disabled={saving || locked} onClick={() => void save()}>
-            <Save className="h-3.5 w-3.5" /> 保存
-          </button>
+            <Save className="h-3.5 w-3.5" />{" "}{tr("ui_script_save")}</button>
           <button
             type="button"
             className={episode.status === "confirmed" ? "btn-secondary !min-h-9" : "btn-primary !min-h-9"}
@@ -818,7 +839,7 @@ function EpisodeEditor({ projectId, episode, onRefresh, onBundle }) {
             onClick={() => void save(episode.status === "confirmed" ? "draft" : "confirmed")}
           >
             <Check className="h-3.5 w-3.5" />
-            {episode.status === "confirmed" ? "取消定稿" : "定稿"}
+            {episode.status === "confirmed" ? tr("ui_script_unlock") : tr("ui_script_lock_2")}
           </button>
           <button type="button" className="btn-danger !min-h-9 !px-2.5" onClick={() => void remove()}>
             <Trash2 className="h-4 w-4" />
@@ -826,15 +847,13 @@ function EpisodeEditor({ projectId, episode, onRefresh, onBundle }) {
         </div>
       </div>
       {locked ? (
-        <div className="border-b border-[var(--line)] bg-[var(--ok)]/10 px-5 py-2 text-xs text-[var(--ok)]">
-          本集已定稿。需要修改时请先取消定稿。
-        </div>
+        <div className="border-b border-[var(--line)] bg-[var(--ok)]/10 px-5 py-2 text-xs text-[var(--ok)]">{tr("ui_script_this_episode_is_locked_unlock_it")}</div>
       ) : null}
       <textarea
         className="min-h-[500px] flex-1 resize-y border-0 bg-transparent p-5 font-mono text-sm leading-7 text-[var(--ink)] outline-none read-only:cursor-not-allowed read-only:bg-black/20 lg:resize-none"
         value={content}
         onChange={(e) => setContent(e.target.value)}
-        placeholder="写下本集场景、动作与对白…"
+        placeholder={tr("ui_script_write_this_episode_s_scenes_actions")}
         readOnly={locked}
       />
     </div>

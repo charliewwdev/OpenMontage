@@ -5,26 +5,102 @@ import { toast } from "../../lib/toast";
 import { ModalOverlay } from "../ModalPortal";
 import { PageShell } from "./PageShell";
 
+import { tr, useLocale } from "../../lib/i18n";
+
 const FALLBACK_SOURCES = [
-  { id: "all", label: "全部来源" },
-  { id: "official", label: "官方精选" },
-  { id: "community", label: "用户分享" },
+  {
+    id: "all",
+
+    get label() {
+      return tr("ui_skills_all_sources");
+    }
+  },
+  {
+    id: "official",
+
+    get label() {
+      return tr("ui_skills_official_picks");
+    }
+  },
+  {
+    id: "community",
+
+    get label() {
+      return tr("ui_skills_community");
+    }
+  },
 ];
 
 const FALLBACK_CATS = [
-  { id: "all", label: "全部分类" },
-  { id: "text", label: "文本写作" },
-  { id: "image", label: "图片设计" },
-  { id: "video", label: "视频创作" },
-  { id: "audio", label: "音频音乐" },
-  { id: "film", label: "影视制作" },
-  { id: "business", label: "商业营销" },
-  { id: "productivity", label: "效率工具" },
-  { id: "other", label: "其他" },
+  {
+    id: "all",
+
+    get label() {
+      return tr("ui_skills_all_categories");
+    }
+  },
+  {
+    id: "text",
+
+    get label() {
+      return tr("ui_skills_text_writing");
+    }
+  },
+  {
+    id: "image",
+
+    get label() {
+      return tr("ui_skills_image_design");
+    }
+  },
+  {
+    id: "video",
+
+    get label() {
+      return tr("ui_skills_video_creation");
+    }
+  },
+  {
+    id: "audio",
+
+    get label() {
+      return tr("ui_skills_audio_music");
+    }
+  },
+  {
+    id: "film",
+
+    get label() {
+      return tr("ui_skills_film_production");
+    }
+  },
+  {
+    id: "business",
+
+    get label() {
+      return tr("ui_skills_marketing");
+    }
+  },
+  {
+    id: "productivity",
+
+    get label() {
+      return tr("ui_skills_productivity");
+    }
+  },
+  {
+    id: "other",
+
+    get label() {
+      return tr("ui_skills_other");
+    }
+  },
 ];
 
+// Tag values are skill data (they match `skill.tags`); only the chip label is translated.
+const ALL_TAGS = "全部标签";
 const FALLBACK_TAGS = [
-  "全部标签",
+  ALL_TAGS,
   "短剧漫剧",
   "剧本创作",
   "分镜设计",
@@ -39,8 +115,34 @@ const FALLBACK_TAGS = [
   "Seedance",
   "创作工作流",
 ];
+const TAG_LABEL_KEYS = {
+  "全部标签": "ui_skills_all_tags",
+  "短剧漫剧": "ui_skills_short_comic_dramas",
+  "剧本创作": "ui_skills_script_writing",
+  "分镜设计": "ui_skills_storyboard_design",
+  "角色设计": "ui_skills_character_design",
+  "场景设计": "ui_skills_scene_design",
+  "提示词": "ui_skills_prompts",
+  "镜头语言": "ui_skills_camera_language",
+  "图片生成": "ui_skills_image_generation",
+  "视频生成": "ui_skills_video_generation",
+  "配音旁白": "ui_skills_voice_over_narration",
+  "优化改写": "ui_skills_rewrite_polish",
+  "创作工作流": "ui_skills_creative_workflow",
+};
+
+/** Server lists carry zh labels; prefer the translated built-in label for known ids. */
+function labelById(fallbacks, item) {
+  return fallbacks.find((entry) => entry.id === item.id)?.label ?? item.label;
+}
+
+function tagLabel(tag) {
+  const key = TAG_LABEL_KEYS[tag];
+  return key ? tr(key) : tag;
+}
 
 function Chip({ active, children, onClick }) {
+  useLocale();
   return (
     <button type="button" className={`${active ? "chip-active" : "chip"} shrink-0`} onClick={onClick}>
       {children}
@@ -55,13 +157,14 @@ function skillPrompt(skill) {
 
 function ctaLabel(skill) {
   const route = skill?.workshop?.route;
-  if (route === "portrait") return "打开写真对标";
-  if (route === "workshop") return "进入影视工坊";
-  if (route === "agent") return "对话创作";
-  return "去创作";
+  if (route === "portrait") return tr("ui_skills_open_portrait_benchmark");
+  if (route === "workshop") return tr("ui_skills_open_film_workshop");
+  if (route === "agent") return tr("ui_skills_chat_creation");
+  return tr("ui_skills_use_it");
 }
 
 export function SkillsPage({ config, onUsePrompt, onUseSkill }) {
+  useLocale();
   const activate = (skill) => {
     if (onUseSkill) onUseSkill(skill);
     else onUsePrompt?.(skillPrompt(skill));
@@ -76,7 +179,7 @@ export function SkillsPage({ config, onUsePrompt, onUseSkill }) {
   const [query, setQuery] = useState("");
   const [source, setSource] = useState("all");
   const [category, setCategory] = useState("all");
-  const [tag, setTag] = useState("全部标签");
+  const [tag, setTag] = useState(ALL_TAGS);
   const [active, setActive] = useState(null);
   const [showSubmit, setShowSubmit] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -106,7 +209,7 @@ export function SkillsPage({ config, onUsePrompt, onUseSkill }) {
     return skills.filter((s) => {
       if (source !== "all" && (s.source || "official") !== source) return false;
       if (category !== "all" && (s.category || "other") !== category) return false;
-      if (tag !== "全部标签" && !(s.tags || []).includes(tag)) return false;
+      if (tag !== ALL_TAGS && !(s.tags || []).includes(tag)) return false;
       if (!q) return true;
       const blob = `${s.title} ${s.summary} ${s.id} ${(s.tags || []).join(" ")} ${s.content || ""}`.toLocaleLowerCase(
         "zh-CN",
@@ -120,19 +223,16 @@ export function SkillsPage({ config, onUsePrompt, onUseSkill }) {
   return (
     <PageShell
       eyebrow={page.eyebrow || "Skills"}
-      title={page.title || "把专业方法装进你的创作 Agent"}
+      title={page.title || tr("ui_skills_put_professional_methods_into_your_creation")}
       description={
         page.description ||
-        "官方 Skill 已绑定影视工坊步骤：一点即进入对应剧本 / 定妆 / 分镜 / 写真对标。对话类 Skill 仍走创作 Agent。"
+        tr("ui_skills_official_skills_are_bound_to_film")
       }
       actions={
         <>
-          <button type="button" className="btn-secondary" onClick={() => setShowSubmit(true)}>
-            投稿到用户分享
-          </button>
+          <button type="button" className="btn-secondary" onClick={() => setShowSubmit(true)}>{tr("ui_skills_submit_to_community")}</button>
           <button type="button" className="btn-secondary" onClick={() => void refresh()}>
-            <Store className="h-3.5 w-3.5" /> Skill 商店
-          </button>
+            <Store className="h-3.5 w-3.5" />{" "}{tr("ui_skills_skill_store")}</button>
         </>
       }
     >
@@ -142,44 +242,45 @@ export function SkillsPage({ config, onUsePrompt, onUseSkill }) {
           className="field !pl-10"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="搜索能力或 Skill 名称"
+          placeholder={tr("ui_skills_search_capabilities_or_skill_names")}
         />
       </label>
 
       <div className="mb-3 flex flex-wrap gap-2">
         {sources.map((item) => (
           <Chip key={item.id} active={source === item.id} onClick={() => setSource(item.id)}>
-            {item.label}
+            {labelById(FALLBACK_SOURCES, item)}
           </Chip>
         ))}
       </div>
       <div className="mb-3 flex flex-wrap gap-2">
         {categories.map((item) => (
           <Chip key={item.id} active={category === item.id} onClick={() => setCategory(item.id)}>
-            {item.label}
+            {labelById(FALLBACK_CATS, item)}
           </Chip>
         ))}
       </div>
       <div className="mb-6 flex flex-wrap gap-2">
         {tagOptions.map((item) => (
           <Chip key={item} active={tag === item} onClick={() => setTag(item)}>
-            {item}
+            {tagLabel(item)}
           </Chip>
         ))}
       </div>
 
       <div className="mb-4 flex items-center gap-2 text-sm text-white/70">
         <CheckCircle2 className="h-4 w-4 text-[#60a5fa]" />
-        <span className="font-medium">官方精选</span>
-        <span className="rounded-full bg-[#60a5fa]/15 px-2 py-0.5 text-[11px] text-[#93c5fd]">{officialCount} 个可用</span>
+        <span className="font-medium">{tr("ui_skills_official_picks")}</span>
+        <span className="rounded-full bg-[#60a5fa]/15 px-2 py-0.5 text-[11px] text-[#93c5fd]">{tr("ui_skills_available", {
+            officialCount: officialCount
+          })}</span>
       </div>
 
       {loading ? (
         <div className="panel flex items-center justify-center gap-2 py-20 text-sm text-[var(--muted)]">
-          <Loader2 className="h-4 w-4 animate-spin" /> 加载 Skill…
-        </div>
+          <Loader2 className="h-4 w-4 animate-spin" />{" "}{tr("ui_skills_loading_skills")}</div>
       ) : !filtered.length ? (
-        <div className="panel py-20 text-center text-sm text-[var(--muted)]">没有匹配的 Skill</div>
+        <div className="panel py-20 text-center text-sm text-[var(--muted)]">{tr("ui_skills_no_matching_skills")}</div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {filtered.map((skill) => (
@@ -205,16 +306,19 @@ export function SkillsPage({ config, onUsePrompt, onUseSkill }) {
                   ))}
                 </div>
                 {skill.experience?.totalHits > 0 || skill.experience?.learnedCount > 0 ? (
-                  <div className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1.5 text-[10px] text-emerald-100/90">
-                    经验 {skill.experience.patchCount || 0} 条 · 命中 {skill.experience.totalHits || 0} 次
-                    {skill.experience.learnedCount
-                      ? ` · 自动学习 ${skill.experience.learnedCount}`
+                  <div className="mt-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1.5 text-[10px] text-emerald-100/90">{tr("ui_skills_learned_hits", {
+                      0: skill.experience.patchCount || 0,
+                      1: skill.experience.totalHits || 0
+                    })}{skill.experience.learnedCount
+                      ? ` ${tr("ui_skills_auto_learned", {
+  learnedCount: skill.experience.learnedCount
+})}`
                       : ""}
                   </div>
                 ) : null}
               </button>
               <div className="mt-4 flex items-center justify-between gap-2 border-t border-white/5 pt-3">
-                <span className="text-[11px] text-white/35">平台内置 · 无需安装</span>
+                <span className="text-[11px] text-white/35">{tr("ui_skills_built_in_no_install_needed")}</span>
                 <button
                   type="button"
                   className="btn-primary !min-h-8 !px-3 !text-xs"
@@ -236,21 +340,21 @@ export function SkillsPage({ config, onUsePrompt, onUseSkill }) {
             onMouseDown={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">投稿 Skill（本地社区）</h3>
+              <h3 className="text-lg font-semibold">{tr("ui_skills_submit_a_skill_local_community")}</h3>
               <button type="button" className="btn-ghost p-1" onClick={() => setShowSubmit(false)}>
                 <X className="h-4 w-4" />
               </button>
             </div>
             <label>
-              <span className="label">标题</span>
+              <span className="label">{tr("ui_skills_title")}</span>
               <input className="field" value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} />
             </label>
             <label>
-              <span className="label">摘要</span>
+              <span className="label">{tr("ui_skills_summary")}</span>
               <input className="field" value={draft.summary} onChange={(e) => setDraft({ ...draft, summary: e.target.value })} />
             </label>
             <label>
-              <span className="label">分类</span>
+              <span className="label">{tr("ui_skills_category")}</span>
               <select className="field" value={draft.category} onChange={(e) => setDraft({ ...draft, category: e.target.value })}>
                 {categories.filter((c) => c.id !== "all").map((c) => (
                   <option key={c.id} value={c.id}>
@@ -260,24 +364,22 @@ export function SkillsPage({ config, onUsePrompt, onUseSkill }) {
               </select>
             </label>
             <label>
-              <span className="label">Prompt / 规则</span>
+              <span className="label">{tr("ui_skills_prompt_rules")}</span>
               <textarea
                 className="field min-h-36"
                 value={draft.prompt}
                 onChange={(e) => setDraft({ ...draft, prompt: e.target.value })}
-                placeholder="写下可复用的创作规则或提示词…"
+                placeholder={tr("ui_skills_write_reusable_creative_rules_or_prompts")}
               />
             </label>
             <div className="flex justify-end gap-2 pt-2">
-              <button type="button" className="btn-secondary" onClick={() => setShowSubmit(false)}>
-                取消
-              </button>
+              <button type="button" className="btn-secondary" onClick={() => setShowSubmit(false)}>{tr("ui_skills_cancel")}</button>
               <button
                 type="button"
                 className="btn-primary"
                 disabled={submitting}
                 onClick={async () => {
-                  if (!draft.title.trim() || !draft.prompt.trim()) return toast.error("请填写标题和 Prompt");
+                  if (!draft.title.trim() || !draft.prompt.trim()) return toast.error(tr("ui_skills_please_enter_a_title_and_prompt"));
                   setSubmitting(true);
                   try {
                     await api("/api/platform/skills/community", {
@@ -285,7 +387,7 @@ export function SkillsPage({ config, onUsePrompt, onUseSkill }) {
                       headers: { "Content-Type": "application/json" },
                       body: JSON.stringify(draft),
                     });
-                    toast.success("已投稿到用户分享");
+                    toast.success(tr("ui_skills_submitted_to_community"));
                     setShowSubmit(false);
                     setDraft({ title: "", summary: "", prompt: "", category: "other" });
                     setSource("community");
@@ -297,9 +399,7 @@ export function SkillsPage({ config, onUsePrompt, onUseSkill }) {
                   }
                 }}
               >
-                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                提交
-              </button>
+                {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{tr("ui_skills_submit")}</button>
             </div>
           </div>
         </ModalOverlay>
@@ -324,9 +424,7 @@ export function SkillsPage({ config, onUsePrompt, onUseSkill }) {
             </div>
             {(active.experience?.topFailures || []).length ? (
               <div className="border-b border-white/10 bg-black/20 px-5 py-3">
-                <div className="text-[11px] font-semibold uppercase tracking-wide text-white/45">
-                  质检经验（自动累积）
-                </div>
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-white/45">{tr("ui_skills_qa_lessons_accumulated_automatically")}</div>
                 <ul className="mt-2 space-y-1.5">
                   {active.experience.topFailures.slice(0, 5).map((f) => (
                     <li key={f.id} className="rounded-lg border border-white/8 bg-white/[.03] px-2.5 py-1.5 text-[11px] text-white/70">
@@ -346,12 +444,10 @@ export function SkillsPage({ config, onUsePrompt, onUseSkill }) {
               </div>
             ) : null}
             <pre className="max-h-[50vh] overflow-auto whitespace-pre-wrap bg-black/30 p-5 text-xs leading-6 text-white/75">
-              {active.content || "暂无内容"}
+              {active.content || tr("ui_skills_nothing_here_yet")}
             </pre>
             <div className="flex justify-end gap-2 border-t border-white/10 p-4">
-              <button type="button" className="btn-secondary" onClick={() => setActive(null)}>
-                关闭
-              </button>
+              <button type="button" className="btn-secondary" onClick={() => setActive(null)}>{tr("ui_skills_close")}</button>
               <button
                 type="button"
                 className="btn-primary"

@@ -6,27 +6,63 @@ import { toast } from "../lib/toast";
 import { Lightbox } from "./Lightbox";
 import { ModalOverlay } from "./ModalPortal";
 
+import { tr, useLocale } from "../lib/i18n";
+
 const KIND_LABEL = {
-  character: "角色",
-  scene: "场景",
-  prop: "道具",
+  get character() {
+    return tr("ui_asset_detail_character");
+  },
+
+  get scene() {
+    return tr("ui_asset_detail_scene");
+  },
+
+  get prop() {
+    return tr("ui_asset_detail_prop");
+  }
 };
 
 const ROLE_LABEL = {
-  protagonist: "主角",
-  lead: "主角",
-  main: "主角",
-  supporting: "配角",
-  side: "配角",
-  antagonist: "反派",
-  villain: "反派",
-  extra: "群演",
-  npc: "配角",
+  get protagonist() {
+    return tr("ui_asset_detail_lead");
+  },
+
+  get lead() {
+    return tr("ui_asset_detail_lead");
+  },
+
+  get main() {
+    return tr("ui_asset_detail_lead");
+  },
+
+  get supporting() {
+    return tr("ui_asset_detail_supporting");
+  },
+
+  get side() {
+    return tr("ui_asset_detail_supporting");
+  },
+
+  get antagonist() {
+    return tr("ui_asset_detail_villain");
+  },
+
+  get villain() {
+    return tr("ui_asset_detail_villain");
+  },
+
+  get extra() {
+    return tr("ui_asset_detail_extra");
+  },
+
+  get npc() {
+    return tr("ui_asset_detail_supporting");
+  }
 };
 
 function roleBadge(entity) {
   const raw = String(entity?.metadata?.role || entity?.role || entity?.category || "").trim();
-  if (!raw) return entity?.kind === "character" ? "角色" : "";
+  if (!raw) return entity?.kind === "character" ? tr("ui_asset_detail_character") : "";
   return ROLE_LABEL[raw.toLowerCase()] || raw;
 }
 
@@ -43,6 +79,7 @@ export function AssetDetailModal({
   onRefresh,
   onNeedKeys,
 }) {
+  useLocale();
   const caps = config?.capabilities || {};
   const uploadRef = useRef(null);
   const promptCacheRef = useRef(new Map());
@@ -145,7 +182,7 @@ export function AssetDetailModal({
   };
 
   const generate = async (redraw = false) => {
-    if (!requireCapability(caps, "seedream", onNeedKeys, "出图后端（Seedream / ComfyUI）")) return;
+    if (!requireCapability(caps, "seedream", onNeedKeys, tr("ui_asset_detail_image_backend_seedream_comfyui"))) return;
     setWorking(true);
     try {
       const res = await api(`/api/projects/${encodeURIComponent(projectId)}/entities`, {
@@ -163,9 +200,11 @@ export function AssetDetailModal({
       const imgs = (res?.bundle?.entities || []).find((e) => e.id === live.id)?.images || [];
       const last = imgs[imgs.length - 1];
       if (last?.qaPass === false) {
-        toast.error(`质检未通过：${last?.qa?.reason || "与提示词不符"}`);
+        toast.error(tr("ui_asset_detail_qa_failed", {
+          0: last?.qa?.reason || tr("ui_qa_reason_prompt_mismatch")
+        }));
       } else {
-        toast.success(redraw ? "参考重绘已保存" : "图片已保存");
+        toast.success(redraw ? tr("ui_asset_detail_reference_redraw_saved") : tr("ui_asset_detail_image_saved"));
       }
     } catch (e) {
       toastMaybeKeys(e, onNeedKeys);
@@ -206,7 +245,7 @@ export function AssetDetailModal({
       });
       invalidatePromptCache(live.id);
       apply(res);
-      toast.success("已上传并设为定稿图");
+      toast.success(tr("ui_asset_detail_uploaded_and_set_as_final_image"));
     } catch (e) {
       toast.error(String(e.message || e));
     } finally {
@@ -228,7 +267,7 @@ export function AssetDetailModal({
         }),
       });
       apply(res);
-      toast.success(res?.punched ? "已抠成透明底" : "已转 PNG（底板色过深或非无缝，未能自动抠除）");
+      toast.success(res?.punched ? tr("ui_asset_detail_background_removed") : tr("ui_asset_detail_converted_to_png_backdrop_too_dark"));
     } catch (e) {
       toast.error(String(e.message || e));
     } finally {
@@ -281,9 +320,7 @@ export function AssetDetailModal({
                     detailTab === "edit" ? "bg-white/10 font-semibold text-white" : "text-white/45 hover:text-white/70"
                   }`}
                   onClick={() => setDetailTab("edit")}
-                >
-                  资料
-                </button>
+                >{tr("ui_asset_detail_profile")}</button>
                 <button
                   type="button"
                   className={`inline-flex items-center gap-1 rounded-md px-2.5 py-1 text-xs ${
@@ -291,10 +328,9 @@ export function AssetDetailModal({
                   }`}
                   onClick={() => void showPromptTab()}
                 >
-                  <FileText className="h-3 w-3" /> 提示词
-                </button>
+                  <FileText className="h-3 w-3" />{" "}{tr("ui_asset_detail_prompt")}</button>
               </div>
-              <button type="button" className="btn-quiet !min-h-8 !px-2 text-white/70" onClick={onClose} aria-label="关闭">
+              <button type="button" className="btn-quiet !min-h-8 !px-2 text-white/70" onClick={onClose} aria-label={tr("ui_asset_detail_close")}>
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -304,24 +340,22 @@ export function AssetDetailModal({
             <div className="scrollbar-thin max-h-[min(82dvh,860px)] space-y-3 overflow-y-auto p-4 text-sm">
               {promptBusy && !promptPayload ? (
                 <div className="flex items-center justify-center gap-2 py-12 text-white/50">
-                  <Loader2 className="h-4 w-4 animate-spin" /> 加载提示词…
-                </div>
+                  <Loader2 className="h-4 w-4 animate-spin" />{" "}{tr("ui_asset_detail_loading_prompt")}</div>
               ) : (
                 <>
                   {promptBusy ? (
                     <div className="flex items-center gap-2 text-[11px] text-white/40">
-                      <Loader2 className="h-3 w-3 animate-spin" /> 更新提示词…
-                    </div>
+                      <Loader2 className="h-3 w-3 animate-spin" />{" "}{tr("ui_asset_detail_updating_prompt")}</div>
                   ) : null}
                   <div>
-                    <div className="mb-1 text-[11px] font-medium text-white/40">将提交给大模型的正向提示词</div>
+                    <div className="mb-1 text-[11px] font-medium text-white/40">{tr("ui_asset_detail_positive_prompt_that_will_be_sent")}</div>
                     <pre className="whitespace-pre-wrap rounded-xl border border-white/10 bg-black/40 p-3 text-[12px] leading-5 text-white/85">
-                      {promptPayload?.prompt || "（无）"}
+                      {promptPayload?.prompt || tr("ui_asset_detail_none")}
                     </pre>
                   </div>
                   {promptPayload?.negativePrompt ? (
                     <div>
-                      <div className="mb-1 text-[11px] font-medium text-white/40">负向提示词</div>
+                      <div className="mb-1 text-[11px] font-medium text-white/40">{tr("ui_asset_detail_negative_prompt")}</div>
                       <pre className="whitespace-pre-wrap rounded-xl border border-white/10 bg-black/40 p-3 text-[12px] leading-5 text-white/70">
                         {promptPayload.negativePrompt}
                       </pre>
@@ -329,15 +363,14 @@ export function AssetDetailModal({
                   ) : null}
                   {promptPayload?.selectedImagePrompt ? (
                     <div>
-                      <div className="mb-1 text-[11px] font-medium text-white/40">当前定稿图实际使用的提示词</div>
+                      <div className="mb-1 text-[11px] font-medium text-white/40">{tr("ui_asset_detail_prompt_actually_used_for_the_current")}</div>
                       <pre className="whitespace-pre-wrap rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-[12px] leading-5 text-amber-50/90">
                         {promptPayload.selectedImagePrompt}
                       </pre>
                     </div>
                   ) : null}
                   {promptPayload?.selectedImageQa?.reason ? (
-                    <div className="rounded-lg border border-white/10 bg-white/[.03] px-3 py-2 text-[11px] text-white/55">
-                      定稿质检：{promptPayload.selectedQaPass ? "通过" : "未过"} · {promptPayload.selectedImageQa.reason}
+                    <div className="rounded-lg border border-white/10 bg-white/[.03] px-3 py-2 text-[11px] text-white/55">{tr("ui_asset_detail_final_image_qa")}{promptPayload.selectedQaPass ? tr("ui_asset_detail_passed") : tr("ui_asset_detail_failed")} · {promptPayload.selectedImageQa.reason}
                     </div>
                   ) : null}
                 </>
@@ -362,20 +395,15 @@ export function AssetDetailModal({
                       className="h-full max-h-[420px] w-full object-contain object-center"
                     />
                     <span className="pointer-events-none absolute bottom-3 right-3 flex items-center gap-1 rounded-md bg-black/55 px-2 py-1 text-[10px] font-medium text-white/80">
-                      <Maximize2 className="h-3 w-3" /> 大图
-                    </span>
+                      <Maximize2 className="h-3 w-3" />{" "}{tr("ui_asset_detail_full_size")}</span>
                   </button>
                 ) : (
                   <div className="flex h-full min-h-[240px] flex-col items-center justify-center text-sm text-white/40">
-                    <ImagePlus className="mb-3 h-8 w-8 text-[#7c6cff]" />
-                    尚无定稿图
-                  </div>
+                    <ImagePlus className="mb-3 h-8 w-8 text-[#7c6cff]" />{tr("ui_asset_detail_no_final_image_yet")}</div>
                 )}
                 {working ? (
                   <div className="absolute inset-0 flex items-center justify-center bg-[#0c0e14]/75 text-sm font-semibold text-white backdrop-blur-sm">
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    正在处理图片…
-                  </div>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />{tr("ui_asset_detail_processing_image")}</div>
                 ) : null}
               </div>
 
@@ -389,12 +417,14 @@ export function AssetDetailModal({
                     }`}
                     title={qaReason}
                   >
-                    {qaPass ? "质检通过" : `质检未过${qaReason ? ` · ${String(qaReason).slice(0, 80)}` : ""}`}
+                    {qaPass ? tr("ui_asset_detail_qa_passed") : tr("ui_asset_detail_qa_failed_2", {
+                      0: qaReason ? ` · ${String(qaReason).slice(0, 80)}` : ""
+                    })}
                   </div>
                 ) : null}
 
                 <div className="flex flex-wrap items-center gap-2">
-                  <h4 className="text-xl font-semibold text-white">{live.name || "未命名"}</h4>
+                  <h4 className="text-xl font-semibold text-white">{live.name || tr("ui_asset_detail_untitled")}</h4>
                   {badge && live.kind === "character" ? (
                     <span className="rounded-full bg-[#7c6cff]/25 px-2 py-0.5 text-[11px] font-semibold text-[#c4b5fd]">
                       {badge}
@@ -408,35 +438,35 @@ export function AssetDetailModal({
                 </div>
 
                 <div>
-                  <div className="label !mb-1">形象描述</div>
-                  <p className="text-sm leading-6 text-white/75">{descShown || "尚未填写形象描述"}</p>
+                  <div className="label !mb-1">{tr("ui_asset_detail_appearance")}</div>
+                  <p className="text-sm leading-6 text-white/75">{descShown || tr("ui_asset_detail_no_appearance_description_yet")}</p>
                   {descNeedsCollapse ? (
                     <button
                       type="button"
                       className="mt-1 text-xs font-medium text-[#a78bfa] hover:underline"
                       onClick={() => setDescExpanded((v) => !v)}
                     >
-                      {descExpanded ? "收起" : "展开全部"}
+                      {descExpanded ? tr("ui_asset_detail_collapse") : tr("ui_asset_detail_show_all")}
                     </button>
                   ) : null}
                 </div>
 
                 {live.kind === "character" ? (
                   <div>
-                    <div className="label !mb-1">角色音色</div>
+                    <div className="label !mb-1">{tr("ui_asset_detail_voice")}</div>
                     {voiceText ? (
                       <p className="text-sm leading-6 text-white/70">{voiceText}</p>
                     ) : (
-                      <p className="text-sm text-white/35">暂无音色描述（解析剧本时若有会写入）</p>
+                      <p className="text-sm text-white/35">{tr("ui_asset_detail_no_voice_description_yet_filled_in")}</p>
                     )}
                   </div>
                 ) : null}
 
                 <details className="rounded-xl border border-white/10 bg-white/[.02] p-3">
-                  <summary className="cursor-pointer text-xs font-medium text-white/55">编辑档案</summary>
+                  <summary className="cursor-pointer text-xs font-medium text-white/55">{tr("ui_asset_detail_edit_profile")}</summary>
                   <div className="mt-3 space-y-3">
                     <label className="block">
-                      <span className="label">名称</span>
+                      <span className="label">{tr("ui_asset_detail_name")}</span>
                       <input
                         className="field"
                         value={name}
@@ -449,7 +479,7 @@ export function AssetDetailModal({
                     </label>
                     {live.kind === "character" ? (
                       <label className="block">
-                        <span className="label">造型</span>
+                        <span className="label">{tr("ui_asset_detail_look")}</span>
                         <input
                           className="field"
                           value={variant}
@@ -462,7 +492,7 @@ export function AssetDetailModal({
                       </label>
                     ) : null}
                     <label className="block">
-                      <span className="label">形象描述</span>
+                      <span className="label">{tr("ui_asset_detail_appearance")}</span>
                       <textarea
                         className="field min-h-28 resize-y text-sm leading-6"
                         value={description}
@@ -475,12 +505,12 @@ export function AssetDetailModal({
                     </label>
                     {live.kind === "character" ? (
                       <label className="block">
-                        <span className="label">角色音色</span>
+                        <span className="label">{tr("ui_asset_detail_voice")}</span>
                         <textarea
                           className="field min-h-20 resize-y text-sm leading-6"
                           value={voiceDescription}
                           disabled={working}
-                          placeholder="例如：少女音偏清亮，喘息中带沙哑…"
+                          placeholder={tr("ui_asset_detail_e_g_bright_young_female_voice")}
                           onChange={(e) => setVoiceDescription(e.target.value)}
                           onBlur={() => {
                             const next = voiceDescription.trim();
@@ -499,7 +529,9 @@ export function AssetDetailModal({
 
                 {(live.images || []).length ? (
                   <div>
-                    <div className="label mb-1.5">版本 · {(live.images || []).length}</div>
+                    <div className="label mb-1.5">{tr("ui_asset_detail_versions", {
+                        length: (live.images || []).length
+                      })}</div>
                     <div className="scrollbar-thin flex gap-2 overflow-x-auto pb-1">
                       {(live.images || []).map((image, index) => (
                         <button
@@ -512,15 +544,20 @@ export function AssetDetailModal({
                               ? "border-[#7c6cff]"
                               : "border-transparent opacity-65 hover:opacity-100"
                           }`}
-                          title={`版本 ${index + 1}${image.qaPass === false ? " · 质检未过" : ""}`}
+                          title={tr("ui_asset_detail_version", {
+                            0: index + 1,
+                            1: image.qaPass === false ? tr("ui_qa_failed_suffix") : ""
+                          })}
                         >
                           <img
                             src={image.url}
-                            alt={`版本 ${index + 1}`}
+                            alt={tr("ui_asset_detail_version_2", {
+                              0: index + 1
+                            })}
                             className="h-full w-full object-contain object-center bg-black/50"
                           />
                           {image.qaPass === false ? (
-                            <span className="absolute inset-x-0 bottom-0 bg-rose-600/80 text-center text-[8px] text-white">未过</span>
+                            <span className="absolute inset-x-0 bottom-0 bg-rose-600/80 text-center text-[8px] text-white">{tr("ui_asset_detail_failed")}</span>
                           ) : null}
                         </button>
                       ))}
@@ -530,21 +567,19 @@ export function AssetDetailModal({
 
                 <div className="grid grid-cols-2 gap-2 pt-1">
                   <button type="button" className="btn-primary" disabled={working} onClick={() => void generate(false)}>
-                    <Sparkles className="h-3.5 w-3.5" /> {thumb ? "生成新版本" : "生成图片"}
+                    <Sparkles className="h-3.5 w-3.5" /> {thumb ? tr("ui_asset_detail_generate_new_version") : tr("ui_asset_detail_generate_image")}
                   </button>
                   <button type="button" className="btn-secondary" disabled={working || !thumb} onClick={() => void generate(true)}>
-                    <RefreshCw className="h-3.5 w-3.5" /> 参考重绘
-                  </button>
+                    <RefreshCw className="h-3.5 w-3.5" />{" "}{tr("ui_asset_detail_redraw_from_reference")}</button>
                   {["character", "prop"].includes(live.kind) ? (
                     <button
                       type="button"
                       className="btn-secondary col-span-2"
                       disabled={working || !thumb}
                       onClick={() => void punchAlpha()}
-                      title="把无缝浅色底板键控成透明 PNG"
+                      title={tr("ui_asset_detail_key_a_seamless_light_backdrop_out")}
                     >
-                      <Eraser className="h-3.5 w-3.5" /> 抠透明底
-                    </button>
+                      <Eraser className="h-3.5 w-3.5" />{" "}{tr("ui_asset_detail_remove_background")}</button>
                   ) : null}
                   <button
                     type="button"
@@ -552,8 +587,7 @@ export function AssetDetailModal({
                     disabled={working}
                     onClick={() => uploadRef.current?.click()}
                   >
-                    <Upload className="h-3.5 w-3.5" /> 上传本地图
-                  </button>
+                    <Upload className="h-3.5 w-3.5" />{" "}{tr("ui_asset_detail_upload_local_image")}</button>
                   <input
                     ref={uploadRef}
                     hidden

@@ -5,6 +5,8 @@ import { getToken } from "../../lib/auth";
 import { toast } from "../../lib/toast";
 import { PageShell } from "./PageShell";
 
+import { tr, useLocale } from "../../lib/i18n";
+
 const STATUS_TONE = {
   running: "text-emerald-300 bg-emerald-500/15 border-emerald-500/30",
   queued: "text-sky-300 bg-sky-500/15 border-sky-500/30",
@@ -14,11 +16,25 @@ const STATUS_TONE = {
 };
 
 const STATUS_LABEL = {
-  running: "运行中",
-  queued: "排队",
-  paused: "已暂停",
-  failed: "失败",
-  done: "已完成",
+  get running() {
+    return tr("ui_jobs_running");
+  },
+
+  get queued() {
+    return tr("ui_jobs_queued");
+  },
+
+  get paused() {
+    return tr("ui_jobs_paused");
+  },
+
+  get failed() {
+    return tr("ui_jobs_failed");
+  },
+
+  get done() {
+    return tr("ui_jobs_completed");
+  }
 };
 
 function jobsWsUrl() {
@@ -29,6 +45,7 @@ function jobsWsUrl() {
 }
 
 function ProgressBar({ pct = 0, tone = "sky", label }) {
+  useLocale();
   const width = Math.max(0, Math.min(100, Number(pct) || 0));
   const fill =
     tone === "emerald"
@@ -54,6 +71,7 @@ function ProgressBar({ pct = 0, tone = "sky", label }) {
 }
 
 function StatCard({ label, value, hint, progress }) {
+  useLocale();
   return (
     <div className="panel space-y-2 px-4 py-3">
       <div className="text-[11px] uppercase tracking-wide text-[var(--muted)]">{label}</div>
@@ -65,6 +83,7 @@ function StatCard({ label, value, hint, progress }) {
 }
 
 function JobRow({ job, onOpen }) {
+  useLocale();
   const tone = STATUS_TONE[job.status] || STATUS_TONE.done;
   const shots = job.shotProgress || {};
   const prog = job.progress || {};
@@ -80,9 +99,12 @@ function JobRow({ job, onOpen }) {
           >
             {job.title || job.projectId}
           </button>
-          <div className="mt-1 text-[11px] text-[var(--muted)]">
-            {job.projectId} · 步骤 {job.step || "—"}
-            {job.updatedAt ? ` · 更新 ${job.updatedAt}` : ""}
+          <div className="mt-1 text-[11px] text-[var(--muted)]">{tr("ui_jobs_step", {
+              projectId: job.projectId,
+              1: job.step || "—"
+            })}{job.updatedAt ? ` ${tr("ui_jobs_updated", {
+  updatedAt: job.updatedAt
+})}` : ""}
           </div>
         </div>
         <span className={`rounded-full border px-2.5 py-0.5 text-[11px] ${tone}`}>
@@ -93,21 +115,31 @@ function JobRow({ job, onOpen }) {
       <ProgressBar
         pct={prog.overallPct ?? 0}
         tone={barTone}
-        label={`总进度 · 阶段 ${prog.stepDone ?? 0}/${prog.stepTotal ?? 0}`}
+        label={tr("ui_jobs_overall_stage", {
+          0: prog.stepDone ?? 0,
+          1: prog.stepTotal ?? 0
+        })}
       />
       {(prog.shotTotal > 0 || shots.total > 0) && (
         <ProgressBar
           pct={prog.shotPct ?? 0}
           tone={barTone}
-          label={`出片 ${prog.shotDone ?? shots.completed ?? 0}/${prog.shotTotal ?? shots.total ?? 0}${
-            shots.generating ? ` · 生成中 ${shots.generating}` : ""
-          }${shots.failed ? ` · 失败 ${shots.failed}` : ""}`}
+          label={tr("ui_jobs_videos", {
+            0: prog.shotDone ?? shots.completed ?? 0,
+            1: prog.shotTotal ?? shots.total ?? 0,
+            2: shots.generating ? tr("ui_jobs_generating_suffix", { count: shots.generating }) : "",
+            3: shots.failed ? tr("ui_jobs_failed_suffix", { count: shots.failed }) : ""
+          })}
         />
       )}
 
       {job.detail ? <p className="text-sm text-white/80">{job.detail}</p> : null}
-      {job.lastLog ? <p className="text-xs text-[var(--muted)]">最近：{job.lastLog}</p> : null}
-      {job.error ? <p className="text-xs text-rose-300">错误：{String(job.error).slice(0, 200)}</p> : null}
+      {job.lastLog ? <p className="text-xs text-[var(--muted)]">{tr("ui_jobs_latest", {
+          lastLog: job.lastLog
+        })}</p> : null}
+      {job.error ? <p className="text-xs text-rose-300">{tr("ui_jobs_error", {
+          0: String(job.error).slice(0, 200)
+        })}</p> : null}
 
       {Array.isArray(job.steps) && job.steps.length ? (
         <div className="flex flex-wrap gap-1.5">
@@ -135,6 +167,7 @@ function JobRow({ job, onOpen }) {
 }
 
 export function JobsPage({ onOpenProject }) {
+  useLocale();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [live, setLive] = useState("connecting"); // connecting | live | polling | offline
@@ -278,14 +311,14 @@ export function JobsPage({ onOpenProject }) {
   const jobs = data?.autoProduce || [];
 
   const liveLabel =
-    live === "live" ? "WebSocket 实时" : live === "polling" ? "轮询回退" : live === "connecting" ? "连接中…" : "离线";
+    live === "live" ? tr("ui_jobs_websocket_live") : live === "polling" ? tr("ui_jobs_polling_fallback") : live === "connecting" ? tr("ui_jobs_connecting") : tr("ui_jobs_offline");
   const LiveIcon = live === "live" ? Radio : live === "polling" ? RefreshCw : WifiOff;
 
   return (
     <PageShell
       eyebrow="Ops"
-      title="任务队列"
-      description="WebSocket 异步推送队列与一键全流程进度；断线时自动回退 HTTP 轮询。"
+      title={tr("ui_jobs_job_queue")}
+      description={tr("ui_jobs_websocket_push_for_the_queue_and")}
       actions={
         <div className="flex flex-wrap items-center gap-2">
           <span
@@ -301,9 +334,7 @@ export function JobsPage({ onOpenProject }) {
             {liveLabel}
           </span>
           <button type="button" className="btn-secondary inline-flex items-center gap-1.5" onClick={requestRefresh}>
-            <RefreshCw className="h-3.5 w-3.5" />
-            刷新
-          </button>
+            <RefreshCw className="h-3.5 w-3.5" />{tr("ui_jobs_refresh")}</button>
         </div>
       }
     >
@@ -311,19 +342,26 @@ export function JobsPage({ onOpenProject }) {
         {data?.note ? <p className="text-xs text-[var(--muted)]">{data.note}</p> : null}
 
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="队列后端" value={q.backend || "—"} hint={data?.polledAt ? `同步 ${data.polledAt}` : ""} />
+          <StatCard label={tr("ui_jobs_queue_backend")} value={q.backend || "—"} hint={data?.polledAt ? tr("ui_jobs_synced", {
+            polledAt: data.polledAt
+          }) : ""} />
           <StatCard
-            label="待处理"
+            label={tr("ui_jobs_pending")}
             value={q.redisPending ?? pool.pending ?? 0}
             hint={
               q.backend === "redis"
-                ? `图 ${q.redisImagePending ?? 0} · 视频 ${q.redisVideoPending ?? 0}`
-                : "线程池排队"
+                ? tr("ui_jobs_images_videos", {
+                0: q.redisImagePending ?? 0,
+                1: q.redisVideoPending ?? 0
+              })
+                : tr("ui_jobs_thread_pool_queue")
             }
             progress={qProg.loadPct}
           />
-          <StatCard label="处理中" value={q.redisProcessing ?? "—"} hint={`池 workers ${pool.workers ?? "—"}`} />
-          <StatCard label="全流程任务" value={jobs.length} hint="含运行 / 暂停 / 失败 / 近完成" />
+          <StatCard label={tr("ui_jobs_processing")} value={q.redisProcessing ?? "—"} hint={tr("ui_jobs_pool_workers", {
+            0: pool.workers ?? "—"
+          })} />
+          <StatCard label={tr("ui_jobs_pipeline_jobs")} value={jobs.length} hint={tr("ui_jobs_running_paused_failed_recently_done")} />
         </div>
 
         {q.redisError ? (
@@ -333,13 +371,12 @@ export function JobsPage({ onOpenProject }) {
         ) : null}
 
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold">一键全流程</h2>
+          <h2 className="text-sm font-semibold">{tr("ui_jobs_one_click_pipeline")}</h2>
           {loading && !data ? (
             <div className="panel flex items-center gap-2 px-5 py-10 text-sm text-[var(--muted)]">
-              <Loader2 className="h-4 w-4 animate-spin" /> 加载任务…
-            </div>
+              <Loader2 className="h-4 w-4 animate-spin" />{" "}{tr("ui_jobs_loading_jobs")}</div>
           ) : jobs.length === 0 ? (
-            <div className="panel px-5 py-10 text-sm text-[var(--muted)]">当前没有可见的全流程任务。</div>
+            <div className="panel px-5 py-10 text-sm text-[var(--muted)]">{tr("ui_jobs_no_visible_pipeline_jobs_right_now")}</div>
           ) : (
             <div className="space-y-3">
               {jobs.map((job) => (

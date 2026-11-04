@@ -7,6 +7,8 @@ import { openShareToX } from "../../lib/shareToX";
 import { SkillExpertBadge } from "../SkillExpertBadge";
 import { PageShell } from "./PageShell";
 
+import { tr, useLocale } from "../../lib/i18n";
+
 function mediaUrl(projectId, path) {
   if (!path) return null;
   if (String(path).startsWith("http") || String(path).startsWith("/api/")) return path;
@@ -14,6 +16,7 @@ function mediaUrl(projectId, path) {
 }
 
 function ShotCard({ projectId, shot }) {
+  useLocale();
   const start = mediaUrl(projectId, shot.startFramePath);
   const end = mediaUrl(projectId, shot.endFramePath);
   const vid = shot.selectedVideo?.url || mediaUrl(projectId, shot.selectedVideo?.path);
@@ -22,11 +25,11 @@ function ShotCard({ projectId, shot }) {
     <article className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white/[.03]">
       <div className="grid grid-cols-2 gap-px bg-[var(--line)]">
         <div className="bg-[var(--stage)] p-2">
-          <p className="mb-1 text-[10px] uppercase tracking-wide text-white/40">首帧</p>
+          <p className="mb-1 text-[10px] uppercase tracking-wide text-white/40">{tr("ui_portrait_match_first_frame")}</p>
           {start ? <img src={start} alt="" className="aspect-[9/16] w-full rounded-lg object-cover" /> : null}
         </div>
         <div className="bg-[var(--stage)] p-2">
-          <p className="mb-1 text-[10px] uppercase tracking-wide text-white/40">尾帧</p>
+          <p className="mb-1 text-[10px] uppercase tracking-wide text-white/40">{tr("ui_portrait_match_last_frame")}</p>
           {end ? <img src={end} alt="" className="aspect-[9/16] w-full rounded-lg object-cover" /> : null}
         </div>
       </div>
@@ -34,7 +37,7 @@ function ShotCard({ projectId, shot }) {
         <div>
           <p className="text-sm font-medium text-white/90">{shot.title || shot.id}</p>
           <p className="text-[11px] text-white/45">
-            {status === "success" ? "已生成" : status === "generating" ? "生成中…" : status === "failed" ? shot.error || "失败" : "待生成"}
+            {status === "success" ? tr("ui_portrait_match_generated") : status === "generating" ? tr("ui_portrait_match_generating") : status === "failed" ? shot.error || tr("ui_portrait_match_failed") : tr("ui_portrait_match_pending")}
           </p>
         </div>
         {vid ? (
@@ -57,6 +60,7 @@ export function PortraitMatchPage({
   onEnterWorkshop,
   onNeedKeys,
 }) {
+  useLocale();
   const [templates, setTemplates] = useState([]);
   const [matchModes, setMatchModes] = useState({});
   const [qualityDiagnosis, setQualityDiagnosis] = useState("");
@@ -101,7 +105,7 @@ export function PortraitMatchPage({
           setQualityDiagnosis(data.qualityDiagnosis || "");
         }
       } catch (err) {
-        if (!cancelled) toast.error(err.message || "加载模板失败");
+        if (!cancelled) toast.error(err.message || tr("ui_portrait_match_failed_to_load_templates"));
       } finally {
         if (!cancelled) setLoadingTemplates(false);
       }
@@ -132,7 +136,7 @@ export function PortraitMatchPage({
           setComfyStatus({
             probing: false,
             reachable: false,
-            error: String(err.message || err || "探测失败"),
+            error: String(err.message || err || tr("ui_portrait_match_probe_failed")),
           });
         }
       }
@@ -144,14 +148,16 @@ export function PortraitMatchPage({
 
   const ensureComfy = () => {
     if (comfyStatus.probing) {
-      toast.info("正在检测智川云 ComfyUI 连通性…");
+      toast.info(tr("ui_portrait_match_checking_zhichuan_cloud_comfyui_connectivity"));
       return false;
     }
     if (!comfyStatus.reachable) {
       toast.error(
         comfyStatus.error
-          ? `ComfyUI 不可达：${comfyStatus.error}`
-          : "ComfyUI 未连通。请在密钥页检测连通，或在可访问智川云的机器上启动 edge media-worker。",
+          ? tr("ui_portrait_match_comfyui_unreachable", {
+          error: comfyStatus.error
+        })
+          : tr("ui_portrait_match_comfyui_not_connected_test_the_connection"),
       );
       onNeedKeys?.();
       return false;
@@ -161,7 +167,7 @@ export function PortraitMatchPage({
 
   useEffect(() => {
     if (!initialProjectId) return;
-    void refresh(initialProjectId).catch((err) => toast.error(err.message || "加载项目失败"));
+    void refresh(initialProjectId).catch((err) => toast.error(err.message || tr("ui_portrait_match_failed_to_load_project")));
   }, [initialProjectId]);
 
   // Poll while generating
@@ -176,7 +182,7 @@ export function PortraitMatchPage({
   const onCreate = async (templateId) => {
     // 极像生成才需要 Comfy；重拍企划只产出分镜/妆造/卡点表。
     if (matchMode === "gen-likeness") {
-      if (!requireCapability(config?.capabilities, "videoReady", onNeedKeys, "出片后端（ComfyUI H3）")) return;
+      if (!requireCapability(config?.capabilities, "videoReady", onNeedKeys, tr("ui_portrait_match_video_backend_comfyui_h3"))) return;
       if (!ensureComfy()) return;
     }
     setCreating(true);
@@ -190,7 +196,7 @@ export function PortraitMatchPage({
       setBundle(res.bundle);
       setProjectId(pid);
       toast.success(
-        matchMode === "reshoot" ? "已创建重拍企划，进入影视工坊查看卡点表" : "已创建极像项目，进入影视工坊出片",
+        matchMode === "reshoot" ? tr("ui_portrait_match_reshoot_plan_created_open_the_film") : tr("ui_portrait_match_look_alike_project_created_open_the"),
       );
       if (pid && (onEnterWorkshop || onOpenDrama)) {
         (onEnterWorkshop || onOpenDrama)(pid);
@@ -205,7 +211,7 @@ export function PortraitMatchPage({
 
   const onGenerateAll = async () => {
     if (!projectId) return;
-    if (!requireCapability(config?.capabilities, "videoReady", onNeedKeys, "出片后端（ComfyUI H3）")) return;
+    if (!requireCapability(config?.capabilities, "videoReady", onNeedKeys, tr("ui_portrait_match_video_backend_comfyui_h3"))) return;
     if (!ensureComfy()) return;
     setGenerating(true);
     try {
@@ -219,12 +225,20 @@ export function PortraitMatchPage({
         const q = res.quality || {};
         toast.error(
           res.message ||
-            `资产未达标：角色 ${q.character?.ready ?? 0}/${q.character?.total ?? 0} · 场景 ${q.scene?.ready ?? 0}/${q.scene?.total ?? 0} · 提示词 ${q.prompts?.ok ? "过" : "未过"}`,
+            tr("ui_portrait_match_assets_not_ready_characters_scenes_prompts", {
+              0: q.character?.ready ?? 0,
+              1: q.character?.total ?? 0,
+              2: q.scene?.ready ?? 0,
+              3: q.scene?.total ?? 0,
+              4: q.prompts?.ok ? tr("ui_portrait_match_prompts_pass") : tr("ui_portrait_match_prompts_fail")
+            }),
         );
         return;
       }
       const n = (res.started || []).filter((x) => !x.error && !x.skipped).length;
-      toast.success(n ? `已提交 ${n} 个镜头到智川云 H3` : "没有需要生成的镜头");
+      toast.success(n ? tr("ui_portrait_match_submitted_shots_to_zhichuan_cloud_h3", {
+        n: n
+      }) : tr("ui_portrait_match_no_shots_need_generating"));
     } catch (err) {
       toastMaybeKeys(err, onNeedKeys);
     } finally {
@@ -238,9 +252,9 @@ export function PortraitMatchPage({
     try {
       const res = await api(`/api/projects/${projectId}/portrait-match/assemble`, { method: "POST" });
       setBundle(res.bundle);
-      toast.success("合片完成");
+      toast.success(tr("ui_portrait_match_merge_done"));
     } catch (err) {
-      toast.error(err.message || "合片失败");
+      toast.error(err.message || tr("ui_portrait_match_merge_failed"));
     } finally {
       setAssembling(false);
     }
@@ -250,13 +264,11 @@ export function PortraitMatchPage({
 
   return (
     <PageShell
-      title="写真对标 · 双路径"
-      description="先选路径：极像生成（H3）或原片重拍企划（真机 4K/60），再进影视工坊"
+      title={tr("ui_portrait_match_portrait_benchmark_two_paths")}
+      description={tr("ui_portrait_match_pick_a_path_first_look_alike")}
       actions={
         <button type="button" className="btn-ghost inline-flex items-center gap-1.5" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4" />
-          返回项目库
-        </button>
+          <ArrowLeft className="h-4 w-4" />{tr("ui_portrait_match_back_to_project_library")}</button>
       }
     >
       <div className="mb-4 flex flex-wrap items-center gap-3">
@@ -272,13 +284,15 @@ export function PortraitMatchPage({
             }`}
           >
             {comfyStatus.probing
-              ? "正在探测 ComfyUI…"
+              ? tr("ui_portrait_match_probing_comfyui")
               : comfyStatus.reachable
-                ? "ComfyUI 已连通"
-                : `ComfyUI 未连通${comfyStatus.error ? ` · ${String(comfyStatus.error).slice(0, 80)}` : ""}`}
+                ? tr("ui_portrait_match_comfyui_connected")
+                : tr("ui_portrait_match_comfyui_not_connected", {
+              0: comfyStatus.error ? ` · ${String(comfyStatus.error).slice(0, 80)}` : ""
+            })}
           </span>
         ) : (
-          <span className="rounded-full bg-sky-500/15 px-2.5 py-1 text-[11px] text-sky-100">重拍企划 · 不跑生成</span>
+          <span className="rounded-full bg-sky-500/15 px-2.5 py-1 text-[11px] text-sky-100">{tr("ui_portrait_match_reshoot_plan_no_generation")}</span>
         )}
       </div>
       {!projectId ? (
@@ -307,13 +321,12 @@ export function PortraitMatchPage({
           ) : null}
           <p className="text-sm text-white/60">
             {matchMode === "reshoot"
-              ? "选模板后进入影视工坊「剧本」查看重拍企划（妆造 / 场地 / 卡点表）；工作台里的首尾帧是现场参考，不调用 H3。"
-              : "选模板后进入影视工坊工作台：原片关键帧身份锁 + H3 出片。角色/场景图只是定妆参考，真正锁脸的是每镜首尾帧。"}
+              ? tr("ui_portrait_match_after_picking_a_template_open_the")
+              : tr("ui_portrait_match_after_picking_a_template_open_the_2")}
           </p>
           {loadingTemplates ? (
             <div className="flex items-center gap-2 text-sm text-white/50">
-              <Loader2 className="h-4 w-4 animate-spin" /> 加载模板…
-            </div>
+              <Loader2 className="h-4 w-4 animate-spin" />{" "}{tr("ui_portrait_match_loading_templates")}</div>
           ) : (
             <div className="grid gap-4 md:grid-cols-3">
               {templates.map((t) => (
@@ -328,9 +341,9 @@ export function PortraitMatchPage({
                       <h3 className="text-base font-semibold text-white">{t.title}</h3>
                       <p className="mt-1 text-xs text-white/50">{t.desc}</p>
                     </div>
-                    <span className="rounded-full bg-white/[.06] px-2 py-0.5 text-[10px] text-white/50">
-                      {t.shotCount} 镜
-                    </span>
+                    <span className="rounded-full bg-white/[.06] px-2 py-0.5 text-[10px] text-white/50">{tr("ui_portrait_match_shots", {
+                        shotCount: t.shotCount
+                      })}</span>
                   </div>
                   {t.sampleUrl ? (
                     <video src={t.sampleUrl} className="aspect-[9/16] w-full rounded-xl object-cover" muted playsInline controls />
@@ -346,7 +359,7 @@ export function PortraitMatchPage({
                     onClick={() => void onCreate(t.id)}
                   >
                     {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                    {matchMode === "reshoot" ? "开重拍企划进工坊" : "开极像项目进出片"}
+                    {matchMode === "reshoot" ? tr("ui_portrait_match_open_reshoot_plan_in_workshop") : tr("ui_portrait_match_open_look_alike_project_to_render")}
                   </button>
                 </article>
               ))}
@@ -357,40 +370,35 @@ export function PortraitMatchPage({
         <section className="space-y-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-semibold text-white">{project?.title || "写真对标"}</h2>
-              <p className="text-xs text-white/45">
-                {doneCount}/{shots.length} 镜完成
-                {genCount ? ` · ${genCount} 生成中` : ""}
-                {" · "}请确认顶部出片后端为 ComfyUI · MiniMax H3
-              </p>
+              <h2 className="text-lg font-semibold text-white">{project?.title || tr("ui_portrait_match_portrait_benchmark")}</h2>
+              <p className="text-xs text-white/45">{tr("ui_portrait_match_shots_done", {
+                  doneCount: doneCount,
+                  length: shots.length
+                })}{genCount ? ` ${tr("ui_portrait_match_generating_2", {
+  genCount: genCount
+})}` : ""}{tr("ui_portrait_match_make_sure_the_video_backend_at", {
+                  0: " · "
+                })}</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <button type="button" className="btn-ghost inline-flex items-center gap-1.5" onClick={() => void refresh()}>
-                <RefreshCw className="h-4 w-4" />
-                刷新
-              </button>
+                <RefreshCw className="h-4 w-4" />{tr("ui_portrait_match_refresh")}</button>
               <button
                 type="button"
                 className="btn-primary inline-flex items-center gap-1.5"
                 disabled={generating || genCount > 0}
                 onClick={() => void onGenerateAll()}
               >
-                {generating || genCount > 0 ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-                生成全部镜头
-              </button>
+                {generating || genCount > 0 ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}{tr("ui_portrait_match_generate_all_shots")}</button>
               <button
                 type="button"
                 className="btn-secondary inline-flex items-center gap-1.5"
                 disabled={assembling || doneCount < 2}
                 onClick={() => void onAssemble()}
               >
-                {assembling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Clapperboard className="h-4 w-4" />}
-                合片
-              </button>
+                {assembling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Clapperboard className="h-4 w-4" />}{tr("ui_portrait_match_merge")}</button>
               {onOpenDrama ? (
-                <button type="button" className="btn-ghost" onClick={() => onOpenDrama(projectId)}>
-                  打开编导台
-                </button>
+                <button type="button" className="btn-ghost" onClick={() => onOpenDrama(projectId)}>{tr("ui_portrait_match_open_director_desk")}</button>
               ) : null}
             </div>
           </div>
@@ -399,18 +407,18 @@ export function PortraitMatchPage({
             <div className="grid gap-4 md:grid-cols-2">
               {sampleEdit?.outputUrl ? (
                 <div className="panel border border-[var(--line)] p-3">
-                  <p className="mb-2 text-xs text-white/50">模板样片（已生成参考）</p>
+                  <p className="mb-2 text-xs text-white/50">{tr("ui_portrait_match_template_sample_reference_already_generated")}</p>
                   <video src={sampleEdit.outputUrl} className="max-h-80 w-full rounded-xl object-contain" controls playsInline />
                 </div>
               ) : null}
               {assembled?.outputUrl ? (
                 <div className="panel border border-[#7c6cff]/40 p-3">
                   <div className="mb-2 flex items-center justify-between gap-2">
-                    <p className="text-xs text-[#a5b4fc]">本次合片成片</p>
+                    <p className="text-xs text-[#a5b4fc]">{tr("ui_portrait_match_this_merged_cut")}</p>
                     <button
                       type="button"
                       className="btn-secondary !min-h-7 text-[11px]"
-                      title="打开 X，自动填好宣传文案与成片链接"
+                      title={tr("ui_portrait_match_open_x_with_promo_copy_and")}
                       onClick={() => {
                         const ok = openShareToX({
                           project,
@@ -419,12 +427,11 @@ export function PortraitMatchPage({
                           outputPath: assembled.outputPath,
                           durationSec: assembled.visualDur || assembled.targetDur || null,
                         });
-                        if (ok) toast.success("已打开 X，确认后即可发布");
-                        else toast.error("无法打开 X 分享");
+                        if (ok) toast.success(tr("ui_portrait_match_x_opened_confirm_there_to_publish"));
+                        else toast.error(tr("ui_portrait_match_couldn_t_open_x_sharing"));
                       }}
                     >
-                      <Share2 className="h-3 w-3" /> 分享到 X
-                    </button>
+                      <Share2 className="h-3 w-3" />{" "}{tr("ui_portrait_match_share_to_x")}</button>
                   </div>
                   <video src={assembled.outputUrl} className="max-h-80 w-full rounded-xl object-contain" controls playsInline />
                 </div>

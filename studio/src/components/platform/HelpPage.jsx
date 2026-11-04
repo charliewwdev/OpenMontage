@@ -1,24 +1,27 @@
 import { PageShell } from "./PageShell";
 
+import { tr, useLocale } from "../../lib/i18n";
+
 export function HelpPage({ config, onNeedKeys, onNavigate }) {
+  useLocale();
   const sections = config?.helpSections || [];
   const page = config?.pages?.help || {};
   const extras = [
     {
-      title: "个人资产",
-      body: "「素材」页可上传图片/视频/音频/文档，按来源（上传 / AI 生成）与分类筛选，支持批量删除。「提示词」页可新建、编辑个人提示词库并一键带入创作 Agent。",
+      title: tr("ui_help_my_assets"),
+      body: tr("ui_help_the_assets_tab_uploads_images_video"),
     },
     {
-      title: "爆款内容广场",
-      body: "先看「真实短视频场景」里各平台爆款的节拍结构（如抖音 AI 氛围感写真卡点、短剧钩子），再选平台套路或工作流提示词一键带入创作；下方画面墙只作气质参考，不是热榜成片抓取。",
+      title: tr("ui_help_viral_content_plaza"),
+      body: tr("ui_help_start_with_the_beat_structure_of"),
     },
     {
-      title: "创作中心与 Agent",
-      body: "创作中心按文本 / 视觉 / 音频 / 视频分组进入工具。创作 Agent 支持「仅生成剧本」或「一键全流程成片」：一句话/粘贴剧本 → 定稿 → 素材 → 分镜视频 → 配音 → 导出。",
+      title: tr("ui_help_creation_hub_agent"),
+      body: tr("ui_help_the_creation_hub_groups_tools_into"),
     },
     {
-      title: "作品频道与画布",
-      body: "作品频道汇总导出成片；无限画布可视化六步节点进度，可拖拽查看后回到工坊继续制作。",
+      title: tr("ui_help_works_channel_canvas"),
+      body: tr("ui_help_the_works_channel_collects_exported_cuts"),
     },
   ];
   const all = [...sections, ...extras];
@@ -26,16 +29,12 @@ export function HelpPage({ config, onNeedKeys, onNavigate }) {
   return (
     <PageShell
       eyebrow={page.eyebrow || "Help"}
-      title={page.title || "帮助中心"}
-      description={page.description || "影视工坊使用说明与常见问题。"}
+      title={page.title || tr("ui_help_help_center")}
+      description={page.description || tr("ui_help_how_to_use_the_film_workshop")}
       actions={
         <div className="flex flex-wrap gap-2">
-          <button type="button" className="btn-secondary" onClick={() => onNeedKeys?.()}>
-            配置密钥
-          </button>
-          <button type="button" className="btn-secondary" onClick={() => onNavigate?.("assets")}>
-            个人资产
-          </button>
+          <button type="button" className="btn-secondary" onClick={() => onNeedKeys?.()}>{tr("ui_help_set_up_keys")}</button>
+          <button type="button" className="btn-secondary" onClick={() => onNavigate?.("assets")}>{tr("ui_help_my_assets")}</button>
         </div>
       }
     >

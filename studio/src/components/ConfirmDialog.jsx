@@ -1,16 +1,19 @@
 import { ModalOverlay } from "./ModalPortal";
 
+import { tr, useLocale } from "../lib/i18n";
+
 export function ConfirmDialog({
   open,
   title,
   message,
-  confirmLabel = "确认",
-  cancelLabel = "取消",
+  confirmLabel = tr("ui_confirm_dialog_confirm"),
+  cancelLabel = tr("ui_confirm_dialog_cancel"),
   danger,
   onConfirm,
   onCancel,
   maxWidthClass = "max-w-md",
 }) {
+  useLocale();
   if (!open) return null;
   return (
     <ModalOverlay onClose={onCancel} className="bg-black/45" zClass="z-[200]">

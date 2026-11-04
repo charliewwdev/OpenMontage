@@ -1,6 +1,9 @@
 import { ModalOverlay } from "./ModalPortal";
 
+import { tr, useLocale } from "../lib/i18n";
+
 export function Lightbox({ src, alt = "", onClose }) {
+  useLocale();
   if (!src) return null;
   return (
     <ModalOverlay onClose={onClose} className="bg-black/80" zClass="z-[200]" role="dialog">
@@ -9,9 +12,7 @@ export function Lightbox({ src, alt = "", onClose }) {
           type="button"
           className="absolute right-2 top-2 z-10 rounded-full bg-black/65 px-3 py-1 text-sm text-white hover:bg-black/80"
           onClick={onClose}
-        >
-          关闭
-        </button>
+        >{tr("ui_lightbox_close")}</button>
         <img
           src={src}
           alt={alt}

@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 
+import { tr, useLocale } from "../lib/i18n";
+
 /**
  * In-app standby when the API is unreachable (deploy / restart).
  * Complements public/maintenance.html used by nginx when upstream is down.
  */
 export function MaintenancePage({ onRetry, brand = "OpenMontage" }) {
+  useLocale();
   const [tick, setTick] = useState(0);
 
   useEffect(() => {
@@ -52,11 +55,7 @@ export function MaintenancePage({ onRetry, brand = "OpenMontage" }) {
             brand
           )}
         </h1>
-        <p className="mt-3 text-sm leading-relaxed text-[rgba(200,220,255,.55)]">
-          渲染集群热切换中，创作台暂时离线。
-          <br />
-          项目、密钥与成片均已保留，节点就绪后自动恢复。
-        </p>
+        <p className="mt-3 text-sm leading-relaxed text-[rgba(200,220,255,.55)]">{tr("ui_maintenance_the_render_cluster_is_hot_swapping")}<br />{tr("ui_maintenance_projects_keys_and_finished_videos_are")}</p>
         <div className="mt-6 flex h-7 items-end justify-center gap-1" aria-hidden>
           {[40, 70, 100, 55, 85, 45, 65].map((h, i) => (
             <span
@@ -71,9 +70,7 @@ export function MaintenancePage({ onRetry, brand = "OpenMontage" }) {
             type="button"
             className="rounded-full border border-[rgba(120,180,255,.18)] bg-[rgba(92,225,255,.08)] px-4 py-2.5 text-sm text-[#e8f0ff] transition hover:border-[rgba(92,225,255,.5)] hover:bg-[rgba(92,225,255,.16)]"
             onClick={() => onRetry?.()}
-          >
-            重新探测节点
-          </button>
+          >{tr("ui_maintenance_probe_nodes_again")}</button>
         </div>
         <p className="mt-6 text-[10px] uppercase tracking-[0.12em] text-[rgba(200,220,255,.32)]">link · standby</p>
       </main>

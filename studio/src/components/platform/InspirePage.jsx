@@ -1,28 +1,78 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Copy, Flame, Lightbulb, RefreshCw, Search, Sparkles, X } from "lucide-react";
 import { api } from "../../api";
-import { useLocale } from "../../lib/i18n";
+import { configText } from "../../lib/configI18n";
+import { useLocale, tr } from "../../lib/i18n";
 import { toast } from "../../lib/toast";
 import { ModalOverlay } from "../ModalPortal";
 import { PageShell } from "./PageShell";
 
 const DEFAULT_CATS = [
-  { id: "all", label: "全部" },
-  { id: "character", label: "角色" },
-  { id: "scene", label: "场景" },
-  { id: "prop", label: "道具" },
-  { id: "style", label: "风格" },
-  { id: "storyboard", label: "分镜" },
+  {
+    id: "all",
+
+    get label() {
+      return tr("ui_inspire_all");
+    }
+  },
+  {
+    id: "character",
+
+    get label() {
+      return tr("ui_inspire_characters");
+    }
+  },
+  {
+    id: "scene",
+
+    get label() {
+      return tr("ui_inspire_scenes");
+    }
+  },
+  {
+    id: "prop",
+
+    get label() {
+      return tr("ui_inspire_props");
+    }
+  },
+  {
+    id: "style",
+
+    get label() {
+      return tr("ui_inspire_style");
+    }
+  },
+  {
+    id: "storyboard",
+
+    get label() {
+      return tr("ui_inspire_storyboard");
+    }
+  },
 ];
 
 const MEDIA_TYPES = [
-  { id: "all", label: "全部" },
-  { id: "image", label: "图片" },
+  {
+    id: "all",
+
+    get label() {
+      return tr("ui_inspire_all");
+    }
+  },
+  {
+    id: "image",
+
+    get label() {
+      return tr("ui_inspire_images");
+    }
+  },
 ];
 
 const PAGE_SIZE = 96;
 
 function PinCard({ pin, prompt, onOpen, onDead }) {
+  useLocale();
   const [ready, setReady] = useState(false);
   const key = `${pin.id}-${pin.imageUrl}`;
 
@@ -49,9 +99,7 @@ function PinCard({ pin, prompt, onOpen, onDead }) {
           onError={() => onDead(key)}
         />
         {ready && prompt ? (
-          <span className="absolute left-2 top-2 rounded-full bg-[#7c6cff]/95 px-2 py-0.5 text-[10px] font-medium text-white shadow">
-            含提示词
-          </span>
+          <span className="absolute left-2 top-2 rounded-full bg-[#7c6cff]/95 px-2 py-0.5 text-[10px] font-medium text-white shadow">{tr("ui_inspire_with_prompt")}</span>
         ) : null}
       </div>
     </button>
@@ -59,6 +107,7 @@ function PinCard({ pin, prompt, onOpen, onDead }) {
 }
 
 function ScenarioCard({ item, expanded, onToggle, onUsePrompt, onStartPortrait, t }) {
+  useLocale();
   const why = Array.isArray(item.whyItWorks) ? item.whyItWorks : [];
   const beats = Array.isArray(item.beats) ? item.beats : [];
 
@@ -156,8 +205,8 @@ export function InspirePage({ config, onUsePrompt, onStartPortrait }) {
   const platforms = config?.inspirePlatforms || [];
   const scenarios = config?.viralScenarios || [];
   const page = config?.pages?.inspire || {};
-  const [promptFilter, setPromptFilter] = useState("全部");
-  const [scenarioFilter, setScenarioFilter] = useState("全部");
+  const [promptFilter, setPromptFilter] = useState(tr("ui_inspire_all"));
+  const [scenarioFilter, setScenarioFilter] = useState(tr("ui_inspire_all"));
   const [expandedId, setExpandedId] = useState(scenarios[0]?.id || null);
   const [category, setCategory] = useState("all");
   const [mediaType, setMediaType] = useState("all");
@@ -245,10 +294,10 @@ export function InspirePage({ config, onUsePrompt, onStartPortrait }) {
   return (
     <PageShell
       eyebrow={page.eyebrow || "Viral Content"}
-      title={page.title || "爆款内容广场"}
+      title={page.title || tr("ui_inspire_viral_content_plaza")}
       description={
         page.description ||
-        "先看各大平台真实短视频爆款长什么样（节拍结构），再选平台套路一键带入创作。"
+        tr("ui_inspire_see_what_viral_short_videos_actually")
       }
     >
       {scenarios.length ? (
@@ -337,7 +386,7 @@ export function InspirePage({ config, onUsePrompt, onStartPortrait }) {
             <input
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="搜索提示词或文件名..."
+              placeholder={tr("ui_inspire_search_prompts_or_file_names")}
               className="w-full rounded-xl border border-[var(--line)] bg-white/[.04] py-2.5 pl-10 pr-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-[#7c6cff]/55"
             />
           </label>
@@ -379,7 +428,7 @@ export function InspirePage({ config, onUsePrompt, onStartPortrait }) {
         <div className="mb-4 flex flex-wrap gap-2">
           {categories.map((cat) => {
             const id = cat.id || cat;
-            const label = cat.label || cat.id || cat;
+            const label = configText(cat.label || cat.id || cat);
             const selectedCat = category === id;
             return (
               <button
@@ -471,7 +520,7 @@ export function InspirePage({ config, onUsePrompt, onStartPortrait }) {
               type="button"
               className="absolute right-3 top-3 z-10 rounded-full bg-black/40 p-1.5 text-white/80 hover:bg-black/60"
               onClick={() => setSelected(null)}
-              aria-label="关闭"
+              aria-label={tr("ui_inspire_close")}
             >
               <X className="h-4 w-4" />
             </button>
@@ -492,9 +541,7 @@ export function InspirePage({ config, onUsePrompt, onStartPortrait }) {
               <div className="min-h-0 flex-1 rounded-2xl border border-[var(--line)] bg-white/[.03] p-4">
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 text-sm font-medium text-white">
-                    <Sparkles className="h-3.5 w-3.5 text-[#7c6cff]" />
-                    创作提示词
-                  </div>
+                    <Sparkles className="h-3.5 w-3.5 text-[#7c6cff]" />{tr("ui_inspire_creative_prompt")}</div>
                   <button
                     type="button"
                     className="btn-secondary !min-h-8 !px-2.5 !text-xs"
@@ -505,11 +552,10 @@ export function InspirePage({ config, onUsePrompt, onStartPortrait }) {
                       toast.success(t("inspire_toast_copied"));
                     }}
                   >
-                    <Copy className="h-3 w-3" /> 复制
-                  </button>
+                    <Copy className="h-3 w-3" />{" "}{tr("ui_inspire_copy")}</button>
                 </div>
                 <div className="max-h-[36vh] overflow-y-auto whitespace-pre-wrap text-sm leading-7 text-white/85">
-                  {pinPrompt(selected) || "暂无提示词"}
+                  {pinPrompt(selected) || tr("ui_inspire_no_prompts_yet")}
                 </div>
                 <p className="mt-3 text-xs text-white/35">{t("inspire_learn_hint")}</p>
               </div>
@@ -525,8 +571,7 @@ export function InspirePage({ config, onUsePrompt, onStartPortrait }) {
                     onUsePrompt?.(text);
                   }}
                 >
-                  <Lightbulb className="h-3.5 w-3.5" /> 用这个提示词打造
-                </button>
+                  <Lightbulb className="h-3.5 w-3.5" />{" "}{tr("ui_inspire_build_with_this_prompt")}</button>
               </div>
             </div>
           </div>

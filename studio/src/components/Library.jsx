@@ -17,6 +17,8 @@ import { api } from "../api";
 import { toast } from "../lib/toast";
 import { ConfirmDialog } from "./ConfirmDialog";
 
+import { tr, useLocale } from "../lib/i18n";
+
 function progressSteps(project, stepCount = 7) {
   const p = project.progress || {};
   const flags = [
@@ -32,6 +34,7 @@ function progressSteps(project, stepCount = 7) {
 }
 
 function ProjectCover({ project, className }) {
+  useLocale();
   const [imgFailed, setImgFailed] = useState(false);
   const [videoFailed, setVideoFailed] = useState(false);
   const still =
@@ -65,12 +68,13 @@ function ProjectCover({ project, className }) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-2 text-white/25">
       <Clapperboard className="h-8 w-8" />
-      <span className="text-[10px] text-white/30">暂无封面素材</span>
+      <span className="text-[10px] text-white/30">{tr("ui_library_no_cover_material_yet")}</span>
     </div>
   );
 }
 
 function CoverEditorDialog({ project, formats, open, onClose, onSaved }) {
+  useLocale();
   const fileRef = useRef(null);
   const [busy, setBusy] = useState(false);
   const [formatId, setFormatId] = useState(project?.coverFormatId || formats[0]?.id || "portrait_9_16");
@@ -92,7 +96,7 @@ function CoverEditorDialog({ project, formats, open, onClose, onSaved }) {
         method: "PATCH",
         body: JSON.stringify(body),
       });
-      toast.success("封面已更新");
+      toast.success(tr("ui_library_cover_updated"));
       onSaved?.();
     } catch (e) {
       toast.error(String(e.message || e));
@@ -134,24 +138,24 @@ function CoverEditorDialog({ project, formats, open, onClose, onSaved }) {
       >
         <div className="flex items-center justify-between border-b border-[var(--line)] px-4 py-3">
           <div>
-            <h3 className="text-sm font-semibold">封面设计 · {project.title}</h3>
-            <p className="mt-0.5 text-[11px] text-[var(--muted)]">首帧抽图 / 上传 / 多比例裁切</p>
+            <h3 className="text-sm font-semibold">{tr("ui_library_cover_design", {
+                title: project.title
+              })}</h3>
+            <p className="mt-0.5 text-[11px] text-[var(--muted)]">{tr("ui_library_first_frame_grab_upload_multi_ratio")}</p>
           </div>
-          <button type="button" className="btn-quiet !min-h-8 !px-2 text-xs" onClick={onClose}>
-            关闭
-          </button>
+          <button type="button" className="btn-quiet !min-h-8 !px-2 text-xs" onClick={onClose}>{tr("ui_library_close")}</button>
         </div>
         <div className="grid gap-4 p-4 sm:grid-cols-[140px_1fr]">
           <div className="flex aspect-[9/16] max-h-52 items-center justify-center overflow-hidden rounded border border-white/10 bg-black/40 sm:aspect-auto sm:h-52">
             {preview ? (
               <img src={preview} alt="" className="max-h-full max-w-full object-contain" />
             ) : (
-              <span className="text-[10px] text-white/30">暂无封面</span>
+              <span className="text-[10px] text-white/30">{tr("ui_library_no_cover")}</span>
             )}
           </div>
           <div className="space-y-3 text-sm">
             <label className="block">
-              <span className="mb-1 block text-[11px] text-[var(--muted)]">封面格式</span>
+              <span className="mb-1 block text-[11px] text-[var(--muted)]">{tr("ui_library_cover_format")}</span>
               <select
                 className="field"
                 value={formatId}
@@ -166,27 +170,25 @@ function CoverEditorDialog({ project, formats, open, onClose, onSaved }) {
               </select>
             </label>
             <label className="block">
-              <span className="mb-1 block text-[11px] text-[var(--muted)]">封面标题（可选）</span>
+              <span className="mb-1 block text-[11px] text-[var(--muted)]">{tr("ui_library_cover_title_optional")}</span>
               <input
                 className="field"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder={project.title || "剧名"}
+                placeholder={project.title || tr("ui_library_title")}
                 disabled={busy}
               />
             </label>
             <div className="flex flex-wrap gap-2">
               <button type="button" className="btn-primary !min-h-8 text-xs" disabled={busy} onClick={fromVideo}>
-                <Clapperboard className="h-3.5 w-3.5" /> 用视频首帧
-              </button>
+                <Clapperboard className="h-3.5 w-3.5" />{" "}{tr("ui_library_use_first_video_frame")}</button>
               <button
                 type="button"
                 className="btn-secondary !min-h-8 text-xs"
                 disabled={busy}
                 onClick={() => fileRef.current?.click()}
               >
-                <Upload className="h-3.5 w-3.5" /> 上传封面
-              </button>
+                <Upload className="h-3.5 w-3.5" />{" "}{tr("ui_library_upload_cover")}</button>
               <button
                 type="button"
                 className="btn-quiet !min-h-8 text-xs"
@@ -200,8 +202,7 @@ function CoverEditorDialog({ project, formats, open, onClose, onSaved }) {
                   })
                 }
               >
-                <ImagePlus className="h-3.5 w-3.5" /> 应用格式
-              </button>
+                <ImagePlus className="h-3.5 w-3.5" />{" "}{tr("ui_library_apply_format")}</button>
               <button
                 type="button"
                 className="btn-quiet !min-h-8 text-xs"
@@ -213,12 +214,10 @@ function CoverEditorDialog({ project, formats, open, onClose, onSaved }) {
                 }}
               >
                 {locked ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
-                {locked ? "已锁定" : "锁定封面"}
+                {locked ? tr("ui_library_locked") : tr("ui_library_lock_cover")}
               </button>
             </div>
-            <p className="text-[10px] leading-4 text-[var(--muted)]">
-              成片成功后会自动用第一段视频首帧生成封面；锁定后不再被自动覆盖。
-            </p>
+            <p className="text-[10px] leading-4 text-[var(--muted)]">{tr("ui_library_after_a_successful_render_the_first")}</p>
             <input
               ref={fileRef}
               type="file"
@@ -248,6 +247,7 @@ export function Library({
   onRequireAuth,
   authed = false,
 }) {
+  useLocale();
   const [confirmId, setConfirmId] = useState(null);
   const [coverProjectId, setCoverProjectId] = useState(null);
   const [query, setQuery] = useState("");
@@ -258,17 +258,17 @@ export function Library({
   const coverFormats = config?.coverFormats?.length
     ? config.coverFormats
     : [
-        { id: "portrait_9_16", label: "竖版封面", ratio: "9:16" },
-        { id: "landscape_16_9", label: "横版封面", ratio: "16:9" },
-        { id: "square_1_1", label: "方版封面", ratio: "1:1" },
-        { id: "social_4_5", label: "社媒封面", ratio: "4:5" },
+        { id: "portrait_9_16", label: tr("ui_library_portrait_cover"), ratio: "9:16" },
+        { id: "landscape_16_9", label: tr("ui_library_landscape_cover"), ratio: "16:9" },
+        { id: "square_1_1", label: tr("ui_library_square_cover"), ratio: "1:1" },
+        { id: "social_4_5", label: tr("ui_library_social_cover"), ratio: "4:5" },
       ];
   const coverTarget = (projects || []).find((p) => p.id === coverProjectId);
   const hasRealProject = (projects || []).some((p) => !String(p.id || "").startsWith("welcome"));
   const onboardingSteps = [
-    { n: "01", title: "登录账号", done: Boolean(authed) },
-    { n: "02", title: "配置模型密钥", done: Boolean(authed) && keysReady },
-    { n: "03", title: "新建项目开拍", done: Boolean(authed) && keysReady && hasRealProject },
+    { n: "01", title: tr("ui_library_sign_in"), done: Boolean(authed) },
+    { n: "02", title: tr("ui_library_configure_model_keys"), done: Boolean(authed) && keysReady },
+    { n: "03", title: tr("ui_library_create_a_project_and_shoot"), done: Boolean(authed) && keysReady && hasRealProject },
   ];
   const onboardingDone = onboardingSteps.every((s) => s.done);
 
@@ -285,7 +285,7 @@ export function Library({
     try {
       await api(`/api/projects/${encodeURIComponent(id)}`, { method: "DELETE" });
       onDeleted?.(id);
-      toast.success("项目已删除");
+      toast.success(tr("ui_library_project_deleted"));
     } catch (e) {
       toast.error(String(e.message || e));
     } finally {
@@ -303,13 +303,9 @@ export function Library({
           <div className="relative flex flex-wrap items-end justify-between gap-2">
             <div className="min-w-0">
               <div className="flex items-center gap-2 text-[11px] font-semibold text-white/55">
-                <Clapperboard className="h-3.5 w-3.5 text-[#b7acff]" />
-                影视创作工坊
-              </div>
-              <h1 className="mt-1 text-xl font-semibold tracking-tight md:text-2xl">从剧本到成片，一站式 AI 影视生产</h1>
-              <p className="mt-1 max-w-2xl text-xs text-white/55">
-                剧本创作 → 剧本定稿 → 智能分析 → 素材生成 → 分镜编排 → 视频成片
-              </p>
+                <Clapperboard className="h-3.5 w-3.5 text-[#b7acff]" />{tr("ui_library_film_creation_workshop")}</div>
+              <h1 className="mt-1 text-xl font-semibold tracking-tight md:text-2xl">{tr("ui_library_from_script_to_final_cut_ai")}</h1>
+              <p className="mt-1 max-w-2xl text-xs text-white/55">{tr("ui_library_script_writing_script_lock_analysis_asset")}</p>
             </div>
           </div>
         </header>
@@ -317,26 +313,23 @@ export function Library({
         {!authed ? (
           <section className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/35 bg-amber-500/10 px-3 py-2.5 md:px-4">
             <div className="min-w-0 text-xs leading-5 text-amber-50/90">
-              <strong className="font-semibold text-amber-100">浏览模式</strong>
-              <span className="text-amber-100/70">
-                {" "}
-                · 可打开项目查看进度与素材；生成剧本 / 出图 / 出片 / 配音等耗 Token 操作需先登录
-              </span>
+              <strong className="font-semibold text-amber-100">{tr("ui_library_browse_mode")}</strong>
+              <span className="text-amber-100/70">{tr("ui_library_open_projects_to_view_progress_and", {
+                  0: " "
+                })}</span>
             </div>
             <button
               type="button"
               className="btn-primary !min-h-8 shrink-0 !px-3 text-xs"
               onClick={() => onRequireAuth?.()}
-            >
-              登录后创作
-            </button>
+            >{tr("ui_library_sign_in_to_create")}</button>
           </section>
         ) : null}
 
         <section className="mt-3 rounded-xl border border-[#7c6cff]/35 bg-[linear-gradient(90deg,rgba(124,108,255,.18),rgba(79,140,255,.12))] px-3 py-2 md:px-4">
           <div className="flex flex-wrap items-center gap-2 text-xs text-white/80">
             <Sparkles className="h-3.5 w-3.5 shrink-0 text-[#c4b5fd]" />
-            <span className="font-semibold">六步生产线</span>
+            <span className="font-semibold">{tr("ui_library_pipeline_step_count", { count: stepLabels.length })}</span>
             <span className="text-white/35">|</span>
             {stepLabels.map((label, i) => (
               <span key={label} className="inline-flex items-center gap-1 text-white/70">
@@ -352,22 +345,20 @@ export function Library({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="min-w-0">
               <strong className="text-sm text-white/90">
-                {onboardingDone ? "上线三步已完成" : "上线三步"}
+                {onboardingDone ? tr("ui_library_three_setup_steps_done") : tr("ui_library_three_setup_steps")}
               </strong>
               <p className="mt-0.5 text-[11px] text-white/50">
                 {onboardingDone
-                  ? "密钥已就绪，可直接新建或打开下方项目。"
-                  : "密钥按账号隔离保存，仅你可见；配好后即可建项目开拍。"}
+                  ? tr("ui_library_keys_are_ready_create_a_new")
+                  : tr("ui_library_keys_are_stored_per_account_and")}
               </p>
             </div>
             {!keysReady ? (
               <button type="button" className="btn-primary !min-h-8 shrink-0 !px-3 text-xs" onClick={() => onNeedKeys?.()}>
-                <KeyRound className="h-3.5 w-3.5" /> 去配置模型
-              </button>
+                <KeyRound className="h-3.5 w-3.5" />{" "}{tr("ui_library_configure_models")}</button>
             ) : (
               <button type="button" className="btn-secondary !min-h-8 shrink-0 !px-3 text-xs" onClick={() => onCreate?.("drama")}>
-                <Plus className="h-3.5 w-3.5" /> 新建项目
-              </button>
+                <Plus className="h-3.5 w-3.5" />{" "}{tr("ui_library_new_project")}</button>
             )}
           </div>
           {!onboardingDone ? (
@@ -381,7 +372,7 @@ export function Library({
                 >
                   <span className="timecode text-[10px] text-white/35">{step.n}</span>
                   <div className="mt-0.5 font-medium text-white/85">{step.title}</div>
-                  <div className="text-[10px]">{step.done ? "已完成" : "待完成"}</div>
+                  <div className="text-[10px]">{step.done ? tr("ui_library_done") : tr("ui_library_to_do")}</div>
                 </li>
               ))}
             </ol>
@@ -390,7 +381,7 @@ export function Library({
 
         <section className="mt-4">
           <div className="mb-2 flex items-end justify-between gap-3">
-            <h2 className="text-base font-semibold">选择创作入口</h2>
+            <h2 className="text-base font-semibold">{tr("ui_library_choose_how_to_start")}</h2>
           </div>
           <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
             {entryCards.map((card) => (
@@ -399,7 +390,9 @@ export function Library({
                 type="button"
                 disabled={!card.available}
                 onClick={() => {
-                  if (!card.available) return toast.info(`${card.title}入口建设中，当前走统一建片场`);
+                  if (!card.available) return toast.info(tr("ui_library_the_entry_is_under_construction_using", {
+                    title: card.title
+                  }));
                   onCreate?.(card.id, card);
                 }}
                 className={`group relative overflow-hidden rounded-xl bg-gradient-to-br p-3 text-left text-white shadow-float transition ${card.tone} ${
@@ -415,7 +408,7 @@ export function Library({
                 </div>
                 <p className="mt-2 line-clamp-2 text-xs text-white/85">{card.desc}</p>
                 {!card.available ? (
-                  <span className="mt-1.5 inline-block rounded-full bg-black/25 px-2 py-0.5 text-[10px]">即将上线</span>
+                  <span className="mt-1.5 inline-block rounded-full bg-black/25 px-2 py-0.5 text-[10px]">{tr("ui_library_coming_soon")}</span>
                 ) : null}
               </button>
             ))}
@@ -425,13 +418,14 @@ export function Library({
         <section className="mt-5">
           <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h2 className="text-base font-semibold">我的项目</h2>
-              <p className="mt-0.5 text-xs text-[var(--muted)]">
-                供应商 {caps.configured ?? 0}/{caps.total ?? 3}
-                {caps.deepseek || caps.llmReady ? ` · LLM${caps.llmBackend && caps.llmBackend !== "none" ? `/${caps.llmBackend}` : ""}` : ""}
-                {caps.seedream ? " · Seedream" : ""}
-                {caps.seedance ? " · Seedance" : ""}
-              </p>
+              <h2 className="text-base font-semibold">{tr("ui_library_my_projects")}</h2>
+              <p className="mt-0.5 text-xs text-[var(--muted)]">{tr("ui_library_providers", {
+                  0: caps.configured ?? 0,
+                  1: caps.total ?? 3,
+                  2: caps.deepseek || caps.llmReady ? ` · LLM${caps.llmBackend && caps.llmBackend !== "none" ? `/${caps.llmBackend}` : ""}` : "",
+                  3: caps.seedream ? " · Seedream" : "",
+                  4: caps.seedance ? " · Seedance" : ""
+                })}</p>
             </div>
             <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
               <label className="relative w-full sm:w-72">
@@ -440,15 +434,13 @@ export function Library({
                   className="field !pl-10"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
-                  placeholder="搜索项目名称"
+                  placeholder={tr("ui_library_search_project_names")}
                 />
               </label>
               <button type="button" className="btn-secondary" onClick={onRefresh}>
-                <RefreshCw className="h-3.5 w-3.5" /> 刷新
-              </button>
+                <RefreshCw className="h-3.5 w-3.5" />{" "}{tr("ui_library_refresh")}</button>
               <button type="button" className="btn-primary" onClick={onCreate}>
-                <Plus className="h-4 w-4" /> 新建项目
-              </button>
+                <Plus className="h-4 w-4" />{" "}{tr("ui_library_new_project")}</button>
             </div>
           </div>
 
@@ -459,11 +451,11 @@ export function Library({
               className="panel group flex w-full flex-col items-center border-dashed border-white/15 py-10 text-center hover:border-[#7c6cff]/50"
             >
               <FolderOpen className="mb-3 h-8 w-8 text-[#a78bfa]" />
-              <strong className="text-lg">还没有项目</strong>
-              <span className="mt-2 text-sm text-[var(--muted)]">从爽剧 / 短剧入口开始第一部作品。</span>
+              <strong className="text-lg">{tr("ui_library_no_projects_yet")}</strong>
+              <span className="mt-2 text-sm text-[var(--muted)]">{tr("ui_library_start_your_first_work_from_the")}</span>
             </button>
           ) : visible.length === 0 ? (
-            <div className="panel py-16 text-center text-sm text-[var(--muted)]">没有匹配的项目。</div>
+            <div className="panel py-16 text-center text-sm text-[var(--muted)]">{tr("ui_library_no_matching_projects")}</div>
           ) : (
             <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
               {visible.map((project) => {
@@ -481,7 +473,7 @@ export function Library({
                       <div className="p-3">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="rounded-full border border-white/10 bg-white/[.04] px-2 py-0.5 text-[10px] text-white/60">
-                          {project.genre || "未分类"}
+                          {project.genre || tr("ui_library_uncategorized")}
                         </span>
                         <span className="rounded-full border border-white/10 bg-white/[.04] px-2 py-0.5 text-[10px] text-white/60">
                           {project.ratio || "9:16"}
@@ -489,11 +481,11 @@ export function Library({
                       </div>
                       <h3 className="mt-2 truncate text-base font-semibold">{project.title}</h3>
                       <p className="mt-1 line-clamp-2 min-h-8 text-xs leading-4 text-[var(--muted)]">
-                        {project.synopsis || project.brief || "尚未生成剧本"}
+                        {project.synopsis || project.brief || tr("ui_library_no_script_yet")}
                       </p>
                       <div className="mt-3">
                         <div className="mb-2 flex items-center justify-between text-[10px] text-[var(--muted)]">
-                          <span>制作进度</span>
+                          <span>{tr("ui_library_progress")}</span>
                           <span className="timecode text-[#a5b4fc]">
                             {doneCount}/{stepLabels.length || steps.length}
                           </span>
@@ -509,13 +501,19 @@ export function Library({
                         </div>
                       </div>
                       <div className="mt-4 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-white/40">
-                        <span>{project.progress?.episodes?.total || 0} 集</span>
-                        <span>{project.progress?.characters?.total || 0} 角色</span>
-                        <span>{project.progress?.scenes?.total || 0} 场景</span>
-                        <span>
-                          更新{" "}
-                          {project.updatedAt ? new Date(project.updatedAt).toLocaleDateString("zh-CN") : "—"}
-                        </span>
+                        <span>{tr("ui_library_ep", {
+                            0: project.progress?.episodes?.total || 0
+                          })}</span>
+                        <span>{tr("ui_library_characters", {
+                            0: project.progress?.characters?.total || 0
+                          })}</span>
+                        <span>{tr("ui_library_scenes", {
+                            0: project.progress?.scenes?.total || 0
+                          })}</span>
+                        <span>{tr("ui_library_updated", {
+                            0: " ",
+                            1: project.updatedAt ? new Date(project.updatedAt).toLocaleDateString("zh-CN") : "—"
+                          })}</span>
                       </div>
                       </div>
                     </button>
@@ -528,17 +526,15 @@ export function Library({
                           type="button"
                           className="btn-quiet !min-h-8 !px-2 text-xs"
                           onClick={() => setCoverProjectId(project.id)}
-                          title="封面设计"
+                          title={tr("ui_library_cover_design_2")}
                         >
-                          <ImagePlus className="h-3.5 w-3.5" /> 封面
-                        </button>
+                          <ImagePlus className="h-3.5 w-3.5" />{" "}{tr("ui_library_cover")}</button>
                         <button
                           type="button"
                           className="btn-quiet !min-h-8 !px-2 text-xs hover:!text-[var(--danger)]"
                           onClick={() => setConfirmId(project.id)}
                         >
-                          <Trash2 className="h-3.5 w-3.5" /> 删除
-                        </button>
+                          <Trash2 className="h-3.5 w-3.5" />{" "}{tr("ui_library_delete")}</button>
                       </div>
                     </div>
                   </article>
@@ -551,9 +547,11 @@ export function Library({
 
       <ConfirmDialog
         open={Boolean(confirmId)}
-        title="删除整个项目？"
-        message={`《${target?.title || confirmId}》及其剧本、素材档案、分镜和剪辑记录将被删除。`}
-        confirmLabel="删除项目"
+        title={tr("ui_library_delete_the_whole_project")}
+        message={tr("ui_library_and_its_script_asset_profiles_shots", {
+          0: target?.title || confirmId
+        })}
+        confirmLabel={tr("ui_library_delete_project")}
         danger
         onCancel={() => setConfirmId(null)}
         onConfirm={() => void remove(confirmId)}

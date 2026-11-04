@@ -1,13 +1,17 @@
 import { useMemo } from "react";
 import { PenLine } from "lucide-react";
 
+import { configText } from "../../lib/configI18n";
+import { tr, useLocale } from "../../lib/i18n";
+
 export function GenrePicker({ value, onChange, disabled = false, genres }) {
+  const { locale } = useLocale();
   const options = genres || [];
   const isPreset = useMemo(() => options.some((option) => option === value), [options, value]);
 
   return (
     <div>
-      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="题材" aria-disabled={disabled}>
+      <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={tr("ui_settings_genre_picker_genre")} aria-disabled={disabled}>
         {options.map((option) => (
           <button
             key={option}
@@ -22,7 +26,7 @@ export function GenrePicker({ value, onChange, disabled = false, genres }) {
                 : "border-[var(--line-strong)] bg-white/[.03] text-[var(--muted)] hover:border-white/25 hover:text-[var(--ink)]"
             }`}
           >
-            {option}
+            {configText(option, locale)}
           </button>
         ))}
         <button
@@ -39,16 +43,14 @@ export function GenrePicker({ value, onChange, disabled = false, genres }) {
               : "border-dashed border-[var(--line-strong)] bg-white/[.03] text-[var(--muted)] hover:border-[#7c6cff]/50 hover:text-[var(--ink)]"
           }`}
         >
-          <PenLine className="h-3.5 w-3.5" />
-          自定义
-        </button>
+          <PenLine className="h-3.5 w-3.5" />{tr("ui_settings_genre_picker_custom")}</button>
       </div>
       {!isPreset ? (
         <input
           className="field mt-3"
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          placeholder="输入自定义题材，例如：民国谍战"
+          placeholder={tr("ui_settings_genre_picker_enter_a_custom_genre_e_g")}
           maxLength={80}
           autoFocus
           disabled={disabled}

@@ -4,22 +4,48 @@ import { api } from "../../api";
 import { toast } from "../../lib/toast";
 import { PageShell } from "./PageShell";
 
-const STARTERS = [
-  "为国风茶饮品牌创作一支 15 秒竖屏短剧钩子：古风茶馆夜雨，女主推门而入。",
-  "都市爽剧：落魄女婿被丈母娘羞辱三年后，以隐秘身份归来反击。",
-  "悬疑：女法医发现每具尸体都带着同一串古语，破译者正是失踪多年的自己。",
-  "科幻：记忆可交易的城市里，男主卖掉童年换工作，买家却是未来的自己。",
-];
+import { configText } from "../../lib/configI18n";
+import { tr, localized, useLocale } from "../../lib/i18n";
+
+const STARTERS = localized(() => [
+  tr("ui_agent_a_15_second_vertical_short_drama"),
+  tr("ui_agent_urban_hit_drama_a_down_and"),
+  tr("ui_agent_mystery_a_female_coroner_finds_the"),
+  tr("ui_agent_sci_fi_in_a_city_where"),
+]);
 
 const STEP_LABEL = {
-  brief: "优化需求",
-  script: "生成剧本",
-  confirm: "定稿",
-  entities: "素材出图",
-  storyboard: "拆分镜",
-  videos: "生成视频",
-  audio: "配音",
-  export: "导出成片",
+  get brief() {
+    return tr("ui_agent_polish_brief");
+  },
+
+  get script() {
+    return tr("ui_agent_generate_script");
+  },
+
+  get confirm() {
+    return tr("ui_agent_lock_script");
+  },
+
+  get entities() {
+    return tr("ui_agent_asset_images");
+  },
+
+  get storyboard() {
+    return tr("ui_agent_split_shots");
+  },
+
+  get videos() {
+    return tr("ui_agent_generate_video");
+  },
+
+  get audio() {
+    return tr("ui_agent_voice_over");
+  },
+
+  get export() {
+    return tr("ui_agent_export_cut");
+  }
 };
 
 function formatElapsed(ms) {
@@ -28,7 +54,10 @@ function formatElapsed(ms) {
   const m = Math.floor(s / 60);
   const r = s % 60;
   if (m <= 0) return `${r}s`;
-  return `${m}分${String(r).padStart(2, "0")}秒`;
+  return tr("ui_agent_m_s", {
+    m: m,
+    1: String(r).padStart(2, "0")
+  });
 }
 
 function stepElapsedMs(step, nowMs) {
@@ -43,6 +72,7 @@ function stepElapsedMs(step, nowMs) {
 }
 
 export function AgentPage({ config, seedPrompt = "", onCreated, onNeedKeys, onRequireAuth }) {
+  useLocale();
   const [prompt, setPrompt] = useState(seedPrompt || "");
   const [title, setTitle] = useState("");
   const defaults = config?.defaults || {};
@@ -120,10 +150,10 @@ export function AgentPage({ config, seedPrompt = "", onCreated, onNeedKeys, onRe
           stopPolling();
           setBusy(false);
           if (next.status === "success") {
-            toast.success("短剧全流程已完成");
+            toast.success(tr("ui_agent_short_drama_pipeline_finished"));
             onCreated?.(pid);
           } else {
-            toast.error(next.error || "全流程失败");
+            toast.error(next.error || tr("ui_agent_pipeline_failed"));
           }
         }
       } catch (error) {
@@ -137,9 +167,11 @@ export function AgentPage({ config, seedPrompt = "", onCreated, onNeedKeys, onRe
   };
 
   const runScriptOnly = async () => {
-    const projectTitle = title.trim() || prompt.trim().slice(0, 24) || "Agent 项目";
-    pushLog(`文本后端：${backend}`);
-    pushLog("正在创建项目…");
+    const projectTitle = title.trim() || prompt.trim().slice(0, 24) || tr("ui_agent_agent_project");
+    pushLog(tr("ui_agent_text_backend", {
+      backend: backend
+    }));
+    pushLog(tr("ui_agent_creating_project"));
     const created = await api("/api/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -153,15 +185,20 @@ export function AgentPage({ config, seedPrompt = "", onCreated, onNeedKeys, onRe
     });
     const pid = created.project?.id;
     setProjectId(pid || "");
-    pushLog(`项目已创建：${projectTitle}`);
-    pushLog(`正在用 ${backend} 生成 ${episodeCount} 集剧本…`);
+    pushLog(tr("ui_agent_project_created", {
+      projectTitle: projectTitle
+    }));
+    pushLog(tr("ui_agent_generating_a_episode_script_with", {
+      backend: backend,
+      episodeCount: episodeCount
+    }));
     await api(`/api/projects/${encodeURIComponent(pid)}/script`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "generate", episodeCount }),
     });
-    pushLog("剧本生成完成，进入影视工坊");
-    toast.success("Agent 已创建项目并生成剧本");
+    pushLog(tr("ui_agent_script_ready_opening_the_film_workshop"));
+    toast.success(tr("ui_agent_agent_created_the_project_and_generated"));
     onCreated?.(pid);
   };
 
@@ -169,16 +206,20 @@ export function AgentPage({ config, seedPrompt = "", onCreated, onNeedKeys, onRe
     if (!imageReady || !videoReady) {
       toast.error(
         imageReady
-          ? "全流程需要出片后端（ComfyUI 或 Seedance）"
-          : "全流程需要出图（ComfyUI 或 Seedream）+ 出片（ComfyUI 或 Seedance）"
+          ? tr("ui_agent_the_full_pipeline_needs_a_video")
+          : tr("ui_agent_the_full_pipeline_needs_images_comfyui")
       );
       onNeedKeys?.();
       return;
     }
     const eps = Math.min(Math.max(Number(episodeCount) || 10, 1), 10);
-    pushLog(`文本后端：${backend}`);
-    pushLog(`一键全流程：建项 → ${eps} 集剧本 → 素材 → 分镜视频 → 配音 → 逐集成片`);
-    const projectTitle = title.trim() || prompt.trim().slice(0, 24) || "一键短剧";
+    pushLog(tr("ui_agent_text_backend", {
+      backend: backend
+    }));
+    pushLog(tr("ui_agent_one_click_pipeline_project_episode_script", {
+      eps: eps
+    }));
+    const projectTitle = title.trim() || prompt.trim().slice(0, 24) || tr("ui_agent_one_click_drama");
     const res = await api("/api/auto-produce", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -201,17 +242,22 @@ export function AgentPage({ config, seedPrompt = "", onCreated, onNeedKeys, onRe
     const pid = res.projectId;
     setProjectId(pid || "");
     setJob(res.job || null);
-    pushLog(`项目已创建并开始后台制作：${projectTitle}（${eps} 集）`);
-    pushLog("可离开本页；多集制作耗时较长，完成后可在工坊 / 作品频道查看");
-    toast.success(`已开始 ${eps} 集全流程制作`);
+    pushLog(tr("ui_agent_project_created_producing_in_the_background", {
+      projectTitle: projectTitle,
+      eps: eps
+    }));
+    pushLog(tr("ui_agent_you_can_leave_this_page_multi"));
+    toast.success(tr("ui_agent_started_full_production_of_episodes", {
+      eps: eps
+    }));
     pollJob(pid);
   };
 
   const run = async () => {
-    if (!prompt.trim()) return toast.error("先写一句话想法，或粘贴完整剧本");
+    if (!prompt.trim()) return toast.error(tr("ui_agent_write_a_one_sentence_idea_first"));
     if (onRequireAuth && !onRequireAuth()) return;
     if (!llmReady) {
-      toast.error("请先配置文本大模型 Key");
+      toast.error(tr("ui_agent_please_configure_a_text_llm_key"));
       onNeedKeys?.();
       return;
     }
@@ -241,8 +287,8 @@ export function AgentPage({ config, seedPrompt = "", onCreated, onNeedKeys, onRe
   return (
     <PageShell
       eyebrow="Creation agent"
-      title="创作 Agent"
-      description="一句话或整段剧本，可只生成剧本，也可一键跑通整部短剧：多集剧本 → 角色场景 → 分镜视频 → 配音 → 逐集成片。"
+      title={tr("ui_agent_creation_agent")}
+      description={tr("ui_agent_one_sentence_or_a_whole_script")}
     >
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
         <section className="panel p-5 md:p-6">
@@ -256,27 +302,23 @@ export function AgentPage({ config, seedPrompt = "", onCreated, onNeedKeys, onRe
                 setEpisodeCount((n) => (n < 2 ? 10 : n));
               }}
             >
-              <Clapperboard className="h-4 w-4" />
-              一键全流程成片
-            </button>
+              <Clapperboard className="h-4 w-4" />{tr("ui_agent_one_click_full_production")}</button>
             <button
               type="button"
               className={mode === "script" ? "btn-primary" : "btn-secondary"}
               disabled={busy}
               onClick={() => setMode("script")}
             >
-              <Sparkles className="h-4 w-4" />
-              仅生成剧本
-            </button>
+              <Sparkles className="h-4 w-4" />{tr("ui_agent_script_only")}</button>
           </div>
 
           <label>
-            <span className="label">一句话想法 / 粘贴剧本</span>
+            <span className="label">{tr("ui_agent_one_sentence_idea_paste_a_script")}</span>
             <textarea
               className="field min-h-56 resize-y leading-7"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="例如：都市爽剧一句话钩子；或直接粘贴已有分场剧本…"
+              placeholder={tr("ui_agent_e_g_a_one_line_urban")}
               disabled={busy}
             />
           </label>
@@ -299,11 +341,11 @@ export function AgentPage({ config, seedPrompt = "", onCreated, onNeedKeys, onRe
 
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <label>
-              <span className="label">片名（可选）</span>
+              <span className="label">{tr("ui_agent_title_optional")}</span>
               <input className="field" value={title} disabled={busy} onChange={(e) => setTitle(e.target.value)} />
             </label>
             <label>
-              <span className="label">{mode === "full" ? "短剧集数（默认 10 集）" : "本次生成集数"}</span>
+              <span className="label">{mode === "full" ? tr("ui_agent_episodes_default_10") : tr("ui_agent_episodes_to_generate")}</span>
               <input
                 className="field"
                 type="number"
@@ -315,17 +357,17 @@ export function AgentPage({ config, seedPrompt = "", onCreated, onNeedKeys, onRe
               />
             </label>
             <label>
-              <span className="label">题材</span>
+              <span className="label">{tr("ui_agent_genre")}</span>
               <select className="field" value={genre} disabled={busy} onChange={(e) => setGenre(e.target.value)}>
                 {(config?.genres || []).map((item) => (
                   <option key={item} value={item}>
-                    {item}
+                    {configText(item)}
                   </option>
                 ))}
               </select>
             </label>
             <label>
-              <span className="label">画幅</span>
+              <span className="label">{tr("ui_agent_frame")}</span>
               <select className="field" value={ratio} disabled={busy} onChange={(e) => setRatio(e.target.value)}>
                 {(config?.ratios || []).map((item) => (
                   <option key={item.value} value={item.value}>
@@ -337,34 +379,29 @@ export function AgentPage({ config, seedPrompt = "", onCreated, onNeedKeys, onRe
           </div>
 
           {mode === "full" ? (
-            <p className="mt-3 text-xs leading-6 text-[var(--muted)]">
-              默认生成完整短剧（最多 10 集）：全剧定稿 → 角色/场景锁图 → 每集 12–30 镜 / 约 3–6 分钟（720p、原生口型对白）→ 轻 BGM →
-              逐集导出成片。集数越多耗时与费用越高，可先用 2–3 集试跑。
-            </p>
+            <p className="mt-3 text-xs leading-6 text-[var(--muted)]">{tr("ui_agent_by_default_a_full_short_drama")}</p>
           ) : null}
 
           <button type="button" className="btn-primary mt-5 min-h-12 w-full" disabled={busy} onClick={() => void run()}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : mode === "full" ? <Clapperboard className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
             {busy
               ? mode === "full"
-                ? "全流程制作中…"
-                : "Agent 创作中…"
+                ? tr("ui_agent_producing")
+                : tr("ui_agent_agent_is_writing")
               : mode === "full"
-                ? `开始一键成片（${Math.min(Math.max(Number(episodeCount) || 10, 1), 10)} 集）`
-                : "开始创作剧本"}
+                ? tr("ui_agent_start_one_click_production_ep", {
+              0: Math.min(Math.max(Number(episodeCount) || 10, 1), 10)
+            })
+                : tr("ui_agent_start_writing_script")}
           </button>
 
           {projectId && job?.status === "success" ? (
-            <button type="button" className="btn-secondary mt-3 w-full" onClick={() => onCreated?.(projectId)}>
-              打开项目工坊
-            </button>
+            <button type="button" className="btn-secondary mt-3 w-full" onClick={() => onCreated?.(projectId)}>{tr("ui_agent_open_project_workshop")}</button>
           ) : null}
           {job?.seriesUrl || (job?.exports || []).length > 1 ? (
             <div className="mt-2 space-y-1">
               {job?.seriesUrl ? (
-                <a className="btn-primary flex w-full items-center justify-center" href={job.seriesUrl} target="_blank" rel="noreferrer">
-                  连续播放全剧（{job.exports?.length || "多"} 集）
-                </a>
+                <a className="btn-primary flex w-full items-center justify-center" href={job.seriesUrl} target="_blank" rel="noreferrer">{tr("ui_agent_play_full_series")}{job.exports?.length || tr("ui_agent_several")}{" "}{tr("ui_agent_ep")}</a>
               ) : null}
               {(job.exports || []).map((item) => (
                 <a
@@ -373,39 +410,40 @@ export function AgentPage({ config, seedPrompt = "", onCreated, onNeedKeys, onRe
                   href={item.url}
                   target="_blank"
                   rel="noreferrer"
-                >
-                  预览第{item.episodeNumber || "?"}集
-                </a>
+                >{tr("ui_agent_preview_episode", {
+                    0: item.episodeNumber || "?"
+                  })}</a>
               ))}
             </div>
           ) : job?.exportUrl ? (
-            <a className="btn-ghost mt-2 flex w-full items-center justify-center" href={job.exportUrl} target="_blank" rel="noreferrer">
-              预览成片
-            </a>
+            <a className="btn-ghost mt-2 flex w-full items-center justify-center" href={job.exportUrl} target="_blank" rel="noreferrer">{tr("ui_agent_preview_cut")}</a>
           ) : null}
         </section>
 
         <aside className="space-y-4">
           <section className="panel space-y-3 p-5 text-sm leading-6">
-            <strong className="block">运行检查</strong>
-            <p className="text-[var(--muted)]">文本后端：{backend}</p>
-            <p className="text-[var(--muted)]">文本模型：{llmReady ? `就绪（${backend}）` : "未配置"}</p>
-            <p className="text-[var(--muted)]">出图：{imageReady ? (caps.comfyui ? "ComfyUI 就绪" : seedreamReady ? "Seedream 就绪" : "就绪") : "未配置（ComfyUI 或 Seedream）"}</p>
-            <p className="text-[var(--muted)]">
-              出片：{videoReady ? (caps.comfyui ? "ComfyUI 就绪" : seedanceReady ? "Seedance 就绪" : "就绪") : "未配置（ComfyUI 或 Seedance）"}
+            <strong className="block">{tr("ui_agent_run_check")}</strong>
+            <p className="text-[var(--muted)]">{tr("ui_agent_text_backend", {
+                backend: backend
+              })}</p>
+            <p className="text-[var(--muted)]">{tr("ui_agent_text_model")}{llmReady ? tr("ui_agent_ready", {
+              backend: backend
+            }) : tr("ui_agent_not_configured")}</p>
+            <p className="text-[var(--muted)]">{tr("ui_agent_images")}{imageReady ? (caps.comfyui ? tr("ui_agent_comfyui_ready") : seedreamReady ? tr("ui_agent_seedream_ready") : tr("ui_agent_ready_2")) : tr("ui_agent_not_configured_comfyui_or_seedream")}</p>
+            <p className="text-[var(--muted)]">{tr("ui_agent_video")}{videoReady ? (caps.comfyui ? tr("ui_agent_comfyui_ready") : seedanceReady ? tr("ui_agent_seedance_ready") : tr("ui_agent_ready_2")) : tr("ui_agent_not_configured_comfyui_or_seedance")}
             </p>
             {!llmReady || (mode === "full" && (!imageReady || !videoReady)) ? (
-              <button type="button" className="btn-secondary mt-2 w-full" onClick={() => onNeedKeys?.()}>
-                去配置密钥
-              </button>
+              <button type="button" className="btn-secondary mt-2 w-full" onClick={() => onNeedKeys?.()}>{tr("ui_agent_configure_keys")}</button>
             ) : null}
           </section>
 
           {steps.length ? (
             <section className="panel p-5">
               <div className="mb-3 flex items-center justify-between gap-2">
-                <strong className="block text-sm">全流程进度</strong>
-                {jobElapsed ? <span className="text-[11px] text-white/45">已耗时 {jobElapsed}</span> : null}
+                <strong className="block text-sm">{tr("ui_agent_pipeline_progress")}</strong>
+                {jobElapsed ? <span className="text-[11px] text-white/45">{tr("ui_agent_elapsed", {
+                    jobElapsed: jobElapsed
+                  })}</span> : null}
               </div>
               <ul className="space-y-2 text-xs">
                 {steps.map((step) => {
@@ -426,14 +464,18 @@ export function AgentPage({ config, seedPrompt = "", onCreated, onNeedKeys, onRe
                           }
                         >
                           {step.status === "running"
-                            ? `进行中${elapsed ? ` · ${elapsed}` : ""}`
+                            ? tr("ui_agent_running", {
+                            0: elapsed ? ` · ${elapsed}` : ""
+                          })
                             : step.status === "done"
-                              ? `完成${elapsed ? ` · ${elapsed}` : ""}`
+                              ? tr("ui_agent_done", {
+                            0: elapsed ? ` · ${elapsed}` : ""
+                          })
                               : step.status === "failed"
-                                ? "失败"
+                                ? tr("ui_agent_failed")
                                 : step.status === "skipped"
-                                  ? "跳过"
-                                  : "等待"}
+                                  ? tr("ui_agent_skipped")
+                                  : tr("ui_agent_waiting")}
                         </span>
                       </div>
                       {step.detail ? <p className="mt-1 text-[11px] text-white/40">{step.detail}</p> : null}
@@ -442,24 +484,24 @@ export function AgentPage({ config, seedPrompt = "", onCreated, onNeedKeys, onRe
                 })}
               </ul>
               {job?.status ? (
-                <p className="mt-3 text-xs text-[var(--muted)]">
-                  状态：{job.status}
-                  {runningStep ? ` · 当前：${STEP_LABEL[runningStep.id] || runningStep.label}` : ""}
+                <p className="mt-3 text-xs text-[var(--muted)]">{tr("ui_agent_status", {
+                    status: job.status
+                  })}{runningStep ? ` ${tr("ui_agent_now", {
+  0: STEP_LABEL[runningStep.id] || runningStep.label
+})}` : ""}
                   {job.error ? ` · ${job.error}` : ""}
                 </p>
               ) : null}
               {runningStep?.id === "entities" ? (
-                <p className="mt-2 text-[11px] leading-5 text-white/35">
-                  素材出图会按角色/场景逐张调用 Seedream，单张常见 30–90 秒；日志会随每张开始/完成更新。
-                </p>
+                <p className="mt-2 text-[11px] leading-5 text-white/35">{tr("ui_agent_asset_images_call_seedream_one_by")}</p>
               ) : null}
             </section>
           ) : null}
 
           <section className="panel p-5">
-            <strong className="mb-3 block text-sm">执行日志</strong>
+            <strong className="mb-3 block text-sm">{tr("ui_agent_run_log")}</strong>
             {!logs.length ? (
-              <p className="text-xs text-[var(--muted)]">点击开始后，这里会显示建项与各阶段进度。</p>
+              <p className="text-xs text-[var(--muted)]">{tr("ui_agent_after_you_start_project_creation_and")}</p>
             ) : (
               <ul className="space-y-2 text-xs">
                 {logs.map((item) => (

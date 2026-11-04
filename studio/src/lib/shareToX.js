@@ -1,3 +1,4 @@
+import { tr } from "./i18n";
 /**
  * One-click share to X: promo copy + video URL (Web Intent).
  * Does not attach the video file — paste the media link in the tweet.
@@ -104,8 +105,8 @@ export function shareVideoToX(opts = {}) {
     text,
     videoUrl: videoUrl || "",
     message: videoUrl
-      ? "已打开 X，文案与成片链接已填好，确认后即可发布"
-      : "已打开 X（未找到成片链接，仅文案）",
+      ? tr("ui_lib_share_to_x_x_opened_with_copy_and_cut")
+      : tr("ui_lib_share_to_x_x_opened_no_cut_link_found"),
   };
 }
 

@@ -6,24 +6,47 @@ import { requireCapability, toastMaybeKeys } from "../../lib/keys";
 import { toast } from "../../lib/toast";
 import { Lightbox } from "../Lightbox";
 
+import { tr, useLocale } from "../../lib/i18n";
+
 const CONFIG = {
   character: {
-    title: "角色造型",
+    get title() {
+      return tr("ui_entity_character_looks");
+    },
+
     eyebrow: "Cast bible",
-    empty: "剧本生成后会自动整理角色；也可以手动添加造型。",
-    accent: "#8b7cf7",
+
+    get empty() {
+      return tr("ui_entity_characters_are_organized_automatically_after_the");
+    },
+
+    accent: "#8b7cf7"
   },
   scene: {
-    title: "空镜场景",
+    get title() {
+      return tr("ui_entity_empty_scenes");
+    },
+
     eyebrow: "Location bible",
-    empty: "在这里建立可重复使用的空间与光线设定。",
-    accent: "#41a99e",
+
+    get empty() {
+      return tr("ui_entity_set_up_reusable_spaces_and_lighting");
+    },
+
+    accent: "#41a99e"
   },
   prop: {
-    title: "关键道具",
+    get title() {
+      return tr("ui_entity_key_props");
+    },
+
     eyebrow: "Prop bible",
-    empty: "只保留跨镜头需要维持一致的关键物件。",
-    accent: "#d79833",
+
+    get empty() {
+      return tr("ui_entity_keep_only_key_objects_that_must");
+    },
+
+    accent: "#d79833"
   },
 };
 
@@ -40,6 +63,7 @@ export function EntityStep({
   config: appConfig,
   focusEpisodeId,
 }) {
+  useLocale();
   const config = CONFIG[kind];
   const caps = appConfig?.capabilities || {};
   const focusEpisode = useMemo(
@@ -63,8 +87,15 @@ export function EntityStep({
   }, [allOfKind, focusEpisode]);
   const focusNote = focusEpisode
     ? entities.length < allOfKind.length
-      ? `当前聚焦第${focusEpisode.episodeNumber}集 · 本集相关 ${entities.length}/${allOfKind.length}`
-      : `当前聚焦第${focusEpisode.episodeNumber}集 · 显示全部 ${allOfKind.length} 项（本集尚未单独挂档）`
+      ? tr("ui_entity_focused_on_ep_related_to_this", {
+    episodeNumber: focusEpisode.episodeNumber,
+    length: entities.length,
+    length2: allOfKind.length
+  })
+      : tr("ui_entity_focused_on_ep_showing_all_nothing", {
+    episodeNumber: focusEpisode.episodeNumber,
+    length: allOfKind.length
+  })
     : "";
   const [showAdd, setShowAdd] = useState(false);
   // Default off: three-view sheets fight portrait/prop close-ups and often ignore wardrobe identity.
@@ -91,7 +122,7 @@ export function EntityStep({
 
   const create = async () => {
     if (onRequireAuth && !onRequireAuth()) return;
-    if (!form.name.trim() || !form.description.trim()) return toast.error("名称和视觉描述不能为空");
+    if (!form.name.trim() || !form.description.trim()) return toast.error(tr("ui_entity_name_and_visual_description_can_t"));
     try {
       const res = await api(`/api/projects/${encodeURIComponent(projectId)}/entities`, {
         method: "POST",
@@ -107,7 +138,7 @@ export function EntityStep({
       setShowAdd(false);
       setForm({ name: "", variant: "", description: "", category: "item" });
       apply(res);
-      toast.success("素材档案已添加");
+      toast.success(tr("ui_entity_asset_profile_added"));
     } catch (e) {
       toast.error(String(e.message || e));
     }
@@ -129,7 +160,9 @@ export function EntityStep({
 
   const remove = async (entity) => {
     if (onRequireAuth && !onRequireAuth()) return;
-    if (!window.confirm(`删除「${entity.name}」？`)) return;
+    if (!window.confirm(tr("ui_entity_delete", {
+      name: entity.name
+    }))) return;
     try {
       const res = await api(
         `/api/projects/${encodeURIComponent(projectId)}/entities?entityId=${encodeURIComponent(entity.id)}`,
@@ -143,11 +176,13 @@ export function EntityStep({
 
   const generate = async (entity, redraw = false, silent = false) => {
     if (onRequireAuth && !onRequireAuth()) return;
-    if (!requireCapability(caps, "seedream", onNeedKeys, "出图后端（Seedream / ComfyUI）")) return;
+    if (!requireCapability(caps, "seedream", onNeedKeys, tr("ui_entity_image_backend_seedream_comfyui"))) return;
     if (workingIds.has(entity.id) || entity.imageStatus === "generating") return;
     setWorking(entity.id, true);
     const backendLabel = caps.imageBackend === "comfyui" ? "ComfyUI" : "Seedream";
-    if (!silent) setBusyMsg?.(`${backendLabel} 出图已排队（后台线程池，含质检）…`);
+    if (!silent) setBusyMsg?.(tr("ui_entity_image_queued_background_pool_with_qa", {
+      backendLabel: backendLabel
+    }));
     try {
       const res = await api(`/api/projects/${encodeURIComponent(projectId)}/entities`, {
         method: "POST",
@@ -164,7 +199,9 @@ export function EntityStep({
       apply(res);
       // Async enqueue: poll project until imageStatus leaves "generating".
       if (res?.async || res?.image?.queued) {
-        if (!silent) toast.success(`${backendLabel} 出图已提交，后台生成中`);
+        if (!silent) toast.success(tr("ui_entity_image_submitted_generating_in_the_background", {
+          backendLabel: backendLabel
+        }));
         const started = Date.now();
         while (Date.now() - started < 15 * 60 * 1000) {
           await new Promise((r) => setTimeout(r, 4000));
@@ -176,9 +213,14 @@ export function EntityStep({
           const last = imgs[imgs.length - 1];
           if (!silent) {
             if (row.imageStatus === "failed" || last?.qaPass === false) {
-              toast.error(`质检未通过：${row.imageError || last?.qa?.reason || "与提示词不符"}`);
+              toast.error(tr("ui_entity_qa_failed_2", {
+                0: row.imageError || last?.qa?.reason || tr("ui_qa_reason_prompt_mismatch")
+              }));
             } else {
-              toast.success(`${backendLabel} 图片已保存${last?.qa?.skipped ? "" : " · 质检通过"}`);
+              toast.success(tr("ui_entity_image_saved", {
+                backendLabel: backendLabel,
+                1: last?.qa?.skipped ? "" : tr("ui_qa_passed_suffix")
+              }));
             }
           }
           break;
@@ -188,9 +230,14 @@ export function EntityStep({
         const last = imgs[imgs.length - 1];
         if (!silent) {
           if (last?.qaPass === false) {
-            toast.error(`质检未通过：${last?.qa?.reason || "与提示词不符"}，可重绘或切换出图模型`);
+            toast.error(tr("ui_entity_qa_failed_redraw_or_switch_the", {
+              0: last?.qa?.reason || tr("ui_qa_reason_prompt_mismatch")
+            }));
           } else {
-            toast.success(`${backendLabel} 图片已保存${last?.qa?.skipped ? "" : " · 质检通过"}`);
+            toast.success(tr("ui_entity_image_saved", {
+              backendLabel: backendLabel,
+              1: last?.qa?.skipped ? "" : tr("ui_qa_passed_suffix")
+            }));
           }
         }
       }
@@ -206,15 +253,22 @@ export function EntityStep({
   const batchGenerate = async () => {
     if (onRequireAuth && !onRequireAuth()) return;
     const missing = entities.filter((e) => !e.selectedImage);
-    if (!missing.length) return toast.info("所有素材都已有选定图片");
-    if (!window.confirm(`批量生成 ${missing.length} 个素材？`)) return;
+    if (!missing.length) return toast.info(tr("ui_entity_every_asset_already_has_a_selected"));
+    if (!window.confirm(tr("ui_entity_generate_assets_in_bulk", {
+      length: missing.length
+    }))) return;
     setBatching(true);
-    setBusyMsg?.(`批量出图 ${missing.length}…`);
+    setBusyMsg?.(tr("ui_entity_generating_images", {
+      length: missing.length
+    }));
     try {
       const results = await Promise.allSettled(missing.map((e) => generate(e, false, true)));
       const ok = results.filter((r) => r.status === "fulfilled").length;
       await onRefresh?.();
-      toast.success(`批量生成完成：${ok}/${missing.length}`);
+      toast.success(tr("ui_entity_bulk_generation_done", {
+        ok: ok,
+        length: missing.length
+      }));
     } finally {
       setBatching(false);
       setBusyMsg?.("");
@@ -223,11 +277,17 @@ export function EntityStep({
 
   const recheckAllQa = async ({ regenerateFailed = false } = {}) => {
     if (onRequireAuth && !onRequireAuth()) return;
-    if (!entities.length) return toast.info("暂无素材");
-    const label = regenerateFailed ? "复检并重生不合格项" : "全部过质检";
-    if (!window.confirm(`对当前 ${entities.length} 个${config.title}执行「${label}」？软通过的脏图会被清掉。`)) return;
+    if (!entities.length) return toast.info(tr("ui_entity_no_assets"));
+    const label = regenerateFailed ? tr("ui_entity_recheck_and_regenerate_failed_items") : tr("ui_entity_qa_all");
+    if (!window.confirm(tr("ui_entity_run_on_the_current_dirty_images", {
+      length: entities.length,
+      title: config.title,
+      label: label
+    }))) return;
     setRechecking(true);
-    setBusyMsg?.(`${label}中…`);
+    setBusyMsg?.(tr("ui_entity_text", {
+      label: label
+    }));
     try {
       const res = await api(`/api/projects/${encodeURIComponent(projectId)}/entities`, {
         method: "POST",
@@ -240,7 +300,9 @@ export function EntityStep({
         }),
       });
       if (res?.async || res?.queued) {
-        toast.success(`${label}已提交后台队列，稍后刷新查看结果`);
+        toast.success(tr("ui_entity_submitted_to_the_background_queue_refresh", {
+          label: label
+        }));
         apply(res);
         const started = Date.now();
         while (Date.now() - started < 20 * 60 * 1000) {
@@ -256,9 +318,16 @@ export function EntityStep({
       }
       apply(res);
       toast.success(
-        `质检完成：通过 ${res.pass || 0}/${res.total || 0}` +
-          (res.cleared ? ` · 清除软通过 ${res.cleared}` : "") +
-          (res.fail ? ` · 未过 ${res.fail}` : ""),
+        tr("ui_entity_qa_done_passed", {
+          0: res.pass || 0,
+          1: res.total || 0
+        }) +
+          (res.cleared ? ` ${tr("ui_entity_soft_passes_cleared", {
+  cleared: res.cleared
+})}` : "") +
+          (res.fail ? ` ${tr("ui_entity_failed", {
+  fail: res.fail
+})}` : ""),
       );
     } catch (e) {
       toastMaybeKeys(e, onNeedKeys);
@@ -298,7 +367,7 @@ export function EntityStep({
           body: JSON.stringify({ action: "upload", entityId: entity.id, dataUrl: reader.result }),
         });
         apply(res);
-        toast.success("图片已保存");
+        toast.success(tr("ui_entity_image_saved_2"));
       } catch (e) {
         toast.error(String(e.message || e));
       } finally {
@@ -323,7 +392,7 @@ export function EntityStep({
         }),
       });
       apply(res);
-      toast.success(res?.punched ? "已抠成透明底" : "已转 PNG（底板未能自动抠除）");
+      toast.success(res?.punched ? tr("ui_entity_background_removed") : tr("ui_entity_converted_to_png_backdrop_couldn_t"));
     } catch (e) {
       toast.error(String(e.message || e));
     } finally {
@@ -354,20 +423,19 @@ export function EntityStep({
           <h3 className="display-type text-2xl font-semibold">
             {config.title}
             {focusEpisode ? (
-              <span className="ml-2 text-base font-normal text-white/45">
-                · 第{focusEpisode.episodeNumber}集
-                {focusEpisode.title ? `「${focusEpisode.title}」` : ""}
-              </span>
+              <span className="ml-2 text-base font-normal text-white/45">{tr("ui_entity_ep", {
+                  episodeNumber: focusEpisode.episodeNumber,
+                  1: focusEpisode.title ? `「${focusEpisode.title}」` : ""
+                })}</span>
             ) : null}
           </h3>
-          <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-            出图后端以顶部模型切换为准（推荐 Seedream）；生成后会做提示词符合度质检。空白「尚无定稿图」表示尚未出图。
-          </p>
+          <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">{tr("ui_entity_the_image_backend_follows_the_model")}</p>
           {focusNote ? <p className="mt-2 text-xs text-[var(--projector)]">{focusNote}</p> : null}
           {missingImages.length ? (
-            <p className="mt-2 text-xs text-[#fbbf24]">
-              还有 {missingImages.length} 个{config.title}没有图片，分镜参考会不完整。请点右侧「批量补齐图片」。
-            </p>
+            <p className="mt-2 text-xs text-[#fbbf24]">{tr("ui_entity_still_have_no_image_so_shot", {
+                length: missingImages.length,
+                title: config.title
+              })}</p>
           ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -378,33 +446,28 @@ export function EntityStep({
                 checked={threeView}
                 disabled={batching}
                 onChange={(e) => setThreeView(e.target.checked)}
-              />
-              三视图设定稿
-            </label>
+              />{tr("ui_entity_three_view_model_sheet")}</label>
           ) : null}
           <button
             type="button"
             className="btn-secondary"
             disabled={batching || rechecking}
             onClick={() => void recheckAllQa({ regenerateFailed: false })}
-            title="用视觉模型重新核对定稿图；软通过脏图会清除选中"
+            title={tr("ui_entity_recheck_final_images_with_a_vision")}
           >
-            {rechecking ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />} 全部过质检
-          </button>
+            {rechecking ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}{" "}{tr("ui_entity_qa_all")}</button>
           <button
             type="button"
             className="btn-secondary"
             disabled={batching || rechecking}
             onClick={() => void recheckAllQa({ regenerateFailed: true })}
-            title="复检后自动重生未通过项"
+            title={tr("ui_entity_regenerate_failed_items_automatically_after_recheck")}
           >
-            {rechecking ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />} 复检并重生
-          </button>
+            {rechecking ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}{" "}{tr("ui_entity_recheck_and_regenerate")}</button>
           <button type="button" className="btn-secondary" disabled={batching || rechecking} onClick={() => void batchGenerate()}>
-            {batching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />} 批量补齐图片
-          </button>
+            {batching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}{" "}{tr("ui_entity_fill_missing_images")}</button>
           <button type="button" className="btn-primary" disabled={batching || rechecking} onClick={() => setShowAdd(true)}>
-            <Plus className="h-4 w-4" /> 添加{kind === "character" ? "造型" : kind === "scene" ? "场景" : "道具"}
+            <Plus className="h-4 w-4" />{" "}{tr("ui_entity_add")}{kind === "character" ? tr("ui_entity_looks") : kind === "scene" ? tr("ui_entity_scenes") : tr("ui_entity_props")}
           </button>
         </div>
       </section>
@@ -418,7 +481,7 @@ export function EntityStep({
         >
           <ImagePlus className="mb-4 h-10 w-10" style={{ color: config.accent }} />
           <strong>{config.empty}</strong>
-          <span className="mt-2 text-sm text-[var(--muted)]">点击添加第一份档案。</span>
+          <span className="mt-2 text-sm text-[var(--muted)]">{tr("ui_entity_click_to_add_the_first_profile")}</span>
         </button>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -454,7 +517,9 @@ export function EntityStep({
                 <header className="flex items-start justify-between gap-4">
                   <div>
                     <div className="label">New {kind}</div>
-                    <h3 className="display-type text-2xl font-semibold">添加{config.title}</h3>
+                    <h3 className="display-type text-2xl font-semibold">{tr("ui_entity_add_2", {
+                        title: config.title
+                      })}</h3>
                   </div>
                   <button type="button" className="btn-quiet !min-h-9 !px-2" onClick={() => setShowAdd(false)}>
                     <X className="h-4 w-4" />
@@ -462,49 +527,45 @@ export function EntityStep({
                 </header>
                 <div className="mt-6 grid gap-4 md:grid-cols-2">
                   <label>
-                    <span className="label">名称</span>
+                    <span className="label">{tr("ui_entity_name")}</span>
                     <input className="field" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} autoFocus />
                   </label>
                   {kind === "character" ? (
                     <label>
-                      <span className="label">造型阶段</span>
+                      <span className="label">{tr("ui_entity_look_stage")}</span>
                       <input
                         className="field"
                         value={form.variant}
                         onChange={(e) => setForm({ ...form, variant: e.target.value })}
-                        placeholder="默认造型 / 雨夜造型"
+                        placeholder={tr("ui_entity_default_look_rainy_night_look")}
                       />
                     </label>
                   ) : null}
                   {kind === "prop" ? (
                     <label>
-                      <span className="label">分类</span>
+                      <span className="label">{tr("ui_entity_category")}</span>
                       <select className="field" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-                        <option value="item">物品</option>
-                        <option value="weapon">武器</option>
-                        <option value="vehicle">载具</option>
-                        <option value="clothing">服装</option>
-                        <option value="accessory">饰品</option>
+                        <option value="item">{tr("ui_entity_item")}</option>
+                        <option value="weapon">{tr("ui_entity_weapon")}</option>
+                        <option value="vehicle">{tr("ui_entity_vehicle")}</option>
+                        <option value="clothing">{tr("ui_entity_clothing")}</option>
+                        <option value="accessory">{tr("ui_entity_accessory")}</option>
                       </select>
                     </label>
                   ) : null}
                   <label className="md:col-span-2">
-                    <span className="label">稳定视觉描述</span>
+                    <span className="label">{tr("ui_entity_stable_visual_description")}</span>
                     <textarea
                       className="field min-h-40 resize-y leading-6"
                       value={form.description}
                       onChange={(e) => setForm({ ...form, description: e.target.value })}
-                      placeholder="描述材质、颜色、轮廓、结构和识别细节…"
+                      placeholder={tr("ui_entity_describe_material_color_silhouette_structure_and")}
                     />
                   </label>
                 </div>
                 <div className="mt-6 flex justify-end gap-2">
-                  <button type="button" className="btn-secondary" onClick={() => setShowAdd(false)}>
-                    取消
-                  </button>
-                  <button type="button" className="btn-primary" onClick={() => void create()}>
-                    添加档案
-                  </button>
+                  <button type="button" className="btn-secondary" onClick={() => setShowAdd(false)}>{tr("ui_entity_cancel")}</button>
+                  <button type="button" className="btn-primary" onClick={() => void create()}>{tr("ui_entity_add_profile")}</button>
                 </div>
               </section>
             </div>,
@@ -516,6 +577,7 @@ export function EntityStep({
 }
 
 function EntityCard({ entity, accent, working, onGenerate, onUpload, onPunchAlpha, onSelect, onUpdate, onDelete, promptPayload, onLoadPrompt }) {
+  useLocale();
   const uploadRef = useRef(null);
   const [previewUrl, setPreviewUrl] = useState(null);
   const [cardTab, setCardTab] = useState("edit"); // edit | prompt
@@ -552,9 +614,7 @@ function EntityCard({ entity, accent, working, onGenerate, onUpload, onPunchAlph
                 cardTab === "edit" ? "bg-white/10 font-semibold text-white" : "text-white/45"
               }`}
               onClick={() => setCardTab("edit")}
-            >
-              资料
-            </button>
+            >{tr("ui_entity_profile")}</button>
             <button
               type="button"
               className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] ${
@@ -562,8 +622,7 @@ function EntityCard({ entity, accent, working, onGenerate, onUpload, onPunchAlph
               }`}
               onClick={() => void switchToPrompt()}
             >
-              <FileText className="h-3 w-3" /> 提示词
-            </button>
+              <FileText className="h-3 w-3" />{" "}{tr("ui_entity_prompt")}</button>
           </div>
           <button
             type="button"
@@ -579,19 +638,18 @@ function EntityCard({ entity, accent, working, onGenerate, onUpload, onPunchAlph
           <div className="space-y-3 p-4 text-sm">
             {promptBusy ? (
               <div className="flex items-center justify-center gap-2 py-10 text-[var(--muted)]">
-                <Loader2 className="h-4 w-4 animate-spin" /> 加载提示词…
-              </div>
+                <Loader2 className="h-4 w-4 animate-spin" />{" "}{tr("ui_entity_loading_prompt")}</div>
             ) : (
               <>
                 <div>
-                  <div className="mb-1 text-[11px] text-[var(--muted)]">将提交给大模型的正向提示词</div>
+                  <div className="mb-1 text-[11px] text-[var(--muted)]">{tr("ui_entity_positive_prompt_that_will_be_sent")}</div>
                   <pre className="max-h-48 overflow-y-auto whitespace-pre-wrap rounded-xl border border-white/10 bg-black/40 p-3 text-[11px] leading-5 text-white/85">
-                    {promptPayload?.prompt || "（无）"}
+                    {promptPayload?.prompt || tr("ui_entity_none")}
                   </pre>
                 </div>
                 {promptPayload?.negativePrompt ? (
                   <div>
-                    <div className="mb-1 text-[11px] text-[var(--muted)]">负向提示词</div>
+                    <div className="mb-1 text-[11px] text-[var(--muted)]">{tr("ui_entity_negative_prompt")}</div>
                     <pre className="max-h-28 overflow-y-auto whitespace-pre-wrap rounded-xl border border-white/10 bg-black/40 p-3 text-[11px] leading-5 text-white/70">
                       {promptPayload.negativePrompt}
                     </pre>
@@ -599,7 +657,7 @@ function EntityCard({ entity, accent, working, onGenerate, onUpload, onPunchAlph
                 ) : null}
                 {promptPayload?.selectedImagePrompt ? (
                   <div>
-                    <div className="mb-1 text-[11px] text-[var(--muted)]">当前定稿图实际使用的提示词</div>
+                    <div className="mb-1 text-[11px] text-[var(--muted)]">{tr("ui_entity_prompt_actually_used_for_the_current")}</div>
                     <pre className="max-h-36 overflow-y-auto whitespace-pre-wrap rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 text-[11px] leading-5 text-amber-50/90">
                       {promptPayload.selectedImagePrompt}
                     </pre>
@@ -631,32 +689,23 @@ function EntityCard({ entity, accent, working, onGenerate, onUpload, onPunchAlph
                     className="h-full w-full object-contain object-center"
                   />
                   <span className="pointer-events-none absolute bottom-3 right-3 flex items-center gap-1 rounded-md bg-[var(--navy)]/70 px-2 py-1 text-[10px] font-medium text-white/80">
-                    <Maximize2 className="h-3 w-3" /> 大图
-                  </span>
+                    <Maximize2 className="h-3 w-3" />{" "}{tr("ui_entity_full_size")}</span>
                 </button>
               ) : (
                 <div className="flex h-full flex-col items-center justify-center text-sm text-[var(--muted)]">
-                  <ImagePlus className="mb-3 h-8 w-8" style={{ color: accent }} />
-                  尚无定稿图
-                </div>
+                  <ImagePlus className="mb-3 h-8 w-8" style={{ color: accent }} />{tr("ui_entity_no_final_image_yet")}</div>
               )}
               {working ? (
                 <div className="absolute inset-0 flex items-center justify-center bg-[var(--navy)]/70 text-sm font-semibold text-white backdrop-blur-sm">
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  正在处理图片…
-                </div>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />{tr("ui_entity_processing_image")}</div>
               ) : null}
               <span className="timecode absolute left-3 top-3 rounded-md bg-[var(--navy)]/85 px-2 py-1 text-[9px] text-white">
                 {entity.kind.toUpperCase()} / {String(entity.images?.length || 0).padStart(2, "0")} VER
               </span>
               {qaFail ? (
-                <span className="absolute right-3 top-3 rounded-md bg-rose-600/85 px-2 py-1 text-[9px] font-semibold text-white">
-                  质检未过
-                </span>
+                <span className="absolute right-3 top-3 rounded-md bg-rose-600/85 px-2 py-1 text-[9px] font-semibold text-white">{tr("ui_entity_qa_failed")}</span>
               ) : sel?.qaPass === true ? (
-                <span className="absolute right-3 top-3 rounded-md bg-emerald-600/85 px-2 py-1 text-[9px] font-semibold text-white">
-                  质检通过
-                </span>
+                <span className="absolute right-3 top-3 rounded-md bg-emerald-600/85 px-2 py-1 text-[9px] font-semibold text-white">{tr("ui_entity_qa_passed")}</span>
               ) : null}
             </div>
             <div className="p-4">
@@ -706,7 +755,9 @@ function EntityCard({ entity, accent, working, onGenerate, onUpload, onPunchAlph
                     >
                       <img
                         src={image.url}
-                        alt={`版本 ${index + 1}`}
+                        alt={tr("ui_entity_version", {
+                          0: index + 1
+                        })}
                         className="h-full w-full object-contain object-center bg-black/50"
                       />
                     </button>
@@ -715,7 +766,7 @@ function EntityCard({ entity, accent, working, onGenerate, onUpload, onPunchAlph
               ) : null}
               <div className="mt-4 grid grid-cols-2 gap-2">
                 <button type="button" className="btn-primary" disabled={locked} onClick={() => void onGenerate(entity, false)}>
-                  <Sparkles className="h-3.5 w-3.5" /> {entity.selectedImage ? "生成新版本" : "生成图片"}
+                  <Sparkles className="h-3.5 w-3.5" /> {entity.selectedImage ? tr("ui_entity_generate_new_version") : tr("ui_entity_generate_image")}
                 </button>
                 <button
                   type="button"
@@ -723,22 +774,19 @@ function EntityCard({ entity, accent, working, onGenerate, onUpload, onPunchAlph
                   disabled={locked || !entity.selectedImage}
                   onClick={() => void onGenerate(entity, true)}
                 >
-                  <RefreshCw className="h-3.5 w-3.5" /> 参考重绘
-                </button>
+                  <RefreshCw className="h-3.5 w-3.5" />{" "}{tr("ui_entity_redraw_from_reference")}</button>
                 {["character", "prop"].includes(entity.kind) ? (
                   <button
                     type="button"
                     className="btn-secondary col-span-2"
                     disabled={locked || !entity.selectedImage}
                     onClick={() => void onPunchAlpha?.(entity)}
-                    title="把无缝浅色底板键控成透明 PNG"
+                    title={tr("ui_entity_key_a_seamless_light_backdrop_out")}
                   >
-                    <Eraser className="h-3.5 w-3.5" /> 抠透明底
-                  </button>
+                    <Eraser className="h-3.5 w-3.5" />{" "}{tr("ui_entity_remove_background")}</button>
                 ) : null}
                 <button type="button" className="btn-secondary col-span-2" disabled={locked} onClick={() => uploadRef.current?.click()}>
-                  <Upload className="h-3.5 w-3.5" /> 上传本地图
-                </button>
+                  <Upload className="h-3.5 w-3.5" />{" "}{tr("ui_entity_upload_local_image")}</button>
                 <input
                   ref={uploadRef}
                   hidden

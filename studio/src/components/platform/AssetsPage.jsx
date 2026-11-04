@@ -21,65 +21,223 @@ import { PageShell } from "./PageShell";
 import { Lightbox } from "../Lightbox";
 import { ModalOverlay } from "../ModalPortal";
 
+import { tr, localized, useLocale } from "../../lib/i18n";
+
 const PAGE_SIZE = 60;
 
-const KIND_FILTERS = [
-  ["all", "全部"],
-  ["image", "图片"],
-  ["video", "视频"],
-  ["audio", "音频"],
-  ["doc", "文档"],
-];
+const KIND_FILTERS = localized(() => [
+  ["all", tr("ui_assets_all")],
+  ["image", tr("ui_assets_images")],
+  ["video", tr("ui_assets_videos")],
+  ["audio", tr("ui_assets_audio")],
+  ["doc", tr("ui_assets_docs")],
+]);
 
-const SOURCE_FILTERS = [
-  ["all", "全部来源"],
-  ["upload", "📤 上传"],
-  ["ai", "🤖 AI 生成"],
-];
+const SOURCE_FILTERS = localized(() => [
+  ["all", tr("ui_assets_all_sources")],
+  ["upload", tr("ui_assets_uploaded")],
+  ["ai", tr("ui_assets_ai_generated")],
+]);
 
-const SORT_FILTERS = [
-  ["latest", "最新"],
-  ["oldest", "最早"],
-  ["hot", "最热"],
-];
+const SORT_FILTERS = localized(() => [
+  ["latest", tr("ui_assets_newest")],
+  ["oldest", tr("ui_assets_oldest")],
+  ["hot", tr("ui_assets_popular")],
+]);
 
-const PROMPT_SORTS = [
-  ["default", "默认"],
-  ["latest", "最新"],
-  ["oldest", "最早"],
-  ["name", "名称"],
-];
+const PROMPT_SORTS = localized(() => [
+  ["default", tr("ui_assets_default")],
+  ["latest", tr("ui_assets_newest")],
+  ["oldest", tr("ui_assets_oldest")],
+  ["name", tr("ui_assets_name")],
+]);
 
 const ASSET_CATS = [
-  { id: "all", label: "全部分类" },
-  { id: "character", label: "👤 角色" },
-  { id: "scene", label: "🏞️ 场景" },
-  { id: "prop", label: "💍 道具" },
-  { id: "style", label: "🎨 风格" },
-  { id: "storyboard", label: "🎬 分镜" },
-  { id: "final", label: "🎞️ 成片" },
-  { id: "music", label: "🎵 音乐" },
-  { id: "voice", label: "🎙️ 语音" },
-  { id: "audio", label: "🎧 音频" },
-  { id: "sfx", label: "🔊 音效" },
-  { id: "image", label: "🖼️ 图片" },
-  { id: "video", label: "🎥 视频" },
-  { id: "other", label: "📁 其他" },
+  {
+    id: "all",
+
+    get label() {
+      return tr("ui_assets_all_categories");
+    }
+  },
+  {
+    id: "character",
+
+    get label() {
+      return tr("ui_assets_character");
+    }
+  },
+  {
+    id: "scene",
+
+    get label() {
+      return tr("ui_assets_scene");
+    }
+  },
+  {
+    id: "prop",
+
+    get label() {
+      return tr("ui_assets_prop");
+    }
+  },
+  {
+    id: "style",
+
+    get label() {
+      return tr("ui_assets_style");
+    }
+  },
+  {
+    id: "storyboard",
+
+    get label() {
+      return tr("ui_assets_storyboard");
+    }
+  },
+  {
+    id: "final",
+
+    get label() {
+      return tr("ui_assets_final_cut");
+    }
+  },
+  {
+    id: "music",
+
+    get label() {
+      return tr("ui_assets_music");
+    }
+  },
+  {
+    id: "voice",
+
+    get label() {
+      return tr("ui_assets_voice");
+    }
+  },
+  {
+    id: "audio",
+
+    get label() {
+      return tr("ui_assets_audio_2");
+    }
+  },
+  {
+    id: "sfx",
+
+    get label() {
+      return tr("ui_assets_sound_effect");
+    }
+  },
+  {
+    id: "image",
+
+    get label() {
+      return tr("ui_assets_image");
+    }
+  },
+  {
+    id: "video",
+
+    get label() {
+      return tr("ui_assets_video");
+    }
+  },
+  {
+    id: "other",
+
+    get label() {
+      return tr("ui_assets_other");
+    }
+  },
 ];
 
 const PROMPT_CATS = [
-  { id: "all", label: "全部" },
-  { id: "general", label: "通用" },
-  { id: "style", label: "风格" },
-  { id: "composition", label: "构图" },
-  { id: "lighting", label: "光影" },
-  { id: "character", label: "人物" },
-  { id: "scene", label: "场景" },
-  { id: "camera", label: "运镜" },
-  { id: "quality", label: "画质" },
-  { id: "audio", label: "音频" },
-  { id: "text", label: "文本" },
-  { id: "template", label: "模板" },
+  {
+    id: "all",
+
+    get label() {
+      return tr("ui_assets_all");
+    }
+  },
+  {
+    id: "general",
+
+    get label() {
+      return tr("ui_assets_general");
+    }
+  },
+  {
+    id: "style",
+
+    get label() {
+      return tr("ui_assets_style_2");
+    }
+  },
+  {
+    id: "composition",
+
+    get label() {
+      return tr("ui_assets_composition");
+    }
+  },
+  {
+    id: "lighting",
+
+    get label() {
+      return tr("ui_assets_lighting");
+    }
+  },
+  {
+    id: "character",
+
+    get label() {
+      return tr("ui_assets_people");
+    }
+  },
+  {
+    id: "scene",
+
+    get label() {
+      return tr("ui_assets_scene_2");
+    }
+  },
+  {
+    id: "camera",
+
+    get label() {
+      return tr("ui_assets_camera_moves");
+    }
+  },
+  {
+    id: "quality",
+
+    get label() {
+      return tr("ui_assets_image_quality");
+    }
+  },
+  {
+    id: "audio",
+
+    get label() {
+      return tr("ui_assets_audio");
+    }
+  },
+  {
+    id: "text",
+
+    get label() {
+      return tr("ui_assets_text");
+    }
+  },
+  {
+    id: "template",
+
+    get label() {
+      return tr("ui_assets_template");
+    }
+  },
 ];
 
 function readAsDataUrl(file) {
@@ -92,6 +250,7 @@ function readAsDataUrl(file) {
 }
 
 function Chip({ active, children, onClick, className = "" }) {
+  useLocale();
   return (
     <button
       type="button"
@@ -104,6 +263,7 @@ function Chip({ active, children, onClick, className = "" }) {
 }
 
 function FilterRow({ children, scroll = false }) {
+  useLocale();
   if (scroll) {
     return (
       <div className="mb-3 overflow-x-auto pb-1 [scrollbar-width:thin] [-ms-overflow-style:auto]">
@@ -115,6 +275,7 @@ function FilterRow({ children, scroll = false }) {
 }
 
 function SortLink({ active, children, onClick }) {
+  useLocale();
   return (
     <button
       type="button"
@@ -129,6 +290,7 @@ function SortLink({ active, children, onClick }) {
 }
 
 export function AssetsPage({ onUsePrompt }) {
+  useLocale();
   const [tab, setTab] = useState("assets");
   const [assets, setAssets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -251,7 +413,9 @@ export function AssetsPage({ onUsePrompt }) {
         });
         ok += 1;
       }
-      toast.success(`已上传 ${ok} 个素材`);
+      toast.success(tr("ui_assets_uploaded_assets", {
+        ok: ok
+      }));
       setSource("upload");
       await refreshAssets({ offset: 0 });
     } catch (error) {
@@ -274,7 +438,9 @@ export function AssetsPage({ onUsePrompt }) {
   const deleteSelected = async () => {
     const picked = assets.filter((a) => selectedIds.has(a.id || `${a.projectId}-${a.path}`));
     if (!picked.length) return;
-    if (!window.confirm(`确定删除选中的 ${picked.length} 个素材？`)) return;
+    if (!window.confirm(tr("ui_assets_delete_the_selected_assets", {
+      length: picked.length
+    }))) return;
     try {
       await api("/api/platform/assets", {
         method: "DELETE",
@@ -283,7 +449,7 @@ export function AssetsPage({ onUsePrompt }) {
           items: picked.map((a) => ({ projectId: a.projectId, path: a.path })),
         }),
       });
-      toast.success("已删除");
+      toast.success(tr("ui_assets_deleted"));
       setSelectedIds(new Set());
       setSelectMode(false);
       await refreshAssets({ offset: 0 });
@@ -293,14 +459,14 @@ export function AssetsPage({ onUsePrompt }) {
   };
 
   const savePrompt = async () => {
-    if (!editor?.text?.trim()) return toast.error("请填写提示词内容");
+    if (!editor?.text?.trim()) return toast.error(tr("ui_assets_please_enter_the_prompt_content"));
     try {
       await api("/api/platform/prompts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editor),
       });
-      toast.success(editor.id ? "已更新提示词" : "已新建提示词");
+      toast.success(editor.id ? tr("ui_assets_prompt_updated") : tr("ui_assets_prompt_created"));
       setEditor(null);
       await refreshPrompts();
     } catch (error) {
@@ -309,10 +475,10 @@ export function AssetsPage({ onUsePrompt }) {
   };
 
   const removePrompt = async (id) => {
-    if (!window.confirm("确定删除这条提示词？")) return;
+    if (!window.confirm(tr("ui_assets_delete_this_prompt"))) return;
     try {
       await api(`/api/platform/prompts/${encodeURIComponent(id)}`, { method: "DELETE" });
-      toast.success("已删除");
+      toast.success(tr("ui_assets_deleted"));
       await refreshPrompts();
     } catch (error) {
       toast.error(String(error.message || error));
@@ -322,8 +488,8 @@ export function AssetsPage({ onUsePrompt }) {
   return (
     <PageShell
       eyebrow="Library"
-      title="个人资产"
-      description="管理上传素材、AI 生成结果与个人提示词库，可筛选、批量删除并一键带入创作。"
+      title={tr("ui_assets_my_assets")}
+      description={tr("ui_assets_manage_uploads_ai_results_and_your")}
     >
       <input
         ref={fileRef}
@@ -338,12 +504,8 @@ export function AssetsPage({ onUsePrompt }) {
       <div className="mb-4 flex items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-2">
           <FolderOpen className="h-4 w-4 shrink-0 text-white/40" aria-hidden />
-          <Chip active={tab === "assets"} onClick={() => setTab("assets")}>
-            素材
-          </Chip>
-          <Chip active={tab === "prompts"} onClick={() => setTab("prompts")}>
-            提示词
-          </Chip>
+          <Chip active={tab === "assets"} onClick={() => setTab("assets")}>{tr("ui_assets_assets")}</Chip>
+          <Chip active={tab === "prompts"} onClick={() => setTab("prompts")}>{tr("ui_assets_prompts")}</Chip>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {tab === "assets" ? (
@@ -355,9 +517,9 @@ export function AssetsPage({ onUsePrompt }) {
                   disabled={!selectedIds.size}
                   onClick={() => void deleteSelected()}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  删除 {selectedIds.size || ""}
-                </button>
+                  <Trash2 className="h-3.5 w-3.5" />{tr("ui_assets_delete", {
+                    0: selectedIds.size || ""
+                  })}</button>
               ) : (
                 <button
                   type="button"
@@ -365,9 +527,7 @@ export function AssetsPage({ onUsePrompt }) {
                   disabled={uploading}
                   onClick={() => fileRef.current?.click()}
                 >
-                  {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-                  上传
-                </button>
+                  {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}{tr("ui_assets_upload")}</button>
               )}
               <button
                 type="button"
@@ -378,7 +538,7 @@ export function AssetsPage({ onUsePrompt }) {
                 }}
               >
                 <CheckSquare className="h-3.5 w-3.5" />
-                {selectMode ? "取消" : "选择"}
+                {selectMode ? tr("ui_assets_cancel") : tr("ui_assets_select")}
               </button>
             </>
           ) : (
@@ -393,8 +553,7 @@ export function AssetsPage({ onUsePrompt }) {
                 })
               }
             >
-              <Plus className="h-3.5 w-3.5" /> 新建
-            </button>
+              <Plus className="h-3.5 w-3.5" />{" "}{tr("ui_assets_new")}</button>
           )}
         </div>
       </div>
@@ -422,9 +581,11 @@ export function AssetsPage({ onUsePrompt }) {
           {/* Row 3b: 质量（默认隐藏损坏文件） */}
           <FilterRow scroll>
             {[
-              ["healthy", "仅健康"],
-              ["broken", `损坏${brokenCount ? ` ${brokenCount}` : ""}`],
-              ["all", "全部含损坏"],
+              ["healthy", tr("ui_assets_healthy_only")],
+              ["broken", tr("ui_assets_broken", {
+                0: brokenCount ? ` ${brokenCount}` : ""
+              })],
+              ["all", tr("ui_assets_all_incl_broken")],
             ].map(([value, label]) => (
               <Chip key={value} active={health === value} onClick={() => setHealth(value)}>
                 {label}
@@ -457,25 +618,25 @@ export function AssetsPage({ onUsePrompt }) {
                 className="field !pl-10"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="搜索素材..."
+                placeholder={tr("ui_assets_search_assets")}
               />
             </label>
           </div>
 
           {loading && !assets.length ? (
             <div className="panel flex items-center justify-center gap-2 py-20 text-sm text-[var(--muted)]">
-              <Loader2 className="h-4 w-4 animate-spin" /> 加载资产…
-            </div>
+              <Loader2 className="h-4 w-4 animate-spin" />{" "}{tr("ui_assets_loading_assets")}</div>
           ) : !assets.length ? (
             <div className="panel flex flex-col items-center justify-center gap-4 py-20 text-center">
-              <p className="text-sm text-[var(--muted)]">还没有素材。上传参考图，或去影视工坊生成角色 / 导出成片。</p>
+              <p className="text-sm text-[var(--muted)]">{tr("ui_assets_no_assets_yet_upload_reference_images")}</p>
               <button type="button" className="btn-primary" disabled={uploading} onClick={() => fileRef.current?.click()}>
-                <Upload className="h-3.5 w-3.5" /> 上传素材
-              </button>
+                <Upload className="h-3.5 w-3.5" />{" "}{tr("ui_assets_upload_assets")}</button>
             </div>
           ) : (
             <>
-              <div className="mb-3 text-xs text-white/35">共 {total} 个</div>
+              <div className="mb-3 text-xs text-white/35">{tr("ui_assets_total", {
+                  total: total
+                })}</div>
               <div className="columns-2 gap-3 sm:columns-3 lg:columns-4 xl:columns-5 2xl:columns-6">
                 {assets.map((item) => {
                   const id = item.id || `${item.projectId}-${item.path}`;
@@ -512,9 +673,7 @@ export function AssetsPage({ onUsePrompt }) {
                       >
                         {item.broken ? (
                           <div className="flex flex-col items-center gap-1 px-3 text-center text-[11px] text-[#f87171]">
-                            <ImageIcon className="h-7 w-7 opacity-70" />
-                            损坏 / 空文件
-                          </div>
+                            <ImageIcon className="h-7 w-7 opacity-70" />{tr("ui_assets_broken_empty_file")}</div>
                         ) : item.kind === "video" ? (
                           <video
                             src={item.url}
@@ -536,15 +695,13 @@ export function AssetsPage({ onUsePrompt }) {
                           <ImageIcon className="h-8 w-8 text-white/30" />
                         )}
                         {item.broken ? (
-                          <span className="absolute right-2 top-2 rounded bg-[#7f1d1d]/90 px-1.5 py-0.5 text-[10px] text-[#fecaca]">
-                            质检未通过
-                          </span>
+                          <span className="absolute right-2 top-2 rounded bg-[#7f1d1d]/90 px-1.5 py-0.5 text-[10px] text-[#fecaca]">{tr("ui_assets_qa_failed")}</span>
                         ) : null}
                       </div>
                       <div className="p-3">
                         <div className="truncate text-sm font-semibold">{item.name || item.projectTitle}</div>
                         <div className="mt-1 truncate text-[11px] text-[var(--muted)]">
-                          {catLabel} · {item.source === "upload" ? "上传" : "AI 生成"}
+                          {catLabel} · {item.source === "upload" ? tr("ui_assets_upload") : tr("ui_assets_ai_generated_2")}
                           {item.broken && item.qaReason ? ` · ${item.qaReason}` : ""}
                         </div>
                         <div className="mt-2 flex items-center gap-2 text-[10px] text-white/40">
@@ -590,17 +747,16 @@ export function AssetsPage({ onUsePrompt }) {
                 className="field !pl-10"
                 value={promptQuery}
                 onChange={(e) => setPromptQuery(e.target.value)}
-                placeholder="搜索提示词..."
+                placeholder={tr("ui_assets_search_prompts")}
               />
             </label>
           </div>
 
           {promptLoading && !prompts.length ? (
             <div className="panel flex items-center justify-center gap-2 py-20 text-sm text-[var(--muted)]">
-              <Loader2 className="h-4 w-4 animate-spin" /> 加载提示词…
-            </div>
+              <Loader2 className="h-4 w-4 animate-spin" />{" "}{tr("ui_assets_loading_prompts")}</div>
           ) : !prompts.length ? (
-            <div className="panel py-20 text-center text-sm text-[var(--muted)]">还没有提示词，点击新建添加</div>
+            <div className="panel py-20 text-center text-sm text-[var(--muted)]">{tr("ui_assets_no_prompts_yet_click_new_to")}</div>
           ) : (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {prompts.map((item) => (
@@ -608,9 +764,9 @@ export function AssetsPage({ onUsePrompt }) {
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <span className="label">
-                        {PROMPT_CATS.find((c) => c.id === item.category)?.label || item.category || "通用"}
+                        {PROMPT_CATS.find((c) => c.id === item.category)?.label || item.category || tr("ui_assets_general")}
                       </span>
-                      <h3 className="mt-2 text-sm font-semibold text-white">{item.title || "未命名"}</h3>
+                      <h3 className="mt-2 text-sm font-semibold text-white">{item.title || tr("ui_assets_untitled")}</h3>
                     </div>
                     <button type="button" className="btn-secondary !min-h-8 !px-2" onClick={() => void removePrompt(item.id)}>
                       <Trash2 className="h-3 w-3" />
@@ -623,17 +779,13 @@ export function AssetsPage({ onUsePrompt }) {
                       className="btn-secondary flex-1"
                       onClick={async () => {
                         await navigator.clipboard.writeText(item.text);
-                        toast.success("已复制");
+                        toast.success(tr("ui_assets_copied"));
                       }}
                     >
-                      <Copy className="h-3.5 w-3.5" /> 复制
-                    </button>
-                    <button type="button" className="btn-secondary flex-1" onClick={() => setEditor({ ...item })}>
-                      编辑
-                    </button>
+                      <Copy className="h-3.5 w-3.5" />{" "}{tr("ui_assets_copy")}</button>
+                    <button type="button" className="btn-secondary flex-1" onClick={() => setEditor({ ...item })}>{tr("ui_assets_edit")}</button>
                     <button type="button" className="btn-primary flex-1" onClick={() => onUsePrompt?.(item.text)}>
-                      <Lightbulb className="h-3.5 w-3.5" /> 去创作
-                    </button>
+                      <Lightbulb className="h-3.5 w-3.5" />{" "}{tr("ui_assets_use_it")}</button>
                   </div>
                 </article>
               ))}
@@ -654,9 +806,7 @@ export function AssetsPage({ onUsePrompt }) {
               type="button"
               className="absolute right-2 top-2 z-10 rounded-full bg-black/65 px-3 py-1 text-sm text-white hover:bg-black/80"
               onClick={() => setPreview(null)}
-            >
-              关闭
-            </button>
+            >{tr("ui_assets_close")}</button>
             <video
               src={preview.url}
               controls
@@ -672,22 +822,22 @@ export function AssetsPage({ onUsePrompt }) {
         <ModalOverlay onClose={() => setEditor(null)} className="bg-[#09101d]/80 backdrop-blur-sm">
           <div className="panel my-auto w-full max-w-lg p-5" onMouseDown={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
             <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-base font-semibold">{editor.id ? "编辑提示词" : "新建提示词"}</h3>
+              <h3 className="text-base font-semibold">{editor.id ? tr("ui_assets_edit_prompt") : tr("ui_assets_new_prompt")}</h3>
               <button type="button" className="rounded-full bg-white/10 p-1.5" onClick={() => setEditor(null)}>
                 <X className="h-4 w-4" />
               </button>
             </div>
             <label className="block">
-              <span className="label">标题</span>
+              <span className="label">{tr("ui_assets_title")}</span>
               <input
                 className="field mt-1"
                 value={editor.title || ""}
                 onChange={(e) => setEditor((prev) => ({ ...prev, title: e.target.value }))}
-                placeholder="可选"
+                placeholder={tr("ui_assets_optional")}
               />
             </label>
             <label className="mt-3 block">
-              <span className="label">分类</span>
+              <span className="label">{tr("ui_assets_category")}</span>
               <select
                 className="field mt-1"
                 value={editor.category || "general"}
@@ -701,21 +851,17 @@ export function AssetsPage({ onUsePrompt }) {
               </select>
             </label>
             <label className="mt-3 block">
-              <span className="label">内容</span>
+              <span className="label">{tr("ui_assets_content")}</span>
               <textarea
                 className="field mt-1 min-h-40 resize-y leading-7"
                 value={editor.text || ""}
                 onChange={(e) => setEditor((prev) => ({ ...prev, text: e.target.value }))}
-                placeholder="写下可复用的创作提示词…"
+                placeholder={tr("ui_assets_write_a_reusable_creative_prompt")}
               />
             </label>
             <div className="mt-4 flex gap-2">
-              <button type="button" className="btn-secondary flex-1" onClick={() => setEditor(null)}>
-                取消
-              </button>
-              <button type="button" className="btn-primary flex-1" onClick={() => void savePrompt()}>
-                保存
-              </button>
+              <button type="button" className="btn-secondary flex-1" onClick={() => setEditor(null)}>{tr("ui_assets_cancel")}</button>
+              <button type="button" className="btn-primary flex-1" onClick={() => void savePrompt()}>{tr("ui_assets_save")}</button>
             </div>
           </div>
         </ModalOverlay>

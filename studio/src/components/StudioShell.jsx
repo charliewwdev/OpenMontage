@@ -13,7 +13,7 @@ import {
   Wand2,
 } from "lucide-react";
 import { api } from "../api";
-import { useLocale } from "../lib/i18n";
+import { useLocale, tr } from "../lib/i18n";
 import { StudioModelBar } from "./StudioModelBar";
 import { ScriptStep } from "./steps/ScriptStep";
 import { EntityStep } from "./steps/EntityStep";
@@ -21,11 +21,71 @@ import { SegmentWorkspace } from "./steps/SegmentWorkspace";
 
 /** Condensed nav: prepare assets once, then live in the segment desk. */
 const NAV_STEPS = [
-  { key: "script", label: "剧本", note: "定稿分集", icon: ScrollText },
-  { key: "character", label: "角色", note: "造型定妆", icon: Users },
-  { key: "scene", label: "场景", note: "空间定妆", icon: ImageIcon },
-  { key: "prop", label: "道具", note: "物件定妆", icon: Box },
-  { key: "workspace", label: "工作台", note: "片段内聚制作", icon: Clapperboard },
+  {
+    key: "script",
+
+    get label() {
+      return tr("ui_studio_shell_script");
+    },
+
+    get note() {
+      return tr("ui_studio_shell_lock_episodes");
+    },
+
+    icon: ScrollText
+  },
+  {
+    key: "character",
+
+    get label() {
+      return tr("ui_studio_shell_characters");
+    },
+
+    get note() {
+      return tr("ui_studio_shell_look_design");
+    },
+
+    icon: Users
+  },
+  {
+    key: "scene",
+
+    get label() {
+      return tr("ui_studio_shell_scenes");
+    },
+
+    get note() {
+      return tr("ui_studio_shell_space_design");
+    },
+
+    icon: ImageIcon
+  },
+  {
+    key: "prop",
+
+    get label() {
+      return tr("ui_studio_shell_props");
+    },
+
+    get note() {
+      return tr("ui_studio_shell_object_design");
+    },
+
+    icon: Box
+  },
+  {
+    key: "workspace",
+
+    get label() {
+      return tr("ui_studio_shell_workspace");
+    },
+
+    get note() {
+      return tr("ui_studio_shell_per_segment_production");
+    },
+
+    icon: Clapperboard
+  },
 ];
 
 const WORKSPACE_KEYS = new Set(["workspace", "storyboard", "audio", "edit"]);
@@ -58,7 +118,9 @@ function shotHasVideo(shot) {
 function formatEpisodeLabel(n, title) {
   const num = Number(n) || 0;
   const raw = String(title || "").trim();
-  if (!raw) return num ? `第${num}集` : "";
+  if (!raw) return num ? tr("ui_studio_shell_ep", {
+    num: num
+  }) : "";
   let stripped = raw;
   for (let i = 0; i < 4; i += 1) {
     const next = stripped
@@ -68,8 +130,13 @@ function formatEpisodeLabel(n, title) {
     if (next === stripped) break;
     stripped = next;
   }
-  if (!stripped) return num ? `第${num}集` : raw;
-  return num ? `第${num}集 · ${stripped}` : stripped;
+  if (!stripped) return num ? tr("ui_studio_shell_ep", {
+    num: num
+  }) : raw;
+  return num ? tr("ui_studio_shell_ep_2", {
+    num: num,
+    stripped: stripped
+  }) : stripped;
 }
 
 function autoLiveProgress(autoJob, bundle) {
@@ -134,7 +201,7 @@ function entityTouchesEpisode(entity, episode) {
 
 function stepCounts(bundle, episode = null) {
   if (!bundle) {
-    return { script: "0 集", character: "0", scene: "0", prop: "0", storyboard: "0 镜", audio: "0", edit: "未开始" };
+    return { script: tr("ui_studio_shell_0_ep"), character: "0", scene: "0", prop: "0", storyboard: tr("ui_studio_shell_0_shots"), audio: "0", edit: tr("ui_studio_shell_not_started") };
   }
   const ents = (bundle.entities || []).filter((e) => !e.deletedAt);
   const shotsAll = (bundle.shots || []).filter((s) => !s.deletedAt);
@@ -162,13 +229,20 @@ function stepCounts(bundle, episode = null) {
       (e) => e.episodeId === eid && (e.outputPath || e.outputUrl),
     );
     return {
-      script: episode.status === "confirmed" ? `第${n}集·定稿` : `第${n}集·草稿`,
+      script: episode.status === "confirmed" ? tr("ui_studio_shell_ep_final", {
+        n: n
+      }) : tr("ui_studio_shell_ep_draft", {
+        n: n
+      }),
       character: byKind("character"),
       scene: byKind("scene"),
       prop: byKind("prop"),
-      storyboard: `${successful}/${shots.length} 镜`,
-      audio: hasAudio ? "已配音" : "未配音",
-      edit: hasEdit ? "已成片" : "未成片",
+      storyboard: tr("ui_studio_shell_shots", {
+        successful: successful,
+        length: shots.length
+      }),
+      audio: hasAudio ? tr("ui_studio_shell_voiced") : tr("ui_studio_shell_not_voiced"),
+      edit: hasEdit ? tr("ui_studio_shell_rendered") : tr("ui_studio_shell_not_rendered"),
     };
   }
 
@@ -183,13 +257,19 @@ function stepCounts(bundle, episode = null) {
     return `${ready}/${list.length}`;
   };
   return {
-    script: `${confirmed.length}/${episodes.length} 集定稿`,
+    script: tr("ui_studio_shell_episodes_locked", {
+      length: confirmed.length,
+      length2: episodes.length
+    }),
     character: byKind("character"),
     scene: byKind("scene"),
     prop: byKind("prop"),
-    storyboard: `${successful}/${shotsAll.length} 镜`,
+    storyboard: tr("ui_studio_shell_shots", {
+      successful: successful,
+      length: shotsAll.length
+    }),
     audio: `${audioReady}/${Math.max(confirmed.length, 1)}`,
-    edit: (bundle.edits || []).some((e) => e.outputPath || e.outputUrl) ? "已成片" : "未成片",
+    edit: (bundle.edits || []).some((e) => e.outputPath || e.outputUrl) ? tr("ui_studio_shell_rendered") : tr("ui_studio_shell_not_rendered"),
   };
 }
 
@@ -534,14 +614,12 @@ export function StudioShell({
           )}
           {readOnly ? (
             <div className="flex items-center justify-between gap-3 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-100 md:px-6">
-              <span>浏览模式：可查看项目进度与素材，生成 / 保存需登录</span>
+              <span>{tr("ui_studio_shell_browse_mode_you_can_view_project")}</span>
               <button
                 type="button"
                 className="btn-primary !min-h-7 !px-3 text-[11px]"
                 onClick={() => onRequireAuth?.()}
-              >
-                登录后创作
-              </button>
+              >{tr("ui_studio_shell_sign_in_to_create")}</button>
             </div>
           ) : null}
           <header className="sticky top-0 z-30 border-b border-[var(--line)] bg-[#0c0e14]/95 backdrop-blur">

@@ -1,7 +1,11 @@
 import { authHeaders, clearSession, getToken } from "./lib/auth";
 
+import { getLocale, tr } from "./lib/i18n";
+
 export async function api(path, options = {}) {
   const headers = authHeaders(options.headers || {});
+  // Lets the server localize user-visible status/error text (server/ui_messages.py).
+  if (!headers["X-Studio-Locale"]) headers["X-Studio-Locale"] = getLocale();
   const res = await fetch(path, { ...options, headers });
   const text = await res.text();
   let data = null;
@@ -29,7 +33,7 @@ export async function api(path, options = {}) {
           /* ignore */
         }
       }
-      const err = new Error("请先登录后再调用模型或保存内容");
+      const err = new Error(tr("ui_api_please_sign_in_before_calling_models"));
       err.status = 401;
       err.code = "login_required";
       err.data = data;

@@ -19,6 +19,8 @@ import { api } from "../../api";
 import { toast } from "../../lib/toast";
 import { ModalOverlay } from "../ModalPortal";
 
+import { tr, useLocale } from "../../lib/i18n";
+
 function clipId() {
   return typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
@@ -64,14 +66,15 @@ function originalBeat(content = "", shotOrder) {
 
 function inferTimeOfDay(shot) {
   const blob = `${shot?.prompt || ""} ${shot?.action || ""} ${shot?.sceneName || ""}`;
-  if (/夜|深夜|夜晚|霓虹|月光/.test(blob)) return "夜";
-  if (/黄昏|夕阳|傍晚/.test(blob)) return "黄昏";
-  if (/清晨|黎明|破晓/.test(blob)) return "清晨";
-  if (/白天|午后|晴/.test(blob)) return "日";
+  if (/夜|深夜|夜晚|霓虹|月光/.test(blob)) return tr("ui_edit_night");
+  if (/黄昏|夕阳|傍晚/.test(blob)) return tr("ui_edit_dusk");
+  if (/清晨|黎明|破晓/.test(blob)) return tr("ui_edit_dawn");
+  if (/白天|午后|晴/.test(blob)) return tr("ui_edit_day");
   return "—";
 }
 
 function PromptWithChips({ prompt, entityByName, activeNames }) {
+  useLocale();
   const parts = String(prompt || "").split(/(@[^\s@,，。；;（）()]+)/g);
   return (
     <p className="text-[13px] leading-6 text-[var(--ink)]/90">
@@ -100,6 +103,7 @@ function PromptWithChips({ prompt, entityByName, activeNames }) {
 }
 
 function DialogueCard({ dialogue, entityByName }) {
+  useLocale();
   const parsed = parseDialogue(dialogue);
   if (!parsed?.line) return null;
   const ent = parsed.speaker ? entityByName.get(parsed.speaker) : null;
@@ -120,8 +124,8 @@ function DialogueCard({ dialogue, entityByName }) {
       </div>
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex items-center gap-2 text-[11px] text-[var(--muted)]">
-          <span className="font-semibold text-[var(--ink)]">{parsed.speaker || "对白"}</span>
-          <span>台词</span>
+          <span className="font-semibold text-[var(--ink)]">{parsed.speaker || tr("ui_edit_dialogue")}</span>
+          <span>{tr("ui_edit_line")}</span>
         </div>
         <p className="text-sm font-medium leading-6 text-[var(--ink)]">「{parsed.line.replace(/^「|」$/g, "")}」</p>
       </div>
@@ -130,6 +134,7 @@ function DialogueCard({ dialogue, entityByName }) {
 }
 
 export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, focusEpisodeId, onFocusEpisode }) {
+  useLocale();
   const episodes = useMemo(
     () => [...(bundle?.episodes || [])].sort((a, b) => a.episodeNumber - b.episodeNumber),
     [bundle?.episodes],
@@ -326,7 +331,7 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
   const save = async (quiet = false) => {
     if (!episode) return null;
     setSaving(true);
-    setBusyMsg?.(quiet ? "" : "保存剪辑草稿…");
+    setBusyMsg?.(quiet ? "" : tr("ui_edit_saving_edit_draft"));
     try {
       const res = await api(`/api/projects/${encodeURIComponent(projectId)}/edits`, {
         method: "POST",
@@ -334,7 +339,7 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
         body: JSON.stringify({ action: "save", episodeId: episode.id, clips }),
       });
       apply(res);
-      if (!quiet) toast.success("剪辑草稿已保存");
+      if (!quiet) toast.success(tr("ui_edit_edit_draft_saved"));
       return res.edit;
     } catch (error) {
       toast.error(String(error.message || error));
@@ -347,10 +352,10 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
 
   const render = async () => {
     if (!episode || !clips.some((clip) => clip.enabled !== false)) {
-      return toast.error("至少启用一个片段");
+      return toast.error(tr("ui_edit_enable_at_least_one_segment"));
     }
     setRendering(true);
-    setBusyMsg?.("FFmpeg 导出中…");
+    setBusyMsg?.(tr("ui_edit_exporting_with_ffmpeg"));
     try {
       await save(true);
       const res = await api(`/api/projects/${encodeURIComponent(projectId)}/edits`, {
@@ -359,7 +364,7 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
         body: JSON.stringify({ action: "export", episodeId: episode.id }),
       });
       apply(res);
-      toast.success("本集成片已导出");
+      toast.success(tr("ui_edit_episode_cut_exported"));
     } catch (error) {
       toast.error(String(error.message || error));
     } finally {
@@ -428,7 +433,7 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
     updateClip(selectedClip.id, { start, end, enabled: true });
     setDraftStart(start);
     setDraftEnd(end);
-    toast.success(mode === "drop" ? "已按剪掉区间更新入点出点" : "已保存裁剪区间");
+    toast.success(mode === "drop" ? tr("ui_edit_in_out_points_updated_from_the") : tr("ui_edit_trim_range_saved"));
   };
 
   const nudge = (which, delta) => {
@@ -463,21 +468,21 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
       <section className="panel flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between md:p-4">
         <div className="min-w-0">
           <div className="label">Episode desk</div>
-          <h3 className="display-type truncate text-xl font-semibold md:text-2xl">
-            第{episode?.episodeNumber || "—"}集 {episode?.title || "成片编辑"}
+          <h3 className="display-type truncate text-xl font-semibold md:text-2xl">{tr("ui_edit_ep", {
+              0: episode?.episodeNumber || "—"
+            })}{" "}{episode?.title || tr("ui_edit_cut_editor")}
           </h3>
-          <p className="mt-0.5 text-xs text-[var(--muted)]">
-            {enabledClips.length}/{clips.length} 片段 · 连续播放时资产 / 脚本 / 时间轴 / 裁剪区整体联动 · ↑↓ 切换片段 · 空格播放
-          </p>
+          <p className="mt-0.5 text-xs text-[var(--muted)]">{tr("ui_edit_segments_assets_script_timeline_trim_area", {
+              length: enabledClips.length,
+              length2: clips.length
+            })}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <button type="button" className="btn-secondary" disabled={saving || !episode} onClick={() => void save()}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} 保存
-          </button>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{" "}{tr("ui_edit_save")}</button>
           {draft?.outputUrl ? (
-            <button type="button" className="btn-secondary" title="弹窗预览成片" onClick={() => setPreviewFinalOpen(true)}>
-              <Film className="h-4 w-4" /> 查看成片
-            </button>
+            <button type="button" className="btn-secondary" title={tr("ui_edit_preview_cut_in_a_popup")} onClick={() => setPreviewFinalOpen(true)}>
+              <Film className="h-4 w-4" />{" "}{tr("ui_edit_view_cut")}</button>
           ) : null}
           <button
             type="button"
@@ -486,18 +491,18 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
             onClick={() => void render()}
           >
             {rendering ? <Loader2 className="h-4 w-4 animate-spin" /> : <Film className="h-4 w-4" />}
-            {rendering ? "导出中…" : "导出成片"}
+            {rendering ? tr("ui_edit_exporting") : tr("ui_edit_export_cut")}
           </button>
         </div>
       </section>
 
       {!episode ? (
-        <div className="panel py-24 text-center text-sm text-[var(--muted)]">请在左侧选择分集。</div>
+        <div className="panel py-24 text-center text-sm text-[var(--muted)]">{tr("ui_edit_select_an_episode_on_the_left")}</div>
       ) : readyShots.length === 0 ? (
         <div className="panel flex flex-col items-center border-dashed py-24 text-center">
           <Scissors className="mb-4 h-10 w-10 text-[var(--projector)]" />
-          <strong>本集还没有可播放视频</strong>
-          <p className="mt-2 text-sm text-[var(--muted)]">先到分镜步骤生成并选定视频。</p>
+          <strong>{tr("ui_edit_no_playable_video_in_this_episode")}</strong>
+          <p className="mt-2 text-sm text-[var(--muted)]">{tr("ui_edit_generate_and_pick_videos_in_the")}</p>
         </div>
       ) : (
         <>
@@ -505,13 +510,13 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
             {/* ── Asset library ── */}
             <aside className="panel max-h-[min(78vh,860px)] overflow-y-auto p-3">
               <div className="mb-3 flex items-center justify-between">
-                <h4 className="text-sm font-semibold">资产库</h4>
-                <span className="text-[10px] text-[var(--muted)]">随播放高亮</span>
+                <h4 className="text-sm font-semibold">{tr("ui_edit_asset_library")}</h4>
+                <span className="text-[10px] text-[var(--muted)]">{tr("ui_edit_highlights_during_playback")}</span>
               </div>
               {[
-                { kind: "character", label: "角色", list: characters },
-                { kind: "scene", label: "场景", list: scenes },
-                { kind: "prop", label: "物品", list: props },
+                { kind: "character", label: tr("ui_edit_characters"), list: characters },
+                { kind: "scene", label: tr("ui_edit_scenes"), list: scenes },
+                { kind: "prop", label: tr("ui_edit_items"), list: props },
               ].map((block) =>
                 block.list.length ? (
                   <div key={block.kind} className="mb-4">
@@ -555,7 +560,7 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
                   </div>
                 ) : null,
               )}
-              {!episodeEntities.length ? <p className="text-xs text-[var(--muted)]">本集暂无资产</p> : null}
+              {!episodeEntities.length ? <p className="text-xs text-[var(--muted)]">{tr("ui_edit_no_assets_in_this_episode")}</p> : null}
             </aside>
 
             {/* ── Script / shots ── */}
@@ -578,7 +583,9 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
                             ? "bg-[var(--projector)] text-white"
                             : "bg-black/5 text-[var(--muted)] hover:bg-black/10 hover:text-[var(--ink)]"
                         }`}
-                        title={shot?.dialogue || `片段 ${i + 1}`}
+                        title={shot?.dialogue || tr("ui_edit_segment", {
+                          0: i + 1
+                        })}
                       >
                         {i + 1}
                       </button>
@@ -598,43 +605,37 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
                     type="button"
                     className={`rounded-md px-2.5 py-1 text-xs ${scriptTab === "lens" ? "bg-[var(--panel)] font-semibold shadow-sm" : "text-[var(--muted)]"}`}
                     onClick={() => setScriptTab("lens")}
-                  >
-                    镜头
-                  </button>
+                  >{tr("ui_edit_shot")}</button>
                   <button
                     type="button"
                     className={`rounded-md px-2.5 py-1 text-xs ${scriptTab === "original" ? "bg-[var(--panel)] font-semibold shadow-sm" : "text-[var(--muted)]"}`}
                     onClick={() => setScriptTab("original")}
-                  >
-                    原文
-                  </button>
+                  >{tr("ui_edit_source")}</button>
                 </div>
-                <button type="button" className="btn-quiet !min-h-8 !px-2 text-xs" onClick={resetFromShots}>
-                  按分镜重置
-                </button>
+                <button type="button" className="btn-quiet !min-h-8 !px-2 text-xs" onClick={resetFromShots}>{tr("ui_edit_reset_to_storyboard")}</button>
               </div>
 
               <div className="border-b border-[var(--line)] px-4 py-3">
                 <div className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="rounded-md bg-black/50 px-2 py-0.5 font-medium text-white">
-                    片段 {selectedIndex >= 0 ? selectedIndex + 1 : "—"}
-                  </span>
+                  <span className="rounded-md bg-black/50 px-2 py-0.5 font-medium text-white">{tr("ui_edit_segment", {
+                      0: selectedIndex >= 0 ? selectedIndex + 1 : "—"
+                    })}</span>
                   <span className="text-[var(--muted)]">{clipDuration(selectedClip || { start: 0, end: 0 }).toFixed(1)}s</span>
                   <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-600">
-                    {selectedShot?.status === "success" ? "已完成" : selectedShot?.status || "就绪"}
+                    {selectedShot?.status === "success" ? tr("ui_edit_done") : selectedShot?.status || tr("ui_edit_ready")}
                   </span>
                 </div>
                 <div className="mt-2 grid gap-1 text-[12px] text-[var(--muted)] sm:grid-cols-2">
                   <div>
-                    <span className="text-[var(--ink)]/50">地点：</span>
+                    <span className="text-[var(--ink)]/50">{tr("ui_edit_location")}</span>
                     {selectedShot?.sceneName || "—"}
                   </div>
                   <div>
-                    <span className="text-[var(--ink)]/50">时间：</span>
+                    <span className="text-[var(--ink)]/50">{tr("ui_edit_time")}</span>
                     {inferTimeOfDay(selectedShot)}
                   </div>
                   <div className="sm:col-span-2">
-                    <span className="text-[var(--ink)]/50">动作：</span>
+                    <span className="text-[var(--ink)]/50">{tr("ui_edit_action")}</span>
                     {selectedShot?.action || "—"}
                   </div>
                 </div>
@@ -663,13 +664,16 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
                         } ${clip.enabled === false ? "opacity-45" : ""}`}
                       >
                         <div className="mb-2 flex flex-wrap items-center gap-2">
-                          <span className="rounded bg-black/55 px-2 py-0.5 text-[11px] font-semibold text-white">
-                            分镜{shot.shotOrder} · {dur.toFixed(1)}s
-                          </span>
+                          <span className="rounded bg-black/55 px-2 py-0.5 text-[11px] font-semibold text-white">{tr("ui_edit_shot_s", {
+                              shotOrder: shot.shotOrder,
+                              1: dur.toFixed(1)
+                            })}</span>
                           {tlStart != null ? (
-                            <span className="text-[10px] text-[var(--muted)]">时间线 {tlStart.toFixed(1)}s</span>
+                            <span className="text-[10px] text-[var(--muted)]">{tr("ui_edit_timeline_s", {
+                                0: tlStart.toFixed(1)
+                              })}</span>
                           ) : (
-                            <span className="text-[10px] text-[var(--muted)]">已禁用</span>
+                            <span className="text-[10px] text-[var(--muted)]">{tr("ui_edit_disabled")}</span>
                           )}
                           <label
                             className="ml-auto flex items-center gap-1 text-[10px] text-[var(--muted)]"
@@ -679,15 +683,13 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
                               type="checkbox"
                               checked={clip.enabled !== false}
                               onChange={(e) => updateClip(clip.id, { enabled: e.target.checked })}
-                            />
-                            启用
-                          </label>
+                            />{tr("ui_edit_enable")}</label>
                         </div>
 
                         {scriptTab === "lens" ? (
                           <>
                             <PromptWithChips
-                              prompt={shot.prompt || shot.action || "（无镜头提示词）"}
+                              prompt={shot.prompt || shot.action || tr("ui_edit_no_shot_prompt")}
                               entityByName={entityByName}
                               activeNames={active ? activeRefNames : new Set(parseRefNames(shot.prompt || ""))}
                             />
@@ -695,7 +697,7 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
                           </>
                         ) : (
                           <pre className="whitespace-pre-wrap font-sans text-[13px] leading-6 text-[var(--ink)]/85">
-                            {beat || "（无对应原文）"}
+                            {beat || tr("ui_edit_no_matching_source_text")}
                           </pre>
                         )}
                       </article>
@@ -709,9 +711,10 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
             <aside className="space-y-3">
               <div ref={monitorRef} className="overflow-hidden rounded-[18px] bg-[var(--navy)] p-3 text-white">
                 <div className="timecode mb-2 flex items-center justify-between text-[10px] text-white/45">
-                  <span>
-                    片段 {selectedIndex >= 0 ? selectedIndex + 1 : "—"} / {enabledClips.length}
-                  </span>
+                  <span>{tr("ui_edit_segment_2", {
+                      0: selectedIndex >= 0 ? selectedIndex + 1 : "—",
+                      length: enabledClips.length
+                    })}</span>
                   <span>
                     {globalTime.toFixed(1)} / {totalDuration.toFixed(1)}s · {ratio}
                   </span>
@@ -771,7 +774,7 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
                     value={Math.min(globalTime, totalDuration)}
                     onChange={(e) => seekGlobal(Number(e.target.value))}
                     className="w-full accent-[var(--projector)]"
-                    aria-label="整集进度"
+                    aria-label={tr("ui_edit_episode_progress")}
                   />
                   <div className="flex flex-wrap items-center justify-center gap-1.5">
                     <button type="button" className="btn-quiet !min-h-9 !px-2.5 text-white/80" onClick={() => jumpClip(-1)}>
@@ -779,7 +782,7 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
                     </button>
                     <button type="button" className="btn-primary !min-h-9 !rounded-full !px-4" onClick={togglePlay}>
                       {playing ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-                      {playing ? "暂停" : "播放"}
+                      {playing ? tr("ui_edit_pause") : tr("ui_edit_play")}
                     </button>
                     <button type="button" className="btn-quiet !min-h-9 !px-2.5 text-white/80" onClick={() => jumpClip(1)}>
                       <ChevronRight className="h-4 w-4" />
@@ -787,24 +790,20 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
                     <button type="button" className="btn-quiet !min-h-9 !px-2.5 text-white/80" onClick={() => setMuted((m) => !m)}>
                       {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
                     </button>
-                    <button type="button" className="btn-quiet !min-h-9 !px-2.5 text-white/80" onClick={toggleFullscreen} title="全屏">
+                    <button type="button" className="btn-quiet !min-h-9 !px-2.5 text-white/80" onClick={toggleFullscreen} title={tr("ui_edit_fullscreen")}>
                       <Maximize2 className="h-4 w-4" />
                     </button>
                   </div>
                   <div className="flex flex-wrap items-center justify-center gap-4 text-xs text-white/70">
                     <label className="flex items-center gap-1.5">
-                      <input type="checkbox" checked={continuous} onChange={(e) => setContinuous(e.target.checked)} />
-                      连续播放
-                    </label>
+                      <input type="checkbox" checked={continuous} onChange={(e) => setContinuous(e.target.checked)} />{tr("ui_edit_continuous_play")}</label>
                     <label className={`flex items-center gap-1.5 ${bgm?.url ? "" : "opacity-40"}`}>
                       <input
                         type="checkbox"
                         checked={bgmOn && !!bgm?.url}
                         disabled={!bgm?.url}
                         onChange={(e) => setBgmOn(e.target.checked)}
-                      />
-                      配乐
-                    </label>
+                      />{tr("ui_edit_score")}</label>
                   </div>
                 </div>
               </div>
@@ -813,9 +812,9 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
               <div className="panel space-y-3 p-3">
                 <div className="flex flex-wrap gap-1.5">
                   {[
-                    { id: "visual", label: "AI 改画面", enabled: false },
-                    { id: "line", label: "改台词", enabled: false },
-                    { id: "trim", label: "剪一刀", enabled: true },
+                    { id: "visual", label: tr("ui_edit_ai_repaint"), enabled: false },
+                    { id: "line", label: tr("ui_edit_edit_line"), enabled: false },
+                    { id: "trim", label: tr("ui_edit_trim"), enabled: true },
                   ].map((m) => (
                     <button
                       key={m.id}
@@ -842,21 +841,17 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
                         type="button"
                         className="rounded-lg border border-[var(--projector)] bg-[var(--projector)]/10 px-3 py-1.5 font-medium"
                         onClick={() => applyTrim("keep")}
-                      >
-                        留下
-                      </button>
+                      >{tr("ui_edit_keep")}</button>
                       <button
                         type="button"
                         className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[var(--muted)] hover:border-white/30"
                         onClick={() => applyTrim("drop")}
-                      >
-                        剪掉
-                      </button>
+                      >{tr("ui_edit_cut")}</button>
                     </div>
                     <div className="space-y-2 text-xs">
                       <label className="block">
                         <span className="mb-1 flex justify-between text-[var(--muted)]">
-                          <span>起点</span>
+                          <span>{tr("ui_edit_in")}</span>
                           <span className="timecode">{draftStart.toFixed(2)}s</span>
                         </span>
                         <input
@@ -867,12 +862,12 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
                           value={draftStart}
                           onChange={(e) => setDraftStart(Math.min(Number(e.target.value), draftEnd - 0.1))}
                           className="w-full accent-[var(--projector)]"
-                          aria-label="起点"
+                          aria-label={tr("ui_edit_in")}
                         />
                       </label>
                       <label className="block">
                         <span className="mb-1 flex justify-between text-[var(--muted)]">
-                          <span>终点</span>
+                          <span>{tr("ui_edit_out")}</span>
                           <span className="timecode">{draftEnd.toFixed(2)}s</span>
                         </span>
                         <input
@@ -883,27 +878,18 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
                           value={draftEnd}
                           onChange={(e) => setDraftEnd(Math.max(Number(e.target.value), draftStart + 0.1))}
                           className="w-full accent-[var(--projector)]"
-                          aria-label="终点"
+                          aria-label={tr("ui_edit_out")}
                         />
                       </label>
                     </div>
                     <div className="grid grid-cols-2 gap-1.5">
-                      <button type="button" className="btn-quiet !min-h-8 text-xs" onClick={() => nudge("start", -0.5)}>
-                        起点 −0.5s
-                      </button>
-                      <button type="button" className="btn-quiet !min-h-8 text-xs" onClick={() => nudge("start", 0.5)}>
-                        起点 +0.5s
-                      </button>
-                      <button type="button" className="btn-quiet !min-h-8 text-xs" onClick={() => nudge("end", -0.5)}>
-                        终点 −0.5s
-                      </button>
-                      <button type="button" className="btn-quiet !min-h-8 text-xs" onClick={() => nudge("end", 0.5)}>
-                        终点 +0.5s
-                      </button>
+                      <button type="button" className="btn-quiet !min-h-8 text-xs" onClick={() => nudge("start", -0.5)}>{tr("ui_edit_in_0_5s")}</button>
+                      <button type="button" className="btn-quiet !min-h-8 text-xs" onClick={() => nudge("start", 0.5)}>{tr("ui_edit_in_0_5s_2")}</button>
+                      <button type="button" className="btn-quiet !min-h-8 text-xs" onClick={() => nudge("end", -0.5)}>{tr("ui_edit_out_0_5s")}</button>
+                      <button type="button" className="btn-quiet !min-h-8 text-xs" onClick={() => nudge("end", 0.5)}>{tr("ui_edit_out_0_5s_2")}</button>
                     </div>
                     <button type="button" className="btn-secondary w-full !min-h-9 text-xs" onClick={previewTrim}>
-                      <Expand className="h-3.5 w-3.5" /> 预览留下的部分
-                    </button>
+                      <Expand className="h-3.5 w-3.5" />{" "}{tr("ui_edit_preview_the_kept_part")}</button>
                     <button
                       type="button"
                       className="btn-primary w-full !min-h-9 text-xs"
@@ -912,28 +898,25 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
                         void save(true);
                       }}
                     >
-                      <Save className="h-3.5 w-3.5" /> 保存裁剪
-                    </button>
+                      <Save className="h-3.5 w-3.5" />{" "}{tr("ui_edit_save_trim")}</button>
                   </>
                 ) : (
                   <p className="py-6 text-center text-xs text-[var(--muted)]">
-                    {editMode === "visual" ? "AI 改画面" : "改台词"}将在后续版本开放；当前可先用「剪一刀」精修入点出点。
-                  </p>
+                    {editMode === "visual" ? tr("ui_edit_ai_repaint") : tr("ui_edit_edit_line")}{tr("ui_edit_coming_in_a_later_version_for")}</p>
                 )}
               </div>
 
               {draft?.outputUrl ? (
                 <div className="panel p-3">
-                  <div className="label mb-2">已导出成片</div>
+                  <div className="label mb-2">{tr("ui_edit_cut_exported")}</div>
                   <video
                     src={draft.outputUrl}
                     controls
                     preload="metadata"
                     className="aspect-video w-full rounded-xl bg-black object-contain"
                   />
-                  <a href={draft.outputUrl} download={`第${episode.episodeNumber}集.mp4`} className="btn-secondary mt-2 w-full">
-                    <Download className="h-4 w-4" /> 下载
-                  </a>
+                  <a href={draft.outputUrl} download={tr("ui_edit_episode_download_filename", { n: episode.episodeNumber })} className="btn-secondary mt-2 w-full">
+                    <Download className="h-4 w-4" />{" "}{tr("ui_edit_download")}</a>
                 </div>
               ) : null}
             </aside>
@@ -942,9 +925,9 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
           {/* Bottom filmstrip */}
           <section className="panel p-3">
             <div className="mb-2 flex items-center justify-between gap-2">
-              <div className="timecode text-[10px] text-[var(--muted)]">
-                时间轴 · {enabledClips.length} 片段 · 点击跳转 · 播放中自动跟随 · ↑↓ 切换
-              </div>
+              <div className="timecode text-[10px] text-[var(--muted)]">{tr("ui_edit_timeline_segments_click_to_jump_follows", {
+                  length: enabledClips.length
+                })}</div>
               <div className="text-[10px] text-[var(--muted)]">{totalDuration.toFixed(1)}s</div>
             </div>
             <div ref={filmstripRef} className="scrollbar-thin flex gap-2 overflow-x-auto pb-1">
@@ -1003,11 +986,11 @@ export function EditStep({ projectId, bundle, setBusyMsg, onBundle, onRefresh, f
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-2 flex items-center justify-between gap-2 px-0.5">
-              <p className="text-sm font-medium text-white/90">成片预览</p>
+              <p className="text-sm font-medium text-white/90">{tr("ui_edit_cut_preview")}</p>
               <button
                 type="button"
                 className="rounded-full bg-white/10 p-1.5 text-white hover:bg-white/20"
-                aria-label="关闭"
+                aria-label={tr("ui_edit_close")}
                 onClick={() => setPreviewFinalOpen(false)}
               >
                 <X className="h-4 w-4" />

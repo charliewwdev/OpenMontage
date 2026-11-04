@@ -12,6 +12,8 @@ import { toast } from "../../lib/toast";
 import { useTimer } from "../../lib/useTimer";
 import { ConfirmDialog } from "../ConfirmDialog";
 
+import { tr, useLocale } from "../../lib/i18n";
+
 export function StoryboardStep({
   projectId,
   bundle,
@@ -23,6 +25,7 @@ export function StoryboardStep({
   focusEpisodeId,
   onFocusEpisode,
 }) {
+  useLocale();
   const caps = config?.capabilities || {};
   const splitStages = config?.splitStages || [];
   const confirmedEpisodes = useMemo(
@@ -112,7 +115,7 @@ export function StoryboardStep({
     (current, stage, index) => (splitElapsed >= stage.startsAt ? index : current),
     0,
   );
-  const splitStage = splitStages[splitStageIndex] || { title: "处理中", detail: "" };
+  const splitStage = splitStages[splitStageIndex] || { title: tr("ui_storyboard_processing"), detail: "" };
 
   useEffect(() => {
     const currentIds = new Set(shots.map((s) => s.id));
@@ -188,17 +191,17 @@ export function StoryboardStep({
   const split = async () => {
     if (!episode) return;
     if (batching || episodeHasGenerating) {
-      toast.info("请等待本集视频任务完成后再重新拆分");
+      toast.info(tr("ui_storyboard_wait_for_this_episode_s_video"));
       return;
     }
     if (shots.length && !confirmSplit) {
       setConfirmSplit(true);
       return;
     }
-    if (!requireCapability(caps, "deepseek", onNeedKeys, "文本大模型 Key")) return;
+    if (!requireCapability(caps, "deepseek", onNeedKeys, tr("ui_storyboard_text_llm_key"))) return;
     setConfirmSplit(false);
     setSplitting(true);
-    setBusyMsg?.("AI 拆镜中…");
+    setBusyMsg?.(tr("ui_storyboard_ai_is_splitting_shots"));
     try {
       const res = await api(`/api/projects/${encodeURIComponent(projectId)}/storyboard`, {
         method: "POST",
@@ -206,7 +209,9 @@ export function StoryboardStep({
         body: JSON.stringify({ action: "generate", episodeId: episode.id }),
       });
       apply(res);
-      toast.success(`DeepSeek 已拆分 ${res.shots?.length || 0} 个镜头`);
+      toast.success(tr("ui_storyboard_deepseek_split_shots", {
+        0: res.shots?.length || 0
+      }));
     } catch (error) {
       toastMaybeKeys(error, onNeedKeys);
     } finally {
@@ -245,7 +250,7 @@ export function StoryboardStep({
   );
 
   const generateVideo = async (shotId, silent = false, { forceEntityQa = false } = {}) => {
-    if (!requireCapability(caps, "seedance", onNeedKeys, "出片后端（ComfyUI / Seedance）")) return;
+    if (!requireCapability(caps, "seedance", onNeedKeys, tr("ui_storyboard_render_backend_comfyui_seedance"))) return;
     const shot = (bundle?.shots || []).find((s) => s.id === shotId);
     if (!forceEntityQa && shot) {
       const blockers = blockersForShot(shot);
@@ -257,7 +262,7 @@ export function StoryboardStep({
             payload: { shotId },
           });
         }
-        const err = new Error("素材质检未过，已阻断出片");
+        const err = new Error(tr("ui_storyboard_assets_failed_qa_rendering_blocked"));
         err.code = "entity_qa_blocked";
         err.blockers = blockers;
         throw err;
@@ -277,7 +282,7 @@ export function StoryboardStep({
       });
       if (!silent) {
         apply(res);
-        toast.success(forceEntityQa ? "已强制出片（未过检素材仍作参考）" : "出片任务已提交");
+        toast.success(forceEntityQa ? tr("ui_storyboard_force_rendered_assets_that_failed_qa") : tr("ui_storyboard_render_job_submitted"));
       }
       return res;
     } catch (error) {
@@ -287,7 +292,7 @@ export function StoryboardStep({
           mode: "shot",
           payload: { shotId },
         });
-        toast.error("素材质检未过，已阻断出片");
+        toast.error(tr("ui_storyboard_assets_failed_qa_rendering_blocked"));
         return;
       }
       if (!silent) toastMaybeKeys(error, onNeedKeys);
@@ -296,7 +301,7 @@ export function StoryboardStep({
   };
 
   const generateSegment = async (segmentOrder, silent = false, { forceEntityQa = false } = {}) => {
-    if (!requireCapability(caps, "seedance", onNeedKeys, "出片后端（ComfyUI / Seedance）")) return;
+    if (!requireCapability(caps, "seedance", onNeedKeys, tr("ui_storyboard_render_backend_comfyui_seedance"))) return;
     if (!episodeId) return;
     if (!forceEntityQa) {
       const segShots = shots.filter((s) => Number(s.segmentOrder || 0) === Number(segmentOrder));
@@ -319,7 +324,7 @@ export function StoryboardStep({
             payload: { segmentOrder },
           });
         }
-        const err = new Error("素材质检未过，已阻断出片");
+        const err = new Error(tr("ui_storyboard_assets_failed_qa_rendering_blocked"));
         err.code = "entity_qa_blocked";
         err.blockers = blockers;
         throw err;
@@ -342,8 +347,12 @@ export function StoryboardStep({
         apply(res);
         toast.success(
           forceEntityQa
-            ? `片段 ${segmentOrder} 已强制出片`
-            : `片段 ${segmentOrder} 出片已提交（段内多镜合并生成）`,
+            ? tr("ui_storyboard_segment_force_rendered", {
+            segmentOrder: segmentOrder
+          })
+            : tr("ui_storyboard_segment_render_submitted_shots_in_the", {
+            segmentOrder: segmentOrder
+          }),
         );
       }
       return res;
@@ -354,7 +363,7 @@ export function StoryboardStep({
           mode: "segment",
           payload: { segmentOrder },
         });
-        toast.error("素材质检未过，已阻断出片");
+        toast.error(tr("ui_storyboard_assets_failed_qa_rendering_blocked"));
         return;
       }
       if (!silent) toastMaybeKeys(error, onNeedKeys);
@@ -377,7 +386,7 @@ export function StoryboardStep({
       ].sort((a, b) => a - b);
       if (!orders.length) {
         setBatching(false);
-        return toast.info("选中的片段没有可提交任务");
+        return toast.info(tr("ui_storyboard_no_submittable_jobs_in_the_selected"));
       }
       if (!forceEntityQa) {
         const ents = [];
@@ -399,7 +408,11 @@ export function StoryboardStep({
           return;
         }
       }
-      setBusyMsg?.(forceEntityQa ? `强制出片 ${orders.length} 段…` : `按片段提交 ${orders.length} 段…`);
+      setBusyMsg?.(forceEntityQa ? tr("ui_storyboard_force_rendering_segments", {
+        length: orders.length
+      }) : tr("ui_storyboard_submitting_segments", {
+        length: orders.length
+      }));
       try {
         const res = await api(`/api/projects/${encodeURIComponent(projectId)}/storyboard`, {
           method: "POST",
@@ -431,8 +444,15 @@ export function StoryboardStep({
           setForceQaDialog({ blockers: merged, mode: "batch-segments", payload: { orders } });
         }
         await onRefresh?.();
-        if (ok === orders.length) toast.success(`已提交 ${ok}/${orders.length} 个片段`);
-        else toast.error(`片段提交：${ok} 成功，${blocked.length} 质检阻断，${failed.length} 其他失败`);
+        if (ok === orders.length) toast.success(tr("ui_storyboard_submitted_segments", {
+          ok: ok,
+          length: orders.length
+        }));
+        else toast.error(tr("ui_storyboard_segment_submit_succeeded_blocked_by_qa", {
+          ok: ok,
+          length: blocked.length,
+          length2: failed.length
+        }));
       } catch (error) {
         toast.error(String(error.message || error));
       } finally {
@@ -445,7 +465,7 @@ export function StoryboardStep({
     const pending = selected.filter((s) => s.status !== "generating" && (s.prompt || "").trim());
     if (!pending.length) {
       setBatching(false);
-      return toast.info("选中的镜头没有可提交任务");
+      return toast.info(tr("ui_storyboard_no_submittable_jobs_in_the_selected_2"));
     }
     if (!forceEntityQa) {
       const ents = [];
@@ -469,7 +489,11 @@ export function StoryboardStep({
         return;
       }
     }
-    setBusyMsg?.(forceEntityQa ? `强制出片 ${pending.length} 镜…` : `批量提交 ${pending.length} 镜…`);
+    setBusyMsg?.(forceEntityQa ? tr("ui_storyboard_force_rendering_shots", {
+      length: pending.length
+    }) : tr("ui_storyboard_submitting_shots", {
+      length: pending.length
+    }));
     try {
       const res = await api(`/api/projects/${encodeURIComponent(projectId)}/storyboard`, {
         method: "POST",
@@ -504,8 +528,15 @@ export function StoryboardStep({
         });
       }
       await onRefresh?.();
-      if (ok === pending.length) toast.success(`已提交 ${ok}/${pending.length} 个视频任务`);
-      else toast.error(`批量提交：${ok} 成功，${blocked.length} 质检阻断，${failed.length} 其他失败`);
+      if (ok === pending.length) toast.success(tr("ui_storyboard_submitted_video_jobs", {
+        ok: ok,
+        length: pending.length
+      }));
+      else toast.error(tr("ui_storyboard_bulk_submit_succeeded_blocked_by_qa", {
+        ok: ok,
+        length: blocked.length,
+        length2: failed.length
+      }));
     } catch (error) {
       toast.error(String(error.message || error));
     } finally {
@@ -515,11 +546,11 @@ export function StoryboardStep({
   };
 
   const batchGenerate = async () => {
-    if (splitting) return toast.info("请等待分镜拆分完成后再提交视频任务");
+    if (splitting) return toast.info(tr("ui_storyboard_wait_for_the_shot_split_to"));
     const selected = shots.filter((s) => selectedShotIds.has(s.id));
-    if (!selected.length) return toast.info("请先勾选要生成的镜头 / 片段");
+    if (!selected.length) return toast.info(tr("ui_storyboard_tick_the_shots_segments_to_generate"));
     if (selected.some((s) => dirtyShotIds.has(s.id))) {
-      return toast.error("选中项有未保存修改，请先保存后再批量生成");
+      return toast.error(tr("ui_storyboard_selected_items_have_unsaved_changes_save"));
     }
     if (!confirmBatch) {
       setConfirmBatch(true);
@@ -551,27 +582,26 @@ export function StoryboardStep({
         <div className="grid gap-5 min-[1500px]:grid-cols-[480px_minmax(0,1fr)] min-[1500px]:items-end">
           <div className="min-w-0">
             <div className="label">Shot planning & generation</div>
-            <h3 className="display-type text-2xl font-semibold">分镜导演台</h3>
-            <p className="mt-1 text-sm text-[var(--muted)]">
-              先拆「片段」（约 10–15s），段内 3–4 个分镜节拍；出片按片段合并生成。
-            </p>
+            <h3 className="display-type text-2xl font-semibold">{tr("ui_storyboard_storyboard_desk")}</h3>
+            <p className="mt-1 text-sm text-[var(--muted)]">{tr("ui_storyboard_split_into_segments_first_about_10")}</p>
           </div>
           <div className="grid min-w-0 gap-2 sm:grid-cols-2 md:grid-cols-3 min-[1500px]:grid-cols-[minmax(0,1.1fr)_minmax(0,1.3fr)_minmax(88px,.55fr)_auto_auto]">
             <div>
-              <span className="label">当前分集</span>
+              <span className="label">{tr("ui_storyboard_current_episode")}</span>
               <div className="field flex items-center bg-white/[.03] text-sm">
                 {confirmedEpisodes.some((e) => e.id === episodeId) ? (
-                  <span>
-                    第{(confirmedEpisodes.find((e) => e.id === episodeId) || {}).episodeNumber}集 ·{" "}
-                    {(confirmedEpisodes.find((e) => e.id === episodeId) || {}).title || "未命名"}
+                  <span>{tr("ui_storyboard_ep", {
+                      episodeNumber: (confirmedEpisodes.find((e) => e.id === episodeId) || {}).episodeNumber,
+                      1: " "
+                    })}{(confirmedEpisodes.find((e) => e.id === episodeId) || {}).title || tr("ui_storyboard_untitled")}
                   </span>
                 ) : (
-                  <span className="text-white/45">请在左侧选择已定稿分集</span>
+                  <span className="text-white/45">{tr("ui_storyboard_select_a_locked_episode_on_the")}</span>
                 )}
               </div>
             </div>
             <label>
-              <span className="label">视频模型</span>
+              <span className="label">{tr("ui_storyboard_video_model")}</span>
               <select className="field" value={model} disabled={workflowBusy} onChange={(e) => setModel(e.target.value)}>
                 {models.map((item) => (
                   <option key={item.id} value={item.id}>
@@ -581,7 +611,7 @@ export function StoryboardStep({
               </select>
             </label>
             <label>
-              <span className="label">分辨率</span>
+              <span className="label">{tr("ui_storyboard_resolution")}</span>
               <select
                 className="field"
                 value={resolution}
@@ -602,7 +632,9 @@ export function StoryboardStep({
               onClick={() => void split()}
             >
               {splitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              {splitting ? `拆分中 ${splitElapsedTime}` : shots.length ? "重新拆分" : "AI 拆分"}
+              {splitting ? tr("ui_storyboard_splitting", {
+                splitElapsedTime: splitElapsedTime
+              }) : shots.length ? tr("ui_storyboard_re_split") : tr("ui_storyboard_ai_split")}
             </button>
             <button
               type="button"
@@ -610,9 +642,9 @@ export function StoryboardStep({
               disabled={!selectedShotIds.size || workflowBusy}
               onClick={() => void batchGenerate()}
             >
-              {batching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />}
-              批量生成{selectedShotIds.size ? ` (${selectedShotIds.size})` : ""}
-            </button>
+              {batching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />}{tr("ui_storyboard_generate_in_bulk", {
+                0: selectedShotIds.size ? ` (${selectedShotIds.size})` : ""
+              })}</button>
           </div>
         </div>
         {splitting ? (
@@ -623,19 +655,20 @@ export function StoryboardStep({
                   <Loader2 className="h-4 w-4 animate-spin text-[var(--projector)]" />
                 </span>
                 <div className="min-w-0">
-                  <div className="timecode text-[10px] text-[var(--muted)]">
-                    AI 分镜导演 · 阶段 {splitStageIndex + 1}/{splitStages.length || 1}
-                  </div>
+                  <div className="timecode text-[10px] text-[var(--muted)]">{tr("ui_storyboard_ai_storyboard_director_stage", {
+                      0: splitStageIndex + 1,
+                      1: splitStages.length || 1
+                    })}</div>
                   <strong className="mt-1 block text-sm">{splitStage.title}</strong>
-                  <p className="mt-1 text-xs leading-5 text-[var(--muted)]">
-                    {splitStage.detail} 剧本越长，等待时间越久，完成后会自动载入结果。
-                  </p>
+                  <p className="mt-1 text-xs leading-5 text-[var(--muted)]">{tr("ui_storyboard_longer_scripts_take_longer_results_load", {
+                      detail: splitStage.detail
+                    })}</p>
                 </div>
               </div>
               <span className="timecode flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--line)] bg-black/40 px-3 py-2 text-xs text-[var(--ink)]">
-                <Clock3 className="h-3.5 w-3.5 text-[var(--projector)]" />
-                已用时 {splitElapsedTime}
-              </span>
+                <Clock3 className="h-3.5 w-3.5 text-[var(--projector)]" />{tr("ui_storyboard_elapsed", {
+                  splitElapsedTime: splitElapsedTime
+                })}</span>
             </div>
             <div className="mt-4 grid grid-cols-5 gap-1.5" aria-hidden="true">
               {splitStages.map((stage, index) => (
@@ -650,17 +683,17 @@ export function StoryboardStep({
       </section>
 
       {!episode || !confirmedEpisodes.some((e) => e.id === episodeId) ? (
-        <div className="panel py-24 text-center text-sm text-[var(--muted)]">
-          请先在剧本步骤创建并定稿分集，再于左侧选择该集进入分镜。
-        </div>
+        <div className="panel py-24 text-center text-sm text-[var(--muted)]">{tr("ui_storyboard_create_and_lock_episodes_in_the")}</div>
       ) : shots.length === 0 ? (
         <div className="panel flex flex-col items-center border-dashed py-24 text-center">
           <Clapperboard className="mb-4 h-10 w-10 text-[var(--projector)]" />
-          <strong className="text-lg">本集还没有分镜</strong>
-          <p className="mt-2 text-sm text-[var(--muted)]">确认剧本和素材后，让 DeepSeek 拆成可生成的视频镜头。</p>
+          <strong className="text-lg">{tr("ui_storyboard_no_shots_in_this_episode_yet")}</strong>
+          <p className="mt-2 text-sm text-[var(--muted)]">{tr("ui_storyboard_once_the_script_and_assets_are")}</p>
           <button type="button" className="btn-primary mt-5" disabled={workflowBusy} onClick={() => void split()}>
             {splitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            {splitting ? `拆分中 · ${splitElapsedTime}` : "AI 拆分本集"}
+            {splitting ? tr("ui_storyboard_splitting_2", {
+              splitElapsedTime: splitElapsedTime
+            }) : tr("ui_storyboard_ai_split_this_episode")}
           </button>
         </div>
       ) : (
@@ -668,8 +701,11 @@ export function StoryboardStep({
           <div className="panel-muted flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-xs text-[var(--muted)]">
             <span>
               {hasSegmentLayout
-                ? `本集 ${segments.length} 片段 · ${shots.length} 拍 · 勾选后按片段批量出片`
-                : "勾选需要一起提交的镜头；有未保存修改时会阻止批量生成。"}
+                ? tr("ui_storyboard_segments_beats_in_this_episode_tick", {
+                length: segments.length,
+                length2: shots.length
+              })
+                : tr("ui_storyboard_tick_the_shots_to_submit_together")}
             </span>
             <button
               type="button"
@@ -681,7 +717,7 @@ export function StoryboardStep({
                 )
               }
             >
-              {selectedShotIds.size === shots.length ? "清空选择" : "全选本集"}
+              {selectedShotIds.size === shots.length ? tr("ui_storyboard_clear_selection") : tr("ui_storyboard_select_all_in_episode")}
             </button>
           </div>
           {hasSegmentLayout
@@ -693,24 +729,23 @@ export function StoryboardStep({
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <strong className="text-sm">片段 {seg.segmentOrder}</strong>
-                          <span className="timecode rounded-md border border-white/10 px-2 py-0.5 text-[10px] text-white/55">
-                            {seg.duration}s · {seg.shots.length} 镜
-                          </span>
+                          <strong className="text-sm">{tr("ui_storyboard_segment", {
+                              segmentOrder: seg.segmentOrder
+                            })}</strong>
+                          <span className="timecode rounded-md border border-white/10 px-2 py-0.5 text-[10px] text-white/55">{tr("ui_storyboard_s_shots", {
+                              duration: seg.duration,
+                              length: seg.shots.length
+                            })}</span>
                           {segReady ? (
-                            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-300">
-                              已完成
-                            </span>
+                            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] text-emerald-300">{tr("ui_storyboard_done")}</span>
                           ) : segGenerating ? (
-                            <span className="rounded-full border border-[var(--projector)]/30 bg-[var(--projector)]/10 px-2 py-0.5 text-[10px] text-[var(--projector)]">
-                              生成中
-                            </span>
+                            <span className="rounded-full border border-[var(--projector)]/30 bg-[var(--projector)]/10 px-2 py-0.5 text-[10px] text-[var(--projector)]">{tr("ui_storyboard_generating")}</span>
                           ) : null}
                         </div>
                         <p className="mt-1 text-xs text-white/45">
                           {[seg.lead?.location || seg.lead?.sceneName, seg.lead?.timeOfDay, seg.lead?.weather]
                             .filter(Boolean)
-                            .join(" · ") || "未写地点"}
+                            .join(" · ") || tr("ui_storyboard_no_location")}
                         </p>
                         {seg.lead?.openingState ? (
                           <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-white/35">
@@ -735,7 +770,7 @@ export function StoryboardStep({
                             })
                           }
                         >
-                          {seg.shots.every((s) => selectedShotIds.has(s.id)) ? "取消本段" : "勾选本段"}
+                          {seg.shots.every((s) => selectedShotIds.has(s.id)) ? tr("ui_storyboard_untick_segment") : tr("ui_storyboard_tick_segment")}
                         </button>
                         <button
                           type="button"
@@ -743,9 +778,7 @@ export function StoryboardStep({
                           disabled={workflowBusy || segGenerating}
                           onClick={() => void generateSegment(seg.segmentOrder)}
                         >
-                          {segGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Video className="h-3.5 w-3.5" />}
-                          生成本段
-                        </button>
+                          {segGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Video className="h-3.5 w-3.5" />}{tr("ui_storyboard_generate_segment")}</button>
                       </div>
                     </div>
                     <div className="space-y-3">
@@ -808,41 +841,44 @@ export function StoryboardStep({
             disabled={workflowBusy}
             onClick={() => void add()}
           >
-            <Plus className="mr-2 h-4 w-4" /> 手动追加镜头
-          </button>
+            <Plus className="mr-2 h-4 w-4" />{" "}{tr("ui_storyboard_add_shot_manually")}</button>
         </div>
       )}
 
       <ConfirmDialog
         open={confirmSplit}
-        title="重新拆分本集分镜？"
-        message="本集现有镜头、视频版本记录和剪辑草稿将被替换；本地视频与已导出文件仍会保留。"
-        confirmLabel="重新拆分"
+        title={tr("ui_storyboard_re_split_this_episode_s_storyboard")}
+        message={tr("ui_storyboard_this_episode_s_shots_video_version")}
+        confirmLabel={tr("ui_storyboard_re_split")}
         onCancel={() => setConfirmSplit(false)}
         onConfirm={() => void split()}
       />
       <ConfirmDialog
         open={confirmBatch}
-        title={hasSegmentLayout ? "按片段提交出片？" : `提交 ${selectedShotIds.size} 个视频任务？`}
+        title={hasSegmentLayout ? tr("ui_storyboard_submit_renders_by_segment") : tr("ui_storyboard_submit_video_jobs", {
+          size: selectedShotIds.size
+        })}
         message={
           hasSegmentLayout
-            ? "将对勾选镜头所属的片段各提交一次合并出片（段内多镜合成一段视频），每组最多 2 个片段并发。引用素材未过质检时会先阻断。"
-            : "任务将按每组 2 个控制并发，提交后可在分镜列表查看进度。引用素材未过质检时会先阻断。"
+            ? tr("ui_storyboard_submits_one_merged_render_for_each")
+            : tr("ui_storyboard_jobs_run_2_at_a_time")
         }
-        confirmLabel="确认提交"
+        confirmLabel={tr("ui_storyboard_confirm_submit")}
         onCancel={() => setConfirmBatch(false)}
         onConfirm={() => void batchGenerate()}
       />
       <ConfirmDialog
         open={Boolean(forceQaDialog)}
-        title="素材质检未过，已阻断出片"
+        title={tr("ui_storyboard_assets_failed_qa_rendering_blocked")}
         message={
           forceQaDialog
-            ? `${formatEntityQaBlockers(forceQaDialog.blockers)}\n\n建议先重生/复核上述素材。强制出片仍会使用未过检参考图。`
+            ? tr("ui_storyboard_regenerate_review_the_assets_above_first", {
+            0: formatEntityQaBlockers(forceQaDialog.blockers)
+          })
             : ""
         }
-        confirmLabel="强制出片"
-        cancelLabel="先去修素材"
+        confirmLabel={tr("ui_storyboard_force_render")}
+        cancelLabel={tr("ui_storyboard_fix_assets_first")}
         danger
         maxWidthClass="max-w-lg"
         onCancel={() => setForceQaDialog(null)}
@@ -867,6 +903,7 @@ function ShotCard({
   onRefresh,
   onGenerate,
 }) {
+  useLocale();
   const [prompt, setPrompt] = useState(shot.prompt || "");
   const [duration, setDuration] = useState(shot.duration || 5);
   const [referenceIds, setReferenceIds] = useState(shot.referenceEntityIds || []);
@@ -915,7 +952,9 @@ function ShotCard({
         }),
       });
       apply(res);
-      if (!quiet) toast.success(`镜头 ${shot.shotOrder} 已保存`);
+      if (!quiet) toast.success(tr("ui_storyboard_shot_saved", {
+        shotOrder: shot.shotOrder
+      }));
     } catch (error) {
       toast.error(String(error.message || error));
       throw error;
@@ -943,7 +982,7 @@ function ShotCard({
         body: JSON.stringify({ action: "cancel-video", shotId: shot.id }),
       });
       apply(res);
-      toast.success("已取消生成，可重新提交");
+      toast.success(tr("ui_storyboard_generation_cancelled_you_can_resubmit"));
     } catch (error) {
       toast.error(String(error.message || error));
     }
@@ -1013,27 +1052,27 @@ function ShotCard({
           <div className="p-5">
             <div className="flex flex-wrap items-center gap-3">
               <label className="flex cursor-pointer items-center gap-2 text-xs font-semibold">
-                <input type="checkbox" checked={selected} disabled={locked} onChange={onToggleSelected} /> 批量选择
-              </label>
+                <input type="checkbox" checked={selected} disabled={locked} onChange={onToggleSelected} />{" "}{tr("ui_storyboard_select_in_bulk")}</label>
               <span className="timecode rounded-md bg-[var(--navy)] px-2.5 py-1 text-xs text-white">
                 {compact && shot.segmentOrder
-                  ? `片段${shot.segmentOrder} · 分镜${shot.beatIndex || shot.shotOrder}`
+                  ? tr("ui_storyboard_segment_shot", {
+                  segmentOrder: shot.segmentOrder,
+                  1: shot.beatIndex || shot.shotOrder
+                })
                   : `SHOT ${String(shot.shotOrder).padStart(2, "0")}`}
               </span>
               <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${statusStyle}`}>
                 {shot.status === "success"
-                  ? "已完成"
+                  ? tr("ui_storyboard_done")
                   : shot.status === "stale"
-                    ? "已过期"
+                    ? tr("ui_storyboard_outdated")
                     : shot.status === "generating"
-                      ? "生成中"
+                      ? tr("ui_storyboard_generating")
                       : shot.status === "failed"
-                        ? "失败"
-                        : "待生成"}
+                        ? tr("ui_storyboard_failed")
+                        : tr("ui_storyboard_not_generated")}
               </span>
-              <label className="ml-auto flex items-center gap-2 text-xs text-[var(--muted)]">
-                时长
-                <input
+              <label className="ml-auto flex items-center gap-2 text-xs text-[var(--muted)]">{tr("ui_storyboard_duration")}<input
                   type="number"
                   min={2}
                   max={15}
@@ -1041,22 +1080,20 @@ function ShotCard({
                   value={duration}
                   disabled={editLocked}
                   onChange={(e) => setDuration(Math.max(2, Math.min(15, Number(e.target.value) || 3)))}
-                />
-                秒
-              </label>
+                />{tr("ui_storyboard_s")}</label>
             </div>
             <label className="mt-4 block">
-              <span className="label">Seedance 提示词</span>
+              <span className="label">{tr("ui_storyboard_seedance_prompt")}</span>
               <textarea
                 className="field min-h-56 resize-y leading-6 md:min-h-72"
                 value={prompt}
                 disabled={editLocked}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="主体、动作、台词、景别、运镜、光线与声音…"
+                placeholder={tr("ui_storyboard_subject_action_lines_framing_camera_lighting")}
               />
             </label>
             <div className="mt-4">
-              <div className="label">参考素材 · 最多 9 张</div>
+              <div className="label">{tr("ui_storyboard_reference_assets_up_to_9")}</div>
               <div className="flex flex-wrap gap-2">
                 {entities.map((entity) => {
                   const on = referenceIds.includes(entity.id);
@@ -1082,9 +1119,7 @@ function ShotCard({
                       {thumb ? (
                         <img src={thumb} alt="" className="h-7 w-7 rounded object-cover" />
                       ) : (
-                        <span className="flex h-7 w-7 items-center justify-center rounded bg-black/40 text-[9px] text-white/40">
-                          无图
-                        </span>
+                        <span className="flex h-7 w-7 items-center justify-center rounded bg-black/40 text-[9px] text-white/40">{tr("ui_storyboard_no_image")}</span>
                       )}
                       <span>
                         {entity.name}
@@ -1094,13 +1129,13 @@ function ShotCard({
                   );
                 })}
                 {!entities.length ? (
-                  <span className="text-xs text-[var(--muted)]">本集暂无已定稿图片，仍可纯文本生成。</span>
+                  <span className="text-xs text-[var(--muted)]">{tr("ui_storyboard_no_locked_images_in_this_episode")}</span>
                 ) : null}
               </div>
             </div>
             {isStale || shot.staleReason ? (
               <p className="mt-3 rounded-lg bg-amber-500/15 px-3 py-2 text-xs text-amber-200">
-                {shot.staleReason || "上游已变更，当前视频可能过期。请保存后重新生成分镜视频。"}
+                {shot.staleReason || tr("ui_storyboard_upstream_changed_the_current_video_may")}
               </p>
             ) : null}
             {shot.error ? (
@@ -1113,8 +1148,7 @@ function ShotCard({
                 disabled={locked || !dirty || saving || shot.status === "generating"}
                 onClick={() => void save()}
               >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} 保存镜头
-              </button>
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{" "}{tr("ui_storyboard_save_shot")}</button>
               <button
                 type="button"
                 className="btn-primary"
@@ -1126,7 +1160,7 @@ function ShotCard({
                 ) : (
                   <Video className="h-4 w-4" />
                 )}
-                {shot.selectedVideo ? "再生成一个版本" : "生成分镜视频"}
+                {shot.selectedVideo ? tr("ui_storyboard_generate_another_version") : tr("ui_storyboard_generate_shot_video")}
               </button>
               {shot.status === "generating" ? (
                 <button
@@ -1134,9 +1168,7 @@ function ShotCard({
                   className="btn-secondary"
                   disabled={locked}
                   onClick={() => void cancelGenerate()}
-                >
-                  取消卡住任务
-                </button>
+                >{tr("ui_storyboard_cancel_stuck_job")}</button>
               ) : null}
               <button
                 type="button"
@@ -1144,8 +1176,7 @@ function ShotCard({
                 disabled={locked || shot.status === "generating"}
                 onClick={() => void remove()}
               >
-                <Trash2 className="h-4 w-4" /> 删除
-              </button>
+                <Trash2 className="h-4 w-4" />{" "}{tr("ui_storyboard_delete")}</button>
             </div>
           </div>
           <div className="border-t border-[var(--line)] bg-[var(--navy)] p-4 text-white xl:border-l xl:border-t-0">
@@ -1175,14 +1206,10 @@ function ShotCard({
                 </>
               ) : shot.status === "generating" ? (
                 <div className="text-center text-xs text-white/60">
-                  <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin text-[var(--projector)]" />
-                  Seedance 正在制作
-                </div>
+                  <Loader2 className="mx-auto mb-2 h-6 w-6 animate-spin text-[var(--projector)]" />{tr("ui_storyboard_seedance_is_rendering")}</div>
               ) : (
                 <div className="px-4 text-center text-xs leading-5 text-white/45">
-                  <Video className="mx-auto mb-2 h-10 w-10 text-white/15" />
-                  本镜尚未生成视频（0 VERSIONS）。点左侧「生成分镜视频」才会出片；切页不会抹掉已生成的 TAKE。
-                </div>
+                  <Video className="mx-auto mb-2 h-10 w-10 text-white/15" />{tr("ui_storyboard_no_video_generated_for_this_shot")}</div>
               )}
             </div>
             {completeVideos.length > 0 ? (
@@ -1210,12 +1237,13 @@ function ShotCard({
                   <strong className="block text-white">
                     {models.find((m) => m.id === activeVideo.model)?.name || activeVideo.model || "Seedance"}
                   </strong>
-                  <span>
-                    {activeVideo.resolution || "—"} ·{" "}
-                    {Number(activeVideo.duration || shot.duration || 0).toFixed(1)} 秒
-                  </span>
+                  <span>{tr("ui_storyboard_s_2", {
+                      0: activeVideo.resolution || "—",
+                      1: " ",
+                      2: Number(activeVideo.duration || shot.duration || 0).toFixed(1)
+                    })}</span>
                 </div>
-                <div className="flex items-center gap-1" aria-label="视频版本评分">
+                <div className="flex items-center gap-1" aria-label={tr("ui_storyboard_rate_video_version")}>
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
                       key={star}
@@ -1227,7 +1255,9 @@ function ShotCard({
                           rating: activeVideo.rating === star ? null : star,
                         })
                       }
-                      aria-label={`${star} 星`}
+                      aria-label={tr("ui_storyboard_stars", {
+                        star: star
+                      })}
                     >
                       ★
                     </button>
@@ -1238,7 +1268,7 @@ function ShotCard({
                   defaultValue={activeVideo.note || ""}
                   disabled={editLocked}
                   maxLength={200}
-                  placeholder="给这个版本添加备注…"
+                  placeholder={tr("ui_storyboard_add_a_note_for_this_version")}
                   onBlur={(event) => {
                     const note = event.target.value.trim();
                     if (note !== (activeVideo.note || "")) void updateVideo(activeVideo.id, { note });
@@ -1251,9 +1281,11 @@ function ShotCard({
       </article>
       <ConfirmDialog
         open={confirmDelete}
-        title={`删除镜头 ${shot.shotOrder}？`}
-        message="该镜头及其视频版本记录将被删除；本地视频文件仍会保留。"
-        confirmLabel="删除镜头"
+        title={tr("ui_storyboard_delete_shot", {
+          shotOrder: shot.shotOrder
+        })}
+        message={tr("ui_storyboard_this_shot_and_its_video_version")}
+        confirmLabel={tr("ui_storyboard_delete_shot_2")}
         danger
         onCancel={() => setConfirmDelete(false)}
         onConfirm={() => void remove()}

@@ -19,6 +19,8 @@ import { api } from "../../api";
 import { toast } from "../../lib/toast";
 import { PageShell } from "./PageShell";
 
+import { tr, useLocale } from "../../lib/i18n";
+
 function fmtUsd(n) {
   const v = Number(n) || 0;
   if (v < 0.01) return `$${v.toFixed(4)}`;
@@ -41,6 +43,7 @@ function latencyBadge(ms) {
 }
 
 function LineChart({ labels, series, height = 160 }) {
+  useLocale();
   const width = 640;
   const pad = 24;
   const maxY = Math.max(1, ...series.flatMap((s) => s.data));
@@ -48,9 +51,7 @@ function LineChart({ labels, series, height = 160 }) {
   const toX = (i) => pad + (i * (width - pad * 2)) / Math.max(1, n - 1);
   const toY = (v) => height - pad - ((v || 0) / maxY) * (height - pad * 2);
   if (!labels.length) {
-    return (
-      <div className="flex h-40 items-center justify-center text-sm text-[var(--muted)]">暂无数据</div>
-    );
+    return (<div className="flex h-40 items-center justify-center text-sm text-[var(--muted)]">{tr("ui_keys_settings_no_data")}</div>);
   }
   return (
     <svg viewBox={`0 0 ${width} ${height}`} className="h-40 w-full">
@@ -79,6 +80,7 @@ function LineChart({ labels, series, height = 160 }) {
 }
 
 function ProviderEditor({ open, catalog, initial, onClose, onSave }) {
+  useLocale();
   const presets = catalog || [];
   const [presetId, setPresetId] = useState(initial?.id || presets[0]?.id || "custom");
   const preset = presets.find((p) => p.id === presetId) || presets[0];
@@ -114,7 +116,7 @@ function ProviderEditor({ open, catalog, initial, onClose, onSave }) {
       if (preset.modelEnv) payload[preset.modelEnv] = model;
       if (apiKey.trim()) payload[preset.keyEnv] = apiKey.trim();
       else if (!initial?.configured) {
-        toast.error("请填写 API Key");
+        toast.error(tr("ui_keys_settings_please_enter_an_api_key"));
         setSaving(false);
         return;
       }
@@ -135,14 +137,14 @@ function ProviderEditor({ open, catalog, initial, onClose, onSave }) {
     >
       <div className="panel w-full max-w-lg space-y-4 p-5 shadow-float" role="dialog" aria-modal="true">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">{initial ? "编辑供应商" : "添加供应商"}</h3>
+          <h3 className="text-lg font-semibold">{initial ? tr("ui_keys_settings_edit_provider") : tr("ui_keys_settings_add_provider")}</h3>
           <button type="button" className="btn-ghost p-1" onClick={onClose}>
             <X className="h-4 w-4" />
           </button>
         </div>
         {!initial ? (
           <label>
-            <span className="label">预设</span>
+            <span className="label">{tr("ui_keys_settings_preset")}</span>
             <select className="field" value={presetId} onChange={(e) => setPresetId(e.target.value)}>
               {presets.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -155,12 +157,14 @@ function ProviderEditor({ open, catalog, initial, onClose, onSave }) {
           <div className="text-sm text-[var(--muted)]">{initial.label}</div>
         )}
         <label>
-          <span className="label">API Key {initial?.configured ? `· 已配置 ${initial.masked}` : ""}</span>
+          <span className="label">API Key {initial?.configured ? tr("ui_keys_settings_configured_3", {
+            masked: initial.masked
+          }) : ""}</span>
           <input
             className="field"
             type="password"
             autoComplete="off"
-            placeholder={initial?.configured ? "留空则保留现有 Key" : preset?.placeholder || "sk-..."}
+            placeholder={initial?.configured ? tr("ui_keys_settings_leave_empty_to_keep_the_current") : preset?.placeholder || "sk-..."}
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
           />
@@ -189,14 +193,14 @@ function ProviderEditor({ open, catalog, initial, onClose, onSave }) {
                     {m.label || m.id}
                   </option>
                 ))}
-                <option value="__custom__">自定义模型 ID…</option>
+                <option value="__custom__">{tr("ui_keys_settings_custom_model_id")}</option>
               </select>
               {!(preset.models || []).some((m) => m.id === model) ? (
                 <input
                   className="field"
                   value={model}
                   onChange={(e) => setModel(e.target.value)}
-                  placeholder="自定义模型 ID"
+                  placeholder={tr("ui_keys_settings_custom_model_id_2")}
                 />
               ) : null}
             </div>
@@ -206,18 +210,12 @@ function ProviderEditor({ open, catalog, initial, onClose, onSave }) {
         </label>
         {preset?.hint ? <p className="text-[11px] leading-4 text-white/45">{preset.hint}</p> : null}
         {preset?.docs ? (
-          <a className="text-xs text-[#a5b4fc] hover:underline" href={preset.docs} target="_blank" rel="noreferrer">
-            打开渠道文档 / 控制台
-          </a>
+          <a className="text-xs text-[#a5b4fc] hover:underline" href={preset.docs} target="_blank" rel="noreferrer">{tr("ui_keys_settings_open_provider_docs_console")}</a>
         ) : null}
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" className="btn-secondary" onClick={onClose}>
-            取消
-          </button>
+          <button type="button" className="btn-secondary" onClick={onClose}>{tr("ui_keys_settings_cancel")}</button>
           <button type="button" className="btn-primary" disabled={saving} onClick={() => void submit()}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            保存并启用
-          </button>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{tr("ui_keys_settings_save_and_enable")}</button>
         </div>
       </div>
     </div>,
@@ -226,10 +224,12 @@ function ProviderEditor({ open, catalog, initial, onClose, onSave }) {
 }
 
 function SectionLabel({ children }) {
+  useLocale();
   return <p className="mb-2 mt-1 text-[11px] uppercase tracking-[0.08em] text-white/35">{children}</p>;
 }
 
 function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
+  useLocale();
   const providers = status?.llmProviders || catalog || [];
   const active = status?.llmBackend || status?.llmProvider || "";
   const [editor, setEditor] = useState(null);
@@ -242,7 +242,7 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
       body: JSON.stringify(payload),
     });
     onUpdated?.(data);
-    toast.success("已保存");
+    toast.success(tr("ui_keys_settings_saved"));
     return data;
   };
 
@@ -281,7 +281,9 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
     setBusyId(p.id);
     try {
       await savePayload({ [p.keyEnv]: "" });
-      toast.success(`已清空 ${p.label}`);
+      toast.success(tr("ui_keys_settings_cleared", {
+        label: p.label
+      }));
     } catch (e) {
       toast.error(String(e.message || e));
     } finally {
@@ -307,11 +309,9 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="truncate text-[15px] font-semibold tracking-tight">{p.label}</h3>
-            {isActive ? <span className="provider-badge-active">使用中</span> : null}
+            {isActive ? <span className="provider-badge-active">{tr("ui_keys_settings_in_use")}</span> : null}
             {!p.configured ? (
-              <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] text-[var(--muted)]">
-                未配置
-              </span>
+              <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] text-[var(--muted)]">{tr("ui_keys_settings_not_configured")}</span>
             ) : null}
           </div>
           <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[var(--muted)]">
@@ -326,7 +326,7 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
                 {p.baseUrl || p.docs}
               </a>
             ) : (
-              <span className="truncate">{p.baseUrl || "未配置接口地址"}</span>
+              <span className="truncate">{p.baseUrl || tr("ui_keys_settings_no_endpoint_configured")}</span>
             )}
             <span>·</span>
             <span>{p.model || "—"}</span>
@@ -340,7 +340,7 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
           {p.hint ? <p className="mt-1 text-[11px] leading-4 text-white/40">{p.hint}</p> : null}
           {p.configured && (p.models || []).length ? (
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <span className="text-[11px] text-white/35">切换模型</span>
+              <span className="text-[11px] text-white/35">{tr("ui_keys_settings_switch_model")}</span>
               <select
                 className="field !min-h-[30px] !w-auto !max-w-[min(100%,280px)] !py-1 !text-xs"
                 value={p.model || ""}
@@ -353,7 +353,9 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
                   </option>
                 ))}
                 {p.model && !(p.models || []).some((m) => m.id === p.model) ? (
-                  <option value={p.model}>{p.model}（当前）</option>
+                  <option value={p.model}>{tr("ui_keys_settings_current", {
+                      model: p.model
+                    })}</option>
                 ) : null}
               </select>
             </div>
@@ -366,16 +368,16 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
             className={`provider-icon-btn ${isActive ? "provider-icon-btn-done" : "provider-icon-btn-primary"}`}
             disabled={busyId === p.id || isActive}
             onClick={() => void enable(p)}
-            title={isActive ? "当前启用" : "启用"}
+            title={isActive ? tr("ui_keys_settings_active") : tr("ui_keys_settings_enable")}
           >
             {busyId === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
-            <span className="hidden sm:inline">{isActive ? "已启用" : "启用"}</span>
+            <span className="hidden sm:inline">{isActive ? tr("ui_keys_settings_enabled") : tr("ui_keys_settings_enable")}</span>
           </button>
-          <button type="button" className="provider-icon-btn" onClick={() => setEditor(p)} title="编辑">
+          <button type="button" className="provider-icon-btn" onClick={() => setEditor(p)} title={tr("ui_keys_settings_edit")}>
             <Pencil className="h-3.5 w-3.5" />
           </button>
           {p.docs ? (
-            <a href={p.docs} target="_blank" rel="noreferrer" className="provider-icon-btn" title="文档">
+            <a href={p.docs} target="_blank" rel="noreferrer" className="provider-icon-btn" title={tr("ui_keys_settings_docs")}>
               <ExternalLink className="h-3.5 w-3.5" />
             </a>
           ) : null}
@@ -384,7 +386,7 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
             className="provider-icon-btn"
             disabled={busyId === p.id || !p.configured || isActive}
             onClick={() => void clearKey(p)}
-            title={isActive ? "请先切换到其他供应商再清空" : "清空 Key"}
+            title={isActive ? tr("ui_keys_settings_switch_to_another_provider_before_clearing") : tr("ui_keys_settings_clear_key")}
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>
@@ -399,26 +401,22 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
       <div className="provider-card-icon">N</div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-[15px] font-semibold">NVIDIA 开源出图</h3>
-          <span className="text-xs text-[var(--muted)]">FLUX schnell / klein · 试用额度</span>
+          <h3 className="text-[15px] font-semibold">{tr("ui_keys_settings_nvidia_open_source_images")}</h3>
+          <span className="text-xs text-[var(--muted)]">{tr("ui_keys_settings_flux_schnell_klein_trial_quota")}</span>
           {nvidiaConfigured ? (
-            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">
-              已配置
-            </span>
+            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">{tr("ui_keys_settings_configured")}</span>
           ) : (
-            <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] text-[var(--muted)]">
-              未配置
-            </span>
+            <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] text-[var(--muted)]">{tr("ui_keys_settings_not_configured")}</span>
           )}
-          {status?.imageBackend === "nvidia" ? <span className="provider-badge-active">出图使用中</span> : null}
+          {status?.imageBackend === "nvidia" ? <span className="provider-badge-active">{tr("ui_keys_settings_used_for_images")}</span> : null}
         </div>
-        <p className="mt-1 text-[11px] leading-4 text-white/40">
-          到{" "}
-          <a className="text-[#a5b4fc] hover:underline" href="https://build.nvidia.com/settings" target="_blank" rel="noreferrer">
+        <p className="mt-1 text-[11px] leading-4 text-white/40">{tr("ui_keys_settings_get_a_trial_key_at", {
+            0: " "
+          })}<a className="text-[#a5b4fc] hover:underline" href="https://build.nvidia.com/settings" target="_blank" rel="noreferrer">
             build.nvidia.com
-          </a>{" "}
-          领取试用 Key。保存后在顶部出图模型里选 FLUX.1 schnell。
-        </p>
+          </a>{tr("ui_keys_settings_after_saving_choose_flux_1_schnell", {
+            0: " "
+          })}</p>
         <div className="mt-3">
           <NvidiaKeyCard status={status} onUpdated={onUpdated} />
         </div>
@@ -428,22 +426,18 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
 
   const volcSection = (
     <section className="provider-card !items-stretch !flex-col gap-3 sm:!flex-row sm:!items-center">
-      <div className="provider-card-icon">火</div>
+      <div className="provider-card-icon">{tr("ui_keys_settings_v")}</div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <h3 className="text-[15px] font-semibold">火山方舟</h3>
-          <span className="text-xs text-[var(--muted)]">Seedream 出图 · Seedance 出片</span>
+          <h3 className="text-[15px] font-semibold">{tr("ui_keys_settings_volcengine_ark")}</h3>
+          <span className="text-xs text-[var(--muted)]">{tr("ui_keys_settings_seedream_images_seedance_video")}</span>
           {volcConfigured ? (
-            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">
-              已配置
-            </span>
+            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">{tr("ui_keys_settings_configured")}</span>
           ) : (
-            <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] text-[var(--muted)]">
-              未配置
-            </span>
+            <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] text-[var(--muted)]">{tr("ui_keys_settings_not_configured")}</span>
           )}
-          {status?.imageBackend === "seedream" ? <span className="provider-badge-active">出图使用中</span> : null}
-          {status?.videoBackend === "seedance" ? <span className="provider-badge-active">出片使用中</span> : null}
+          {status?.imageBackend === "seedream" ? <span className="provider-badge-active">{tr("ui_keys_settings_used_for_images")}</span> : null}
+          {status?.videoBackend === "seedance" ? <span className="provider-badge-active">{tr("ui_keys_settings_used_for_video")}</span> : null}
         </div>
         <div className="mt-3">
           <VolcCard status={status} onUpdated={onUpdated} />
@@ -458,31 +452,24 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-[15px] font-semibold">ComfyUI</h3>
-          <span className="text-xs text-[var(--muted)]">本机 / 局域网 / 智川云租机 · 出图 + 出片</span>
+          <span className="text-xs text-[var(--muted)]">{tr("ui_keys_settings_local_lan_zhichuan_cloud_rental_images")}</span>
           {status?.comfyui?.reachable ? (
-            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">
-              已连通{status.comfyui.deviceName ? ` · ${status.comfyui.deviceName}` : ""}
-            </span>
+            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">{tr("ui_keys_settings_connected", {
+                0: status.comfyui.deviceName ? ` · ${status.comfyui.deviceName}` : ""
+              })}</span>
           ) : comfyConfigured ? (
-            <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] text-amber-300">
-              已配置未连通
-            </span>
+            <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] text-amber-300">{tr("ui_keys_settings_configured_not_connected")}</span>
           ) : (
-            <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] text-[var(--muted)]">
-              未配置
-            </span>
+            <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] text-[var(--muted)]">{tr("ui_keys_settings_not_configured")}</span>
           )}
-          {status?.imageBackend === "comfyui" ? <span className="provider-badge-active">出图使用中</span> : null}
-          {status?.videoBackend === "comfyui" ? <span className="provider-badge-active">出片使用中</span> : null}
+          {status?.imageBackend === "comfyui" ? <span className="provider-badge-active">{tr("ui_keys_settings_used_for_images")}</span> : null}
+          {status?.videoBackend === "comfyui" ? <span className="provider-badge-active">{tr("ui_keys_settings_used_for_video")}</span> : null}
         </div>
-        <p className="mt-1 text-[11px] leading-4 text-white/40">
-          本机填 <code className="text-white/55">http://127.0.0.1:8188</code>
-          ；云端 Studio 需把本机 Comfy 暴露为可访问地址（隧道 / 公网）。也可在{" "}
-          <a className="text-[#a5b4fc] hover:underline" href="https://gpuhome.cc/market" target="_blank" rel="noreferrer">
-            算力市场
-          </a>{" "}
-          租 ComfyUI 镜像后填「自定义服务」地址。下方可选出图 Checkpoint、出片模型与 Comfy Org API Key。
-        </p>
+        <p className="mt-1 text-[11px] leading-4 text-white/40">{tr("ui_keys_settings_local")}{" "}<code className="text-white/55">http://127.0.0.1:8188</code>{tr("ui_keys_settings_a_cloud_studio_needs_your_local", {
+            0: " "
+          })}<a className="text-[#a5b4fc] hover:underline" href="https://gpuhome.cc/market" target="_blank" rel="noreferrer">{tr("ui_keys_settings_gpu_marketplace")}</a>{tr("ui_keys_settings_and_enter_its_custom_service_address", {
+            0: " "
+          })}</p>
         <div className="mt-3">
           <ComfyCard status={status} onUpdated={onUpdated} />
         </div>
@@ -493,29 +480,24 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-[var(--muted)]">
-          已配置项置顶；火山与 ComfyUI 归入「媒体」分组。已保存的 Key 仍在服务端，不会因页面改版丢失。
-        </p>
+        <p className="text-sm text-[var(--muted)]">{tr("ui_keys_settings_configured_providers_are_pinned_to_the")}</p>
         <div className="flex gap-2">
           <button type="button" className="btn-secondary" disabled={testing} onClick={onTest}>
-            {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-            检测连通
-          </button>
+            {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}{tr("ui_keys_settings_test_connection")}</button>
           <button type="button" className="provider-add-btn" onClick={() => setEditor({ add: true })}>
-            <Plus className="h-4 w-4" /> 添加供应商
-          </button>
+            <Plus className="h-4 w-4" />{" "}{tr("ui_keys_settings_add_provider")}</button>
         </div>
       </div>
 
       {hasConfigured ? (
         <div className="space-y-3">
-          <SectionLabel>已配置</SectionLabel>
+          <SectionLabel>{tr("ui_keys_settings_configured")}</SectionLabel>
           {configuredProviders.length ? (
             <div className="space-y-2.5">{configuredProviders.map(renderLlmCard)}</div>
           ) : null}
           {volcConfigured || comfyConfigured ? (
             <div className="space-y-2.5">
-              <SectionLabel>媒体 · 出图 / 出片</SectionLabel>
+              <SectionLabel>{tr("ui_keys_settings_media_images_video")}</SectionLabel>
               {volcConfigured ? volcSection : null}
               {nvidiaConfigured ? nvidiaSection : null}
               {comfyConfigured ? comfySection : null}
@@ -526,14 +508,14 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
 
       {otherProviders.length ? (
         <div className="space-y-2.5">
-          <SectionLabel>文本模型 · 未配置</SectionLabel>
+          <SectionLabel>{tr("ui_keys_settings_text_models_not_configured")}</SectionLabel>
           {otherProviders.map(renderLlmCard)}
         </div>
       ) : null}
 
       {!volcConfigured || !comfyConfigured ? (
         <div className="space-y-2.5">
-          <SectionLabel>媒体 · 未配置</SectionLabel>
+          <SectionLabel>{tr("ui_keys_settings_media_not_configured")}</SectionLabel>
           {!volcConfigured ? volcSection : null}
           {!nvidiaConfigured ? nvidiaSection : null}
           {!comfyConfigured ? comfySection : null}
@@ -552,12 +534,13 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
 }
 
 function NvidiaKeyCard({ status, onUpdated }) {
+  useLocale();
   const [key, setKey] = useState("");
   const [saving, setSaving] = useState(false);
   const configured = status?.nvidia?.configured;
   const save = async () => {
     if (!key.trim()) {
-      toast.error("请填写 NVIDIA API Key");
+      toast.error(tr("ui_keys_settings_please_enter_an_nvidia_api_key"));
       return;
     }
     setSaving(true);
@@ -569,7 +552,7 @@ function NvidiaKeyCard({ status, onUpdated }) {
       });
       setKey("");
       onUpdated?.(data);
-      toast.success("NVIDIA Key 已保存");
+      toast.success(tr("ui_keys_settings_nvidia_key_saved"));
     } catch (e) {
       toast.error(String(e.message || e));
     } finally {
@@ -582,19 +565,20 @@ function NvidiaKeyCard({ status, onUpdated }) {
         className="field sm:flex-1"
         type="password"
         autoComplete="off"
-        placeholder={configured ? `已配置 ${status?.nvidia?.masked || ""}，粘贴新 Key 以更换` : "粘贴 nvapi- Key"}
+        placeholder={configured ? tr("ui_keys_settings_configured_paste_a_new_key_to", {
+          0: status?.nvidia?.masked || ""
+        }) : tr("ui_keys_settings_paste_nvapi_key")}
         value={key}
         onChange={(e) => setKey(e.target.value)}
       />
       <button type="button" className="btn-secondary !min-h-[38px] !px-3 text-xs" disabled={saving || !key.trim()} onClick={() => void save()}>
-        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-        保存
-      </button>
+        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{tr("ui_keys_settings_save")}</button>
     </div>
   );
 }
 
 function VolcCard({ status, onUpdated }) {
+  useLocale();
   const [key, setKey] = useState("");
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -609,7 +593,7 @@ function VolcCard({ status, onUpdated }) {
 
   const save = async () => {
     if (!key.trim()) {
-      toast.error(configured ? "请粘贴新 Key 后再保存" : "请填写火山 API Key");
+      toast.error(configured ? tr("ui_keys_settings_paste_a_new_key_before_saving") : tr("ui_keys_settings_please_enter_a_volcengine_api_key"));
       return;
     }
     setSaving(true);
@@ -622,7 +606,7 @@ function VolcCard({ status, onUpdated }) {
       setKey("");
       setEditing(false);
       onUpdated?.(data);
-      toast.success(configured ? "火山 Key 已更新" : "火山 Key 已保存");
+      toast.success(configured ? tr("ui_keys_settings_volcengine_key_updated") : tr("ui_keys_settings_volcengine_key_saved"));
     } catch (e) {
       toast.error(String(e.message || e));
     } finally {
@@ -633,14 +617,14 @@ function VolcCard({ status, onUpdated }) {
   if (configured && !editing) {
     return (
       <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">
-          已配置 {masked || "Key"}
-        </span>
+        <span className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200">{tr("ui_keys_settings_configured_2", {
+            0: masked || "Key"
+          })}</span>
         <button
           type="button"
           className="provider-icon-btn"
-          title="编辑 Key"
-          aria-label="编辑 Key"
+          title={tr("ui_keys_settings_edit_key")}
+          aria-label={tr("ui_keys_settings_edit_key")}
           onClick={() => {
             setKey("");
             setEditing(true);
@@ -658,7 +642,7 @@ function VolcCard({ status, onUpdated }) {
         className="field sm:flex-1"
         type="password"
         autoComplete="off"
-        placeholder={configured ? "粘贴新 Key 以更换" : "粘贴火山方舟 API Key"}
+        placeholder={configured ? tr("ui_keys_settings_paste_a_new_key_to_replace") : tr("ui_keys_settings_paste_volcengine_ark_api_key")}
         value={key}
         onChange={(e) => setKey(e.target.value)}
       />
@@ -669,7 +653,7 @@ function VolcCard({ status, onUpdated }) {
         onClick={() => void save()}
       >
         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-        {configured ? "更新 Key" : "保存"}
+        {configured ? tr("ui_keys_settings_update_key") : tr("ui_keys_settings_save")}
       </button>
       {configured ? (
         <button
@@ -680,9 +664,7 @@ function VolcCard({ status, onUpdated }) {
             setKey("");
             setEditing(false);
           }}
-        >
-          取消
-        </button>
+        >{tr("ui_keys_settings_cancel")}</button>
       ) : null}
     </div>
   );
@@ -703,11 +685,18 @@ function shortenUrl(url) {
 }
 
 const COMFY_LOCAL_PRESETS = [
-  { label: "本机 8188", url: "http://127.0.0.1:8188" },
+  {
+    get label() {
+      return tr("ui_keys_settings_local_8188");
+    },
+
+    url: "http://127.0.0.1:8188"
+  },
   { label: "localhost", url: "http://localhost:8188" },
 ];
 
 function ComfyCard({ status, onUpdated }) {
+  useLocale();
   const comfy = status?.comfyui || {};
   const [serverUrl, setServerUrl] = useState(comfy.serverUrl || "");
   const [imageUrl, setImageUrl] = useState(comfy.imageUrl || "");
@@ -770,7 +759,7 @@ function ComfyCard({ status, onUpdated }) {
       });
       onUpdated?.(data);
       if (url) setEditing(false);
-      toast.success(url ? "ComfyUI 已保存" : "已清空 ComfyUI 地址");
+      toast.success(url ? tr("ui_keys_settings_comfyui_saved") : tr("ui_keys_settings_comfyui_url_cleared"));
       return data;
     } catch (e) {
       toast.error(String(e.message || e));
@@ -797,11 +786,16 @@ function ComfyCard({ status, onUpdated }) {
         const vid = (r.videoModels || []).length;
         toast.success(
           vid
-            ? `ComfyUI 连通 · 出图 ${r.checkpointCount || 0} · 出片模型 ${vid}`
-            : `ComfyUI 连通 · 出图模型 ${r.checkpointCount || 0} 个（未检测到出片权重）`,
+            ? tr("ui_keys_settings_comfyui_connected_images_video_model", {
+            0: r.checkpointCount || 0,
+            vid: vid
+          })
+            : tr("ui_keys_settings_comfyui_connected_image_models_no_video", {
+            0: r.checkpointCount || 0
+          }),
         );
       } else {
-        toast.error(r?.error || "ComfyUI 连通失败");
+        toast.error(r?.error || tr("ui_keys_settings_comfyui_connection_failed"));
       }
     } catch (e) {
       toast.error(String(e.message || e));
@@ -825,15 +819,15 @@ function ComfyCard({ status, onUpdated }) {
           <span
             className="max-w-full truncate rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200"
             title={savedUrl}
-          >
-            已配置 {shortenUrl(savedUrl)}
-            {isLocal ? " · 本机" : ""}
+          >{tr("ui_keys_settings_configured_2", {
+              0: shortenUrl(savedUrl)
+            })}{isLocal ? ` ${tr("ui_keys_settings_local_2")}` : ""}
           </span>
           <button
             type="button"
             className="provider-icon-btn"
-            title="编辑地址与模型"
-            aria-label="编辑地址与模型"
+            title={tr("ui_keys_settings_edit_url_and_models")}
+            aria-label={tr("ui_keys_settings_edit_url_and_models")}
             onClick={() => {
               setServerUrl(savedUrl);
               setEditing(true);
@@ -848,13 +842,9 @@ function ComfyCard({ status, onUpdated }) {
             disabled={testing || !hasUrl}
             onClick={() => void test()}
           >
-            {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
-            检测连通
-          </button>
+            {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}{tr("ui_keys_settings_test_connection")}</button>
           {comfy.docs ? (
-            <a className="btn-secondary !min-h-[38px] !px-3 text-xs" href={comfy.docs} target="_blank" rel="noreferrer">
-              ComfyUI 文档
-            </a>
+            <a className="btn-secondary !min-h-[38px] !px-3 text-xs" href={comfy.docs} target="_blank" rel="noreferrer">{tr("ui_keys_settings_comfyui_docs")}</a>
           ) : null}
         </div>
       ) : (
@@ -879,7 +869,7 @@ function ComfyCard({ status, onUpdated }) {
               className="field sm:flex-1"
               type="url"
               autoComplete="off"
-              placeholder="本机 http://127.0.0.1:8188，或智川云自定义服务地址"
+              placeholder={tr("ui_keys_settings_local_http_127_0_0_1")}
               value={serverUrl}
               onChange={(e) => setServerUrl(e.target.value)}
             />
@@ -890,7 +880,7 @@ function ComfyCard({ status, onUpdated }) {
               onClick={() => void save()}
             >
               {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {comfy.configured ? "更新" : "保存"}
+              {comfy.configured ? tr("ui_keys_settings_update") : tr("ui_keys_settings_save")}
             </button>
             {comfy.configured ? (
               <button
@@ -904,9 +894,7 @@ function ComfyCard({ status, onUpdated }) {
                   setApiKey("");
                   setEditing(false);
                 }}
-              >
-                取消
-              </button>
+              >{tr("ui_keys_settings_cancel")}</button>
             ) : null}
             <button
               type="button"
@@ -914,15 +902,13 @@ function ComfyCard({ status, onUpdated }) {
               disabled={testing || !draftUrl}
               onClick={() => void test()}
             >
-              {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
-              检测连通
-            </button>
+              {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}{tr("ui_keys_settings_test_connection")}</button>
           </div>
         </div>
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[11px] text-white/35">出图模型</span>
+        <span className="text-[11px] text-white/35">{tr("ui_keys_settings_image_model")}</span>
         {checkpoints.length ? (
           <select
             className="field !min-h-[30px] !w-auto !max-w-[min(100%,320px)] !py-1 !text-xs"
@@ -942,7 +928,7 @@ function ComfyCard({ status, onUpdated }) {
         ) : (
           <input
             className="field !min-h-[30px] !max-w-[min(100%,320px)] !py-1 !text-xs"
-            placeholder="如 RealVisXL / qwen-image-3.0-pro"
+            placeholder={tr("ui_keys_settings_e_g_realvisxl_qwen_image_3")}
             value={checkpoint}
             disabled={saving}
             onChange={(e) => setCheckpoint(e.target.value)}
@@ -956,7 +942,7 @@ function ComfyCard({ status, onUpdated }) {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[11px] text-white/35">出片模型</span>
+        <span className="text-[11px] text-white/35">{tr("ui_keys_settings_video_model")}</span>
         {videoModels.length ? (
           <select
             className="field !min-h-[30px] !w-auto !max-w-[min(100%,320px)] !py-1 !text-xs"
@@ -976,7 +962,7 @@ function ComfyCard({ status, onUpdated }) {
         ) : (
           <input
             className="field !min-h-[30px] !max-w-[min(100%,320px)] !py-1 !text-xs"
-            placeholder="如 MiniMax-Hailuo-02 / H3（检测连通后可自动发现）"
+            placeholder={tr("ui_keys_settings_e_g_minimax_hailuo_02_h3")}
             value={videoModel}
             disabled={saving}
             onChange={(e) => setVideoModel(e.target.value)}
@@ -992,15 +978,15 @@ function ComfyCard({ status, onUpdated }) {
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <span className="shrink-0 text-[11px] text-white/35">Comfy Org API Key</span>
         {comfy.apiKeyConfigured && !apiKey ? (
-          <span className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1.5 text-xs text-emerald-200">
-            已配置 {comfy.apiKeyMasked || "Key"}
-          </span>
+          <span className="rounded-lg border border-emerald-500/25 bg-emerald-500/10 px-2.5 py-1.5 text-xs text-emerald-200">{tr("ui_keys_settings_configured_2", {
+              0: comfy.apiKeyMasked || "Key"
+            })}</span>
         ) : null}
         <input
           className="field sm:flex-1 !min-h-[34px] !py-1 !text-xs"
           type="password"
           autoComplete="off"
-          placeholder={comfy.apiKeyConfigured ? "粘贴新 Key 以更换（Qwen Image API）" : "可选 · platform.comfy.org API Key"}
+          placeholder={comfy.apiKeyConfigured ? tr("ui_keys_settings_paste_a_new_key_to_replace_2") : tr("ui_keys_settings_optional_platform_comfy_org_api_key")}
           value={apiKey}
           onChange={(e) => setApiKey(e.target.value)}
         />
@@ -1011,9 +997,7 @@ function ComfyCard({ status, onUpdated }) {
             disabled={saving}
             onClick={() => void save()}
           >
-            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-            保存 Key
-          </button>
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}{tr("ui_keys_settings_save_key")}</button>
         ) : null}
       </div>
 
@@ -1022,26 +1006,26 @@ function ComfyCard({ status, onUpdated }) {
         className="text-[11px] text-white/40 underline-offset-2 hover:text-white/70 hover:underline"
         onClick={() => setShowAdvanced((v) => !v)}
       >
-        {showAdvanced ? "收起高级" : "高级：分设出图 / 出片地址"}
+        {showAdvanced ? tr("ui_keys_settings_hide_advanced") : tr("ui_keys_settings_advanced_separate_image_video_urls")}
       </button>
       {showAdvanced ? (
         <div className="grid gap-2 sm:grid-cols-2">
           <label className="space-y-1">
-            <span className="text-[11px] text-white/35">出图地址（可选）</span>
+            <span className="text-[11px] text-white/35">{tr("ui_keys_settings_image_url_optional")}</span>
             <input
               className="field !min-h-[34px] !py-1 !text-xs"
               type="url"
-              placeholder="默认与主地址相同"
+              placeholder={tr("ui_keys_settings_defaults_to_the_main_url")}
               value={imageUrl}
               onChange={(e) => setImageUrl(e.target.value)}
             />
           </label>
           <label className="space-y-1">
-            <span className="text-[11px] text-white/35">出片地址（可选）</span>
+            <span className="text-[11px] text-white/35">{tr("ui_keys_settings_video_url_optional")}</span>
             <input
               className="field !min-h-[34px] !py-1 !text-xs"
               type="url"
-              placeholder="默认与主地址相同"
+              placeholder={tr("ui_keys_settings_defaults_to_the_main_url")}
               value={videoUrl}
               onChange={(e) => setVideoUrl(e.target.value)}
             />
@@ -1053,9 +1037,7 @@ function ComfyCard({ status, onUpdated }) {
               disabled={saving || !canSave}
               onClick={() => void save()}
             >
-              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-              保存高级地址
-            </button>
+              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}{tr("ui_keys_settings_save_advanced_urls")}</button>
           ) : null}
         </div>
       ) : null}
@@ -1080,6 +1062,7 @@ function buildPageItems(page, pageCount) {
 }
 
 function LogsPager({ meta, pageSize, onPageChange, onPageSizeChange, loading }) {
+  useLocale();
   const page = meta?.page || 1;
   const pageCount = meta?.pageCount || 1;
   const total = meta?.total || 0;
@@ -1093,19 +1076,16 @@ function LogsPager({ meta, pageSize, onPageChange, onPageSizeChange, loading }) 
     <div className="flex flex-col gap-3 border-t border-[var(--line)] px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="text-xs text-[var(--muted)]">
         {total ? (
-          <>
-            显示 <span className="tabular-nums text-white/80">{from}</span>–
-            <span className="tabular-nums text-white/80">{to}</span> / 共{" "}
-            <span className="tabular-nums text-white/80">{fmtNum(total)}</span> 条
-          </>
+          <>{tr("ui_keys_settings_showing")}{" "}<span className="tabular-nums text-white/80">{from}</span>–
+                        <span className="tabular-nums text-white/80">{to}</span>{" "}{tr("ui_keys_settings_of", {
+              0: " "
+            })}<span className="tabular-nums text-white/80">{fmtNum(total)}</span>{" "}{tr("ui_keys_settings_entries")}</>
         ) : (
-          "暂无记录"
+          tr("ui_keys_settings_no_records")
         )}
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        <label className="flex items-center gap-1.5 text-xs text-[var(--muted)]">
-          每页
-          <select
+        <label className="flex items-center gap-1.5 text-xs text-[var(--muted)]">{tr("ui_keys_settings_per_page")}<select
             className="field !w-auto !py-1 !text-xs"
             value={pageSize}
             disabled={loading}
@@ -1124,8 +1104,8 @@ function LogsPager({ meta, pageSize, onPageChange, onPageSizeChange, loading }) 
             className="btn-secondary !px-2 !py-1"
             disabled={loading || page <= 1}
             onClick={() => onPageChange?.(1)}
-            title="首页"
-            aria-label="首页"
+            title={tr("ui_keys_settings_first")}
+            aria-label={tr("ui_keys_settings_first")}
           >
             <ChevronsLeft className="h-3.5 w-3.5" />
           </button>
@@ -1134,8 +1114,8 @@ function LogsPager({ meta, pageSize, onPageChange, onPageSizeChange, loading }) 
             className="btn-secondary !px-2 !py-1"
             disabled={loading || page <= 1}
             onClick={() => onPageChange?.(page - 1)}
-            title="上一页"
-            aria-label="上一页"
+            title={tr("ui_keys_settings_previous")}
+            aria-label={tr("ui_keys_settings_previous")}
           >
             <ChevronLeft className="h-3.5 w-3.5" />
           </button>
@@ -1163,8 +1143,8 @@ function LogsPager({ meta, pageSize, onPageChange, onPageSizeChange, loading }) 
             className="btn-secondary !px-2 !py-1"
             disabled={loading || page >= pageCount}
             onClick={() => onPageChange?.(page + 1)}
-            title="下一页"
-            aria-label="下一页"
+            title={tr("ui_keys_settings_next")}
+            aria-label={tr("ui_keys_settings_next")}
           >
             <ChevronRight className="h-3.5 w-3.5" />
           </button>
@@ -1173,8 +1153,8 @@ function LogsPager({ meta, pageSize, onPageChange, onPageSizeChange, loading }) 
             className="btn-secondary !px-2 !py-1"
             disabled={loading || page >= pageCount}
             onClick={() => onPageChange?.(pageCount)}
-            title="末页"
-            aria-label="末页"
+            title={tr("ui_keys_settings_last")}
+            aria-label={tr("ui_keys_settings_last")}
           >
             <ChevronsRight className="h-3.5 w-3.5" />
           </button>
@@ -1185,6 +1165,7 @@ function LogsPager({ meta, pageSize, onPageChange, onPageSizeChange, loading }) 
 }
 
 export function UsageSettings() {
+  useLocale();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState(null);
   const [subTab, setSubTab] = useState("logs");
@@ -1233,14 +1214,14 @@ export function UsageSettings() {
   const logsMeta = data?.logsMeta || { total: 0, page: 1, pageCount: 1, offset: 0, limit: pageSize };
 
   return (
-    <PageShell eyebrow="Settings" title="用量统计" description="查看调用次数、Token、费用与请求日志。">
+    <PageShell eyebrow="Settings" title={tr("ui_keys_settings_usage")} description={tr("ui_keys_settings_see_call_counts_tokens_cost_and")}>
       <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3">
         <div className="usage-seg">
           {[
-            ["today", "今日"],
-            ["7d", "近 7 天"],
-            ["30d", "近 30 天"],
+            ["today", tr("ui_keys_settings_today")],
+            ["7d", tr("ui_keys_settings_last_7_days")],
+            ["30d", tr("ui_keys_settings_last_30_days")],
           ].map(([id, label]) => (
             <button key={id} type="button" className={range === id ? "active" : ""} onClick={() => setRange(id)}>
               {label}
@@ -1248,13 +1229,13 @@ export function UsageSettings() {
           ))}
         </div>
         <select className="field !w-auto !py-1.5" value={kind} onChange={(e) => setKind(e.target.value)}>
-          <option value="all">全部类型</option>
-          <option value="text">文本</option>
-          <option value="image">出图</option>
-          <option value="video">出片</option>
+          <option value="all">{tr("ui_keys_settings_all_types")}</option>
+          <option value="text">{tr("ui_keys_settings_text")}</option>
+          <option value="image">{tr("ui_keys_settings_image")}</option>
+          <option value="video">{tr("ui_keys_settings_video")}</option>
         </select>
         <select className="field !w-auto !py-1.5" value={provider} onChange={(e) => setProvider(e.target.value)}>
-          <option value="">全部供应商</option>
+          <option value="">{tr("ui_keys_settings_all_providers")}</option>
           {(data?.filters?.providers || []).map((p) => (
             <option key={p} value={p}>
               {p}
@@ -1262,31 +1243,28 @@ export function UsageSettings() {
           ))}
         </select>
         <select className="field !w-auto !py-1.5" value={model} onChange={(e) => setModel(e.target.value)}>
-          <option value="">全部模型</option>
+          <option value="">{tr("ui_keys_settings_all_models")}</option>
           {(data?.filters?.models || []).map((m) => (
             <option key={m} value={m}>
               {m}
             </option>
           ))}
         </select>
-        <button type="button" className="btn-secondary" onClick={() => void load()}>
-          刷新
-        </button>
+        <button type="button" className="btn-secondary" onClick={() => void load()}>{tr("ui_keys_settings_refresh")}</button>
       </div>
 
       {loading && !data ? (
         <div className="panel flex items-center gap-2 px-5 py-10 text-sm text-[var(--muted)]">
-          <Loader2 className="h-4 w-4 animate-spin" /> 加载用量…
-        </div>
+          <Loader2 className="h-4 w-4 animate-spin" />{" "}{tr("ui_keys_settings_loading_usage")}</div>
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             {[
-              ["总请求数", fmtNum(hero.requests)],
-              ["真实消耗 Tokens", fmtNum(hero.tokens)],
-              ["缓存命中率", fmtPct(hero.cache_hit_rate)],
-              ["估算费用", fmtUsd(hero.cost_usd)],
-              ["成功率", fmtPct(hero.success_rate)],
+              [tr("ui_keys_settings_total_requests"), fmtNum(hero.requests)],
+              [tr("ui_keys_settings_tokens_actually_used"), fmtNum(hero.tokens)],
+              [tr("ui_keys_settings_cache_hit_rate"), fmtPct(hero.cache_hit_rate)],
+              [tr("ui_keys_settings_estimated_cost"), fmtUsd(hero.cost_usd)],
+              [tr("ui_keys_settings_success_rate"), fmtPct(hero.success_rate)],
             ].map(([label, value]) => (
               <div key={label} className="usage-hero">
                 <div className="text-[11px] uppercase tracking-[0.08em] text-[var(--muted)]">{label}</div>
@@ -1297,7 +1275,7 @@ export function UsageSettings() {
 
           <div className="grid gap-4 xl:grid-cols-2">
             <section className="panel p-4">
-              <div className="label">请求趋势</div>
+              <div className="label">{tr("ui_keys_settings_request_trend")}</div>
               <LineChart
                 labels={trend.buckets || []}
                 series={[{ name: "requests", data: trend.requests || [], color: "#7c6cff" }]}
@@ -1305,13 +1283,13 @@ export function UsageSettings() {
             </section>
             <section className="panel p-4">
               <div className="mb-1 flex flex-wrap gap-3 text-[11px] text-[var(--muted)]">
-                <span className="text-sky-400">● 输入</span>
-                <span className="text-emerald-400">● 输出</span>
-                <span className="text-orange-400">● 缓存创建</span>
-                <span className="text-violet-400">● 缓存命中</span>
-                <span className="text-rose-400">● 费用</span>
+                <span className="text-sky-400">{tr("ui_keys_settings_input")}</span>
+                <span className="text-emerald-400">{tr("ui_keys_settings_output")}</span>
+                <span className="text-orange-400">{tr("ui_keys_settings_cache_write")}</span>
+                <span className="text-violet-400">{tr("ui_keys_settings_cache_hit")}</span>
+                <span className="text-rose-400">{tr("ui_keys_settings_cost")}</span>
               </div>
-              <div className="label">Token / 费用趋势</div>
+              <div className="label">{tr("ui_keys_settings_token_cost_trend")}</div>
               <LineChart
                 labels={trend.buckets || []}
                 series={[
@@ -1331,9 +1309,9 @@ export function UsageSettings() {
 
           <div className="usage-seg">
             {[
-              ["logs", "请求日志"],
-              ["providers", "供应商"],
-              ["models", "模型"],
+              ["logs", tr("ui_keys_settings_request_log")],
+              ["providers", tr("ui_keys_settings_provider")],
+              ["models", tr("ui_keys_settings_model")],
             ].map(([id, label]) => (
               <button key={id} type="button" className={subTab === id ? "active" : ""} onClick={() => setSubTab(id)}>
                 {label}
@@ -1347,7 +1325,7 @@ export function UsageSettings() {
                 <table className="min-w-full text-left text-sm">
                   <thead className="text-xs text-[var(--muted)]">
                     <tr>
-                      {["时间", "供应商", "模型", "类型", "Token", "费用", "耗时", "状态"].map((h) => (
+                      {[tr("ui_keys_settings_time"), tr("ui_keys_settings_provider"), tr("ui_keys_settings_model"), tr("ui_keys_settings_type"), "Token", tr("ui_keys_settings_cost_2"), tr("ui_keys_settings_duration"), tr("ui_keys_settings_status")].map((h) => (
                         <th key={h} className="px-3 py-2 font-medium">
                           {h}
                         </th>
@@ -1379,9 +1357,7 @@ export function UsageSettings() {
                     ))}
                     {!data?.logs?.length ? (
                       <tr>
-                        <td colSpan={8} className="px-3 py-8 text-center text-[var(--muted)]">
-                          暂无请求记录
-                        </td>
+                        <td colSpan={8} className="px-3 py-8 text-center text-[var(--muted)]">{tr("ui_keys_settings_no_requests_yet")}</td>
                       </tr>
                     ) : null}
                   </tbody>
@@ -1405,7 +1381,7 @@ export function UsageSettings() {
               <table className="min-w-full text-left text-sm">
                 <thead className="text-xs text-[var(--muted)]">
                   <tr>
-                    {["供应商", "请求", "成功", "失败", "成功率", "Token", "费用", "均延迟"].map((h) => (
+                    {[tr("ui_keys_settings_provider"), tr("ui_keys_settings_requests"), tr("ui_keys_settings_succeeded"), tr("ui_keys_settings_failed"), tr("ui_keys_settings_success_rate"), "Token", tr("ui_keys_settings_cost_2"), tr("ui_keys_settings_avg_latency")].map((h) => (
                       <th key={h} className="px-3 py-2 font-medium">
                         {h}
                       </th>
@@ -1435,7 +1411,7 @@ export function UsageSettings() {
               <table className="min-w-full text-left text-sm">
                 <thead className="text-xs text-[var(--muted)]">
                   <tr>
-                    {["模型", "供应商", "请求", "输入 Token", "输出 Token", "费用", "均延迟"].map((h) => (
+                    {[tr("ui_keys_settings_model"), tr("ui_keys_settings_provider"), tr("ui_keys_settings_requests"), tr("ui_keys_settings_input_tokens"), tr("ui_keys_settings_output_tokens"), tr("ui_keys_settings_cost_2"), tr("ui_keys_settings_avg_latency")].map((h) => (
                       <th key={h} className="px-3 py-2 font-medium">
                         {h}
                       </th>
@@ -1466,6 +1442,7 @@ export function UsageSettings() {
 }
 
 export function KeysSettings({ config, onUpdated }) {
+  const { locale } = useLocale();
   const catalog = config?.llmProviders || [];
   const [loading, setLoading] = useState(true);
   const [testing, setTesting] = useState(false);
@@ -1499,8 +1476,10 @@ export function KeysSettings({ config, onUpdated }) {
     try {
       const data = await api("/api/settings/keys/test", { method: "POST" });
       const llm = data.results?.llm || data.results?.deepseek;
-      if (llm?.ok) toast.success(`文本模型可用（${data.keys?.llmBackend || "llm"}）`);
-      else toast.error(llm?.error || "检测失败");
+      if (llm?.ok) toast.success(tr("ui_keys_settings_text_model_available", {
+        0: data.keys?.llmBackend || "llm"
+      }));
+      else toast.error(llm?.error || tr("ui_keys_settings_check_failed"));
       setStatus(data.keys);
       onUpdated?.(data);
     } catch (error) {
@@ -1513,19 +1492,20 @@ export function KeysSettings({ config, onUpdated }) {
   const activeLabel = useMemo(() => {
     const list = status?.llmProviders || catalog;
     const id = status?.llmBackend;
-    return list.find((p) => p.id === id)?.label || id || "未启用";
-  }, [status, catalog]);
+    return list.find((p) => p.id === id)?.label || id || tr("ui_keys_settings_not_enabled");
+  }, [status, catalog, locale]);
 
   return (
     <PageShell
       eyebrow="Settings"
-      title="模型配置"
-      description={`管理文本与媒体供应商。当前文本后端：${activeLabel}`}
+      title={tr("ui_keys_settings_model_settings")}
+      description={tr("ui_keys_settings_manage_text_and_media_providers_current", {
+        activeLabel: activeLabel
+      })}
     >
       {loading && !status ? (
         <div className="panel flex items-center gap-2 px-5 py-10 text-sm text-[var(--muted)]">
-          <Loader2 className="h-4 w-4 animate-spin" /> 读取配置…
-        </div>
+          <Loader2 className="h-4 w-4 animate-spin" />{" "}{tr("ui_keys_settings_loading_settings")}</div>
       ) : (
         <ProvidersTab
           status={status}

@@ -1,6 +1,19 @@
+import { tr } from "./i18n";
 /** Client-side mirror of server entity-ref QA gate (preflight banners / force dialog). */
 
-const KIND_LABEL = { character: "角色", scene: "场景", prop: "道具" };
+const KIND_LABEL = {
+  get character() {
+    return tr("ui_lib_entity_qa_gate_character");
+  },
+
+  get scene() {
+    return tr("ui_lib_entity_qa_gate_scene");
+  },
+
+  get prop() {
+    return tr("ui_lib_entity_qa_gate_prop");
+  }
+};
 
 function selectedImage(ent) {
   if (!ent) return null;
@@ -28,7 +41,7 @@ export function listEntityQaBlockers(entities = []) {
         ? `${baseName}·${variant}`
         : baseName;
     const kind = ent.kind || "unknown";
-    const kindLabel = KIND_LABEL[kind] || "素材";
+    const kindLabel = KIND_LABEL[kind] || tr("ui_lib_entity_qa_gate_asset");
     const img = selectedImage(ent);
     if (!img?.path && !img?.url) {
       blockers.push({
@@ -37,7 +50,7 @@ export function listEntityQaBlockers(entities = []) {
         kind,
         kindLabel,
         issue: "no_image",
-        reason: "尚无可用参考图",
+        reason: tr("ui_lib_entity_qa_gate_no_usable_reference_image_yet"),
       });
       continue;
     }
@@ -50,13 +63,13 @@ export function listEntityQaBlockers(entities = []) {
     // override a currently passing selection (matches server entity_ref_qa_blockers).
     if (img.qaPass === true && !soft) continue;
     let issue = "qa_pending";
-    let detail = reason || String(ent.qaFailReason || "") || "尚未通过质检";
+    let detail = reason || String(ent.qaFailReason || "") || tr("ui_lib_entity_qa_gate_hasn_t_passed_qa_yet");
     if (soft) {
       issue = "soft_pass";
-      detail = reason || "质检无效（软通过/跳过）";
+      detail = reason || tr("ui_lib_entity_qa_gate_invalid_qa_soft_pass_skipped");
     } else if (img.qaPass === false) {
       issue = "qa_fail";
-      detail = reason || String(ent.qaFailReason || "") || "质检未达标";
+      detail = reason || String(ent.qaFailReason || "") || tr("ui_lib_entity_qa_gate_qa_not_passed");
     }
     blockers.push({
       entityId: eid,

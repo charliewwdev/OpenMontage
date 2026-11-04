@@ -4,15 +4,42 @@ import { api } from "../../api";
 import { toast } from "../../lib/toast";
 import { PageShell } from "./PageShell";
 
+import { tr, useLocale } from "../../lib/i18n";
+
 const TIERS = [
-  { title: "分享链接", desc: "把带邀请码的地址发给搭档或客户，对方打开后可自行配置 Key。" },
-  { title: "协作生产", desc: "同一台部署可多人使用；项目存在本地 PROJECTS_ROOT。" },
-  { title: "邀请奖励", desc: "对方首次通过你的链接打开时，记 +20 创作积分。" },
+  {
+    get title() {
+      return tr("ui_refer_share_the_link");
+    },
+
+    get desc() {
+      return tr("ui_refer_send_the_link_with_your_invite");
+    }
+  },
+  {
+    get title() {
+      return tr("ui_refer_collaborative_production");
+    },
+
+    get desc() {
+      return tr("ui_refer_one_deployment_can_serve_several_people");
+    }
+  },
+  {
+    get title() {
+      return tr("ui_refer_invite_reward");
+    },
+
+    get desc() {
+      return tr("ui_refer_20_creator_credits_when_someone_opens");
+    }
+  },
 ];
 
 const REF_CAPTURE_KEY = "om.refer.captured";
 
 export function ReferPage({ config }) {
+  useLocale();
   const [credits, setCredits] = useState(null);
   const origin =
     config?.public_url ||
@@ -42,7 +69,7 @@ export function ReferPage({ config }) {
     })
       .then((res) => {
         setCredits(res.credits);
-        toast.success("已记录邀请，创作积分 +20");
+        toast.success(tr("ui_refer_invite_recorded_creator_credits_20"));
       })
       .catch(() => {});
   }, []);
@@ -55,16 +82,17 @@ export function ReferPage({ config }) {
   }, [origin, credits?.refCode]);
 
   return (
-    <PageShell eyebrow="Refer" title="推荐计划" description="分享影视工坊，邀请伙伴一起用六步流程做短剧。">
+    <PageShell eyebrow="Refer" title={tr("ui_refer_referral_program")} description={tr("ui_refer_share_the_film_workshop_and_invite")}>
       <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="panel p-6">
           <Gift className="h-8 w-8 text-[#a78bfa]" />
-          <h3 className="mt-4 text-lg font-semibold">分享工作台地址</h3>
-          <p className="mt-2 text-sm text-[var(--muted)]">链接含你的邀请码。对方首次打开时本地记邀请奖励。</p>
-          <code className="mt-4 block break-all rounded-xl bg-black/30 px-4 py-3 text-sm">{link || "（加载中）"}</code>
-          <div className="mt-3 text-xs text-[var(--muted)]">
-            已邀请 {credits?.referrals ?? 0} 次 · 积分余额 {credits?.balance ?? 0}
-          </div>
+          <h3 className="mt-4 text-lg font-semibold">{tr("ui_refer_share_the_studio_link")}</h3>
+          <p className="mt-2 text-sm text-[var(--muted)]">{tr("ui_refer_the_link_includes_your_invite_code")}</p>
+          <code className="mt-4 block break-all rounded-xl bg-black/30 px-4 py-3 text-sm">{link || tr("ui_refer_loading")}</code>
+          <div className="mt-3 text-xs text-[var(--muted)]">{tr("ui_refer_invited_times_credit_balance", {
+              0: credits?.referrals ?? 0,
+              1: credits?.balance ?? 0
+            })}</div>
           <div className="mt-4 flex flex-wrap gap-2">
             <button
               type="button"
@@ -72,11 +100,10 @@ export function ReferPage({ config }) {
               disabled={!link}
               onClick={async () => {
                 await navigator.clipboard.writeText(link);
-                toast.success("邀请链接已复制");
+                toast.success(tr("ui_refer_invite_link_copied"));
               }}
             >
-              <Copy className="h-4 w-4" /> 复制链接
-            </button>
+              <Copy className="h-4 w-4" />{" "}{tr("ui_refer_copy_link")}</button>
             <button
               type="button"
               className="btn-secondary"
@@ -89,15 +116,13 @@ export function ReferPage({ config }) {
                 }
               }}
             >
-              <Share2 className="h-4 w-4" /> 系统分享
-            </button>
+              <Share2 className="h-4 w-4" />{" "}{tr("ui_refer_system_share")}</button>
           </div>
         </div>
 
         <aside className="panel space-y-4 p-5">
           <div className="flex items-center gap-2 text-sm font-semibold">
-            <Users className="h-4 w-4 text-[#a78bfa]" /> 推荐玩法
-          </div>
+            <Users className="h-4 w-4 text-[#a78bfa]" />{" "}{tr("ui_refer_ideas")}</div>
           {TIERS.map((tier) => (
             <div key={tier.title}>
               <strong className="block text-sm">{tier.title}</strong>

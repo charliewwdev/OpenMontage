@@ -1,6 +1,9 @@
 import { PROJECT_RATIOS } from "../../config/options";
 
+import { tr, useLocale } from "../../lib/i18n";
+
 export function AspectRatioPicker({ value, onChange, disabled = false, ratios }) {
+  useLocale();
   const options = ratios?.length ? ratios : PROJECT_RATIOS;
   const normalized = options.some((o) => o.value === value) ? value : options[0]?.value || "9:16";
 
@@ -8,7 +11,7 @@ export function AspectRatioPicker({ value, onChange, disabled = false, ratios })
     <div
       className="grid grid-cols-1 gap-2 sm:grid-cols-3"
       role="radiogroup"
-      aria-label="画面比例"
+      aria-label={tr("ui_settings_aspect_ratio_picker_aspect_ratio")}
       aria-disabled={disabled}
     >
       {options.map((option) => {

@@ -78,6 +78,7 @@ from platform_config import (  # noqa: E402
 import asset_library as assetlib  # noqa: E402
 from pinterest_feed import fetch_pins, fetch_remote_image  # noqa: E402
 import inspire_store  # noqa: E402
+from ui_messages import set_request_locale, ui_msg  # noqa: E402
 from providers import provider_status  # noqa: E402
 from settings_store import load_and_apply, public_status, save_secrets  # noqa: E402
 from store import ProjectStore, ensure_seed_projects  # noqa: E402
@@ -290,6 +291,7 @@ def _path_is_public(path: str, method: str = "GET") -> bool:
 class AuthContextMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         set_current_user(None)
+        set_request_locale(request.headers.get("x-studio-locale"))
         path = request.url.path or "/"
         method = request.method.upper()
         token = _bearer_token(request)
@@ -335,7 +337,7 @@ def _entity_qa_blocked_http(exc: EntityQaBlockedError) -> HTTPException:
             "error": str(exc),
             "code": "entity_qa_blocked",
             "blockers": exc.blockers,
-            "forceHint": "传入 forceEntityQa=true 可强制出片（仍会使用未过检参考图）",
+            "forceHint": ui_msg("entity_qa_force_hint"),
         },
     )
 
@@ -493,7 +495,7 @@ def import_keys_from_env() -> dict[str, Any]:
             "imported": [],
             "keys": public_status(),
             "capabilities": _providers_payload(),
-            "error": "进程环境里没有可用的文本大模型 / 火山 Key。请在本页直接粘贴保存即可（运行时动态读取，不必依赖环境变量）。",
+            "error": ui_msg("keys_import_none_in_env"),
         }
     status = save_secrets(PROJECTS_ROOT, payload)
     return {
@@ -606,21 +608,21 @@ async def test_keys() -> dict[str, Any]:
             results["llm"] = err
             results["deepseek"] = err
     else:
-        err = {"ok": False, "error": "未配置任何文本大模型 API Key"}
+        err = {"ok": False, "error": ui_msg("keys_no_llm")}
         results["llm"] = err
         results["deepseek"] = err
     from settings_store import get_secret
 
     results["cursor"] = {
         "ok": bool(status.get("cursor")),
-        "error": None if status.get("cursor") else "未配置 CURSOR_API_KEY",
+        "error": None if status.get("cursor") else ui_msg("keys_no_cursor"),
         "model": get_secret("CURSOR_MODEL", "auto") or "auto",
     }
 
     results["volcengine"] = {
         "ok": bool(status.get("volcengine")),
-        "error": None if status.get("volcengine") else "未配置 VOLCENGINE_API_KEY / ARK_API_KEY",
-        "note": "火山 Key 已写入进程；图片/视频任务会在实际出图出片时校验。",
+        "error": None if status.get("volcengine") else ui_msg("keys_no_volcengine"),
+        "note": ui_msg("keys_volcengine_note"),
     }
 
     if get_secret("COMFYUI_SERVER_URL") or get_secret("COMFYUI_IMAGE_SERVER_URL"):
@@ -660,7 +662,7 @@ async def test_keys() -> dict[str, Any]:
     else:
         results["comfyui"] = {
             "ok": False,
-            "error": "未配置 COMFYUI_SERVER_URL（智川云租 GPU 后填写）",
+            "error": ui_msg("keys_no_comfyui"),
         }
     return {"results": results, "keys": public_status()}
 
@@ -792,7 +794,7 @@ def _build_jobs_payload() -> dict[str, Any]:
             "error": str(exc)[:160],
             "mediaQueue": queue,
             "autoProduce": [],
-            "note": "无独立 cron；媒体队列 + 一键全流程为后台任务源。",
+            "note": ui_msg("jobs_note_error"),
             "polledAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
     rank = {"running": 0, "queued": 1, "paused": 2, "failed": 3, "done": 4}
@@ -822,7 +824,7 @@ def _build_jobs_payload() -> dict[str, Any]:
             },
         },
         "autoProduce": trimmed,
-        "note": "无独立 cron / 定时表；后台任务来自 Redis 媒体队列与项目一键全流程。",
+        "note": ui_msg("jobs_note"),
         "polledAt": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
 
@@ -1011,7 +1013,7 @@ async def platform_assets_upload(request: Request) -> dict[str, Any]:
         try:
             assert_media_ok(dest, kind=kind, unlink_on_fail=True)
         except MediaQAError as exc:
-            raise _http_error(400, f"文件未通过质量检测：{exc}") from exc
+            raise _http_error(400, ui_msg("upload_media_qa_failed", error=exc)) from exc
     rel = dest.relative_to(root).as_posix()
     cat = category or assetlib.guess_category(rel, kind)
     lib = assetlib.library_id()
@@ -1752,7 +1754,7 @@ async def share_x_post(request: Request) -> dict[str, Any]:
     output_path = str(body.get("outputPath") or "").strip()
     headless = body.get("headless", True) is not False
     if not text:
-        raise _http_error(400, "缺少文案 text")
+        raise _http_error(400, ui_msg("share_missing_text"))
     try:
         video = xsb.resolve_project_video(STORE, project_id, output_url=output_url, output_path=output_path)
         result = xsb.post_video(PROJECTS_ROOT, video_path=video, text=text, headless=headless)
@@ -1761,7 +1763,7 @@ async def share_x_post(request: Request) -> dict[str, Any]:
     except (ValueError, RuntimeError) as exc:
         raise _http_error(400, str(exc)) from exc
     except Exception as exc:  # noqa: BLE001
-        raise _http_error(500, f"浏览器发帖失败: {exc}") from exc
+        raise _http_error(500, ui_msg("share_browser_failed", error=exc)) from exc
     return result
 
 
@@ -1847,7 +1849,7 @@ async def project_audio(project_id: str, request: Request) -> dict[str, Any]:
     if override and not lines:
         lines = dialogue_lines_for_episode(override)
     if not lines:
-        raise _http_error(400, "episode has no dialogue text（请用「角色：台词」格式）")
+        raise _http_error(400, ui_msg("audio_no_dialogue"))
     rel = f"media/audio/{episode_id}.mp3"
     out = STORE._dir(pid) / rel
     try:
@@ -2292,7 +2294,7 @@ async def storyboard_actions(project_id: str, request: Request) -> dict[str, Any
         if backend == "none":
             raise _http_error(
                 400,
-                "未配置出片后端，或顶部所选后端不可用。请在顶部模型切换选择 ComfyUI / Seedance，并确认 Key 或租机地址。",
+                ui_msg("video_backend_missing"),
             )
         return resolve_video_model(str(body.get("model") or ""))
 
@@ -2478,7 +2480,7 @@ async def auto_produce_create(request: Request) -> dict[str, Any]:
     body = await request.json()
     brief = str(body.get("brief") or body.get("prompt") or body.get("script") or "").strip()
     if not brief:
-        raise _http_error(400, "请输入一句话想法或粘贴剧本")
+        raise _http_error(400, ui_msg("auto_produce_missing_brief"))
     title = str(body.get("title") or "").strip() or brief[:24] or "一键短剧"
     state = STORE.create_project(
         title=title,

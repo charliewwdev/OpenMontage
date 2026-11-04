@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, Images, X } from "lucide-react";
+import { tr, useLocale } from "../../lib/i18n";
 export function VideoStylePicker({ value, onChange, disabled = false, styles, categories }) {
+  useLocale();
   const library = styles || [];
   const categoryOptions = categories || [];
   const selectedStyle = library.find((s) => s.promptValue === value || s.id === value);
@@ -47,15 +49,13 @@ export function VideoStylePicker({ value, onChange, disabled = false, styles, ca
         <span className="min-w-0 flex-1">
           <span className="label !mb-1">Selected look</span>
           <strong className="block truncate text-sm">
-            {selectedStyle?.label ?? (value ? "原有自定义风格" : "选择视觉风格")}
+            {selectedStyle?.label ?? (value ? tr("ui_settings_video_style_picker_existing_custom_style") : tr("ui_settings_video_style_picker_choose_visual_style"))}
           </strong>
           <span className="mt-1 block truncate text-xs text-[var(--muted)]">
-            {selectedStyle?.generationPrompt ?? (value || "从风格库中选择统一画面语言")}
+            {selectedStyle?.generationPrompt ?? (value || tr("ui_settings_video_style_picker_pick_a_shared_visual_language_from"))}
           </span>
         </span>
-        <span className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-2 text-xs font-semibold text-[var(--ink)]">
-          选择风格
-        </span>
+        <span className="shrink-0 rounded-lg border border-[var(--line)] px-3 py-2 text-xs font-semibold text-[var(--ink)]">{tr("ui_settings_video_style_picker_choose_style")}</span>
       </button>
 
       {open
@@ -73,10 +73,10 @@ export function VideoStylePicker({ value, onChange, disabled = false, styles, ca
                 <header className="flex shrink-0 items-start justify-between gap-4 border-b border-[var(--line)] px-5 py-4 md:px-6 md:py-5">
                   <div>
                     <div className="label">Visual library · {library.length} looks</div>
-                    <h3 className="display-type text-2xl font-semibold">选择视觉风格</h3>
-                    <p className="mt-1 text-xs text-[var(--muted)]">统一角色、场景、道具和分镜的画面语言。</p>
+                    <h3 className="display-type text-2xl font-semibold">{tr("ui_settings_video_style_picker_choose_visual_style")}</h3>
+                    <p className="mt-1 text-xs text-[var(--muted)]">{tr("ui_settings_video_style_picker_unifies_the_visual_language_of_characters")}</p>
                   </div>
-                  <button type="button" aria-label="关闭" className="btn-ghost !min-h-9 !px-2" onClick={() => setOpen(false)}>
+                  <button type="button" aria-label={tr("ui_settings_video_style_picker_close")} className="btn-ghost !min-h-9 !px-2" onClick={() => setOpen(false)}>
                     <X className="h-4 w-4" />
                   </button>
                 </header>

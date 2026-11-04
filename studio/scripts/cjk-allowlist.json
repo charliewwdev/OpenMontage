@@ -1,0 +1,98 @@
+[
+  {
+    "file": "src/App.jsx",
+    "text": "请按 Skill「"
+  },
+  {
+    "file": "src/App.jsx",
+    "text": "的规则帮我创作："
+  },
+  {
+    "file": "src/components/platform/SkillsPage.jsx",
+    "text": "全部标签"
+  },
+  {
+    "file": "src/components/platform/SkillsPage.jsx",
+    "text": "短剧漫剧"
+  },
+  {
+    "file": "src/components/platform/SkillsPage.jsx",
+    "text": "剧本创作"
+  },
+  {
+    "file": "src/components/platform/SkillsPage.jsx",
+    "text": "分镜设计"
+  },
+  {
+    "file": "src/components/platform/SkillsPage.jsx",
+    "text": "角色设计"
+  },
+  {
+    "file": "src/components/platform/SkillsPage.jsx",
+    "text": "场景设计"
+  },
+  {
+    "file": "src/components/platform/SkillsPage.jsx",
+    "text": "提示词"
+  },
+  {
+    "file": "src/components/platform/SkillsPage.jsx",
+    "text": "镜头语言"
+  },
+  {
+    "file": "src/components/platform/SkillsPage.jsx",
+    "text": "图片生成"
+  },
+  {
+    "file": "src/components/platform/SkillsPage.jsx",
+    "text": "视频生成"
+  },
+  {
+    "file": "src/components/platform/SkillsPage.jsx",
+    "text": "配音旁白"
+  },
+  {
+    "file": "src/components/platform/SkillsPage.jsx",
+    "text": "优化改写"
+  },
+  {
+    "file": "src/components/platform/SkillsPage.jsx",
+    "text": "创作工作流"
+  },
+  {
+    "file": "src/components/platform/SkillsPage.jsx",
+    "text": "请按 Skill「"
+  },
+  {
+    "file": "src/components/platform/SkillsPage.jsx",
+    "text": "的规则帮我创作："
+  },
+  {
+    "file": "src/components/StudioShell.jsx",
+    "text": "^第\\s*"
+  },
+  {
+    "file": "src/components/StudioShell.jsx",
+    "text": "\\s*集\\s*[·・.\\-:：]*\\s*"
+  },
+  {
+    "file": "src/components/steps/EntityStep.jsx",
+    "text": "默认造型"
+  },
+  {
+    "file": "src/lib/dialogue.js",
+    "text": "旁白"
+  },
+  {
+    "file": "src/lib/dialogue.js",
+    "text": "对白"
+  },
+  {
+    "file": "src/lib/projectModel.js",
+    "text": "第 1 集"
+  },
+  {
+    "file": "src/lib/projectModel.js",
+    "text": "短剧"
+  }
+]

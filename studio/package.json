@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "server": "python3 server/app.py",
-    "start": "python3 server/app.py"
+    "start": "python3 server/app.py",
+    "check:i18n": "node scripts/check-cjk.mjs"
   },
   "dependencies": {
     "@xyflow/react": "^12.3.6",
@@ -17,6 +18,7 @@
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@babel/parser": "^7.29.12",
     "@tailwindcss/vite": "^4.3.3",
     "@vitejs/plugin-react": "^4.3.4",
     "tailwindcss": "^4.3.3",

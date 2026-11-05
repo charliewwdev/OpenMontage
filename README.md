@@ -17,6 +17,7 @@
   <img src="https://img.shields.io/badge/Stack-React%20%2B%20FastAPI%20%2B%20Postgres-0F172A?style=flat-square" alt="Stack"/>
   <img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker Compose"/>
   <img src="https://img.shields.io/github/last-commit/charliewwdev/OpenMontage?style=flat-square" alt="Last commit"/>
+  <a href="https://altern.ai/ai/openmontage-drama-studio" target="_blank" rel="noopener"><img src="https://data.altern.ai/alternbadge.png" alt="Featured on Altern" width="200" height="43"></a>
 </p>
 
 <p align="center">⭐ If this is useful, a star helps others find it.</p>

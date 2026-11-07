@@ -92,6 +92,8 @@ def _secret(name: str, default: str = "") -> str:
 
 
 def provider_configured(meta: dict[str, Any]) -> bool:
+    if meta.get("keyOptional"):
+        return True
     return bool(_secret(str(meta.get("keyEnv") or "")))
 
 
@@ -114,6 +116,10 @@ def resolve_provider() -> dict[str, Any]:
         "gemini",
         "cloudflare",
         "openrouter",
+        "pollinations",
+        "sambanova",
+        "cohere",
+        "mistral",
         "gpuhome",
         "suanqiao",
         "deepseek",
@@ -125,7 +131,6 @@ def resolve_provider() -> dict[str, Any]:
         "zhipu",
         "grok",
         "minimax",
-        "mistral",
         "custom",
         "cursor",
     ):
@@ -179,8 +184,11 @@ def _chat_openai_compat(
         url = f"{base}/chat/completions"
     headers = {
         "Content-Type": "application/json",
-        "Authorization": f"Bearer {key}",
+        "User-Agent": "OpenMontage-DramaStudio/1.0",
     }
+    if key:
+        headers["Authorization"] = f"Bearer {key}"
+
     messages = [
         {"role": "system", "content": system},
         {"role": "user", "content": user},

@@ -235,6 +235,39 @@ class CloudflareImageBackend:
             raise RuntimeError(str(exc)) from exc
 
 
+class PollinationsImageBackend:
+    id = "pollinations"
+
+    def configured(self) -> bool:
+        try:
+            from .pollinations_image import configured as pollinations_ok
+
+            return bool(pollinations_ok())
+        except Exception:
+            return False
+
+    def unavailable_message(self) -> str:
+        return "顶部已选择 Pollinations 出图，但 POLLINATIONS_IMAGE=0 已关闭。"
+
+    def generate(
+        self,
+        *,
+        prompt: str,
+        ratio: str,
+        out_path: Path,
+        reference_path: Path | None = None,
+        negative_prompt: str | None = None,
+        denoise: float | None = None,
+    ) -> Path:
+        del reference_path, negative_prompt, denoise
+        from .pollinations_image import PollinationsImageError, generate_image as pollinations_generate
+
+        try:
+            return pollinations_generate(prompt=prompt, ratio=ratio, out_path=out_path)
+        except PollinationsImageError as exc:
+            raise RuntimeError(str(exc)) from exc
+
+
 def _free_first_enabled() -> bool:
     return (_secret("STUDIO_FREE_FIRST") or "1").lower() not in {"0", "false", "off", "no"}
 
@@ -255,6 +288,7 @@ def _image_usable(backend: ImageBackend) -> bool:
 # Free stills first when STUDIO_IMAGE_BACKEND=auto; paid/rented backends after.
 IMAGE_BACKENDS.register(NvidiaFluxImageBackend.id, NvidiaFluxImageBackend(), priority=40)
 IMAGE_BACKENDS.register(CloudflareImageBackend.id, CloudflareImageBackend(), priority=35)
+IMAGE_BACKENDS.register(PollinationsImageBackend.id, PollinationsImageBackend(), priority=33)
 IMAGE_BACKENDS.register(HfImageBackend.id, HfImageBackend(), priority=30)
 IMAGE_BACKENDS.register(SeedreamImageBackend.id, SeedreamImageBackend(), priority=20)
 IMAGE_BACKENDS.register(ComfyImageBackend.id, ComfyImageBackend(), priority=10)

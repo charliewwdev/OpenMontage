@@ -4,11 +4,15 @@ Use these when you want Drama Studio generation without renting a ComfyUI box or
 
 | Provider | What you get for free | Studio wiring | Sign up |
 |:---|:---|:---|:---|
+| **Pollinations** | **No API key**: anonymous OpenAI-compatible chat + FLUX-style images (rate-limited). | LLM `pollinations` (always on); image backend `pollinations` (default on; `POLLINATIONS_IMAGE=0` to disable) | [pollinations.ai](https://pollinations.ai/) |
 | **NVIDIA NIM** (`build.nvidia.com`) | Hosted GPU: **FLUX image works with one key**. Chat models are listed broadly but each must be enabled on its model page (`Get API Key`); cold starts can take >60s or 404 until enabled. Rate-limited free prototype tier. | `NVIDIA_API_KEY` → `STUDIO_IMAGE_BACKEND=nvidia`; optional `LLM_PROVIDER=nvidia` after enabling a chat model | [Get API Key](https://build.nvidia.com/settings) |
 | **GroqCloud** | Free plan LLM on Groq LPU (rate limits per model; no card). | `GROQ_API_KEY` → LLM provider `groq` | [console.groq.com](https://console.groq.com/keys) |
 | **Cloudflare Workers AI** | **10,000 Neurons / day** on Workers Free (reset 00:00 UTC). Text + some image models (e.g. FLUX schnell). Larger frontier models may require Paid. | `CF_ACCOUNT_ID` + `CF_API_TOKEN` → LLM `cloudflare` | [Workers AI](https://developers.cloudflare.com/workers-ai/) |
 | **Google AI Studio (Gemini)** | Free API key for Gemini Flash (not a raw GPU rental; free hosted inference). | `GEMINI_API_KEY` | [aistudio.google.com/apikey](https://aistudio.google.com/apikey) |
 | **OpenRouter `:free` models** | Community free model routes (unstable / queue). | `OPENROUTER_API_KEY` + model ending in `:free` | [openrouter.ai/keys](https://openrouter.ai/keys) |
+| **SambaNova Cloud** | Free-tier OpenAI-compatible chat (Llama / Gemma / GPT-OSS, etc.). | `SAMBANOVA_API_KEY` → LLM `sambanova` | [cloud.sambanova.ai](https://cloud.sambanova.ai/) |
+| **Cohere Trial** | Trial credits via OpenAI Compatibility endpoint. | `COHERE_API_KEY` → LLM `cohere` | [dashboard.cohere.com](https://dashboard.cohere.com/api-keys) |
+| **Mistral La Plateforme** | Free experiment quota (prefer `mistral-small-latest` / Nemo). | `MISTRAL_API_KEY` → LLM `mistral` | [console.mistral.ai](https://console.mistral.ai/api-keys/) |
 | **Hugging Face ZeroGPU** | ~5 GPU minutes / day on Gradio Spaces (demo Spaces, not Studio API). | Host a Space; optional `HF_TOKEN` for Inference Providers (~$0.10/mo credits). | [ZeroGPU docs](https://huggingface.co/docs/hub/spaces-zerogpu) |
 | **Google Colab / Kaggle** | Notebook T4-class GPU sessions (hours/week style quotas). | Run ComfyUI/notebook → expose URL → `COMFYUI_SERVER_URL` | Colab / Kaggle |
 | **Modal Starter** | ~$30 / month compute credit (serverless GPU). | Custom OpenAI-compatible or Comfy bridge | [modal.com](https://modal.com) |
@@ -21,7 +25,13 @@ Use these when you want Drama Studio generation without renting a ComfyUI box or
 STUDIO_IMAGE_BACKEND=auto
 STUDIO_VIDEO_BACKEND=auto
 STUDIO_FREE_FIRST=1
-# LLM_PROVIDER=   # empty → nvidia → groq → gemini → cloudflare → openrouter → paid
+# LLM_PROVIDER=   # empty → nvidia → groq → gemini → cloudflare → openrouter
+#                 # → pollinations (no key) → sambanova → cohere → mistral → paid
+
+# Zero-config free fallback (no keys required):
+# POLLINATIONS_IMAGE=1
+# POLLINATIONS_MODEL=openai-fast
+# POLLINATIONS_IMAGE_MODEL=flux
 
 NVIDIA_API_KEY=nvapi-...
 NVIDIA_IMAGE_MODEL=flux-3-image-klein
@@ -29,6 +39,10 @@ GROQ_API_KEY=gsk_...              # or GEMINI_API_KEY=
 CF_ACCOUNT_ID=...
 CF_API_TOKEN=...                  # Workers AI: LLM + FLUX images
 CF_IMAGE_MODEL=@cf/black-forest-labs/flux-1-schnell
+# OPENROUTER_API_KEY=
+# SAMBANOVA_API_KEY=
+# COHERE_API_KEY=
+# MISTRAL_API_KEY=
 HF_TOKEN=hf_...
 HF_IMAGE_MODEL=black-forest-labs/FLUX.1-schnell
 ```

@@ -279,12 +279,13 @@ def _provider_public(item: dict[str, Any]) -> dict[str, Any]:
     model = get_secret(model_env, str(item.get("defaultModel") or ""))
     models = item.get("models") or []
     model_ids = [str(m.get("id") or m) for m in models if (m.get("id") if isinstance(m, dict) else m)]
+    key_optional = bool(item.get("keyOptional"))
     return {
         "id": item["id"],
         "label": item["label"],
         "kind": item["kind"],
-        "configured": bool(key),
-        "masked": mask_secret(key) if key else "",
+        "configured": bool(key) or key_optional,
+        "masked": mask_secret(key) if key else ("（免 Key）" if key_optional else ""),
         "baseUrl": base,
         "model": model,
         "models": [
@@ -299,6 +300,7 @@ def _provider_public(item: dict[str, Any]) -> dict[str, Any]:
         "placeholder": item.get("placeholder") or "sk-...",
         "hint": item.get("hint") or "",
         "freeTier": bool(item.get("freeTier")),
+        "keyOptional": key_optional,
         "keyEnv": key_env,
         "baseEnv": base_env,
         "modelEnv": model_env,
@@ -415,6 +417,24 @@ def _studio_image_models(
                     "model": mid,
                     "label": "FLUX.1 schnell（免费 · Cloudflare Neurons）",
                     "group": "免费 · Cloudflare",
+                    "freeTier": True,
+                }
+            )
+    except Exception:
+        pass
+    try:
+        from providers.pollinations_image import DEFAULT_MODEL as POLLINATIONS_DEFAULT
+        from providers.pollinations_image import configured as pollinations_ok
+
+        if pollinations_ok():
+            mid = get_secret("POLLINATIONS_IMAGE_MODEL") or POLLINATIONS_DEFAULT
+            out.append(
+                {
+                    "id": f"pollinations:{mid}",
+                    "backend": "pollinations",
+                    "model": mid,
+                    "label": f"{mid}（免费 · Pollinations 免 Key）",
+                    "group": "免费 · Pollinations",
                     "freeTier": True,
                 }
             )
@@ -713,6 +733,12 @@ def public_status() -> dict[str, Any]:
             + ("…" if get_secret("CF_ACCOUNT_ID") else ""),
             "model": get_secret("CF_IMAGE_MODEL") or "@cf/black-forest-labs/flux-1-schnell",
         },
+        "pollinationsImage": {
+            "configured": (get_secret("POLLINATIONS_IMAGE") or "1").strip().lower()
+            not in {"0", "false", "off", "no"},
+            "masked": "（免 Key）",
+            "model": get_secret("POLLINATIONS_IMAGE_MODEL") or "flux",
+        },
         "comfyui": comfy,
         "imageBackend": _image_backend_id(volc_key),
         "videoBackend": _video_backend_id(volc_key),
@@ -734,6 +760,12 @@ def public_status() -> dict[str, Any]:
                 else []
             ),
             *(["cloudflare"] if (get_secret("CF_API_TOKEN") and get_secret("CF_ACCOUNT_ID")) else []),
+            *(
+                ["pollinations"]
+                if (get_secret("POLLINATIONS_IMAGE") or "1").strip().lower()
+                not in {"0", "false", "off", "no"}
+                else []
+            ),
             *(["hf"] if (get_secret("HF_TOKEN") or get_secret("HUGGINGFACE_HUB_TOKEN")) else []),
             *(["seedream"] if volc_key else []),
             *(

@@ -250,8 +250,8 @@ LLM_PROVIDERS: list[dict[str, Any]] = [
         "freeTier": True,
         "models": [
             {"id": "openrouter/free", "label": "OpenRouter Free 路由"},
-            {"id": "meta-llama/llama-3.3-70b-instruct:free", "label": "Llama 3.3 70B :free"},
-            {"id": "google/gemma-3-27b-it:free", "label": "Gemma 3 27B :free"},
+            {"id": "liquid/lfm-2.5-2.6b:free", "label": "LFM 2.5 2.6B :free"},
+            {"id": "google/gemma-4-31b-it:free", "label": "Gemma 4 31B :free"},
         ],
     },
     {

@@ -199,12 +199,21 @@ def _chat_openai_compat(
     message = ((raw.get("choices") or [{}])[0].get("message") or {})
     content = message.get("content") or ""
     # Free / OSS gateways (Groq gpt-oss, some OpenRouter :free) often put the
-    # answer in reasoning* while leaving content empty.
+    # final answer in reasoning* while leaving content empty. Only adopt that
+    # text when it already looks like JSON — raw chain-of-thought is not usable.
     if not str(content).strip():
         for key in ("reasoning", "reasoning_content", "reasoning_text"):
             alt = message.get(key)
-            if isinstance(alt, str) and alt.strip():
-                content = alt
+            if not isinstance(alt, str) or not alt.strip():
+                continue
+            stripped = alt.strip()
+            if stripped.startswith("{") or stripped.startswith("["):
+                content = stripped
+                break
+            # Prefer a JSON object embedded in the reasoning trailer.
+            brace = stripped.rfind("{")
+            if brace >= 0 and "}" in stripped[brace:]:
+                content = stripped[brace:]
                 break
     if not str(content).strip():
         raise LlmError("模型返回空 content")

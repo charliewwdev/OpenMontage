@@ -122,6 +122,7 @@ def resolve_provider() -> dict[str, Any]:
         "grok",
         "minimax",
         "openrouter",
+        "cloudgpu",
         "mistral",
         "custom",
         "cursor",

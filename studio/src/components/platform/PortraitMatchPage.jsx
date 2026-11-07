@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Clapperboard, Film, Loader2, Play, RefreshCw, Share2, Sparkles } from "lucide-react";
 import { api } from "../../api";
 import { toast } from "../../lib/toast";
+import { requireGithubStar } from "../../lib/githubStar";
 import { requireCapability, toastMaybeKeys } from "../../lib/keys";
 import { openShareToX } from "../../lib/shareToX";
 import { SkillExpertBadge } from "../SkillExpertBadge";
@@ -211,6 +212,7 @@ export function PortraitMatchPage({
 
   const onGenerateAll = async () => {
     if (!projectId) return;
+    if (!(await requireGithubStar())) return;
     if (!requireCapability(config?.capabilities, "videoReady", onNeedKeys, tr("ui_portrait_match_video_backend_comfyui_h3"))) return;
     if (!ensureComfy()) return;
     setGenerating(true);

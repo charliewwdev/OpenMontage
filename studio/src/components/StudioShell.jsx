@@ -439,6 +439,8 @@ export function StudioShell({
   const startAutoFromWorkshop = async () => {
     if (!projectId) return;
     if (onRequireAuth && !onRequireAuth()) return;
+    const { requireGithubStar } = await import("../lib/githubStar");
+    if (!(await requireGithubStar())) return;
     try {
       setBusyMsg?.(t("studio_auto_starting"));
       await api(`/api/projects/${encodeURIComponent(projectId)}/auto-produce`, {

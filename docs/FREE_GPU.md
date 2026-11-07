@@ -4,7 +4,7 @@ Use these when you want Drama Studio generation without renting a ComfyUI box or
 
 ## Hosted studio: GitHub Star gate
 
-On https://openmontage.dtok.io (and any deploy with `STUDIO_REQUIRE_GITHUB_STAR=1`), users must **Star** [`charliewwdev/OpenMontage`](https://github.com/charliewwdev/OpenMontage) and verify their GitHub username in **模型配置** before they can view provider keys or call any text / image / video generation (including Pollinations and shared Coolify keys).
+On https://openmontage.dtok.io (and any deploy with `STUDIO_REQUIRE_GITHUB_STAR=1`), users must **Star** [`charliewwdev/OpenMontage`](https://github.com/charliewwdev/OpenMontage) and verify their GitHub username **before generating** (script / stills / audio / video / one-click produce). A modal appears at generate actions. Model keys remain configurable without starring (BYOK).
 
 Self-hosted / local: keep `STUDIO_REQUIRE_GITHUB_STAR=0` (see `studio/.env.example`). Optional `GITHUB_TOKEN` raises GitHub API rate limits for verification.
 

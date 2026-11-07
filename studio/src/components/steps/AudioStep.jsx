@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Loader2, Mic2, SkipForward, Volume2 } from "lucide-react";
 import { api } from "../../api";
 import { extractDialogueLines } from "../../lib/dialogue";
+import { requireGithubStar } from "../../lib/githubStar";
 import { toast } from "../../lib/toast";
 
 import { tr, useLocale } from "../../lib/i18n";
@@ -67,6 +68,7 @@ export function AudioStep({
     if (!dialogueLines.length && !shotDialogues.length) {
       return toast.error(tr("ui_audio_no_dialogue_detected_in_this_episode"));
     }
+    if (!(await requireGithubStar())) return;
     setBusy(true);
     setBusyMsg?.(tr("ui_audio_synthesizing_voice_over"));
     try {

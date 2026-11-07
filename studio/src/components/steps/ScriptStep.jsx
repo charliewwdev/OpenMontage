@@ -14,6 +14,7 @@ import {
   X,
 } from "lucide-react";
 import { api } from "../../api";
+import { requireGithubStar } from "../../lib/githubStar";
 import { requireCapability, toastMaybeKeys } from "../../lib/keys";
 import { toast } from "../../lib/toast";
 import { useTimer } from "../../lib/useTimer";
@@ -207,6 +208,7 @@ export function ScriptStep({
 
   const runGenerate = async () => {
     if (onRequireAuth && !onRequireAuth()) return;
+    if (!(await requireGithubStar())) return;
     if (!requireCapability(caps, "deepseek", onNeedKeys, tr("ui_script_text_llm_key"))) return;
     if (!form.brief.trim()) return toast.error(tr("ui_script_fill_in_the_brief_or_paste"));
     if (!form.genre.trim()) return toast.error(tr("ui_script_pick_a_genre_or_enter_a"));
@@ -256,6 +258,7 @@ export function ScriptStep({
   };
 
   const runContinue = async () => {
+    if (!(await requireGithubStar())) return;
     if (!requireCapability(caps, "deepseek", onNeedKeys, tr("ui_script_text_llm_key"))) return;
     const episodeCount = parseCount(continueEpisodeCount);
     if (episodeCount === null) return toast.error(tr("ui_script_episodes_to_continue_must_be_a", {
@@ -288,6 +291,7 @@ export function ScriptStep({
   };
 
   const runRewrite = async () => {
+    if (!(await requireGithubStar())) return;
     if (!requireCapability(caps, "deepseek", onNeedKeys, tr("ui_script_text_llm_key"))) return;
     const episodeCount = parseCount(rewriteEpisodeCount, maxRewriteCount);
     if (episodeCount === null) return toast.error(tr("ui_script_invalid_number_of_episodes_to_rewrite"));

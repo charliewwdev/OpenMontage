@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "./api";
 import { AuthPage, SKIP_AUTO_DEMO_KEY } from "./components/AuthPage";
+import { GithubStarModal } from "./components/GithubStarModal";
 import { MaintenancePage } from "./components/MaintenancePage";
 import { clearSession, getStoredUser, getToken, setSession } from "./lib/auth";
 import { LocaleProvider, tr, useLocale } from "./lib/i18n";
@@ -170,12 +171,12 @@ export default function App() {
     return () => window.removeEventListener("om:need-auth", onNeedAuth);
   }, [messages]);
 
+  const [showStarGate, setShowStarGate] = useState(false);
+
   useEffect(() => {
     const onStarRequired = () => {
       toast.info(tr("ui_keys_star_required_toast"));
-      setScreen("library");
-      setNav("keys");
-      writeAppRoute({ screen: "library", nav: "keys" });
+      setShowStarGate(true);
     };
     window.addEventListener("om:star-required", onStarRequired);
     return () => window.removeEventListener("om:star-required", onStarRequired);
@@ -790,6 +791,14 @@ export default function App() {
         <MaintenancePage brand={config?.brand || "OpenMontage"} onRetry={() => void onRetryApi()} />
       ) : hardGate ? (
         <AuthPage brand={config?.brand} tagline={config?.tagline} authConfig={config?.auth} onAuthed={onAuthed} />
+        <GithubStarModal
+          open={showStarGate}
+          onClose={() => setShowStarGate(false)}
+          onVerified={() => {
+            setShowStarGate(false);
+            window.dispatchEvent(new CustomEvent("studio-keys-changed"));
+          }}
+        />
       ) : (
         <>
           <PlatformShell
@@ -826,6 +835,14 @@ export default function App() {
               }}
             />
           ) : null}
+          <GithubStarModal
+            open={showStarGate}
+            onClose={() => setShowStarGate(false)}
+            onVerified={() => {
+              setShowStarGate(false);
+              window.dispatchEvent(new CustomEvent("studio-keys-changed"));
+            }}
+          />
         </>
       )}
     </LocaleProvider>

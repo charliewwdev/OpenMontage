@@ -511,10 +511,10 @@ async def post_keys(request: Request) -> dict[str, Any]:
     body = await request.json()
     payload = body if isinstance(body, dict) else {}
     # Coolify/ops restore writes shared secrets so all users can fall back before BYOK.
+    # Star gate applies to generation, not to saving BYOK keys.
     if _ops_token_ok(request) and not current_user_id():
         status = save_secrets(PROJECTS_ROOT, payload, user_id="")
     else:
-        _require_github_star()
         status = save_secrets(PROJECTS_ROOT, payload)
     return {"ok": True, "keys": status, "capabilities": _providers_payload()}
 
@@ -522,7 +522,6 @@ async def post_keys(request: Request) -> dict[str, Any]:
 @app.post("/api/settings/keys/import-env")
 def import_keys_from_env() -> dict[str, Any]:
     """Optional ops helper: copy process env into secrets store once."""
-    _require_github_star()
     from providers.llm_catalog import all_secret_envs
 
     payload: dict[str, str] = {}
@@ -624,6 +623,7 @@ def ops_migrate_disk_to_pg(request: Request) -> dict[str, Any]:
 
 @app.post("/api/settings/keys/test")
 async def test_keys() -> dict[str, Any]:
+    # Live ping burns provider quota — same star gate as generation.
     _require_github_star()
     results: dict[str, Any] = {
         "llm": None,

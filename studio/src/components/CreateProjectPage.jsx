@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, Clapperboard, KeyRound, Loader2, Plus, RotateCcw, Sparkles, Upload, Wand2 } from "lucide-react";
 import { api } from "../api";
+import { requireGithubStar } from "../lib/githubStar";
 import { requireCapability, toastMaybeKeys } from "../lib/keys";
 import { toast } from "../lib/toast";
 import { AspectRatioPicker } from "./project-settings/AspectRatioPicker";
@@ -72,6 +73,7 @@ export function CreateProjectPage({ config, entryMode = null, onBack, onCreated,
   };
 
   const optimizeBrief = async () => {
+    if (!(await requireGithubStar())) return;
     if (!requireCapability(config?.capabilities, "deepseek", onNeedKeys, tr("ui_create_project_text_llm_key"))) return;
     if (!form.brief.trim()) return toast.error(tr("ui_create_project_write_a_one_sentence_story_idea"));
     if (!form.genre.trim()) return toast.error(tr("ui_create_project_pick_a_genre_or_enter_a"));
@@ -135,6 +137,7 @@ export function CreateProjectPage({ config, entryMode = null, onBack, onCreated,
     if (!form.brief.trim()) return toast.error(tr("ui_create_project_write_a_one_sentence_idea_or"));
     if (!form.genre.trim()) return toast.error(tr("ui_create_project_pick_a_genre_or_enter_a"));
     if (!form.visualStyle.trim()) return toast.error(tr("ui_create_project_pick_a_visual_style"));
+    if (!(await requireGithubStar())) return;
     if (!requireCapability(caps, "deepseek", onNeedKeys, tr("ui_create_project_text_llm_key"))) return;
     if (!caps.seedream || !caps.seedance) {
       toast.error(tr("ui_create_project_the_full_pipeline_needs_seedream_seedance"));

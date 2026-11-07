@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Eraser, FileText, ImagePlus, Loader2, Maximize2, Plus, RefreshCw, ShieldCheck, Sparkles, Trash2, Upload, X } from "lucide-react";
 import { api } from "../../api";
+import { requireGithubStar } from "../../lib/githubStar";
 import { requireCapability, toastMaybeKeys } from "../../lib/keys";
 import { toast } from "../../lib/toast";
 import { Lightbox } from "../Lightbox";
@@ -176,6 +177,7 @@ export function EntityStep({
 
   const generate = async (entity, redraw = false, silent = false) => {
     if (onRequireAuth && !onRequireAuth()) return;
+    if (!(await requireGithubStar())) return;
     if (!requireCapability(caps, "seedream", onNeedKeys, tr("ui_entity_image_backend_seedream_comfyui"))) return;
     if (workingIds.has(entity.id) || entity.imageStatus === "generating") return;
     setWorking(entity.id, true);

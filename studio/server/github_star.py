@@ -231,72 +231,18 @@ def assert_github_star_or_raise() -> None:
         raise GitHubStarError("请先登录，并 Star GitHub 仓库后再使用", code="login_required")
     if not is_verified():
         raise GitHubStarError(
-            "请先在 GitHub 为 OpenMontage 点 Star，并在模型配置页完成验证后，才能查看与使用模型。",
+            "请先在 GitHub 为 OpenMontage 点 Star 并完成验证后，才能生成内容。",
             code="star_required",
         )
 
 
-def redact_keys_status(status: dict[str, Any]) -> dict[str, Any]:
-    """Strip secrets / readiness when star gate is on and user is not verified."""
-    gate = status_for_current_user()
+def attach_star_status(status: dict[str, Any]) -> dict[str, Any]:
+    """Attach githubStar gate status; keys remain visible so users can BYOK before starring."""
     status = dict(status)
-    status["githubStar"] = gate
-    if not gate.get("required") or gate.get("verified"):
-        return status
-
-    redacted_providers = []
-    for item in status.get("llmProviders") or []:
-        if not isinstance(item, dict):
-            continue
-        redacted_providers.append(
-            {
-                "id": item.get("id"),
-                "label": item.get("label"),
-                "kind": item.get("kind"),
-                "freeTier": bool(item.get("freeTier")),
-                "configured": False,
-                "masked": "",
-                "baseUrl": "",
-                "model": "",
-                "models": [],
-                "modelKnown": False,
-                "docs": item.get("docs") or "",
-                "placeholder": "",
-                "hint": "",
-                "keyOptional": False,
-                "keyEnv": "",
-                "baseEnv": "",
-                "modelEnv": "",
-            }
-        )
-    status["llmProviders"] = redacted_providers
-    status["llmReady"] = False
-    status["llmBackend"] = "none"
-    status["llmProvider"] = ""
-    status["ready"] = False
-    status["imageBackendsAvailable"] = []
-    status["videoBackendsAvailable"] = []
-    status["imageModels"] = []
-    status["videoModels"] = []
-    status["audioModels"] = []
-    for key in ("deepseek", "cursor", "volcengine", "nvidia", "hf", "cloudflareImage", "pollinationsImage"):
-        block = status.get(key)
-        if isinstance(block, dict):
-            status[key] = {
-                **{k: "" for k in block.keys()},
-                "configured": False,
-                "masked": "",
-            }
-    comfy = status.get("comfyui")
-    if isinstance(comfy, dict):
-        status["comfyui"] = {
-            **comfy,
-            "configured": False,
-            "serverUrl": "",
-            "imageUrl": "",
-            "videoUrl": "",
-            "masked": "",
-            "reachable": False,
-        }
-    status["indextts"] = {"configured": False, "baseUrl": ""}
+    status["githubStar"] = status_for_current_user()
     return status
+
+
+def redact_keys_status(status: dict[str, Any]) -> dict[str, Any]:
+    """Backward-compatible alias — no longer strips provider secrets."""
+    return attach_star_status(status)

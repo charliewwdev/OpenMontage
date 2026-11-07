@@ -1768,33 +1768,40 @@ export function KeysSettings({ config, onUpdated }) {
   }, [status, catalog, locale]);
 
   const starGate = status?.githubStar;
-  const starBlocked = Boolean(starGate?.required && !starGate?.verified);
+  const starNeeded = Boolean(starGate?.required && !starGate?.verified);
 
   return (
     <PageShell
       eyebrow="Settings"
       title={tr("ui_keys_settings_model_settings")}
-      description={
-        starBlocked
-          ? tr("ui_keys_star_page_desc")
-          : tr("ui_keys_settings_manage_text_and_media_providers_current", {
-              activeLabel: activeLabel
-            })
-      }
+      description={tr("ui_keys_settings_manage_text_and_media_providers_current", {
+        activeLabel: activeLabel
+      })}
     >
       {loading && !status ? (
         <div className="panel flex items-center gap-2 px-5 py-10 text-sm text-[var(--muted)]">
           <Loader2 className="h-4 w-4 animate-spin" />{" "}{tr("ui_keys_settings_loading_settings")}</div>
-      ) : starBlocked ? (
-        <GithubStarGate gate={starGate} onVerified={onKeysUpdated} />
       ) : (
-        <ProvidersTab
-          status={status}
-          catalog={catalog}
-          onUpdated={onKeysUpdated}
-          testing={testing}
-          onTest={() => void test()}
-        />
+        <>
+          {starNeeded ? (
+            <div className="mb-4">
+              <GithubStarGate
+                gate={starGate}
+                onVerified={(data) => {
+                  onKeysUpdated(data);
+                  window.dispatchEvent(new CustomEvent("studio-keys-changed"));
+                }}
+              />
+            </div>
+          ) : null}
+          <ProvidersTab
+            status={status}
+            catalog={catalog}
+            onUpdated={onKeysUpdated}
+            testing={testing}
+            onTest={() => void test()}
+          />
+        </>
       )}
     </PageShell>
   );

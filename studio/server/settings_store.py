@@ -799,9 +799,9 @@ def public_status() -> dict[str, Any]:
         ),
     }
     try:
-        from github_star import redact_keys_status
+        from github_star import attach_star_status
 
-        return redact_keys_status(out)
+        return attach_star_status(out)
     except Exception:
         return out
 

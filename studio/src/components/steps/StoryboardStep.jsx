@@ -7,6 +7,7 @@ import {
   isEntityQaBlockedError,
   listEntityQaBlockers,
 } from "../../lib/entityQaGate";
+import { requireGithubStar } from "../../lib/githubStar";
 import { requireCapability, toastMaybeKeys } from "../../lib/keys";
 import { toast } from "../../lib/toast";
 import { useTimer } from "../../lib/useTimer";
@@ -198,6 +199,7 @@ export function StoryboardStep({
       setConfirmSplit(true);
       return;
     }
+    if (!(await requireGithubStar())) return;
     if (!requireCapability(caps, "deepseek", onNeedKeys, tr("ui_storyboard_text_llm_key"))) return;
     setConfirmSplit(false);
     setSplitting(true);
@@ -250,6 +252,7 @@ export function StoryboardStep({
   );
 
   const generateVideo = async (shotId, silent = false, { forceEntityQa = false } = {}) => {
+    if (!(await requireGithubStar())) return;
     if (!requireCapability(caps, "seedance", onNeedKeys, tr("ui_storyboard_render_backend_comfyui_seedance"))) return;
     const shot = (bundle?.shots || []).find((s) => s.id === shotId);
     if (!forceEntityQa && shot) {
@@ -301,6 +304,7 @@ export function StoryboardStep({
   };
 
   const generateSegment = async (segmentOrder, silent = false, { forceEntityQa = false } = {}) => {
+    if (!(await requireGithubStar())) return;
     if (!requireCapability(caps, "seedance", onNeedKeys, tr("ui_storyboard_render_backend_comfyui_seedance"))) return;
     if (!episodeId) return;
     if (!forceEntityQa) {
@@ -372,6 +376,7 @@ export function StoryboardStep({
   };
 
   const runBatchGenerate = async ({ forceEntityQa = false } = {}) => {
+    if (!(await requireGithubStar())) return;
     const selected = shots.filter((s) => selectedShotIds.has(s.id));
     setBatching(true);
 

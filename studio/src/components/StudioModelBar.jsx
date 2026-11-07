@@ -342,6 +342,18 @@ export function StudioModelBar({ config, onChanged }) {
           >
             <div className="mb-2 text-[11px] font-semibold text-white/80">{t("studio_model_switcher_title")}</div>
             <p className="mb-3 text-[10px] leading-4 text-white/40">{t("studio_model_switcher_hint")}</p>
+            {keys?.githubStar?.required && !keys?.githubStar?.verified ? (
+              <button
+                type="button"
+                className="mb-3 w-full rounded-xl border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-left text-[11px] leading-4 text-amber-100 hover:bg-amber-500/15"
+                onClick={() => {
+                  setOpen(false);
+                  window.dispatchEvent(new CustomEvent("om:star-required"));
+                }}
+              >
+                {t("ui_keys_star_required_toast")}
+              </button>
+            ) : null}
 
             <div className="mb-3 block">
               <span className="label !mb-1">{t("studio_model_image_label")}</span>

@@ -317,6 +317,10 @@ def chat_json(
 ) -> Any:
     import time
 
+    from github_star import assert_github_star_or_raise
+
+    assert_github_star_or_raise()
+
     meta = resolve_provider()
     kind = meta["kind"]
     key = _secret(meta["keyEnv"])

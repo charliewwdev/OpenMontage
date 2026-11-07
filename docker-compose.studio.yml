@@ -101,6 +101,10 @@ services:
       STUDIO_IMAGE_BACKEND: ${STUDIO_IMAGE_BACKEND:-auto}
       STUDIO_VIDEO_BACKEND: ${STUDIO_VIDEO_BACKEND:-auto}
       STUDIO_FREE_FIRST: ${STUDIO_FREE_FIRST:-1}
+      # Hosted default on: require GitHub star before keys/generate. Local .env should set 0.
+      STUDIO_REQUIRE_GITHUB_STAR: ${STUDIO_REQUIRE_GITHUB_STAR:-1}
+      GITHUB_STAR_REPO: ${GITHUB_STAR_REPO:-charliewwdev/OpenMontage}
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}
       LLM_PROVIDER: ${LLM_PROVIDER:-}
       CURSOR_API_KEY: ${CURSOR_API_KEY:-}
       CURSOR_API_BASE: ${CURSOR_API_BASE:-https://api.cursor.com}

@@ -205,6 +205,9 @@ def generate_video_file(
     resolution: str = "720p",
     use_turbo: bool = True,
 ) -> dict:
+    from github_star import assert_github_star_or_raise
+
+    assert_github_star_or_raise()
     backend = VIDEO_BACKENDS.get("comfyui")
     if backend is None or not hasattr(backend, "render_file"):
         raise RuntimeError("ComfyUI 视频后端未注册")
@@ -225,6 +228,9 @@ def register_video_job(backend_id: str, runner: Any) -> None:
 
 
 def run_registered_video_job(backend_id: str, **kwargs: Any) -> None:
+    from github_star import assert_github_star_or_raise
+
+    assert_github_star_or_raise()
     from .video_jobs import ensure_registered
 
     ensure_registered()

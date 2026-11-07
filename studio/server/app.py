@@ -131,6 +131,7 @@ AUTH_PUBLIC_GET_PREFIXES = (
     "/api/platform/exports",
     "/api/projects",
     "/api/settings/keys",  # public status only; POST still gated for anon writes
+    "/api/settings/github-star",  # star gate status (verify POST still needs login)
     "/api/settings/usage",  # browse usage charts anonymously
     "/api/settings/credits",  # browse credit packages; mutations still gated
 )
@@ -371,6 +372,21 @@ async def bad_request_handler(_: Request, exc: ValueError) -> JSONResponse:
 
 @app.exception_handler(Exception)
 async def unhandled_handler(_: Request, exc: Exception) -> JSONResponse:
+    try:
+        from github_star import GitHubStarError
+
+        if isinstance(exc, GitHubStarError):
+            status = 401 if exc.code == "login_required" else 403
+            return JSONResponse(
+                status_code=status,
+                content={
+                    "error": str(exc),
+                    "code": exc.code or "star_required",
+                    "starUrl": f"https://github.com/{(os.environ.get('GITHUB_STAR_REPO') or 'charliewwdev/OpenMontage').strip()}",
+                },
+            )
+    except Exception:
+        pass
     return JSONResponse(status_code=500, content={"error": str(exc)})
 
 
@@ -465,6 +481,31 @@ def get_keys(probe: int = 0) -> dict[str, Any]:
     return {"keys": keys_payload, "capabilities": _providers_payload()}
 
 
+def _require_github_star(*, allow_ops: bool = False, request: Request | None = None) -> None:
+    if allow_ops and request is not None and _ops_token_ok(request):
+        return
+    from github_star import assert_github_star_or_raise
+
+    assert_github_star_or_raise()
+
+
+@app.get("/api/settings/github-star")
+def get_github_star() -> dict[str, Any]:
+    from github_star import status_for_current_user
+
+    return {"githubStar": status_for_current_user()}
+
+
+@app.post("/api/settings/github-star/verify")
+async def post_github_star_verify(request: Request) -> dict[str, Any]:
+    from github_star import verify_and_bind
+
+    body = await request.json()
+    payload = body if isinstance(body, dict) else {}
+    status = verify_and_bind(str(payload.get("login") or payload.get("username") or ""))
+    return {"ok": True, "githubStar": status, "keys": public_status(), "capabilities": _providers_payload()}
+
+
 @app.post("/api/settings/keys")
 async def post_keys(request: Request) -> dict[str, Any]:
     body = await request.json()
@@ -473,6 +514,7 @@ async def post_keys(request: Request) -> dict[str, Any]:
     if _ops_token_ok(request) and not current_user_id():
         status = save_secrets(PROJECTS_ROOT, payload, user_id="")
     else:
+        _require_github_star()
         status = save_secrets(PROJECTS_ROOT, payload)
     return {"ok": True, "keys": status, "capabilities": _providers_payload()}
 
@@ -480,6 +522,7 @@ async def post_keys(request: Request) -> dict[str, Any]:
 @app.post("/api/settings/keys/import-env")
 def import_keys_from_env() -> dict[str, Any]:
     """Optional ops helper: copy process env into secrets store once."""
+    _require_github_star()
     from providers.llm_catalog import all_secret_envs
 
     payload: dict[str, str] = {}
@@ -581,6 +624,7 @@ def ops_migrate_disk_to_pg(request: Request) -> dict[str, Any]:
 
 @app.post("/api/settings/keys/test")
 async def test_keys() -> dict[str, Any]:
+    _require_github_star()
     results: dict[str, Any] = {
         "llm": None,
         "deepseek": None,

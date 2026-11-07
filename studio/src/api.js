@@ -46,6 +46,18 @@ export async function api(path, options = {}) {
       err.code = data.code;
       err.blockers = data.blockers;
       err.forceHint = data.forceHint;
+      err.starUrl = data.starUrl;
+    }
+    if (err.code === "star_required" || err.code === "not_starred") {
+      try {
+        window.dispatchEvent(
+          new CustomEvent("om:star-required", {
+            detail: { path, message: msg, starUrl: err.starUrl || data?.starUrl },
+          }),
+        );
+      } catch {
+        /* ignore */
+      }
     }
     throw err;
   }

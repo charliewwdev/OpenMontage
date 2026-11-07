@@ -2,6 +2,12 @@
 
 Use these when you want Drama Studio generation without renting a ComfyUI box or paying Volcengine. Quotas change; verify on each vendor’s dashboard.
 
+## Hosted studio: GitHub Star gate
+
+On https://openmontage.dtok.io (and any deploy with `STUDIO_REQUIRE_GITHUB_STAR=1`), users must **Star** [`charliewwdev/OpenMontage`](https://github.com/charliewwdev/OpenMontage) and verify their GitHub username in **模型配置** before they can view provider keys or call any text / image / video generation (including Pollinations and shared Coolify keys).
+
+Self-hosted / local: keep `STUDIO_REQUIRE_GITHUB_STAR=0` (see `studio/.env.example`). Optional `GITHUB_TOKEN` raises GitHub API rate limits for verification.
+
 | Provider | What you get for free | Studio wiring | Sign up |
 |:---|:---|:---|:---|
 | **Pollinations** | **No API key**: anonymous OpenAI-compatible chat + FLUX-style images (rate-limited). | LLM `pollinations` (always on); image backend `pollinations` (default on; `POLLINATIONS_IMAGE=0` to disable) | [pollinations.ai](https://pollinations.ai/) |

@@ -9,6 +9,7 @@ import {
   Loader2,
   Plus,
   ShieldCheck,
+  Star,
   Trash2,
   Pencil,
   Zap,
@@ -1640,6 +1641,78 @@ export function UsageSettings() {
   );
 }
 
+function GithubStarGate({ gate, onVerified }) {
+  useLocale();
+  const [login, setLogin] = useState(gate?.login || "");
+  const [busy, setBusy] = useState(false);
+  const starUrl = gate?.starUrl || "https://github.com/charliewwdev/OpenMontage";
+
+  const verify = async () => {
+    const name = String(login || "").trim().replace(/^@/, "");
+    if (!name) {
+      toast.error(tr("ui_keys_star_enter_username"));
+      return;
+    }
+    setBusy(true);
+    try {
+      const data = await api("/api/settings/github-star/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ login: name }),
+      });
+      toast.success(tr("ui_keys_star_verified"));
+      onVerified?.(data);
+    } catch (error) {
+      toast.error(String(error.message || error));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="panel mx-auto max-w-xl space-y-4 p-6">
+      <div className="flex items-start gap-3">
+        <div className="rounded-full bg-amber-500/15 p-2 text-amber-300">
+          <Star className="h-5 w-5" />
+        </div>
+        <div>
+          <h2 className="text-lg font-semibold text-white">{tr("ui_keys_star_title")}</h2>
+          <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">{tr("ui_keys_star_body")}</p>
+        </div>
+      </div>
+      <ol className="list-decimal space-y-2 pl-5 text-sm text-white/80">
+        <li>{tr("ui_keys_star_step_star")}</li>
+        <li>{tr("ui_keys_star_step_username")}</li>
+        <li>{tr("ui_keys_star_step_verify")}</li>
+      </ol>
+      <a
+        className="btn-secondary inline-flex items-center gap-2 !min-h-10"
+        href={starUrl}
+        target="_blank"
+        rel="noreferrer"
+      >
+        <ExternalLink className="h-4 w-4" />
+        {tr("ui_keys_star_open_repo")}
+      </a>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <input
+          className="field flex-1"
+          placeholder={tr("ui_keys_star_username_placeholder")}
+          value={login}
+          onChange={(e) => setLogin(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") void verify();
+          }}
+        />
+        <button type="button" className="btn-primary !min-h-10 !px-4" disabled={busy} onClick={() => void verify()}>
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+          <span>{tr("ui_keys_star_verify_btn")}</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function KeysSettings({ config, onUpdated }) {
   const { locale } = useLocale();
   const catalog = config?.llmProviders || [];
@@ -1694,17 +1767,26 @@ export function KeysSettings({ config, onUpdated }) {
     return list.find((p) => p.id === id)?.label || id || tr("ui_keys_settings_not_enabled");
   }, [status, catalog, locale]);
 
+  const starGate = status?.githubStar;
+  const starBlocked = Boolean(starGate?.required && !starGate?.verified);
+
   return (
     <PageShell
       eyebrow="Settings"
       title={tr("ui_keys_settings_model_settings")}
-      description={tr("ui_keys_settings_manage_text_and_media_providers_current", {
-        activeLabel: activeLabel
-      })}
+      description={
+        starBlocked
+          ? tr("ui_keys_star_page_desc")
+          : tr("ui_keys_settings_manage_text_and_media_providers_current", {
+              activeLabel: activeLabel
+            })
+      }
     >
       {loading && !status ? (
         <div className="panel flex items-center gap-2 px-5 py-10 text-sm text-[var(--muted)]">
           <Loader2 className="h-4 w-4 animate-spin" />{" "}{tr("ui_keys_settings_loading_settings")}</div>
+      ) : starBlocked ? (
+        <GithubStarGate gate={starGate} onVerified={onKeysUpdated} />
       ) : (
         <ProvidersTab
           status={status}

@@ -29,6 +29,10 @@ def chat_json(
     from .llm import LlmError, chat_json as unified_chat_json
 
     try:
+        from github_star import GitHubStarError
+    except Exception:
+        GitHubStarError = ()  # type: ignore[misc, assignment]
+    try:
         return unified_chat_json(
             system=system,
             user=user,
@@ -36,5 +40,7 @@ def chat_json(
             max_tokens=max_tokens,
             retries=retries,
         )
+    except GitHubStarError:
+        raise
     except LlmError as exc:
         raise DeepSeekError(str(exc)) from exc

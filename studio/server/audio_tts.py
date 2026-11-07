@@ -197,6 +197,10 @@ def _indextts_speech(text: str, out_path: Path, *, speaker: str | None = None) -
 
 
 def synthesize_mp3(text: str, out_path: Path, *, voice: str | None = None) -> dict:
+    from github_star import assert_github_star_or_raise
+
+    assert_github_star_or_raise()
+
     """Single-voice TTS. Backend follows the header switcher (sticky)."""
     out_path.parent.mkdir(parents=True, exist_ok=True)
     cleaned = (text or "").strip()

@@ -693,7 +693,7 @@ def public_status() -> dict[str, Any]:
 
     llm_ready = bool(configured)
     comfy = _comfyui_public()
-    return {
+    out = {
         "llmProvider": preferred or (backend if backend != "none" else ""),
         "llmProviders": providers,
         "llmReady": llm_ready,
@@ -798,6 +798,12 @@ def public_status() -> dict[str, Any]:
             or bool(get_secret("COMFYUI_VIDEO_SERVER_URL"))
         ),
     }
+    try:
+        from github_star import redact_keys_status
+
+        return redact_keys_status(out)
+    except Exception:
+        return out
 
 
 def save_secrets(

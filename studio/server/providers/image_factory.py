@@ -325,6 +325,9 @@ def generate_image(
     negative_prompt: str | None = None,
     denoise: float | None = None,
 ) -> Path:
+    from github_star import assert_github_star_or_raise
+
+    assert_github_star_or_raise()
     preferred, backend = resolve_image_backend()
     log.info(
         "generate_image preferred=%s resolved=%s out=%s",

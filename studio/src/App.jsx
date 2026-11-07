@@ -170,6 +170,17 @@ export default function App() {
     return () => window.removeEventListener("om:need-auth", onNeedAuth);
   }, [messages]);
 
+  useEffect(() => {
+    const onStarRequired = () => {
+      toast.info(tr("ui_keys_star_required_toast"));
+      setScreen("library");
+      setNav("keys");
+      writeAppRoute({ screen: "library", nav: "keys" });
+    };
+    window.addEventListener("om:star-required", onStarRequired);
+    return () => window.removeEventListener("om:star-required", onStarRequired);
+  }, [messages]);
+
   const verifySession = useCallback(async (cfg) => {
     const required = cfg?.auth?.required !== false;
     const token = getToken();

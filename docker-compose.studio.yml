@@ -1,8 +1,9 @@
 # Local / Coolify-compatible Drama Studio stack
-# One-shot (no extra services required):
-#   docker compose -f docker-compose.studio.yml up --build
-# Then open http://localhost:8787 and click Demo.
-# Coolify: docker-compose build pack → this file (override MINIO_*/API_BASE_URL for hosted).
+# Local one-shot (bundled MinIO):
+#   docker compose -f docker-compose.studio.yml --profile local-minio up --build
+# Coolify / hosted (external MinIO via MINIO_* envs — do NOT enable local-minio):
+#   docker-compose build pack → this file
+# Then open http://localhost:8787 (or the Coolify FQDN) and click Demo.
 
 services:
   drama-db:
@@ -46,10 +47,12 @@ services:
       timeout: 3s
       retries: 6
 
-  # Bundled S3-compatible store so `docker compose up --build` works without
-  # a separate MinIO / AWS account. Override MINIO_ENDPOINT for hosted MinIO.
+  # Bundled S3 for local demos only. Coolify uses hosted MinIO (MINIO_ENDPOINT);
+  # keep this behind a profile so deploy does not pull Docker Hub minio/minio
+  # (Hub often returns "pull access denied" and aborts the whole stack).
   drama-minio:
-    image: minio/minio:latest
+    profiles: ["local-minio"]
+    image: quay.io/minio/minio:latest
     restart: unless-stopped
     command: ["server", "/data", "--console-address", ":9001"]
     environment:
@@ -68,7 +71,8 @@ services:
       start_period: 10s
 
   drama-minio-init:
-    image: minio/mc:latest
+    profiles: ["local-minio"]
+    image: quay.io/minio/mc:latest
     depends_on:
       drama-minio:
         condition: service_healthy
@@ -96,8 +100,6 @@ services:
         condition: service_healthy
       drama-redis:
         condition: service_healthy
-      drama-minio-init:
-        condition: service_completed_successfully
     ports:
       - "${PORT:-8787}:8787"
     environment:

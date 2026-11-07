@@ -1,0 +1,42 @@
+# Optional edge media worker — local/GPU LAN only. Do not use on Coolify.
+# Coolify ignores Compose profiles and would start this alongside drama-studio.
+#
+#   REDIS_URL=redis://<coolify-host>:6379/0 \
+#   COMFYUI_SERVER_URL=https://….gpuhome.cc:8443 \
+#   docker compose -f docker-compose.studio.yml -f docker-compose.studio.edge.yml up media-worker-edge
+
+services:
+  media-worker-edge:
+    build:
+      context: .
+      dockerfile: studio/Dockerfile
+    image: openmontage-drama-studio:local
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - "cd /app && PYTHONPATH=/app/studio/server:/app python -m media_worker"
+    environment:
+      OPENMONTAGE_ROOT: /app
+      PROJECTS_ROOT: /data/projects
+      REDIS_URL: ${REDIS_URL:-}
+      STUDIO_REDIS_URL: ${STUDIO_REDIS_URL:-${REDIS_URL}}
+      DATABASE_URL: ${DATABASE_URL:-}
+      STUDIO_DATABASE_URL: ${STUDIO_DATABASE_URL:-}
+      COMFYUI_SERVER_URL: ${COMFYUI_SERVER_URL:-}
+      COMFYUI_VIDEO_SERVER_URL: ${COMFYUI_VIDEO_SERVER_URL:-}
+      COMFYUI_VIDEO_MODEL: ${COMFYUI_VIDEO_MODEL:-}
+      COMFY_API_KEY: ${COMFY_API_KEY:-}
+      COMFYUI_API_KEY: ${COMFYUI_API_KEY:-}
+      STUDIO_MEDIA_WORKERS: ${STUDIO_MEDIA_WORKERS:-2}
+      STUDIO_VIDEO_PARALLEL: ${STUDIO_VIDEO_PARALLEL:-2}
+      STUDIO_IMAGE_WORKERS: ${STUDIO_IMAGE_WORKERS:-1}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
+      MINIO_BUCKET: ${MINIO_BUCKET:-openmontage}
+      MINIO_PREFIX: ${MINIO_PREFIX:-openmontage}
+    volumes:
+      - drama_projects:/data/projects
+
+volumes:
+  drama_projects:

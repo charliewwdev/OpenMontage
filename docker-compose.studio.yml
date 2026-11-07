@@ -1,9 +1,9 @@
-# Local / Coolify-compatible Drama Studio stack
-# Local one-shot (bundled MinIO):
-#   docker compose -f docker-compose.studio.yml --profile local-minio up --build
-# Coolify / hosted (external MinIO via MINIO_* envs — do NOT enable local-minio):
-#   docker-compose build pack → this file
-# Then open http://localhost:8787 (or the Coolify FQDN) and click Demo.
+# Coolify + local Drama Studio stack (db / redis / studio only).
+# Coolify ignores Compose profiles and pulls every image listed here — keep
+# optional MinIO / edge-worker out of this file:
+#   Local + MinIO:  docker compose -f docker-compose.studio.yml -f docker-compose.studio.minio.yml up --build
+#   Edge worker:    docker compose -f docker-compose.studio.yml -f docker-compose.studio.edge.yml up media-worker-edge
+# Hosted: set MINIO_* to external MinIO (e.g. minio-api.dtok.io). Then open the FQDN and click Demo.
 
 services:
   drama-db:
@@ -46,48 +46,6 @@ services:
       interval: 10s
       timeout: 3s
       retries: 6
-
-  # Bundled S3 for local demos only. Coolify uses hosted MinIO (MINIO_ENDPOINT);
-  # keep this behind a profile so deploy does not pull Docker Hub minio/minio
-  # (Hub often returns "pull access denied" and aborts the whole stack).
-  drama-minio:
-    profiles: ["local-minio"]
-    image: quay.io/minio/minio:latest
-    restart: unless-stopped
-    command: ["server", "/data", "--console-address", ":9001"]
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
-    ports:
-      - "${MINIO_API_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
-    volumes:
-      - drama_minio:/data
-    healthcheck:
-      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/minio/health/live"]
-      interval: 10s
-      timeout: 5s
-      retries: 8
-      start_period: 10s
-
-  drama-minio-init:
-    profiles: ["local-minio"]
-    image: quay.io/minio/mc:latest
-    depends_on:
-      drama-minio:
-        condition: service_healthy
-    restart: "no"
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        set -e
-        mc alias set local http://drama-minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"
-        mc mb --ignore-existing "local/$${MINIO_BUCKET}"
-        echo "minio bucket ready: $${MINIO_BUCKET}"
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
-      MINIO_BUCKET: ${MINIO_BUCKET:-openmontage}
 
   drama-studio:
     build:
@@ -168,7 +126,7 @@ services:
       OSS_API_BASE_URL: ${OSS_API_BASE_URL:-}
       OSS_CONSOLE_USERNAME: ${OSS_CONSOLE_USERNAME:-}
       OSS_CONSOLE_PASSWORD: ${OSS_CONSOLE_PASSWORD:-}
-      # Default: in-compose MinIO. Hosted stacks override these.
+      # Hosted Coolify sets MINIO_* to external MinIO. Local+minio overlay uses drama-minio.
       MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://drama-minio:9000}
       MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-${MINIO_ROOT_USER:-minioadmin}}
       MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-${MINIO_ROOT_PASSWORD:-minioadmin}}
@@ -184,47 +142,7 @@ services:
       retries: 3
       start_period: 40s
 
-  # Edge media worker: run on a host that can reach ComfyUI (e.g. Mac / GPU LAN)
-  # when Coolify egress to 智川云 is blocked. API stays on Coolify; this only consumes Redis.
-  #   REDIS_URL=redis://<coolify-host>:6379/0 \
-  #   COMFYUI_SERVER_URL=https://….gpuhome.cc:8443 \
-  #   docker compose -f docker-compose.studio.yml --profile edge-worker up media-worker-edge
-  media-worker-edge:
-    profiles: ["edge-worker"]
-    build:
-      context: .
-      dockerfile: studio/Dockerfile
-    image: openmontage-drama-studio:local
-    restart: unless-stopped
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - "cd /app && PYTHONPATH=/app/studio/server:/app python -m media_worker"
-    environment:
-      OPENMONTAGE_ROOT: /app
-      PROJECTS_ROOT: /data/projects
-      # Required when starting this profile: Redis URL of the Coolify Studio stack.
-      REDIS_URL: ${REDIS_URL:-}
-      STUDIO_REDIS_URL: ${STUDIO_REDIS_URL:-${REDIS_URL}}
-      DATABASE_URL: ${DATABASE_URL:-}
-      STUDIO_DATABASE_URL: ${STUDIO_DATABASE_URL:-}
-      COMFYUI_SERVER_URL: ${COMFYUI_SERVER_URL:-}
-      COMFYUI_VIDEO_SERVER_URL: ${COMFYUI_VIDEO_SERVER_URL:-}
-      COMFYUI_VIDEO_MODEL: ${COMFYUI_VIDEO_MODEL:-}
-      COMFY_API_KEY: ${COMFY_API_KEY:-}
-      COMFYUI_API_KEY: ${COMFYUI_API_KEY:-}
-      STUDIO_MEDIA_WORKERS: ${STUDIO_MEDIA_WORKERS:-2}
-      STUDIO_VIDEO_PARALLEL: ${STUDIO_VIDEO_PARALLEL:-2}
-      STUDIO_IMAGE_WORKERS: ${STUDIO_IMAGE_WORKERS:-1}
-      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://drama-minio:9000}
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-${MINIO_ROOT_USER:-minioadmin}}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-${MINIO_ROOT_PASSWORD:-minioadmin}}
-      MINIO_BUCKET: ${MINIO_BUCKET:-openmontage}
-      MINIO_PREFIX: ${MINIO_PREFIX:-openmontage}
-    volumes:
-      - drama_projects:/data/projects
-
 volumes:
   drama_projects:
   drama_pg:
   drama_redis:
-  drama_minio:

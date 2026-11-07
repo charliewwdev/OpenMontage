@@ -45,7 +45,8 @@ mkdir -p "$WORK"
 git archive HEAD \
   studio lib tools schemas pipeline_defs workflow_defs \
   AGENT_GUIDE.md AGENTS.md CLAUDE.md PROJECT_CONTEXT.md README.md \
-  docker-compose.studio.yml scripts/deploy_coolify_drama_studio.sh \
+  docker-compose.studio.yml docker-compose.studio.minio.yml docker-compose.studio.edge.yml \
+  scripts/deploy_coolify_drama_studio.sh \
   scripts/coolify_set_drama_keys.sh scripts/sync_dtok_git.sh \
   .gitignore \
   | tar -x -C "$WORK"
@@ -58,7 +59,8 @@ rsync -a --delete \
   --exclude '.env' --exclude '.env.*' --exclude '*.env' \
   --exclude '.studio_secrets.json' --exclude '**/.studio_secrets.json' \
   "$ROOT/studio/" "$WORK/studio/"
-for rel in scripts/sync_dtok_git.sh scripts/deploy_coolify_drama_studio.sh scripts/coolify_set_drama_keys.sh scripts/baota_set_maintenance.sh docker-compose.studio.yml; do
+for rel in scripts/sync_dtok_git.sh scripts/deploy_coolify_drama_studio.sh scripts/coolify_set_drama_keys.sh scripts/baota_set_maintenance.sh \
+  docker-compose.studio.yml docker-compose.studio.minio.yml docker-compose.studio.edge.yml; do
   [[ -f "$ROOT/$rel" ]] && cp "$ROOT/$rel" "$WORK/$rel"
 done
 # Ensure edge nginx + maintenance assets ship even if path filters change.

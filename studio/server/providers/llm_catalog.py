@@ -188,6 +188,27 @@ LLM_PROVIDERS: list[dict[str, Any]] = [
         "placeholder": "sk-or-...",
     },
     {
+        "id": "cloudgpu",
+        "label": "CloudGPU",
+        "kind": "openai",
+        "keyEnv": "CLOUDGPU_API_KEY",
+        "baseEnv": "CLOUDGPU_BASE_URL",
+        "modelEnv": "CLOUDGPU_MODEL",
+        "defaultBase": "https://cloudgpu.app/v1",
+        "defaultModel": "deepseek-v4-flash",
+        "docs": "https://cloudgpu.app",
+        "placeholder": "sk-...",
+        # Subset of GET https://cloudgpu.app/v1/models (2026-11-07); other chat model ids can be typed in
+        "models": [
+            {"id": "deepseek-v4-flash", "label": "DeepSeek V4 Flash (default)"},
+            {"id": "deepseek-v4-pro", "label": "DeepSeek V4 Pro"},
+            {"id": "glm-5.3", "label": "GLM-5.3"},
+            {"id": "kimi-k3", "label": "Kimi K3"},
+            {"id": "minimax-m3", "label": "MiniMax M3"},
+            {"id": "qwen3.5-397b", "label": "Qwen3.5 397B"},
+        ],
+    },
+    {
         "id": "mistral",
         "label": "Mistral",
         "kind": "openai",

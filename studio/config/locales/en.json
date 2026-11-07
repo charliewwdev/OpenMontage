@@ -1499,6 +1499,17 @@
   "ui_edit_episode_download_filename": "episode-{n}.mp4",
   "ui_audio_speaker_narration": "Narration",
   "ui_audio_speaker_dialogue": "Dialogue",
-  "ui_keys_settings_free_gpu_banner_title": "Free GPU / inference quotas",
-  "ui_keys_settings_free_gpu_banner_body": "Prefer NVIDIA NIM (images), Groq / Gemini (scripts), Cloudflare Workers AI (10k Neurons/day). Video shots still need Seedance or your own ComfyUI. Catalog:"
+  "ui_keys_settings_free_gpu_banner_title": "Free GPU / inference (preferred by default)",
+  "ui_keys_settings_free_gpu_banner_body": "Image auto: NVIDIA → Cloudflare → HF → Seedream → reachable Comfy. LLM auto: NVIDIA / Groq / Gemini / CF / OpenRouter:free. Video: reachable Comfy (incl. Colab) before Seedance; dead Comfy is skipped. Catalog:",
+  "ui_keys_settings_free_tier_badge": "Free",
+  "ui_keys_settings_free_first_on": "Free-first routing on (STUDIO_FREE_FIRST)",
+  "ui_keys_settings_hf_images": "Hugging Face images",
+  "ui_keys_settings_hf_images_hint": "Inference Providers free credits. Create a token:",
+  "ui_keys_settings_cf_images": "Cloudflare Workers AI images",
+  "ui_keys_settings_cf_images_hint": "FLUX.1 schnell · ~10k Neurons/day. Needs Account ID + API Token (Workers AI).",
+  "ui_keys_settings_please_enter_hf_token": "Enter an HF_TOKEN",
+  "ui_keys_settings_hf_token_saved": "Hugging Face token saved (image backend stays auto / free-first)",
+  "ui_keys_settings_please_enter_cf_creds": "Enter CF_ACCOUNT_ID and CF_API_TOKEN",
+  "ui_keys_settings_cf_creds_saved": "Cloudflare Workers AI saved (image backend stays auto / free-first)",
+  "ui_keys_settings_cf_account_configured": "Account {0} configured — paste a new Account ID to replace"
 }

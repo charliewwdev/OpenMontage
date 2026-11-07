@@ -202,21 +202,77 @@ class HfImageBackend:
             raise RuntimeError(str(exc)) from exc
 
 
-# Free NIM / HF stills first when STUDIO_IMAGE_BACKEND=auto; paid/rented backends after.
-IMAGE_BACKENDS.register(NvidiaFluxImageBackend.id, NvidiaFluxImageBackend(), priority=30)
-IMAGE_BACKENDS.register(HfImageBackend.id, HfImageBackend(), priority=25)
+class CloudflareImageBackend:
+    id = "cloudflare"
+
+    def configured(self) -> bool:
+        try:
+            from .cf_image import configured as cf_ok
+
+            return bool(cf_ok())
+        except Exception:
+            return False
+
+    def unavailable_message(self) -> str:
+        return "顶部已选择 Cloudflare Workers AI 出图，但缺少 CF_ACCOUNT_ID / CF_API_TOKEN（免费约 10k Neurons/天）。"
+
+    def generate(
+        self,
+        *,
+        prompt: str,
+        ratio: str,
+        out_path: Path,
+        reference_path: Path | None = None,
+        negative_prompt: str | None = None,
+        denoise: float | None = None,
+    ) -> Path:
+        del reference_path, negative_prompt, denoise
+        from .cf_image import CfImageError, generate_image as cf_generate
+
+        try:
+            return cf_generate(prompt=prompt, ratio=ratio, out_path=out_path)
+        except CfImageError as exc:
+            raise RuntimeError(str(exc)) from exc
+
+
+def _free_first_enabled() -> bool:
+    return (_secret("STUDIO_FREE_FIRST") or "1").lower() not in {"0", "false", "off", "no"}
+
+
+def _image_usable(backend: ImageBackend) -> bool:
+    if not backend.configured():
+        return False
+    if getattr(backend, "id", "") == "comfyui":
+        try:
+            from .comfyui import reachable as comfy_reachable
+
+            return bool(comfy_reachable(capability="image"))
+        except Exception:
+            return False
+    return True
+
+
+# Free stills first when STUDIO_IMAGE_BACKEND=auto; paid/rented backends after.
+IMAGE_BACKENDS.register(NvidiaFluxImageBackend.id, NvidiaFluxImageBackend(), priority=40)
+IMAGE_BACKENDS.register(CloudflareImageBackend.id, CloudflareImageBackend(), priority=35)
+IMAGE_BACKENDS.register(HfImageBackend.id, HfImageBackend(), priority=30)
 IMAGE_BACKENDS.register(SeedreamImageBackend.id, SeedreamImageBackend(), priority=20)
 IMAGE_BACKENDS.register(ComfyImageBackend.id, ComfyImageBackend(), priority=10)
 
 
 def resolve_image_backend() -> tuple[str, ImageBackend | None]:
-    """Sticky preferred id never falls through. Unknown ids follow auto order."""
-    preferred = (_secret("STUDIO_IMAGE_BACKEND") or "auto").lower()
+    """Prefer free backends. Pinned dead Comfy falls through when STUDIO_FREE_FIRST=1 (default)."""
+    preferred = (_secret("STUDIO_IMAGE_BACKEND") or "auto").lower() or "auto"
+    free_first = _free_first_enabled()
     pinned = IMAGE_BACKENDS.get(preferred) if preferred not in {"", "auto"} else None
     if preferred not in {"", "auto"} and pinned is not None:
-        return preferred, pinned if pinned.configured() else None
+        if _image_usable(pinned):
+            return preferred, pinned
+        if pinned.configured() and not free_first:
+            return preferred, None
+        # free-first: unreachable/unusable pin → walk free chain
     for backend in IMAGE_BACKENDS.all():
-        if backend.configured():
+        if _image_usable(backend):
             return preferred, backend
     return preferred, None
 
@@ -247,7 +303,7 @@ def generate_image(
         if pinned is not None:
             raise RuntimeError(pinned.unavailable_message())
         raise RuntimeError(
-            "未配置出图后端：请配置 NVIDIA / HF（免费）或 Seedream / ComfyUI，并在顶部选择后端。"
+            "未配置出图后端：请配置 NVIDIA / Cloudflare / HF（免费）或 Seedream / ComfyUI；默认 auto 优先免费额度。"
         )
     if (
         preferred not in {"", "auto"}

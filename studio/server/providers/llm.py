@@ -107,12 +107,13 @@ def resolve_provider() -> dict[str, Any]:
             return meta
         if meta and not provider_configured(meta):
             raise LlmError(f"已选择 {meta['label']}，但未配置 API Key")
-    # Prefer free GPU / free-tier hosts first when auto-picking
+    # Prefer free GPU / free-tier hosts first when LLM_PROVIDER unset
     for pid in (
         "nvidia",
         "groq",
         "gemini",
         "cloudflare",
+        "openrouter",
         "gpuhome",
         "suanqiao",
         "deepseek",
@@ -124,7 +125,6 @@ def resolve_provider() -> dict[str, Any]:
         "zhipu",
         "grok",
         "minimax",
-        "openrouter",
         "mistral",
         "custom",
         "cursor",

@@ -117,6 +117,30 @@ def configured(*, capability: str | None = None) -> bool:
     return bool(server_url(capability=capability))
 
 
+# Soft probe cache so auto/free-first routing skips dead rented GPUs without hammering.
+_REACH_CACHE: dict[str, tuple[float, bool]] = {}
+_REACH_TTL_S = 45.0
+
+
+def reachable(*, capability: str | None = None, force: bool = False) -> bool:
+    """True when Comfy URL is set and /system_stats answers within a short timeout."""
+    root = server_url(capability=capability)
+    if not root:
+        return False
+    now = time.time()
+    cached = _REACH_CACHE.get(root)
+    if not force and cached and now - cached[0] < _REACH_TTL_S:
+        return cached[1]
+    ok = False
+    try:
+        ping(base=root)
+        ok = True
+    except Exception:
+        ok = False
+    _REACH_CACHE[root] = (now, ok)
+    return ok
+
+
 def _http_json(method: str, url: str, body: dict | None = None, timeout: int = 60) -> Any:
     data = None if body is None else json.dumps(body).encode("utf-8")
     headers = {"Accept": "application/json"}

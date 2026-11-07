@@ -1499,6 +1499,17 @@
   "ui_edit_episode_download_filename": "第{n}集.mp4",
   "ui_audio_speaker_narration": "旁白",
   "ui_audio_speaker_dialogue": "对白",
-  "ui_keys_settings_free_gpu_banner_title": "免费 GPU / 推理额度",
-  "ui_keys_settings_free_gpu_banner_body": "优先填 NVIDIA NIM（出图）、Groq / Gemini（剧本）、Cloudflare Workers AI（日 10k Neurons）。视频镜头仍需 Seedance 或自管 ComfyUI。清单："
+  "ui_keys_settings_free_gpu_banner_title": "免费 GPU / 推理额度（默认优先）",
+  "ui_keys_settings_free_gpu_banner_body": "出图 auto：NVIDIA → Cloudflare → HF → Seedream → 可达 Comfy。剧本 auto：NVIDIA / Groq / Gemini / CF / OpenRouter:free。视频：可达 Comfy（含 Colab）优先于 Seedance；死掉的 Comfy 会自动跳过。清单：",
+  "ui_keys_settings_free_tier_badge": "免费",
+  "ui_keys_settings_free_first_on": "已开启免费优先（STUDIO_FREE_FIRST）",
+  "ui_keys_settings_hf_images": "Hugging Face 出图",
+  "ui_keys_settings_hf_images_hint": "Inference Providers 小额免费额度。创建 Token：",
+  "ui_keys_settings_cf_images": "Cloudflare Workers AI 出图",
+  "ui_keys_settings_cf_images_hint": "FLUX.1 schnell，共享约 10k Neurons/天。需要 Account ID + API Token（Workers AI 权限）。",
+  "ui_keys_settings_please_enter_hf_token": "请输入 HF_TOKEN",
+  "ui_keys_settings_hf_token_saved": "Hugging Face Token 已保存（出图默认 auto 免费优先）",
+  "ui_keys_settings_please_enter_cf_creds": "请填写 CF_ACCOUNT_ID 与 CF_API_TOKEN",
+  "ui_keys_settings_cf_creds_saved": "Cloudflare Workers AI 已保存（出图默认 auto 免费优先）",
+  "ui_keys_settings_cf_account_configured": "已配置账号 {0}，可粘贴新 Account ID"
 }

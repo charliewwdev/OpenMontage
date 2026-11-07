@@ -137,17 +137,40 @@ class SeedanceVideoBackend:
         enqueue("shot_video", payload)
 
 
+def _free_first_enabled() -> bool:
+    return (_secret("STUDIO_FREE_FIRST") or "1").lower() not in {"0", "false", "off", "no"}
+
+
+def _video_usable(backend: VideoBackend) -> bool:
+    if not backend.configured():
+        return False
+    if getattr(backend, "id", "") == "comfyui":
+        try:
+            from .comfyui import reachable as comfy_reachable
+
+            return bool(comfy_reachable(capability="video"))
+        except Exception:
+            return False
+    return True
+
+
+# Reachable self-hosted / Colab Comfy (free GPU) before paid Seedance when auto.
 VIDEO_BACKENDS.register(ComfyVideoBackend.id, ComfyVideoBackend(), priority=20)
 VIDEO_BACKENDS.register(SeedanceVideoBackend.id, SeedanceVideoBackend(), priority=10)
 
 
 def resolve_video_backend() -> tuple[str, VideoBackend | None]:
-    preferred = (_secret("STUDIO_VIDEO_BACKEND") or "auto").lower()
+    """Prefer reachable Comfy (free rent/Colab) then Seedance. Dead Comfy pin falls through when free-first."""
+    preferred = (_secret("STUDIO_VIDEO_BACKEND") or "auto").lower() or "auto"
+    free_first = _free_first_enabled()
     pinned = VIDEO_BACKENDS.get(preferred) if preferred not in {"", "auto"} else None
     if preferred not in {"", "auto"} and pinned is not None:
-        return preferred, pinned if pinned.configured() else None
+        if _video_usable(pinned):
+            return preferred, pinned
+        if pinned.configured() and not free_first:
+            return preferred, None
     for backend in VIDEO_BACKENDS.all():
-        if backend.configured():
+        if _video_usable(backend):
             return preferred, backend
     return preferred, None
 

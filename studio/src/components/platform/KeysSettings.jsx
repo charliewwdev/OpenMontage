@@ -291,11 +291,22 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
     }
   };
 
-  const configuredProviders = providers.filter((p) => p.configured);
-  const otherProviders = providers.filter((p) => !p.configured);
+  const freeFirst = (list) =>
+    [...list].sort((a, b) => Number(Boolean(b.freeTier)) - Number(Boolean(a.freeTier)));
+  const configuredProviders = freeFirst(providers.filter((p) => p.configured));
+  const otherProviders = freeFirst(providers.filter((p) => !p.configured));
   const volcConfigured = Boolean(status?.volcengine?.configured);
   const comfyConfigured = Boolean(status?.comfyui?.configured);
-  const hasConfigured = configuredProviders.length > 0 || volcConfigured || comfyConfigured;
+  const nvidiaConfigured = Boolean(status?.nvidia?.configured);
+  const hfConfigured = Boolean(status?.hf?.configured);
+  const cfImageConfigured = Boolean(status?.cloudflareImage?.configured);
+  const hasConfigured =
+    configuredProviders.length > 0 ||
+    volcConfigured ||
+    comfyConfigured ||
+    nvidiaConfigured ||
+    hfConfigured ||
+    cfImageConfigured;
 
   const renderLlmCard = (p) => {
     const isActive = active === p.id;
@@ -310,6 +321,9 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="truncate text-[15px] font-semibold tracking-tight">{p.label}</h3>
             {isActive ? <span className="provider-badge-active">{tr("ui_keys_settings_in_use")}</span> : null}
+            {p.freeTier ? (
+              <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">{tr("ui_keys_settings_free_tier_badge")}</span>
+            ) : null}
             {!p.configured ? (
               <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] text-[var(--muted)]">{tr("ui_keys_settings_not_configured")}</span>
             ) : null}
@@ -395,13 +409,13 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
     );
   };
 
-  const nvidiaConfigured = Boolean(status?.nvidia?.configured);
   const nvidiaSection = (
     <section className="provider-card !items-stretch !flex-col gap-3 sm:!flex-row sm:!items-center">
       <div className="provider-card-icon">N</div>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <h3 className="text-[15px] font-semibold">{tr("ui_keys_settings_nvidia_open_source_images")}</h3>
+          <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">{tr("ui_keys_settings_free_tier_badge")}</span>
           <span className="text-xs text-[var(--muted)]">{tr("ui_keys_settings_flux_schnell_klein_trial_quota")}</span>
           {nvidiaConfigured ? (
             <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">{tr("ui_keys_settings_configured")}</span>
@@ -427,6 +441,55 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
         </p>
         <div className="mt-3">
           <NvidiaKeyCard status={status} onUpdated={onUpdated} />
+        </div>
+      </div>
+    </section>
+  );
+
+  const hfSection = (
+    <section className="provider-card !items-stretch !flex-col gap-3 sm:!flex-row sm:!items-center">
+      <div className="provider-card-icon">HF</div>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-[15px] font-semibold">{tr("ui_keys_settings_hf_images")}</h3>
+          <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">{tr("ui_keys_settings_free_tier_badge")}</span>
+          {hfConfigured ? (
+            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">{tr("ui_keys_settings_configured")}</span>
+          ) : (
+            <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] text-[var(--muted)]">{tr("ui_keys_settings_not_configured")}</span>
+          )}
+          {status?.imageBackend === "hf" ? <span className="provider-badge-active">{tr("ui_keys_settings_used_for_images")}</span> : null}
+        </div>
+        <p className="mt-1 text-[11px] leading-4 text-white/40">
+          {tr("ui_keys_settings_hf_images_hint")}{" "}
+          <a className="text-[#a5b4fc] hover:underline" href="https://huggingface.co/settings/tokens" target="_blank" rel="noreferrer">
+            huggingface.co/settings/tokens
+          </a>
+        </p>
+        <div className="mt-3">
+          <HfKeyCard status={status} onUpdated={onUpdated} />
+        </div>
+      </div>
+    </section>
+  );
+
+  const cfImageSection = (
+    <section className="provider-card !items-stretch !flex-col gap-3 sm:!flex-row sm:!items-center">
+      <div className="provider-card-icon">CF</div>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="text-[15px] font-semibold">{tr("ui_keys_settings_cf_images")}</h3>
+          <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">{tr("ui_keys_settings_free_tier_badge")}</span>
+          {cfImageConfigured ? (
+            <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">{tr("ui_keys_settings_configured")}</span>
+          ) : (
+            <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] text-[var(--muted)]">{tr("ui_keys_settings_not_configured")}</span>
+          )}
+          {status?.imageBackend === "cloudflare" ? <span className="provider-badge-active">{tr("ui_keys_settings_used_for_images")}</span> : null}
+        </div>
+        <p className="mt-1 text-[11px] leading-4 text-white/40">{tr("ui_keys_settings_cf_images_hint")}</p>
+        <div className="mt-3">
+          <CfImageKeyCard status={status} onUpdated={onUpdated} />
         </div>
       </div>
     </section>
@@ -504,6 +567,17 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
       <a className="text-[#a5b4fc] hover:underline" href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">
         Gemini
       </a>
+      <span className="text-white/55"> / </span>
+      <a className="text-[#a5b4fc] hover:underline" href="https://huggingface.co/settings/tokens" target="_blank" rel="noreferrer">
+        HF
+      </a>
+      <span className="text-white/55"> / </span>
+      <a className="text-[#a5b4fc] hover:underline" href="https://developers.cloudflare.com/workers-ai/" target="_blank" rel="noreferrer">
+        Cloudflare
+      </a>
+      {status?.freeFirst !== false ? (
+        <span className="ml-1 text-emerald-300/90"> · {tr("ui_keys_settings_free_first_on")}</span>
+      ) : null}
     </div>
   );
 
@@ -526,11 +600,13 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
           {configuredProviders.length ? (
             <div className="space-y-2.5">{configuredProviders.map(renderLlmCard)}</div>
           ) : null}
-          {volcConfigured || comfyConfigured ? (
+          {volcConfigured || comfyConfigured || nvidiaConfigured || hfConfigured || cfImageConfigured ? (
             <div className="space-y-2.5">
               <SectionLabel>{tr("ui_keys_settings_media_images_video")}</SectionLabel>
-              {volcConfigured ? volcSection : null}
               {nvidiaConfigured ? nvidiaSection : null}
+              {cfImageConfigured ? cfImageSection : null}
+              {hfConfigured ? hfSection : null}
+              {volcConfigured ? volcSection : null}
               {comfyConfigured ? comfySection : null}
             </div>
           ) : null}
@@ -544,11 +620,13 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
         </div>
       ) : null}
 
-      {!volcConfigured || !comfyConfigured ? (
+      {!volcConfigured || !comfyConfigured || !nvidiaConfigured || !hfConfigured || !cfImageConfigured ? (
         <div className="space-y-2.5">
           <SectionLabel>{tr("ui_keys_settings_media_not_configured")}</SectionLabel>
-          {!volcConfigured ? volcSection : null}
           {!nvidiaConfigured ? nvidiaSection : null}
+          {!cfImageConfigured ? cfImageSection : null}
+          {!hfConfigured ? hfSection : null}
+          {!volcConfigured ? volcSection : null}
           {!comfyConfigured ? comfySection : null}
         </div>
       ) : null}
@@ -579,7 +657,12 @@ function NvidiaKeyCard({ status, onUpdated }) {
       const data = await api("/api/settings/keys", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ NVIDIA_API_KEY: key.trim(), NVIDIA_IMAGE_MODEL: "flux-3-image-klein" }),
+        body: JSON.stringify({
+          NVIDIA_API_KEY: key.trim(),
+          NVIDIA_IMAGE_MODEL: "flux-3-image-klein",
+          STUDIO_IMAGE_BACKEND: "auto",
+          STUDIO_FREE_FIRST: "1",
+        }),
       });
       setKey("");
       onUpdated?.(data);
@@ -604,6 +687,125 @@ function NvidiaKeyCard({ status, onUpdated }) {
       />
       <button type="button" className="btn-secondary !min-h-[38px] !px-3 text-xs" disabled={saving || !key.trim()} onClick={() => void save()}>
         {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{tr("ui_keys_settings_save")}</button>
+    </div>
+  );
+}
+
+function HfKeyCard({ status, onUpdated }) {
+  useLocale();
+  const [key, setKey] = useState("");
+  const [saving, setSaving] = useState(false);
+  const configured = status?.hf?.configured;
+  const save = async () => {
+    if (!key.trim()) {
+      toast.error(tr("ui_keys_settings_please_enter_hf_token"));
+      return;
+    }
+    setSaving(true);
+    try {
+      const data = await api("/api/settings/keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          HF_TOKEN: key.trim(),
+          HF_IMAGE_MODEL: "black-forest-labs/FLUX.1-schnell",
+          STUDIO_IMAGE_BACKEND: "auto",
+          STUDIO_FREE_FIRST: "1",
+        }),
+      });
+      setKey("");
+      onUpdated?.(data);
+      toast.success(tr("ui_keys_settings_hf_token_saved"));
+    } catch (e) {
+      toast.error(String(e.message || e));
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+      <input
+        className="field sm:flex-1"
+        type="password"
+        autoComplete="off"
+        placeholder={configured ? tr("ui_keys_settings_configured_paste_a_new_key_to", {
+          0: status?.hf?.masked || ""
+        }) : "hf_…"}
+        value={key}
+        onChange={(e) => setKey(e.target.value)}
+      />
+      <button type="button" className="btn-secondary !min-h-[38px] !px-3 text-xs" disabled={saving || !key.trim()} onClick={() => void save()}>
+        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{tr("ui_keys_settings_save")}</button>
+    </div>
+  );
+}
+
+function CfImageKeyCard({ status, onUpdated }) {
+  useLocale();
+  const [accountId, setAccountId] = useState("");
+  const [token, setToken] = useState("");
+  const [saving, setSaving] = useState(false);
+  const configured = status?.cloudflareImage?.configured;
+  const save = async () => {
+    if (!accountId.trim() || !token.trim()) {
+      toast.error(tr("ui_keys_settings_please_enter_cf_creds"));
+      return;
+    }
+    setSaving(true);
+    try {
+      const data = await api("/api/settings/keys", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          CF_ACCOUNT_ID: accountId.trim(),
+          CF_API_TOKEN: token.trim(),
+          CF_IMAGE_MODEL: "@cf/black-forest-labs/flux-1-schnell",
+          STUDIO_IMAGE_BACKEND: "auto",
+          STUDIO_FREE_FIRST: "1",
+        }),
+      });
+      setAccountId("");
+      setToken("");
+      onUpdated?.(data);
+      toast.success(tr("ui_keys_settings_cf_creds_saved"));
+    } catch (e) {
+      toast.error(String(e.message || e));
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <div className="flex flex-col gap-2">
+      <input
+        className="field"
+        autoComplete="off"
+        placeholder={configured ? tr("ui_keys_settings_cf_account_configured", {
+          0: status?.cloudflareImage?.accountId || ""
+        }) : "CF_ACCOUNT_ID"}
+        value={accountId}
+        onChange={(e) => setAccountId(e.target.value)}
+      />
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <input
+          className="field sm:flex-1"
+          type="password"
+          autoComplete="off"
+          placeholder={configured ? tr("ui_keys_settings_configured_paste_a_new_key_to", {
+            0: status?.cloudflareImage?.masked || ""
+          }) : "CF_API_TOKEN"}
+          value={token}
+          onChange={(e) => setToken(e.target.value)}
+        />
+        <button
+          type="button"
+          className="btn-secondary !min-h-[38px] !px-3 text-xs"
+          disabled={saving || !accountId.trim() || !token.trim()}
+          onClick={() => void save()}
+        >
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          {tr("ui_keys_settings_save")}
+        </button>
+      </div>
     </div>
   );
 }

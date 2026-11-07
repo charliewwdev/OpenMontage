@@ -151,7 +151,7 @@ LLM_PROVIDERS: list[dict[str, Any]] = [
     },
     {
         "id": "gemini",
-        "label": "Google Gemini",
+        "label": "Google Gemini（免费额度）",
         "kind": "gemini",
         "keyEnv": "GEMINI_API_KEY",
         "baseEnv": "GEMINI_BASE_URL",
@@ -237,15 +237,22 @@ LLM_PROVIDERS: list[dict[str, Any]] = [
     },
     {
         "id": "openrouter",
-        "label": "OpenRouter",
+        "label": "OpenRouter（:free 路由）",
         "kind": "openai",
         "keyEnv": "OPENROUTER_API_KEY",
         "baseEnv": "OPENROUTER_BASE_URL",
         "modelEnv": "OPENROUTER_MODEL",
         "defaultBase": "https://openrouter.ai/api/v1",
-        "defaultModel": "openai/gpt-4o-mini",
+        "defaultModel": "openrouter/free",
         "docs": "https://openrouter.ai/keys",
         "placeholder": "sk-or-...",
+        "hint": "选型号名以 :free 结尾的社区免费路由（不稳定/排队）。见 docs/FREE_GPU.md。",
+        "freeTier": True,
+        "models": [
+            {"id": "openrouter/free", "label": "OpenRouter Free 路由"},
+            {"id": "meta-llama/llama-3.3-70b-instruct:free", "label": "Llama 3.3 70B :free"},
+            {"id": "google/gemma-3-27b-it:free", "label": "Gemma 3 27B :free"},
+        ],
     },
     {
         "id": "mistral",
@@ -335,8 +342,11 @@ def all_secret_envs() -> tuple[str, ...]:
             "CLOUDFLARE_LLM_MODEL",
             "HF_TOKEN",
             "HUGGINGFACE_HUB_TOKEN",
-            "STUDIO_IMAGE_BACKEND",  # auto | seedream | comfyui | nvidia | hf
-            "STUDIO_VIDEO_BACKEND",  # auto | seedance | comfyui
+            "HF_IMAGE_MODEL",
+            "CF_IMAGE_MODEL",
+            "STUDIO_IMAGE_BACKEND",  # auto | nvidia | cloudflare | hf | seedream | comfyui
+            "STUDIO_VIDEO_BACKEND",  # auto | comfyui | seedance
+            "STUDIO_FREE_FIRST",  # 1 (default) | 0 — dead Comfy pin falls through to next free/paid
             "STUDIO_TTS_BACKEND",  # auto | edge | openai | indextts
             "STUDIO_TTS_MODEL",
             "INDEXTTS_BASE_URL",

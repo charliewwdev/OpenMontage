@@ -298,6 +298,7 @@ def _provider_public(item: dict[str, Any]) -> dict[str, Any]:
         "docs": item.get("docs") or "",
         "placeholder": item.get("placeholder") or "sk-...",
         "hint": item.get("hint") or "",
+        "freeTier": bool(item.get("freeTier")),
         "keyEnv": key_env,
         "baseEnv": base_env,
         "modelEnv": model_env,
@@ -381,8 +382,62 @@ def _studio_image_models(
     active_seedream: str,
     comfy: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
-    """Concrete image models from Keys settings (Seedream catalog + Comfy checkpoints)."""
+    """Concrete image models — free backends listed first for the model bar."""
     out: list[dict[str, Any]] = []
+    from providers.nvidia_flux import MODELS
+
+    labels = {
+        "flux-3-image-klein": "FLUX 3 Image Klein（免费 · NVIDIA）",
+        "flux.1-schnell": "FLUX.1 schnell（免费 · NVIDIA）",
+        "flux.2-klein-4b": "FLUX.2 klein 4B（免费 · NVIDIA）",
+    }
+    for mid in MODELS:
+        out.append(
+            {
+                "id": f"nvidia:{mid}",
+                "backend": "nvidia",
+                "model": mid,
+                "label": labels.get(mid, mid),
+                "group": "免费 · NVIDIA",
+                "freeTier": True,
+            }
+        )
+    try:
+        from providers.cf_image import DEFAULT_MODEL as CF_DEFAULT
+        from providers.cf_image import configured as cf_ok
+
+        if cf_ok():
+            mid = get_secret("CF_IMAGE_MODEL") or CF_DEFAULT
+            out.append(
+                {
+                    "id": f"cloudflare:{mid}",
+                    "backend": "cloudflare",
+                    "model": mid,
+                    "label": "FLUX.1 schnell（免费 · Cloudflare Neurons）",
+                    "group": "免费 · Cloudflare",
+                    "freeTier": True,
+                }
+            )
+    except Exception:
+        pass
+    try:
+        from providers.hf_image import DEFAULT_MODEL as HF_DEFAULT
+        from providers.hf_image import configured as hf_ok
+
+        if hf_ok():
+            mid = get_secret("HF_IMAGE_MODEL") or HF_DEFAULT
+            out.append(
+                {
+                    "id": f"hf:{mid}",
+                    "backend": "hf",
+                    "model": mid,
+                    "label": f"{mid.split('/')[-1]}（免费 · Hugging Face）",
+                    "group": "免费 · Hugging Face",
+                    "freeTier": True,
+                }
+            )
+    except Exception:
+        pass
     if volc_key:
         try:
             from platform_config import seedream_models
@@ -443,23 +498,6 @@ def _studio_image_models(
                     "group": "ComfyUI",
                 }
             )
-    from providers.nvidia_flux import MODELS
-
-    labels = {
-        "flux-3-image-klein": "FLUX 3 Image Klein（开源 · 当前可用）",
-        "flux.1-schnell": "FLUX.1 schnell（开源）",
-        "flux.2-klein-4b": "FLUX.2 klein 4B（开源）",
-    }
-    for mid in MODELS:
-        out.append(
-            {
-                "id": f"nvidia:{mid}",
-                "backend": "nvidia",
-                "model": mid,
-                "label": labels.get(mid, mid),
-                "group": "NVIDIA 开源",
-            }
-        )
     return out
 
 
@@ -663,11 +701,25 @@ def public_status() -> dict[str, Any]:
             "masked": mask_secret(get_secret("NVIDIA_API_KEY") or get_secret("NVIDIA_NIM_API_KEY")),
             "model": get_secret("NVIDIA_IMAGE_MODEL") or "flux-3-image-klein",
         },
+        "hf": {
+            "configured": bool(get_secret("HF_TOKEN") or get_secret("HUGGINGFACE_HUB_TOKEN")),
+            "masked": mask_secret(get_secret("HF_TOKEN") or get_secret("HUGGINGFACE_HUB_TOKEN")),
+            "model": get_secret("HF_IMAGE_MODEL") or "black-forest-labs/FLUX.1-schnell",
+        },
+        "cloudflareImage": {
+            "configured": bool(get_secret("CF_API_TOKEN") and get_secret("CF_ACCOUNT_ID")),
+            "masked": mask_secret(get_secret("CF_API_TOKEN")),
+            "accountId": (get_secret("CF_ACCOUNT_ID") or "")[:6]
+            + ("…" if get_secret("CF_ACCOUNT_ID") else ""),
+            "model": get_secret("CF_IMAGE_MODEL") or "@cf/black-forest-labs/flux-1-schnell",
+        },
         "comfyui": comfy,
         "imageBackend": _image_backend_id(volc_key),
         "videoBackend": _video_backend_id(volc_key),
         "imageBackendPref": (get_secret("STUDIO_IMAGE_BACKEND") or "auto").lower() or "auto",
         "videoBackendPref": (get_secret("STUDIO_VIDEO_BACKEND") or "auto").lower() or "auto",
+        "freeFirst": (get_secret("STUDIO_FREE_FIRST") or "1").strip().lower()
+        not in {"0", "false", "off", "no"},
         "ttsBackendPref": (get_secret("STUDIO_TTS_BACKEND") or "auto").lower() or "auto",
         "ttsModel": get_secret("STUDIO_TTS_MODEL") or "",
         "indextts": {
@@ -676,12 +728,14 @@ def public_status() -> dict[str, Any]:
         },
         "mediaQa": (get_secret("STUDIO_MEDIA_QA") or "1").strip() not in {"0", "false", "off", "no"},
         "imageBackendsAvailable": [
-            *(["seedream"] if volc_key else []),
             *(
                 ["nvidia"]
                 if (get_secret("NVIDIA_API_KEY") or get_secret("NVIDIA_NIM_API_KEY"))
                 else []
             ),
+            *(["cloudflare"] if (get_secret("CF_API_TOKEN") and get_secret("CF_ACCOUNT_ID")) else []),
+            *(["hf"] if (get_secret("HF_TOKEN") or get_secret("HUGGINGFACE_HUB_TOKEN")) else []),
+            *(["seedream"] if volc_key else []),
             *(
                 ["comfyui"]
                 if (get_secret("COMFYUI_SERVER_URL") or get_secret("COMFYUI_IMAGE_SERVER_URL"))
@@ -689,12 +743,12 @@ def public_status() -> dict[str, Any]:
             ),
         ],
         "videoBackendsAvailable": [
-            *(["seedance"] if volc_key else []),
             *(
                 ["comfyui"]
                 if (get_secret("COMFYUI_SERVER_URL") or get_secret("COMFYUI_VIDEO_SERVER_URL"))
                 else []
             ),
+            *(["seedance"] if volc_key else []),
         ],
         "seedreamModel": seedream,
         "seedanceModel": seedance,
@@ -705,6 +759,9 @@ def public_status() -> dict[str, Any]:
         "ready": llm_ready
         and (
             bool(volc_key)
+            or bool(get_secret("NVIDIA_API_KEY") or get_secret("NVIDIA_NIM_API_KEY"))
+            or bool(get_secret("HF_TOKEN") or get_secret("HUGGINGFACE_HUB_TOKEN"))
+            or bool(get_secret("CF_API_TOKEN") and get_secret("CF_ACCOUNT_ID"))
             or bool(get_secret("COMFYUI_SERVER_URL"))
             or bool(get_secret("COMFYUI_VIDEO_SERVER_URL"))
         ),

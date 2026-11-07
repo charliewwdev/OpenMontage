@@ -33,6 +33,14 @@ function resolveImageValue(keys) {
     const mid = keys?.nvidia?.model || "flux-3-image-klein";
     return `nvidia:${mid}`;
   }
+  if (pref === "hf") {
+    const mid = keys?.hf?.model || "black-forest-labs/FLUX.1-schnell";
+    return `hf:${mid}`;
+  }
+  if (pref === "cloudflare") {
+    const mid = keys?.cloudflareImage?.model || "@cf/black-forest-labs/flux-1-schnell";
+    return `cloudflare:${mid}`;
+  }
   return pref;
 }
 
@@ -207,6 +215,20 @@ export function StudioModelBar({ config, onChanged }) {
       void save({
         STUDIO_IMAGE_BACKEND: "nvidia",
         ...(model ? { NVIDIA_IMAGE_MODEL: model } : {}),
+      });
+      return;
+    }
+    if (backend === "hf") {
+      void save({
+        STUDIO_IMAGE_BACKEND: "hf",
+        ...(model ? { HF_IMAGE_MODEL: model } : {}),
+      });
+      return;
+    }
+    if (backend === "cloudflare") {
+      void save({
+        STUDIO_IMAGE_BACKEND: "cloudflare",
+        ...(model ? { CF_IMAGE_MODEL: model } : {}),
       });
       return;
     }

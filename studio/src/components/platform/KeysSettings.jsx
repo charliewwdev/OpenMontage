@@ -548,42 +548,8 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
     </section>
   );
 
-  const freeGpuBanner = (
-    <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 px-4 py-3 text-[12px] leading-5 text-emerald-100/90">
-      <strong className="font-semibold text-emerald-200">{tr("ui_keys_settings_free_gpu_banner_title")}</strong>
-      <span className="text-white/55"> — {tr("ui_keys_settings_free_gpu_banner_body")} </span>
-      <a className="text-[#a5b4fc] hover:underline" href="https://github.com/charliewwdev/OpenMontage/blob/main/docs/FREE_GPU.md" target="_blank" rel="noreferrer">
-        FREE_GPU.md
-      </a>
-      <span className="text-white/55"> · </span>
-      <a className="text-[#a5b4fc] hover:underline" href="https://build.nvidia.com/settings" target="_blank" rel="noreferrer">
-        NVIDIA
-      </a>
-      <span className="text-white/55"> / </span>
-      <a className="text-[#a5b4fc] hover:underline" href="https://console.groq.com/keys" target="_blank" rel="noreferrer">
-        Groq
-      </a>
-      <span className="text-white/55"> / </span>
-      <a className="text-[#a5b4fc] hover:underline" href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">
-        Gemini
-      </a>
-      <span className="text-white/55"> / </span>
-      <a className="text-[#a5b4fc] hover:underline" href="https://huggingface.co/settings/tokens" target="_blank" rel="noreferrer">
-        HF
-      </a>
-      <span className="text-white/55"> / </span>
-      <a className="text-[#a5b4fc] hover:underline" href="https://developers.cloudflare.com/workers-ai/" target="_blank" rel="noreferrer">
-        Cloudflare
-      </a>
-      {status?.freeFirst !== false ? (
-        <span className="ml-1 text-emerald-300/90"> · {tr("ui_keys_settings_free_first_on")}</span>
-      ) : null}
-    </div>
-  );
-
   return (
     <div className="space-y-5">
-      {freeGpuBanner}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-[var(--muted)]">{tr("ui_keys_settings_configured_providers_are_pinned_to_the")}</p>
         <div className="flex gap-2">

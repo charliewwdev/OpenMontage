@@ -148,7 +148,12 @@ def llm_ready() -> bool:
 
 def _http_json(method: str, url: str, headers: dict[str, str], body: dict[str, Any] | None, timeout: int = 300) -> Any:
     data = None if body is None else json.dumps(body).encode("utf-8")
-    req = urllib.request.Request(url, data=data, method=method, headers=headers)
+    # Groq / some edges return Cloudflare 1010 without a browser-like UA.
+    merged = {
+        "User-Agent": "Mozilla/5.0 (compatible; OpenMontageStudio/1.0)",
+        **(headers or {}),
+    }
+    req = urllib.request.Request(url, data=data, method=method, headers=merged)
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             return json.loads(resp.read().decode("utf-8") or "{}")

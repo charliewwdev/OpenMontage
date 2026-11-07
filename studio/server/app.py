@@ -597,7 +597,9 @@ async def test_keys() -> dict[str, Any]:
                 system="只输出 JSON。",
                 user='返回 {"ok": true}',
                 temperature=0,
-                max_tokens=32,
+                # Reasoning models (Groq gpt-oss / some OpenRouter :free) burn
+                # tokens on chain-of-thought before content — keep headroom.
+                max_tokens=256,
                 retries=1,
             )
             sample = {"ok": True, "sample": data, "backend": status.get("llmBackend")}

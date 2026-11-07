@@ -196,7 +196,16 @@ def _chat_openai_compat(
             raw = _http_json("POST", url, headers, body)
         else:
             raise
-    content = (((raw.get("choices") or [{}])[0].get("message") or {}).get("content")) or ""
+    message = ((raw.get("choices") or [{}])[0].get("message") or {})
+    content = message.get("content") or ""
+    # Free / OSS gateways (Groq gpt-oss, some OpenRouter :free) often put the
+    # answer in reasoning* while leaving content empty.
+    if not str(content).strip():
+        for key in ("reasoning", "reasoning_content", "reasoning_text"):
+            alt = message.get(key)
+            if isinstance(alt, str) and alt.strip():
+                content = alt
+                break
     if not str(content).strip():
         raise LlmError("模型返回空 content")
     return str(content)

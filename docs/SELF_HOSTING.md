@@ -140,8 +140,8 @@ Implementation pointers: `studio/server/demo_auth.py`, `studio/server/auth_proxy
 
 Configured via env and/or **Model settings** in the UI:
 
-- **Text:** DeepSeek, OpenAI, Claude, Gemini, Qwen, Doubao, Kimi, GLM, MiniMax, OpenRouter, gpuhome / suanqiao token factories, or any OpenAI-compatible base URL.
-- **Images:** Volcengine Ark **Seedream**, or `COMFYUI_SERVER_URL` (and related vars) for a GPU you control.
+- **Text:** Prefer free tiers first — **NVIDIA NIM**, **Groq**, **Gemini**, Cloudflare Workers AI — then DeepSeek / OpenAI / Claude / Qwen / gpuhome / etc. See [`FREE_GPU.md`](FREE_GPU.md).
+- **Images:** Free **NVIDIA NIM FLUX** (`NVIDIA_API_KEY`), optional HF Inference; or paid Seedream / rented ComfyUI.
 - **Video:** Volcengine Ark **Seedance** (`VOLCENGINE_API_KEY` / `ARK_API_KEY`).
 - **Speech:** edge-tts default; optional OpenAI-compatible TTS keys.
 

@@ -15,7 +15,7 @@
 | Redis 7 | 是 | 媒体任务队列 |
 | MinIO（S3 兼容对象存储） | **是（已内置）** | `drama-minio` + `drama-minio-init`（自动建桶）。托管/外部 S3 时覆盖 `MINIO_*`。 |
 | 账号 / 登录服务 | **不需要 DTok** | 用内置 **本地 Demo 鉴权**，或把 `API_BASE_URL` 指到自有兼容账号接口 |
-| 文本大模型 | 需自备 | 任意 OpenAI 兼容 Key |
+| 文本大模型 | 需自备（可先用免费层） | 优先 NVIDIA NIM / Groq / Gemini；详见 [FREE_GPU.md](FREE_GPU.md) |
 | 出图 | 需自备 | 火山方舟 **Seedream**（**付费**），**或**自有 ComfyUI |
 | 分镜出视频 | 需自备 | 火山方舟 **Seedance**（**付费第三方 API**） |
 | 配音 TTS | 默认本地路径 | **edge-tts** 无需密钥；可选 OpenAI 兼容语音 |

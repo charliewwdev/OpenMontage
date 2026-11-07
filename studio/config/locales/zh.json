@@ -635,12 +635,12 @@
   "ui_keys_settings_not_configured": "未配置",
   "ui_keys_settings_switch_model": "切换模型",
   "ui_keys_settings_current": "{model}（当前）",
-  "ui_keys_settings_nvidia_open_source_images": "NVIDIA 开源出图",
-  "ui_keys_settings_flux_schnell_klein_trial_quota": "FLUX schnell / klein · 试用额度",
+  "ui_keys_settings_nvidia_open_source_images": "NVIDIA NIM · 免费 GPU",
+  "ui_keys_settings_flux_schnell_klein_trial_quota": "FLUX 出图 + NIM 对话 · build.nvidia.com 试用",
   "ui_keys_settings_configured": "已配置",
   "ui_keys_settings_used_for_images": "出图使用中",
   "ui_keys_settings_get_a_trial_key_at": "到{0}",
-  "ui_keys_settings_after_saving_choose_flux_1_schnell": "{0}领取试用 Key。保存后在顶部出图模型里选 FLUX.1 schnell。",
+  "ui_keys_settings_after_saving_choose_flux_1_schnell": "{0}领取免费 Key（同一 Key 可出图 + 文本）。保存后顶部选 NVIDIA/FLUX。更多免费额度见",
   "ui_keys_settings_v": "火",
   "ui_keys_settings_volcengine_ark": "火山方舟",
   "ui_keys_settings_seedream_images_seedance_video": "Seedream 出图 · Seedance 出片",
@@ -1498,5 +1498,7 @@
   "ui_portrait_match_prompts_fail": "未过",
   "ui_edit_episode_download_filename": "第{n}集.mp4",
   "ui_audio_speaker_narration": "旁白",
-  "ui_audio_speaker_dialogue": "对白"
+  "ui_audio_speaker_dialogue": "对白",
+  "ui_keys_settings_free_gpu_banner_title": "免费 GPU / 推理额度",
+  "ui_keys_settings_free_gpu_banner_body": "优先填 NVIDIA NIM（出图）、Groq / Gemini（剧本）、Cloudflare Workers AI（日 10k Neurons）。视频镜头仍需 Seedance 或自管 ComfyUI。清单："
 }

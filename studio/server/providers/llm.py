@@ -107,14 +107,17 @@ def resolve_provider() -> dict[str, Any]:
             return meta
         if meta and not provider_configured(meta):
             raise LlmError(f"已选择 {meta['label']}，但未配置 API Key")
-    # Prefer explicit order when auto-picking
+    # Prefer free GPU / free-tier hosts first when auto-picking
     for pid in (
+        "nvidia",
+        "groq",
+        "gemini",
+        "cloudflare",
         "gpuhome",
         "suanqiao",
         "deepseek",
         "openai",
         "anthropic",
-        "gemini",
         "qwen",
         "moonshot",
         "doubao",
@@ -289,6 +292,13 @@ def chat_json(
     base = _secret(meta["baseEnv"], meta.get("defaultBase") or "")
     model = _secret(meta["modelEnv"], meta.get("defaultModel") or "")
     provider_id = str(meta.get("id") or "unknown")
+    if provider_id == "cloudflare" and not base:
+        account = _secret("CF_ACCOUNT_ID")
+        if not account:
+            raise LlmError("Cloudflare Workers AI 需要 CF_ACCOUNT_ID，或填写 CLOUDFLARE_AI_BASE_URL")
+        base = f"https://api.cloudflare.com/client/v4/accounts/{account}/ai/v1"
+    if provider_id == "nvidia" and not base:
+        base = "https://integrate.api.nvidia.com/v1"
 
     last_err: Exception | None = None
     t0 = time.time()

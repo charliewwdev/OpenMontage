@@ -410,13 +410,21 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
           )}
           {status?.imageBackend === "nvidia" ? <span className="provider-badge-active">{tr("ui_keys_settings_used_for_images")}</span> : null}
         </div>
-        <p className="mt-1 text-[11px] leading-4 text-white/40">{tr("ui_keys_settings_get_a_trial_key_at", {
-            0: " "
-          })}<a className="text-[#a5b4fc] hover:underline" href="https://build.nvidia.com/settings" target="_blank" rel="noreferrer">
+        <p className="mt-1 text-[11px] leading-4 text-white/40">
+          {tr("ui_keys_settings_get_a_trial_key_at", { 0: " " })}
+          <a className="text-[#a5b4fc] hover:underline" href="https://build.nvidia.com/settings" target="_blank" rel="noreferrer">
             build.nvidia.com
-          </a>{tr("ui_keys_settings_after_saving_choose_flux_1_schnell", {
-            0: " "
-          })}</p>
+          </a>
+          {tr("ui_keys_settings_after_saving_choose_flux_1_schnell", { 0: " " })}{" "}
+          <a
+            className="text-[#a5b4fc] hover:underline"
+            href="https://github.com/charliewwdev/OpenMontage/blob/main/docs/FREE_GPU.md"
+            target="_blank"
+            rel="noreferrer"
+          >
+            FREE_GPU.md
+          </a>
+        </p>
         <div className="mt-3">
           <NvidiaKeyCard status={status} onUpdated={onUpdated} />
         </div>
@@ -477,8 +485,31 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
     </section>
   );
 
+  const freeGpuBanner = (
+    <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 px-4 py-3 text-[12px] leading-5 text-emerald-100/90">
+      <strong className="font-semibold text-emerald-200">{tr("ui_keys_settings_free_gpu_banner_title")}</strong>
+      <span className="text-white/55"> — {tr("ui_keys_settings_free_gpu_banner_body")} </span>
+      <a className="text-[#a5b4fc] hover:underline" href="https://github.com/charliewwdev/OpenMontage/blob/main/docs/FREE_GPU.md" target="_blank" rel="noreferrer">
+        FREE_GPU.md
+      </a>
+      <span className="text-white/55"> · </span>
+      <a className="text-[#a5b4fc] hover:underline" href="https://build.nvidia.com/settings" target="_blank" rel="noreferrer">
+        NVIDIA
+      </a>
+      <span className="text-white/55"> / </span>
+      <a className="text-[#a5b4fc] hover:underline" href="https://console.groq.com/keys" target="_blank" rel="noreferrer">
+        Groq
+      </a>
+      <span className="text-white/55"> / </span>
+      <a className="text-[#a5b4fc] hover:underline" href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">
+        Gemini
+      </a>
+    </div>
+  );
+
   return (
     <div className="space-y-5">
+      {freeGpuBanner}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-[var(--muted)]">{tr("ui_keys_settings_configured_providers_are_pinned_to_the")}</p>
         <div className="flex gap-2">

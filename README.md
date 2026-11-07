@@ -66,7 +66,7 @@ become reference images that feed the video shots, so you can redo a single char
 - **Step by step or one click.** Run each stage yourself, or let the agent run the whole pipeline in the background
   and then re-run any stage or swap a version.
 
-Try the hosted instance: **[openmontage.dtok.io](https://openmontage.dtok.io/)** · Starter prompts: [`docs/examples.md`](docs/examples.md) · Studio docs: [`studio/README.en.md`](studio/README.en.md)
+Try the hosted instance: **[openmontage.dtok.io](https://openmontage.dtok.io/)** · Starter prompts: [`docs/examples.md`](docs/examples.md) · Free GPU quotas: [`docs/FREE_GPU.md`](docs/FREE_GPU.md) · Studio docs: [`studio/README.en.md`](studio/README.en.md)
 
 ## The 7-stage workshop
 

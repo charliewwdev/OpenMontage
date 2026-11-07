@@ -635,12 +635,12 @@
   "ui_keys_settings_not_configured": "Not configured",
   "ui_keys_settings_switch_model": "Switch model",
   "ui_keys_settings_current": "{model} (current)",
-  "ui_keys_settings_nvidia_open_source_images": "NVIDIA open-source images",
-  "ui_keys_settings_flux_schnell_klein_trial_quota": "FLUX schnell / klein · trial quota",
+  "ui_keys_settings_nvidia_open_source_images": "NVIDIA NIM · free GPU",
+  "ui_keys_settings_flux_schnell_klein_trial_quota": "FLUX images + NIM chat · build.nvidia.com trial",
   "ui_keys_settings_configured": "Configured",
   "ui_keys_settings_used_for_images": "Used for images",
-  "ui_keys_settings_get_a_trial_key_at": "Get a trial key at{0}",
-  "ui_keys_settings_after_saving_choose_flux_1_schnell": "{0}. After saving, choose FLUX.1 schnell in the image model picker at the top.",
+  "ui_keys_settings_get_a_trial_key_at": "Get a free key at{0}",
+  "ui_keys_settings_after_saving_choose_flux_1_schnell": "{0} (same key for images + text). Then pick NVIDIA/FLUX at the top. More free quotas:",
   "ui_keys_settings_v": "V",
   "ui_keys_settings_volcengine_ark": "Volcengine Ark",
   "ui_keys_settings_seedream_images_seedance_video": "Seedream images · Seedance video",
@@ -1498,5 +1498,7 @@
   "ui_portrait_match_prompts_fail": "not passed",
   "ui_edit_episode_download_filename": "episode-{n}.mp4",
   "ui_audio_speaker_narration": "Narration",
-  "ui_audio_speaker_dialogue": "Dialogue"
+  "ui_audio_speaker_dialogue": "Dialogue",
+  "ui_keys_settings_free_gpu_banner_title": "Free GPU / inference quotas",
+  "ui_keys_settings_free_gpu_banner_body": "Prefer NVIDIA NIM (images), Groq / Gemini (scripts), Cloudflare Workers AI (10k Neurons/day). Video shots still need Seedance or your own ComfyUI. Catalog:"
 }

@@ -169,9 +169,44 @@ class NvidiaFluxImageBackend:
             raise RuntimeError(str(exc)) from exc
 
 
-IMAGE_BACKENDS.register(ComfyImageBackend.id, ComfyImageBackend(), priority=20)
-IMAGE_BACKENDS.register(NvidiaFluxImageBackend.id, NvidiaFluxImageBackend(), priority=15)
-IMAGE_BACKENDS.register(SeedreamImageBackend.id, SeedreamImageBackend(), priority=10)
+class HfImageBackend:
+    id = "hf"
+
+    def configured(self) -> bool:
+        try:
+            from .hf_image import configured as hf_ok
+
+            return bool(hf_ok())
+        except Exception:
+            return False
+
+    def unavailable_message(self) -> str:
+        return "顶部已选择 Hugging Face 出图，但没有 HF_TOKEN。到 huggingface.co/settings/tokens 创建 Token（Inference Providers 小额免费额度）。"
+
+    def generate(
+        self,
+        *,
+        prompt: str,
+        ratio: str,
+        out_path: Path,
+        reference_path: Path | None = None,
+        negative_prompt: str | None = None,
+        denoise: float | None = None,
+    ) -> Path:
+        del reference_path, negative_prompt, denoise
+        from .hf_image import HfImageError, generate_image as hf_generate
+
+        try:
+            return hf_generate(prompt=prompt, ratio=ratio, out_path=out_path)
+        except HfImageError as exc:
+            raise RuntimeError(str(exc)) from exc
+
+
+# Free NIM / HF stills first when STUDIO_IMAGE_BACKEND=auto; paid/rented backends after.
+IMAGE_BACKENDS.register(NvidiaFluxImageBackend.id, NvidiaFluxImageBackend(), priority=30)
+IMAGE_BACKENDS.register(HfImageBackend.id, HfImageBackend(), priority=25)
+IMAGE_BACKENDS.register(SeedreamImageBackend.id, SeedreamImageBackend(), priority=20)
+IMAGE_BACKENDS.register(ComfyImageBackend.id, ComfyImageBackend(), priority=10)
 
 
 def resolve_image_backend() -> tuple[str, ImageBackend | None]:
@@ -212,7 +247,7 @@ def generate_image(
         if pinned is not None:
             raise RuntimeError(pinned.unavailable_message())
         raise RuntimeError(
-            "未配置出图后端：请在顶部选择 Seedream、ComfyUI 或 NVIDIA 开源出图，并配置对应 Key。"
+            "未配置出图后端：请配置 NVIDIA / HF（免费）或 Seedream / ComfyUI，并在顶部选择后端。"
         )
     if (
         preferred not in {"", "auto"}

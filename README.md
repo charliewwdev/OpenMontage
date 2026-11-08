@@ -66,7 +66,7 @@ become reference images that feed the video shots, so you can redo a single char
 - **Step by step or one click.** Run each stage yourself, or let the agent run the whole pipeline in the background
   and then re-run any stage or swap a version.
 
-Try the hosted instance: **[openmontage.dtok.io](https://openmontage.dtok.io/)** · Starter prompts: [`docs/examples.md`](docs/examples.md) · Free GPU quotas: [`docs/FREE_GPU.md`](docs/FREE_GPU.md) · Studio docs: [`studio/README.en.md`](studio/README.en.md)
+Try the hosted instance: **[openmontage.dtok.io](https://openmontage.dtok.io/)** · Starter prompts: [`docs/examples.md`](docs/examples.md) · Free GPU quotas: [`docs/FREE_GPU.md`](docs/FREE_GPU.md) · Colab Comfy playbook: [`docs/COMFY_COLAB.md`](docs/COMFY_COLAB.md) · Studio docs: [`studio/README.en.md`](studio/README.en.md)
 
 ## The 7-stage workshop
 
@@ -179,6 +179,20 @@ The hosted instance has a credits / top-up page. Self-hosted, you pay your model
 
 ## Quick start
 
+### One-click cloud deploy
+
+[![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://www.heroku.com/deploy?template=https://github.com/charliewwdev/OpenMontage)
+[![Deploy to DigitalOcean](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/charliewwdev/OpenMontage/tree/main)
+
+| | What you get |
+|:---|:---|
+| **Heroku** | Container dyno + Postgres + Redis (`app.json` / `heroku.yml`) |
+| **DigitalOcean** | App Platform service + Dev Postgres (`.do/deploy.template.yaml`) |
+
+After deploy, open the app → **Demo**, then paste LLM / image / video keys in *Model settings* (or set them in the platform env form). Set `STUDIO_PUBLIC_URL` to your live HTTPS URL if CORS needs it. Full notes: [`docs/SELF_HOSTING.md`](docs/SELF_HOSTING.md#one-click-heroku--digitalocean).
+
+### Docker Compose (local / VPS)
+
 Docker — one shot (Postgres + Redis + MinIO + Studio):
 
 ```bash
@@ -188,7 +202,6 @@ docker compose -f docker-compose.studio.yml up --build
 # health: GET http://localhost:8787/api/health
 # MinIO console: http://localhost:9001 (minioadmin / minioadmin)
 ```
-
 
 Local development:
 

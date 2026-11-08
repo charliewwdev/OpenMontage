@@ -33,6 +33,7 @@ class _OpenAiTransport:
             user=kwargs["user"],
             temperature=kwargs["temperature"],
             max_tokens=kwargs["max_tokens"],
+            timeout=int(kwargs.get("timeout") or 120),
         )
 
 
@@ -51,6 +52,7 @@ class _AnthropicTransport:
             user=kwargs["user"],
             temperature=kwargs["temperature"],
             max_tokens=kwargs["max_tokens"],
+            timeout=int(kwargs.get("timeout") or 120),
         )
 
 
@@ -69,6 +71,7 @@ class _GeminiTransport:
             user=kwargs["user"],
             temperature=kwargs["temperature"],
             max_tokens=kwargs["max_tokens"],
+            timeout=int(kwargs.get("timeout") or 120),
         )
 
 

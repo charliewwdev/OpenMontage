@@ -27,6 +27,7 @@ import { JobsPage } from "./components/platform/JobsPage";
 import { HelpPage } from "./components/platform/HelpPage";
 import { CreditsPage } from "./components/platform/CreditsPage";
 import { ReferPage } from "./components/platform/ReferPage";
+import { UsersPage } from "./components/platform/UsersPage";
 
 const STUDIO_STEPS = new Set([
   "script",
@@ -712,6 +713,8 @@ export default function App() {
       body = <HelpPage config={config} onNeedKeys={goKeys} onNavigate={onNavigate} />;
     } else if (nav === "credits") {
       body = <CreditsPage config={config} onNeedKeys={goKeys} />;
+    } else if (nav === "users") {
+      body = <UsersPage config={config} />;
     } else if (nav === "refer") {
       body = <ReferPage config={config} />;
     } else {
@@ -791,14 +794,6 @@ export default function App() {
         <MaintenancePage brand={config?.brand || "OpenMontage"} onRetry={() => void onRetryApi()} />
       ) : hardGate ? (
         <AuthPage brand={config?.brand} tagline={config?.tagline} authConfig={config?.auth} onAuthed={onAuthed} />
-        <GithubStarModal
-          open={showStarGate}
-          onClose={() => setShowStarGate(false)}
-          onVerified={() => {
-            setShowStarGate(false);
-            window.dispatchEvent(new CustomEvent("studio-keys-changed"));
-          }}
-        />
       ) : (
         <>
           <PlatformShell

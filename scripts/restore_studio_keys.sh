@@ -38,6 +38,7 @@ wanted = [
     "GPUHOME_API_KEY", "GPUHOME_BASE_URL", "GPUHOME_MODEL",
     "COMFYUI_SERVER_URL", "COMFYUI_IMAGE_SERVER_URL", "COMFYUI_VIDEO_SERVER_URL",
     "COMFYUI_CHECKPOINT", "COMFYUI_VIDEO_MODEL",
+    "COMFYUI_AUTH_TOKEN", "COMFYUI_HTTP_TOKEN",
     "COMFY_API_KEY", "COMFYUI_API_KEY", "COMFY_ORG_API_KEY",
     "STUDIO_MEDIA_QA",
     "STUDIO_QA_MIN_SCORE", "STUDIO_ENTITY_QA_MAX_ATTEMPTS", "STUDIO_VIDEO_QA_MAX_ATTEMPTS",
@@ -70,13 +71,12 @@ elif vals.get("STUDIO_IMAGE_BACKEND") or vals.get("STUDIO_VIDEO_BACKEND"):
 if not payload:
     print("skip restore: no usable keys in env file")
     raise SystemExit(0)
+# Free-first platform default: leave LLM_PROVIDER unset so Studio walks
+# nvidia → groq → … → pollinations. Only pin when explicitly in the env file.
+# (Do not auto-pick gpuhome/deepseek — that made paid providers look "enabled"
+# while free tiers appeared unused.)
 if not payload.get("LLM_PROVIDER"):
-    if "GPUHOME_API_KEY" in payload:
-        payload["LLM_PROVIDER"] = "gpuhome"
-    elif "DEEPSEEK_API_KEY" in payload:
-        payload["LLM_PROVIDER"] = "deepseek"
-    elif "CURSOR_API_KEY" in payload:
-        payload["LLM_PROVIDER"] = "cursor"
+    print("note: LLM_PROVIDER unset → free-first auto (nvidia/groq/…/pollinations)")
 
 ops = (
     os.environ.get("STUDIO_OPS_TOKEN")

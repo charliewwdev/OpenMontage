@@ -1,6 +1,8 @@
 # OpenMontage Drama Studio — Coolify / Docker image
 # Build context MUST be the OpenMontage repo root:
 #   docker build -f studio/Dockerfile -t openmontage-drama-studio .
+# PaaS one-click (Heroku / DigitalOcean) uses the identical root ./Dockerfile —
+# keep both files in sync when changing layers.
 
 FROM node:22-alpine AS ui
 WORKDIR /ui

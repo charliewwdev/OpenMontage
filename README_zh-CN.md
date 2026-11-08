@@ -56,7 +56,7 @@
 
 OpenMontage Drama Studio 是面向短剧 / 短视频制作的 **产品化工坊**。一句话描述需求（例如「10 集复仇爽剧，9:16，前 3 秒强钩子」），系统先生成剧本，再按七步生产线推进；每一步都可编辑，角色、场景、道具会作为参考图带入镜头生成，所以可以只重做某个角色或某个镜头，不必从头再来。
 
-英文 Studio 说明：[`studio/README.en.md`](studio/README.en.md)。开箱提示词：[`docs/examples.md`](docs/examples.md)。免费 GPU 额度：[`docs/FREE_GPU.md`](docs/FREE_GPU.md)。
+英文 Studio 说明：[`studio/README.en.md`](studio/README.en.md)。开箱提示词：[`docs/examples.md`](docs/examples.md)。免费 GPU 额度：[`docs/FREE_GPU.md`](docs/FREE_GPU.md)。Colab 出片手册：[`docs/COMFY_COLAB.md`](docs/COMFY_COLAB.md)。
 
 - **自带密钥（BYOK）**：文本、出图、出视频模型都在「模型配置」里按账号配置，密钥按账号隔离保存。
 - **先逛逛**：灵感、技能、资产页面无需登录即可浏览；调用大模型与写入项目时再鉴权。
@@ -225,6 +225,20 @@ Compose 默认使用 **本地 Demo 鉴权** + 栈内 MinIO，无需外部账号�
 
 ## 快速开始
 
+### 云上一键部署
+
+[![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://www.heroku.com/deploy?template=https://github.com/charliewwdev/OpenMontage)
+[![Deploy to DigitalOcean](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/charliewwdev/OpenMontage/tree/main)
+
+| | 会带上什么 |
+|:---|:---|
+| **Heroku** | 容器 Dyno + Postgres + Redis（`app.json` / `heroku.yml`） |
+| **DigitalOcean** | App Platform 服务 + Dev Postgres（`.do/deploy.template.yaml`） |
+
+部署完成后打开站点 → **Demo**，再在「模型配置」里贴 LLM / 出图 / 出视频密钥（也可在平台环境变量表单里填）。若 CORS 异常，把 `STUDIO_PUBLIC_URL` 设成你的 HTTPS 地址。详见 [`docs/SELF_HOSTING_zh-CN.md`](docs/SELF_HOSTING_zh-CN.md)。
+
+### Docker Compose（本机 / VPS）
+
 Docker 一键（Postgres + Redis + MinIO + Studio）：
 
 ```bash
@@ -234,7 +248,6 @@ docker compose -f docker-compose.studio.yml up --build
 # 健康检查：GET http://localhost:8787/api/health
 # MinIO 控制台：http://localhost:9001（minioadmin / minioadmin）
 ```
-
 
 本地开发：
 

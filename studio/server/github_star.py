@@ -246,3 +246,25 @@ def attach_star_status(status: dict[str, Any]) -> dict[str, Any]:
 def redact_keys_status(status: dict[str, Any]) -> dict[str, Any]:
     """Backward-compatible alias — no longer strips provider secrets."""
     return attach_star_status(status)
+
+
+def list_public_starrers(*, limit: int = 200) -> dict[str, Any]:
+    """Public roster of verified GitHub logins (no studio user ids / emails)."""
+    root = _projects_root()
+    binds = _load_binds(root) if root is not None else {}
+    logins = sorted({str(k).strip() for k in binds.keys() if str(k).strip()}, key=str.lower)
+    cap = max(1, min(int(limit or 200), 500))
+    users = [
+        {
+            "login": login,
+            "profileUrl": f"https://github.com/{login}",
+            "avatarUrl": f"https://github.com/{login}.png?size=96",
+        }
+        for login in logins[:cap]
+    ]
+    return {
+        "repo": star_repo(),
+        "starUrl": star_url(),
+        "total": len(logins),
+        "users": users,
+    }

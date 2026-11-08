@@ -391,6 +391,9 @@ def all_secret_envs() -> tuple[str, ...]:
             "COMFYUI_VIDEO_SERVER_URL",
             "COMFYUI_CHECKPOINT",
             "COMFYUI_VIDEO_MODEL",
+            # Vast/portal tunnel HTTP auth (Bearer / ?token=); not Comfy.org partner billing
+            "COMFYUI_AUTH_TOKEN",
+            "COMFYUI_HTTP_TOKEN",
             # Comfy Org partner-node billing (Qwen Image 3 API on rented ComfyUI)
             "COMFY_API_KEY",
             "COMFYUI_API_KEY",

@@ -77,14 +77,9 @@ envs = api("GET", f"/api/v1/applications/{app}/envs")
 by_key = {e["key"]: e for e in envs}
 
 volc = pick("VOLCENGINE_API_KEY") or pick("ARK_API_KEY")
+# Prefer explicit LLM_PROVIDER. Otherwise leave empty so Coolify/Studio
+# free-first auto picks nvidia/groq/pollinations (not paid gpuhome).
 llm_provider = pick("LLM_PROVIDER")
-if not llm_provider:
-    if pick("GPUHOME_API_KEY"):
-        llm_provider = "gpuhome"
-    elif pick("DEEPSEEK_API_KEY"):
-        llm_provider = "deepseek"
-    elif pick("CURSOR_API_KEY"):
-        llm_provider = "cursor"
 
 pairs = [
     ("GPUHOME_API_KEY", pick("GPUHOME_API_KEY")),

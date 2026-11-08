@@ -1,0 +1,26 @@
+# Heroku container stack — used by the Deploy to Heroku button (see app.json).
+# Docs: https://devcenter.heroku.com/articles/build-docker-images-heroku-yml
+
+setup:
+  addons:
+    - plan: heroku-postgresql
+      as: DATABASE
+    - plan: heroku-redis
+      as: REDIS
+  config:
+    HOST: "0.0.0.0"
+    STUDIO_AUTH_REQUIRED: "true"
+    STUDIO_DEMO_ENABLED: "true"
+    STUDIO_DEMO_AUTO_ENTER: "false"
+    STUDIO_GOOGLE_ENABLED: "false"
+    STUDIO_REQUIRE_GITHUB_STAR: "0"
+    STUDIO_FREE_FIRST: "1"
+    STUDIO_IMAGE_BACKEND: "auto"
+    STUDIO_VIDEO_BACKEND: "auto"
+    UVICORN_WORKERS: "1"
+
+build:
+  docker:
+    web: Dockerfile
+
+# CMD comes from the Dockerfile (/entrypoint.sh). Listens on $PORT.

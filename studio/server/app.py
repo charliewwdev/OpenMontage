@@ -132,6 +132,7 @@ AUTH_PUBLIC_GET_PREFIXES = (
     "/api/projects",
     "/api/settings/keys",  # public status only; POST still gated for anon writes
     "/api/settings/github-star",  # star gate status (verify POST still needs login)
+    "/api/community/",  # public star user roster
     "/api/settings/usage",  # browse usage charts anonymously
     "/api/settings/credits",  # browse credit packages; mutations still gated
 )
@@ -494,6 +495,14 @@ def get_github_star() -> dict[str, Any]:
     from github_star import status_for_current_user
 
     return {"githubStar": status_for_current_user()}
+
+
+@app.get("/api/community/users")
+def get_community_users(limit: int = 200) -> dict[str, Any]:
+    """Public list of verified GitHub Star users — no login required."""
+    from github_star import list_public_starrers
+
+    return list_public_starrers(limit=limit)
 
 
 @app.post("/api/settings/github-star/verify")

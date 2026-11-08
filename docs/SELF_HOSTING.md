@@ -149,6 +149,26 @@ There is no requirement to use DTok-billed credits when self-hosting.
 
 ---
 
+## One-click: Heroku / DigitalOcean
+
+README badges deploy from the public GitHub repo:
+
+| Platform | Manifest | Provisions |
+|:---|:---|:---|
+| [Deploy to Heroku](https://www.heroku.com/deploy?template=https://github.com/charliewwdev/OpenMontage) | `app.json` + `heroku.yml` + root `Dockerfile` | Web container + Postgres + Redis |
+| [Deploy to DigitalOcean](https://cloud.digitalocean.com/apps/new?repo=https://github.com/charliewwdev/OpenMontage/tree/main) | `.do/deploy.template.yaml` + root `Dockerfile` | App Platform service + Dev Postgres |
+
+Notes:
+
+- **Demo auth** is on by default (`STUDIO_DEMO_ENABLED=true`, `STUDIO_REQUIRE_GITHUB_STAR=0`). Open the app and click **Demo**.
+- **Model keys** are optional at create time — paste them in the platform form or later under *Model settings*.
+- **DigitalOcean** button allows only one Dev Database; Redis is omitted and the media queue falls back to the in-process pool. Add managed Redis later if you need multi-replica workers.
+- **MinIO** is not bundled on PaaS — media can stay in Postgres / ephemeral disk for trials; attach S3-compatible storage (`MINIO_*`) for production.
+- After Heroku deploy, set `STUDIO_PUBLIC_URL=https://YOURAPP.herokuapp.com` if links/CORS look wrong. DigitalOcean binds `${APP_URL}` in the template.
+- Coolify / Compose remains the full-stack path (Postgres + Redis + MinIO). Keep root `Dockerfile` and `studio/Dockerfile` identical when editing image layers.
+
+---
+
 ## Checklist before you call it “fully self-hosted”
 
 - [ ] `STUDIO_PUBLIC_URL` is your host, not `openmontage.dtok.io`

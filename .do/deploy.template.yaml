@@ -1,0 +1,100 @@
+# DigitalOcean App Platform — Deploy to DigitalOcean button
+# https://docs.digitalocean.com/products/app-platform/how-to/add-deploy-do-button/
+#
+# Button only supports: one service + one Dev Database.
+# Postgres is required; Redis is optional (in-process media queue fallback).
+# MinIO/S3 is optional — media can live in Postgres / local disk for a trial deploy.
+
+spec:
+  name: openmontage-drama-studio
+  region: nyc
+  services:
+    - name: web
+      dockerfile_path: Dockerfile
+      git:
+        branch: main
+        repo_clone_url: https://github.com/charliewwdev/OpenMontage.git
+      http_port: 8787
+      instance_count: 1
+      instance_size_slug: basic-xs
+      health_check:
+        http_path: /api/health
+        initial_delay_seconds: 40
+        period_seconds: 30
+        timeout_seconds: 5
+        success_threshold: 1
+        failure_threshold: 5
+      envs:
+        - key: HOST
+          scope: RUN_TIME
+          value: "0.0.0.0"
+        - key: PORT
+          scope: RUN_TIME
+          value: "8787"
+        - key: DATABASE_URL
+          scope: RUN_TIME
+          value: ${omstudio-db.DATABASE_URL}
+        - key: STUDIO_AUTH_REQUIRED
+          scope: RUN_TIME
+          value: "true"
+        - key: STUDIO_DEMO_ENABLED
+          scope: RUN_TIME
+          value: "true"
+        - key: STUDIO_DEMO_AUTO_ENTER
+          scope: RUN_TIME
+          value: "false"
+        - key: STUDIO_GOOGLE_ENABLED
+          scope: RUN_TIME
+          value: "false"
+        - key: STUDIO_REQUIRE_GITHUB_STAR
+          scope: RUN_TIME
+          value: "0"
+        - key: STUDIO_FREE_FIRST
+          scope: RUN_TIME
+          value: "1"
+        - key: STUDIO_IMAGE_BACKEND
+          scope: RUN_TIME
+          value: "auto"
+        - key: STUDIO_VIDEO_BACKEND
+          scope: RUN_TIME
+          value: "auto"
+        - key: UVICORN_WORKERS
+          scope: RUN_TIME
+          value: "1"
+        - key: STUDIO_PUBLIC_URL
+          scope: RUN_TIME
+          value: ${APP_URL}
+        - key: STUDIO_CORS_ORIGINS
+          scope: RUN_TIME
+          value: ${APP_URL}
+        - key: STUDIO_DEMO_SECRET
+          scope: RUN_TIME
+          type: SECRET
+          value: "change-me-after-deploy"
+        - key: DEEPSEEK_API_KEY
+          scope: RUN_TIME
+          type: SECRET
+          value: ""
+        - key: GROQ_API_KEY
+          scope: RUN_TIME
+          type: SECRET
+          value: ""
+        - key: NVIDIA_API_KEY
+          scope: RUN_TIME
+          type: SECRET
+          value: ""
+        - key: VOLCENGINE_API_KEY
+          scope: RUN_TIME
+          type: SECRET
+          value: ""
+        - key: ARK_API_KEY
+          scope: RUN_TIME
+          type: SECRET
+          value: ""
+        - key: COMFYUI_SERVER_URL
+          scope: RUN_TIME
+          value: ""
+  databases:
+    - name: omstudio-db
+      engine: PG
+      production: false

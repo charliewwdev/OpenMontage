@@ -9,7 +9,6 @@ import {
   Loader2,
   Plus,
   ShieldCheck,
-  Star,
   Trash2,
   Pencil,
   Zap,
@@ -247,6 +246,9 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
     return data;
   };
 
+  const freePoolOn = Boolean(status?.llmFreePool) || status?.llmProvider === "auto";
+  const imageFreePoolOn = (status?.imageBackendPref || "auto").toLowerCase() === "auto";
+
   const enable = async (p) => {
     if (!p.configured) {
       setEditor(p);
@@ -254,7 +256,12 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
     }
     setBusyId(p.id);
     try {
-      await savePayload({ LLM_PROVIDER: p.id });
+      // Free tiers join the shared free pool (all free usable). Paid pins a single provider.
+      if (p.freeTier) {
+        await savePayload({ LLM_PROVIDER: "auto", STUDIO_FREE_FIRST: "1" });
+      } else {
+        await savePayload({ LLM_PROVIDER: p.id });
+      }
     } catch (e) {
       toast.error(String(e.message || e));
     } finally {
@@ -266,10 +273,14 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
     if (!p?.modelEnv || !nextModel || nextModel === p.model) return;
     setBusyId(p.id);
     try {
-      await savePayload({
-        LLM_PROVIDER: p.id,
-        [p.modelEnv]: nextModel,
-      });
+      const payload = { [p.modelEnv]: nextModel };
+      if (p.freeTier && freePoolOn) {
+        payload.LLM_PROVIDER = "auto";
+        payload.STUDIO_FREE_FIRST = "1";
+      } else {
+        payload.LLM_PROVIDER = p.id;
+      }
+      await savePayload(payload);
     } catch (e) {
       toast.error(String(e.message || e));
     } finally {
@@ -310,7 +321,8 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
     cfImageConfigured;
 
   const renderLlmCard = (p) => {
-    const isActive = active === p.id;
+    const inFreePool = Boolean(p.freeTier && p.configured && freePoolOn);
+    const isActive = inFreePool || active === p.id;
     const initials = String(p.label || p.id || "?")
       .replace(/[^A-Za-z0-9\u4e00-\u9fa5]/g, "")
       .slice(0, 2)
@@ -321,7 +333,11 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="truncate text-[15px] font-semibold tracking-tight">{p.label}</h3>
-            {isActive ? <span className="provider-badge-active">{tr("ui_keys_settings_in_use")}</span> : null}
+            {inFreePool ? (
+              <span className="provider-badge-active">{tr("ui_keys_settings_free_pool_enabled")}</span>
+            ) : isActive ? (
+              <span className="provider-badge-active">{tr("ui_keys_settings_in_use")}</span>
+            ) : null}
             {p.freeTier ? (
               <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[11px] text-emerald-300">{tr("ui_keys_settings_free_tier_badge")}</span>
             ) : null}
@@ -399,9 +415,13 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
           <button
             type="button"
             className="provider-icon-btn"
-            disabled={busyId === p.id || !p.configured || isActive}
+            disabled={busyId === p.id || !p.configured || (!inFreePool && active === p.id)}
             onClick={() => void clearKey(p)}
-            title={isActive ? tr("ui_keys_settings_switch_to_another_provider_before_clearing") : tr("ui_keys_settings_clear_key")}
+            title={
+              !inFreePool && active === p.id
+                ? tr("ui_keys_settings_switch_to_another_provider_before_clearing")
+                : tr("ui_keys_settings_clear_key")
+            }
           >
             <Trash2 className="h-3.5 w-3.5" />
           </button>
@@ -423,7 +443,11 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
           ) : (
             <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] text-[var(--muted)]">{tr("ui_keys_settings_not_configured")}</span>
           )}
-          {status?.imageBackend === "nvidia" ? <span className="provider-badge-active">{tr("ui_keys_settings_used_for_images")}</span> : null}
+          {nvidiaConfigured && imageFreePoolOn ? (
+            <span className="provider-badge-active">{tr("ui_keys_settings_free_pool_enabled")}</span>
+          ) : status?.imageBackend === "nvidia" ? (
+            <span className="provider-badge-active">{tr("ui_keys_settings_used_for_images")}</span>
+          ) : null}
         </div>
         <p className="mt-1 text-[11px] leading-4 text-white/40">
           {tr("ui_keys_settings_get_a_trial_key_at", { 0: " " })}
@@ -459,7 +483,11 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
           ) : (
             <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] text-[var(--muted)]">{tr("ui_keys_settings_not_configured")}</span>
           )}
-          {status?.imageBackend === "hf" ? <span className="provider-badge-active">{tr("ui_keys_settings_used_for_images")}</span> : null}
+          {hfConfigured && imageFreePoolOn ? (
+            <span className="provider-badge-active">{tr("ui_keys_settings_free_pool_enabled")}</span>
+          ) : status?.imageBackend === "hf" ? (
+            <span className="provider-badge-active">{tr("ui_keys_settings_used_for_images")}</span>
+          ) : null}
         </div>
         <p className="mt-1 text-[11px] leading-4 text-white/40">
           {tr("ui_keys_settings_hf_images_hint")}{" "}
@@ -486,7 +514,11 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
           ) : (
             <span className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[11px] text-[var(--muted)]">{tr("ui_keys_settings_not_configured")}</span>
           )}
-          {status?.imageBackend === "cloudflare" ? <span className="provider-badge-active">{tr("ui_keys_settings_used_for_images")}</span> : null}
+          {cfImageConfigured && imageFreePoolOn ? (
+            <span className="provider-badge-active">{tr("ui_keys_settings_free_pool_enabled")}</span>
+          ) : status?.imageBackend === "cloudflare" ? (
+            <span className="provider-badge-active">{tr("ui_keys_settings_used_for_images")}</span>
+          ) : null}
         </div>
         <p className="mt-1 text-[11px] leading-4 text-white/40">{tr("ui_keys_settings_cf_images_hint")}</p>
         <div className="mt-3">
@@ -542,6 +574,27 @@ function ProvidersTab({ status, catalog, onUpdated, testing, onTest }) {
           })}<a className="text-[#a5b4fc] hover:underline" href="https://gpuhome.cc/market" target="_blank" rel="noreferrer">{tr("ui_keys_settings_gpu_marketplace")}</a>{tr("ui_keys_settings_and_enter_its_custom_service_address", {
             0: " "
           })}</p>
+        <p className="mt-1.5 text-[11px] leading-4 text-white/40">
+          {tr("ui_keys_settings_comfy_colab_hint")}{" "}
+          <a
+            className="text-[#a5b4fc] hover:underline"
+            href="https://github.com/charliewwdev/OpenMontage/blob/main/docs/COMFY_COLAB.md"
+            target="_blank"
+            rel="noreferrer"
+          >
+            COMFY_COLAB.md
+          </a>
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <a
+            className="btn-secondary !h-8 !px-3 !text-[12px]"
+            href="https://colab.research.google.com/github/charliewwdev/OpenMontage/blob/main/notebooks/comfyui_openmontage_colab.ipynb"
+            target="_blank"
+            rel="noreferrer"
+          >
+            {tr("ui_keys_settings_open_comfy_colab")}
+          </a>
+        </div>
         <div className="mt-3">
           <ComfyCard status={status} onUpdated={onUpdated} />
         </div>
@@ -1641,78 +1694,6 @@ export function UsageSettings() {
   );
 }
 
-function GithubStarGate({ gate, onVerified }) {
-  useLocale();
-  const [login, setLogin] = useState(gate?.login || "");
-  const [busy, setBusy] = useState(false);
-  const starUrl = gate?.starUrl || "https://github.com/charliewwdev/OpenMontage";
-
-  const verify = async () => {
-    const name = String(login || "").trim().replace(/^@/, "");
-    if (!name) {
-      toast.error(tr("ui_keys_star_enter_username"));
-      return;
-    }
-    setBusy(true);
-    try {
-      const data = await api("/api/settings/github-star/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ login: name }),
-      });
-      toast.success(tr("ui_keys_star_verified"));
-      onVerified?.(data);
-    } catch (error) {
-      toast.error(String(error.message || error));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div className="panel mx-auto max-w-xl space-y-4 p-6">
-      <div className="flex items-start gap-3">
-        <div className="rounded-full bg-amber-500/15 p-2 text-amber-300">
-          <Star className="h-5 w-5" />
-        </div>
-        <div>
-          <h2 className="text-lg font-semibold text-white">{tr("ui_keys_star_title")}</h2>
-          <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">{tr("ui_keys_star_body")}</p>
-        </div>
-      </div>
-      <ol className="list-decimal space-y-2 pl-5 text-sm text-white/80">
-        <li>{tr("ui_keys_star_step_star")}</li>
-        <li>{tr("ui_keys_star_step_username")}</li>
-        <li>{tr("ui_keys_star_step_verify")}</li>
-      </ol>
-      <a
-        className="btn-secondary inline-flex items-center gap-2 !min-h-10"
-        href={starUrl}
-        target="_blank"
-        rel="noreferrer"
-      >
-        <ExternalLink className="h-4 w-4" />
-        {tr("ui_keys_star_open_repo")}
-      </a>
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <input
-          className="field flex-1"
-          placeholder={tr("ui_keys_star_username_placeholder")}
-          value={login}
-          onChange={(e) => setLogin(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") void verify();
-          }}
-        />
-        <button type="button" className="btn-primary !min-h-10 !px-4" disabled={busy} onClick={() => void verify()}>
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
-          <span>{tr("ui_keys_star_verify_btn")}</span>
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export function KeysSettings({ config, onUpdated }) {
   const { locale } = useLocale();
   const catalog = config?.llmProviders || [];
@@ -1767,9 +1748,6 @@ export function KeysSettings({ config, onUpdated }) {
     return list.find((p) => p.id === id)?.label || id || tr("ui_keys_settings_not_enabled");
   }, [status, catalog, locale]);
 
-  const starGate = status?.githubStar;
-  const starNeeded = Boolean(starGate?.required && !starGate?.verified);
-
   return (
     <PageShell
       eyebrow="Settings"
@@ -1782,26 +1760,13 @@ export function KeysSettings({ config, onUpdated }) {
         <div className="panel flex items-center gap-2 px-5 py-10 text-sm text-[var(--muted)]">
           <Loader2 className="h-4 w-4 animate-spin" />{" "}{tr("ui_keys_settings_loading_settings")}</div>
       ) : (
-        <>
-          {starNeeded ? (
-            <div className="mb-4">
-              <GithubStarGate
-                gate={starGate}
-                onVerified={(data) => {
-                  onKeysUpdated(data);
-                  window.dispatchEvent(new CustomEvent("studio-keys-changed"));
-                }}
-              />
-            </div>
-          ) : null}
-          <ProvidersTab
-            status={status}
-            catalog={catalog}
-            onUpdated={onKeysUpdated}
-            testing={testing}
-            onTest={() => void test()}
-          />
-        </>
+        <ProvidersTab
+          status={status}
+          catalog={catalog}
+          onUpdated={onKeysUpdated}
+          testing={testing}
+          onTest={() => void test()}
+        />
       )}
     </PageShell>
   );

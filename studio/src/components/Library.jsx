@@ -271,7 +271,6 @@ export function Library({
     { n: "03", title: tr("ui_library_create_a_project_and_shoot"), done: Boolean(authed) && keysReady && hasRealProject },
   ];
   const onboardingDone = onboardingSteps.every((s) => s.done);
-
   const visible = useMemo(() => {
     const keyword = query.trim().toLocaleLowerCase("zh-CN");
     if (!keyword) return projects || [];
@@ -300,13 +299,11 @@ export function Library({
       <div className="yc-frame mx-0 min-h-[calc(100vh-2.5rem)] w-full max-w-none overflow-hidden p-3 md:p-4">
         <header className="relative overflow-hidden rounded-2xl border border-white/10 bg-[linear-gradient(135deg,#15182a_0%,#1a1240_45%,#0d1b3a_100%)] px-4 py-3 md:px-6 md:py-4">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(124,108,255,.28),transparent_40%)]" />
-          <div className="relative flex flex-wrap items-end justify-between gap-2">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2 text-[11px] font-semibold text-white/55">
-                <Clapperboard className="h-3.5 w-3.5 text-[#b7acff]" />{tr("ui_library_film_creation_workshop")}</div>
-              <h1 className="mt-1 text-xl font-semibold tracking-tight md:text-2xl">{tr("ui_library_from_script_to_final_cut_ai")}</h1>
-              <p className="mt-1 max-w-2xl text-xs text-white/55">{tr("ui_library_script_writing_script_lock_analysis_asset")}</p>
-            </div>
+          <div className="relative min-w-0">
+            <div className="flex items-center gap-2 text-[11px] font-semibold text-white/55">
+              <Clapperboard className="h-3.5 w-3.5 text-[#b7acff]" />{tr("ui_library_film_creation_workshop")}</div>
+            <h1 className="mt-1 text-xl font-semibold tracking-tight md:text-2xl">{tr("ui_library_from_script_to_final_cut_ai")}</h1>
+            <p className="mt-1 max-w-2xl text-xs text-white/55">{tr("ui_library_script_writing_script_lock_analysis_asset")}</p>
           </div>
         </header>
 

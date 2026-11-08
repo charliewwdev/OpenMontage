@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { LogOut, Moon, PanelLeftClose, PanelLeftOpen, Sun } from "lucide-react";
+import { Github, LogOut, Moon, PanelLeftClose, PanelLeftOpen, Sun } from "lucide-react";
 import { api } from "../api";
 import { resolveIcon } from "../lib/icons";
 import { useLocale } from "../lib/i18n";
@@ -80,6 +80,8 @@ export function PlatformShell({
   const displayBrand = brand || t("shell_brand_name");
   const displayTagline = tagline || t("shell_brand_tagline");
   const displayName = user?.username || t("auth_page_guest");
+  const githubUrl = config?.links?.github || "https://github.com/charliewwdev/OpenMontage";
+  const xUrl = config?.links?.x || "";
   const [usageToday, setUsageToday] = useState(null);
   const [creditsBalance, setCreditsBalance] = useState(null);
   const [theme, setTheme] = useState(() => readTheme());
@@ -132,6 +134,31 @@ export function PlatformShell({
     setTheme((current) => (current === "light" ? "dark" : "light"));
   };
 
+  const socialLinks = (
+    <>
+      <a
+        className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/[.06] px-2 py-1 text-[10px] font-medium text-white/85 transition hover:border-white/30 hover:bg-white/[.1]"
+        href={githubUrl}
+        target="_blank"
+        rel="noreferrer"
+      >
+        <Github className="h-3 w-3" />
+        {t("ui_library_link_github")}
+      </a>
+      {xUrl ? (
+        <a
+          className="inline-flex items-center gap-1 rounded-lg border border-white/15 bg-white/[.06] px-2 py-1 text-[10px] font-medium text-white/85 transition hover:border-white/30 hover:bg-white/[.1]"
+          href={xUrl}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <span className="text-[10px] font-bold leading-none">𝕏</span>
+          {t("ui_library_link_x")}
+        </a>
+      ) : null}
+    </>
+  );
+
   return (
     <div className="flex min-h-screen bg-[var(--stage)] text-[var(--ink)]">
       <aside
@@ -172,6 +199,34 @@ export function PlatformShell({
               </button>
             )}
           </div>
+          {!collapsed ? (
+            <div className="mt-2.5 flex flex-wrap items-center gap-1.5">{socialLinks}</div>
+          ) : (
+            <div className="mt-2 flex flex-col items-center gap-1">
+              <a
+                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-white/15 bg-white/[.06] text-white/80 transition hover:border-white/30 hover:bg-white/[.1]"
+                href={githubUrl}
+                target="_blank"
+                rel="noreferrer"
+                title={t("ui_library_link_github")}
+                aria-label={t("ui_library_link_github")}
+              >
+                <Github className="h-3.5 w-3.5" />
+              </a>
+              {xUrl ? (
+                <a
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-white/15 bg-white/[.06] text-white/80 transition hover:border-white/30 hover:bg-white/[.1]"
+                  href={xUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  title={t("ui_library_link_x")}
+                  aria-label={t("ui_library_link_x")}
+                >
+                  <span className="text-[11px] font-bold leading-none">𝕏</span>
+                </a>
+              ) : null}
+            </div>
+          )}
           {!collapsed ? (
             <div className="mt-3 flex rounded-lg border border-[var(--line)] p-0.5 text-[10px]">
               <button
@@ -322,7 +377,18 @@ export function PlatformShell({
         </div>
       </aside>
 
-      <div className="min-w-0 flex-1">{children}</div>
+      <div className="flex min-w-0 flex-1 flex-col">
+        {!immersive ? (
+          <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] bg-[#0a0b10] px-3 py-2 md:hidden">
+            <div className="min-w-0">
+              <div className="truncate text-sm font-semibold tracking-wide">{displayBrand}</div>
+              <div className="truncate text-[10px] text-[var(--muted)]">{displayTagline}</div>
+            </div>
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">{socialLinks}</div>
+          </div>
+        ) : null}
+        <div className="min-w-0 flex-1">{children}</div>
+      </div>
     </div>
   );
 }

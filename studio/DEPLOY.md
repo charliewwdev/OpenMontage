@@ -51,6 +51,15 @@ In Coolify → Storages, mount a volume:
 
 The image ships with `midnight-sms-ep01` as a demo; mounting an empty volume hides it unless you copy data in.
 
+## One-click PaaS (Heroku / DigitalOcean)
+
+Public GitHub buttons (see root README):
+
+- **Heroku:** `app.json` + `heroku.yml` + root `Dockerfile` (Postgres + Redis)
+- **DigitalOcean App Platform:** `.do/deploy.template.yaml` + root `Dockerfile` (Dev Postgres; Redis optional later)
+
+Coolify stays on `studio/Dockerfile`. Keep root `Dockerfile` and `studio/Dockerfile` in sync. Details: [`docs/SELF_HOSTING.md`](../docs/SELF_HOSTING.md#one-click-heroku--digitalocean).
+
 ## Local Docker
 
 One-shot (Postgres + Redis + Studio). Add the MinIO overlay for local S3 — see [`docs/SELF_HOSTING.md`](../docs/SELF_HOSTING.md). Coolify uses only `docker-compose.studio.yml` with external `MINIO_*`.

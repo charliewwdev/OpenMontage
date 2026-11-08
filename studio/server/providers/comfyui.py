@@ -141,12 +141,39 @@ def reachable(*, capability: str | None = None, force: bool = False) -> bool:
     return ok
 
 
+def _http_auth_token() -> str:
+    """Vast/portal/tunnel gate token (Bearer / ?token=). Not the Comfy.org partner key."""
+    return (
+        _secret("COMFYUI_AUTH_TOKEN")
+        or _secret("COMFYUI_HTTP_TOKEN")
+        or ""
+    ).strip()
+
+
+def _with_auth_query(url: str) -> str:
+    """Append ?token= for portals that accept query auth (Vast trycloudflare)."""
+    tok = _http_auth_token()
+    if not tok or "token=" in url:
+        return url
+    sep = "&" if "?" in url else "?"
+    return f"{url}{sep}token={urllib.parse.quote(tok)}"
+
+
+def _auth_headers() -> dict[str, str]:
+    tok = _http_auth_token()
+    if not tok:
+        return {}
+    return {"Authorization": f"Bearer {tok}"}
+
+
 def _http_json(method: str, url: str, body: dict | None = None, timeout: int = 60) -> Any:
     data = None if body is None else json.dumps(body).encode("utf-8")
-    headers = {"Accept": "application/json"}
+    headers = {"Accept": "application/json", **_auth_headers()}
     if body is not None:
         headers["Content-Type"] = "application/json"
-    req = urllib.request.Request(url, data=data, method=method, headers=headers)
+    req = urllib.request.Request(
+        _with_auth_query(url), data=data, method=method, headers=headers
+    )
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             raw = resp.read().decode("utf-8") or "{}"
@@ -159,7 +186,9 @@ def _http_json(method: str, url: str, body: dict | None = None, timeout: int = 6
 
 
 def _http_bytes(url: str, timeout: int = 120) -> bytes:
-    req = urllib.request.Request(url, method="GET")
+    req = urllib.request.Request(
+        _with_auth_query(url), method="GET", headers=_auth_headers()
+    )
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             return resp.read()
@@ -789,12 +818,13 @@ def _upload_image(root: str, path: Path) -> str:
         f"Content-Type: application/octet-stream\r\n\r\n"
     ).encode("utf-8") + blob + f"\r\n--{boundary}--\r\n".encode("utf-8")
     req = urllib.request.Request(
-        f"{root}/upload/image",
+        _with_auth_query(f"{root}/upload/image"),
         data=body,
         method="POST",
         headers={
             "Content-Type": f"multipart/form-data; boundary={boundary}",
             "Accept": "application/json",
+            **_auth_headers(),
         },
     )
     try:

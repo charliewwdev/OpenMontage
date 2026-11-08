@@ -663,7 +663,15 @@ def _studio_audio_models() -> list[dict[str, Any]]:
 def public_status() -> dict[str, Any]:
     providers = [_provider_public(item) for item in LLM_PROVIDERS]
     configured = [p for p in providers if p["configured"]]
-    preferred = get_secret("LLM_PROVIDER").lower()
+    preferred_raw = (get_secret("LLM_PROVIDER") or "").strip().lower()
+    preferred = "" if preferred_raw in {"", "auto", "free"} else preferred_raw
+    free_first = (get_secret("STUDIO_FREE_FIRST") or "1").strip().lower() not in {
+        "0",
+        "false",
+        "off",
+        "no",
+    }
+    llm_free_pool = bool(free_first and preferred_raw in {"", "auto", "free"})
     backend = "none"
     if preferred:
         meta = provider_by_id(preferred)
@@ -694,10 +702,12 @@ def public_status() -> dict[str, Any]:
     llm_ready = bool(configured)
     comfy = _comfyui_public()
     out = {
-        "llmProvider": preferred or (backend if backend != "none" else ""),
+        # Pref shown to UI: "auto" when free-pool so keys page can mark all free as enabled.
+        "llmProvider": ("auto" if llm_free_pool else preferred) or (backend if backend != "none" else ""),
         "llmProviders": providers,
         "llmReady": llm_ready,
         "llmBackend": backend,
+        "llmFreePool": llm_free_pool,
         "deepseek": {
             "configured": bool(deepseek and deepseek["configured"]),
             "masked": (deepseek or {}).get("masked") or "",

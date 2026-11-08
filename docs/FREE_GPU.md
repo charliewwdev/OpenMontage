@@ -31,8 +31,8 @@ Self-hosted / local: keep `STUDIO_REQUIRE_GITHUB_STAR=0` (see `studio/.env.examp
 STUDIO_IMAGE_BACKEND=auto
 STUDIO_VIDEO_BACKEND=auto
 STUDIO_FREE_FIRST=1
-# LLM_PROVIDER=   # empty → nvidia → groq → gemini → cloudflare → openrouter
-#                 # → pollinations (no key) → sambanova → cohere → mistral → paid
+# LLM_PROVIDER=   # empty/auto → groq → cloudflare → openrouter → pollinations
+#                 # → gemini → … → nvidia (cold) → paid
 
 # Zero-config free fallback (no keys required):
 # POLLINATIONS_IMAGE=1
@@ -66,7 +66,7 @@ STUDIO_VIDEO_BACKEND=auto      # picks reachable Comfy before Seedance
 
 | Priority | Channel | Free quota (verify live) | Fit for Studio video | How to wire |
 |:---|:---|:---|:---|:---|
-| **1** | **Google Colab** free | ~15–30 h/week T4 (dynamic; no guarantee) | Best DIY: run ComfyUI notebook + Cloudflare tunnel | Paste tunnel URL → `COMFYUI_SERVER_URL` |
+| **1** | **Google Colab** | Free ~15–30 h/week **T4** (no guarantee); Pro for L4/A100 | **Playbook + notebook:** [`COMFY_COLAB.md`](COMFY_COLAB.md) / [`notebooks/comfyui_openmontage_colab.ipynb`](../notebooks/comfyui_openmontage_colab.ipynb). Free T4 ≈16GB **cannot** run full MiniMax H3; use **Colab Pro (24GB+)** or a rental for H3. Same cloudflared pattern as community notebooks ([ComfyUI-On-Colab](https://github.com/nazdridoy/ComfyUI-On-Colab)). | Paste `*.trycloudflare.com` → `COMFYUI_SERVER_URL` |
 | **1** | **Kaggle** Notebooks | ~30 h/week GPU (often T4/P100), resets weekly | Same pattern as Colab | Tunnel / ngrok → Comfy URL |
 | **2** | **Lightning AI** free | ~5 credits on signup; +~25 after card; ~30 credits ≈ tens of interruptible GPU-hours | Good short Comfy sessions | Expose Comfy port → Studio |
 | **2** | **Modal** Starter | **~$30 / month** compute credit | Serverless GPU; write a thin Comfy/OpenAI bridge or keep a worker | Custom URL or job bridge |
@@ -77,7 +77,7 @@ STUDIO_VIDEO_BACKEND=auto      # picks reachable Comfy before Seedance
 
 ### Practical unblock order (production backlog)
 
-1. **Colab or Kaggle** → start ComfyUI with video workflow (MiniMax H3 / Wan) → `cloudflared tunnel` → update live `COMFYUI_SERVER_URL` (shared secrets / Coolify).
+1. **Colab (repeatable):** follow [`COMFY_COLAB.md`](COMFY_COLAB.md) — Drive-persist Comfy → cloudflared → paste URL into Studio. For **H3 video**, pick a **≥24GB** runtime (Colab Pro / rental), not free T4.
 2. If sessions die too often → **Modal $30** or **Lightning** credits for a steadier worker.
 3. If you only need a few trial clips → **Comfy Cloud** free runs (UI), not the stuck auto-produce queue.
 4. Seedance remains the quality/paid path once Volcengine balance is restored (`STUDIO_VIDEO_BACKEND=seedance`).
@@ -86,7 +86,7 @@ STUDIO_VIDEO_BACKEND=auto      # picks reachable Comfy before Seedance
 
 - **`STUDIO_FREE_FIRST=1` (default):** pinned `comfyui` that is unreachable **falls through** to the next usable backend.
 - Image `auto`: **NVIDIA → Cloudflare → HF → Seedream → reachable Comfy**.
-- LLM with empty `LLM_PROVIDER`: **nvidia → groq → gemini → cloudflare → openrouter → paid**.
+- LLM with empty/`auto` `LLM_PROVIDER`: **groq → cloudflare → openrouter → pollinations → … → nvidia → paid** (failed free hosts fall through).
 - Video `auto`: **reachable Comfy** (Colab/Kaggle/rental) → **Seedance**. Dead Comfy URLs do not win.
 
 ## Quick verify

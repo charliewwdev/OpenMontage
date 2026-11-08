@@ -121,6 +121,26 @@ docker compose -f docker-compose.studio.yml up --build
 
 ---
 
+## 一键部署：Heroku / DigitalOcean
+
+README 徽章从公开 GitHub 仓库一键拉起：
+
+| 平台 | 清单文件 | 会创建 |
+|:---|:---|:---|
+| [Deploy to Heroku](https://www.heroku.com/deploy?template=https://github.com/charliewwdev/OpenMontage) | `app.json` + `heroku.yml` + 根目录 `Dockerfile` | Web 容器 + Postgres + Redis |
+| [Deploy to DigitalOcean](https://cloud.digitalocean.com/apps/new?repo=https://github.com/charliewwdev/OpenMontage/tree/main) | `.do/deploy.template.yaml` + 根目录 `Dockerfile` | App Platform 服务 + Dev Postgres |
+
+说明：
+
+- 默认开启 **Demo 鉴权**（`STUDIO_DEMO_ENABLED=true`，`STUDIO_REQUIRE_GITHUB_STAR=0`），打开站点点 **Demo** 即可。
+- **模型密钥**创建时可空，之后在平台环境变量或「模型配置」里补。
+- **DigitalOcean** 按钮只支持一个 Dev Database，故不带 Redis，媒体队列回退到进程内线程池；以后要多副本再加托管 Redis。
+- **MinIO** 不会随 PaaS 一键带上；试用可走 Postgres / 临时盘，生产请接 S3 兼容存储（`MINIO_*`）。
+- Heroku 部署后若 CORS/外链异常，设 `STUDIO_PUBLIC_URL=https://YOURAPP.herokuapp.com`。DigitalOcean 模板已绑定 `${APP_URL}`。
+- 完整栈（Postgres + Redis + MinIO）仍用 Coolify / Compose。改镜像层时请保持根目录 `Dockerfile` 与 `studio/Dockerfile` 一致。
+
+---
+
 ## 上线前核对
 
 - [ ] `STUDIO_PUBLIC_URL` 是你的地址，不是 `openmontage.dtok.io`

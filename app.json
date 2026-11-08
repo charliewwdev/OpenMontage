@@ -1,0 +1,102 @@
+{
+  "name": "OpenMontage Drama Studio",
+  "description": "Self-hostable AI short-drama workshop: script → cast → storyboard → shots → voice → edit. Bring your own LLM / Seedream / Seedance keys.",
+  "repository": "https://github.com/charliewwdev/OpenMontage",
+  "website": "https://openmontage.dtok.io/",
+  "logo": "https://raw.githubusercontent.com/charliewwdev/OpenMontage/main/assets/drama-studio-mark.svg",
+  "keywords": [
+    "ai",
+    "video",
+    "short-drama",
+    "fastapi",
+    "react",
+    "seedance",
+    "openmontage"
+  ],
+  "success_url": "/",
+  "stack": "container",
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "basic"
+    }
+  },
+  "addons": [
+    "heroku-postgresql",
+    "heroku-redis"
+  ],
+  "env": {
+    "HOST": {
+      "description": "Bind address (leave as 0.0.0.0).",
+      "value": "0.0.0.0"
+    },
+    "STUDIO_AUTH_REQUIRED": {
+      "description": "Gate generation / mutations behind auth.",
+      "value": "true"
+    },
+    "STUDIO_DEMO_ENABLED": {
+      "description": "Enable one-click Demo login (recommended for first boot).",
+      "value": "true"
+    },
+    "STUDIO_DEMO_AUTO_ENTER": {
+      "description": "Skip the login screen and enter Demo automatically.",
+      "value": "false"
+    },
+    "STUDIO_GOOGLE_ENABLED": {
+      "description": "Show Google sign-in (needs API_BASE_URL / OAuth client).",
+      "value": "false"
+    },
+    "STUDIO_REQUIRE_GITHUB_STAR": {
+      "description": "Require starring the GitHub repo before generate (hosted demo only).",
+      "value": "0"
+    },
+    "STUDIO_FREE_FIRST": {
+      "description": "Prefer free LLM / image providers when configured.",
+      "value": "1"
+    },
+    "STUDIO_IMAGE_BACKEND": {
+      "description": "Image backend: auto | nvidia | seedream | comfyui | …",
+      "value": "auto"
+    },
+    "STUDIO_VIDEO_BACKEND": {
+      "description": "Video backend: auto | seedance | comfyui | …",
+      "value": "auto"
+    },
+    "UVICORN_WORKERS": {
+      "description": "API worker processes (1–2 on Basic dynos).",
+      "value": "1"
+    },
+    "STUDIO_PUBLIC_URL": {
+      "description": "Public HTTPS URL of this app after deploy (e.g. https://YOURAPP.herokuapp.com). Set after first boot if CORS looks wrong.",
+      "required": false
+    },
+    "STUDIO_DEMO_SECRET": {
+      "description": "Optional HMAC secret for Demo tokens (set a long random string in production).",
+      "required": false
+    },
+    "DEEPSEEK_API_KEY": {
+      "description": "Optional DeepSeek key for scripts (or configure keys in the UI later).",
+      "required": false
+    },
+    "GROQ_API_KEY": {
+      "description": "Optional Groq key (free-tier friendly LLM).",
+      "required": false
+    },
+    "NVIDIA_API_KEY": {
+      "description": "Optional NVIDIA NIM key (images / chat).",
+      "required": false
+    },
+    "VOLCENGINE_API_KEY": {
+      "description": "Optional Volcengine Ark key (Seedream images + Seedance video).",
+      "required": false
+    },
+    "ARK_API_KEY": {
+      "description": "Alias for VOLCENGINE_API_KEY if you use that name.",
+      "required": false
+    },
+    "COMFYUI_SERVER_URL": {
+      "description": "Optional public ComfyUI URL for self-hosted image/video.",
+      "required": false
+    }
+  }
+}

@@ -293,10 +293,21 @@ def _llm_providers_public() -> list[dict[str, Any]]:
 def public_platform_payload() -> dict[str, Any]:
     cfg = load_platform_config()
     product = cfg.get("product") or {}
+    links = product.get("links") if isinstance(product.get("links"), dict) else {}
+    github_url = str(
+        links.get("github")
+        or os.environ.get("STUDIO_GITHUB_URL")
+        or f"https://github.com/{(os.environ.get('GITHUB_STAR_REPO') or 'charliewwdev/OpenMontage').strip()}"
+    ).strip()
+    x_url = str(links.get("x") or links.get("twitter") or os.environ.get("STUDIO_X_URL") or "").strip()
     return {
         "product": product.get("name") or "OpenMontage Drama Studio",
         "brand": product.get("brand") or "OpenMontage",
         "tagline": product.get("tagline") or "",
+        "links": {
+            "github": github_url,
+            "x": x_url,
+        },
         "public_url": os.environ.get(product.get("publicUrlEnv") or "STUDIO_PUBLIC_URL", "")
         or os.environ.get("STUDIO_PUBLIC_URL", ""),
         "defaults": {

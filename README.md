@@ -10,19 +10,18 @@
 </p>
 
 <p align="center">
-  <a href="https://openmontage.dtok.io/"><img src="https://img.shields.io/badge/Live_demo-openmontage.dtok.io-E11D48?style=flat-square" alt="Live demo"/></a>
-  <a href="https://github.com/charliewwdev/OpenMontage/stargazers"><img src="https://img.shields.io/github/stars/charliewwdev/OpenMontage?style=flat-square" alt="GitHub stars"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPLv3-334155?style=flat-square" alt="License: AGPL-3.0"/></a>
-  <a href="https://github.com/charliewwdev/OpenMontage/releases"><img src="https://img.shields.io/github/v/release/charliewwdev/OpenMontage?style=flat-square" alt="Release"/></a>
-  <img src="https://img.shields.io/badge/Stack-React%20%2B%20FastAPI%20%2B%20Postgres-0F172A?style=flat-square" alt="Stack"/>
-  <img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker Compose"/>
-  <img src="https://img.shields.io/github/last-commit/charliewwdev/OpenMontage?style=flat-square" alt="Last commit"/>
+  <a href="https://openmontage.dtok.io/"><img src="https://img.shields.io/badge/Live_demo-openmontage.dtok.io-E11D48?style=flat-square" alt="Live demo" height="20"/></a>
+  <a href="https://github.com/charliewwdev/OpenMontage/stargazers"><img src="https://img.shields.io/github/stars/charliewwdev/OpenMontage?style=flat-square&amp;logo=github" alt="GitHub stars" height="20"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPLv3-334155?style=flat-square" alt="License: AGPL-3.0" height="20"/></a>
+  <a href="https://github.com/charliewwdev/OpenMontage/releases"><img src="https://img.shields.io/github/v/release/charliewwdev/OpenMontage?style=flat-square&amp;label=release" alt="Release" height="20"/></a>
+  <img src="https://img.shields.io/badge/Stack-React%20%2B%20FastAPI%20%2B%20Postgres-0F172A?style=flat-square" alt="Stack" height="20"/>
+  <img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&amp;logo=docker&amp;logoColor=white" alt="Docker Compose" height="20"/>
 </p>
 
 <p align="center">
-  <a href="https://www.heroku.com/deploy?template=https://github.com/charliewwdev/OpenMontage"><img src="https://www.herokucdn.com/deploy/button.svg" alt="Deploy to Heroku"/></a>
-  &nbsp;
-  <a href="https://cloud.digitalocean.com/apps/new?repo=https://github.com/charliewwdev/OpenMontage/tree/main"><img src="https://www.deploytodo.com/do-btn-blue.svg" alt="Deploy to DigitalOcean"/></a>
+  <a href="https://www.heroku.com/deploy?template=https://github.com/charliewwdev/OpenMontage"><img src="assets/deploy-heroku.svg" alt="Deploy to Heroku" height="40" width="220"/></a>
+  &nbsp;&nbsp;
+  <a href="https://cloud.digitalocean.com/apps/new?repo=https://github.com/charliewwdev/OpenMontage/tree/main"><img src="assets/deploy-digitalocean.svg" alt="Deploy to DigitalOcean" height="40" width="220"/></a>
 </p>
 <p align="center"><sub>One-click deploy · after boot open the app → <b>Demo</b> · paste model keys in <i>Model settings</i> · <a href="docs/SELF_HOSTING.md#one-click-heroku--digitalocean">notes</a></sub></p>
 

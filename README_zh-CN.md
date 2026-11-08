@@ -10,18 +10,18 @@
 </p>
 
 <p align="center">
-  <a href="https://openmontage.dtok.io/"><img src="https://img.shields.io/badge/在线体验-openmontage.dtok.io-E11D48?style=flat-square" alt="在线体验"/></a>
-  <a href="https://github.com/charliewwdev/OpenMontage/stargazers"><img src="https://img.shields.io/github/stars/charliewwdev/OpenMontage?style=flat-square" alt="GitHub stars"/></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPLv3-334155?style=flat-square" alt="License: AGPL-3.0"/></a>
-  <a href="https://github.com/charliewwdev/OpenMontage/releases"><img src="https://img.shields.io/github/v/release/charliewwdev/OpenMontage?style=flat-square" alt="Release"/></a>
-  <img src="https://img.shields.io/badge/Stack-React%20%2B%20FastAPI%20%2B%20Postgres-0F172A?style=flat-square" alt="Stack"/>
-  <img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker Compose"/>
+  <a href="https://openmontage.dtok.io/"><img src="https://img.shields.io/badge/在线体验-openmontage.dtok.io-E11D48?style=flat-square" alt="在线体验" height="20"/></a>
+  <a href="https://github.com/charliewwdev/OpenMontage/stargazers"><img src="https://img.shields.io/github/stars/charliewwdev/OpenMontage?style=flat-square&amp;logo=github" alt="GitHub stars" height="20"/></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPLv3-334155?style=flat-square" alt="License: AGPL-3.0" height="20"/></a>
+  <a href="https://github.com/charliewwdev/OpenMontage/releases"><img src="https://img.shields.io/github/v/release/charliewwdev/OpenMontage?style=flat-square&amp;label=release" alt="Release" height="20"/></a>
+  <img src="https://img.shields.io/badge/Stack-React%20%2B%20FastAPI%20%2B%20Postgres-0F172A?style=flat-square" alt="Stack" height="20"/>
+  <img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&amp;logo=docker&amp;logoColor=white" alt="Docker Compose" height="20"/>
 </p>
 
 <p align="center">
-  <a href="https://www.heroku.com/deploy?template=https://github.com/charliewwdev/OpenMontage"><img src="https://www.herokucdn.com/deploy/button.svg" alt="一键部署到 Heroku"/></a>
-  &nbsp;
-  <a href="https://cloud.digitalocean.com/apps/new?repo=https://github.com/charliewwdev/OpenMontage/tree/main"><img src="https://www.deploytodo.com/do-btn-blue.svg" alt="一键部署到 DigitalOcean"/></a>
+  <a href="https://www.heroku.com/deploy?template=https://github.com/charliewwdev/OpenMontage"><img src="assets/deploy-heroku.svg" alt="一键部署到 Heroku" height="40" width="220"/></a>
+  &nbsp;&nbsp;
+  <a href="https://cloud.digitalocean.com/apps/new?repo=https://github.com/charliewwdev/OpenMontage/tree/main"><img src="assets/deploy-digitalocean.svg" alt="一键部署到 DigitalOcean" height="40" width="220"/></a>
 </p>
 <p align="center"><sub>一键部署 · 启动后打开站点点 <b>Demo</b> · 在「模型配置」粘贴密钥 · <a href="docs/SELF_HOSTING_zh-CN.md">说明</a></sub></p>
 

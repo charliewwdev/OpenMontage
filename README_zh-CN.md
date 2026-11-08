@@ -18,6 +18,13 @@
   <img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=flat-square&logo=docker&logoColor=white" alt="Docker Compose"/>
 </p>
 
+<p align="center">
+  <a href="https://www.heroku.com/deploy?template=https://github.com/charliewwdev/OpenMontage"><img src="https://www.herokucdn.com/deploy/button.svg" alt="一键部署到 Heroku"/></a>
+  &nbsp;
+  <a href="https://cloud.digitalocean.com/apps/new?repo=https://github.com/charliewwdev/OpenMontage/tree/main"><img src="https://www.deploytodo.com/do-btn-blue.svg" alt="一键部署到 DigitalOcean"/></a>
+</p>
+<p align="center"><sub>一键部署 · 启动后打开站点点 <b>Demo</b> · 在「模型配置」粘贴密钥 · <a href="docs/SELF_HOSTING_zh-CN.md">说明</a></sub></p>
+
 <p align="center">⭐ 觉得有用就点个 Star，让更多人看到</p>
 
 <p align="center"><a href="README.md">English</a> · <b>简体中文</b></p>
@@ -225,17 +232,7 @@ Compose 默认使用 **本地 Demo 鉴权** + 栈内 MinIO，无需外部账号�
 
 ## 快速开始
 
-### 云上一键部署
-
-[![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://www.heroku.com/deploy?template=https://github.com/charliewwdev/OpenMontage)
-[![Deploy to DigitalOcean](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/charliewwdev/OpenMontage/tree/main)
-
-| | 会带上什么 |
-|:---|:---|
-| **Heroku** | 容器 Dyno + Postgres + Redis（`app.json` / `heroku.yml`） |
-| **DigitalOcean** | App Platform 服务 + Dev Postgres（`.do/deploy.template.yaml`） |
-
-部署完成后打开站点 → **Demo**，再在「模型配置」里贴 LLM / 出图 / 出视频密钥（也可在平台环境变量表单里填）。若 CORS 异常，把 `STUDIO_PUBLIC_URL` 设成你的 HTTPS 地址。详见 [`docs/SELF_HOSTING_zh-CN.md`](docs/SELF_HOSTING_zh-CN.md)。
+一键部署按钮在本 README **顶部徽章下方**（Heroku / DigitalOcean）。说明见 [`docs/SELF_HOSTING_zh-CN.md`](docs/SELF_HOSTING_zh-CN.md)。
 
 ### Docker Compose（本机 / VPS）
 

@@ -19,6 +19,13 @@
   <img src="https://img.shields.io/github/last-commit/charliewwdev/OpenMontage?style=flat-square" alt="Last commit"/>
 </p>
 
+<p align="center">
+  <a href="https://www.heroku.com/deploy?template=https://github.com/charliewwdev/OpenMontage"><img src="https://www.herokucdn.com/deploy/button.svg" alt="Deploy to Heroku"/></a>
+  &nbsp;
+  <a href="https://cloud.digitalocean.com/apps/new?repo=https://github.com/charliewwdev/OpenMontage/tree/main"><img src="https://www.deploytodo.com/do-btn-blue.svg" alt="Deploy to DigitalOcean"/></a>
+</p>
+<p align="center"><sub>One-click deploy · after boot open the app → <b>Demo</b> · paste model keys in <i>Model settings</i> · <a href="docs/SELF_HOSTING.md#one-click-heroku--digitalocean">notes</a></sub></p>
+
 <p align="center">⭐ If this is useful, a star helps others find it.</p>
 
 <p align="center"><b>English</b> · <a href="README_zh-CN.md">简体中文</a></p>
@@ -179,17 +186,7 @@ The hosted instance has a credits / top-up page. Self-hosted, you pay your model
 
 ## Quick start
 
-### One-click cloud deploy
-
-[![Deploy to Heroku](https://www.herokucdn.com/deploy/button.svg)](https://www.heroku.com/deploy?template=https://github.com/charliewwdev/OpenMontage)
-[![Deploy to DigitalOcean](https://www.deploytodo.com/do-btn-blue.svg)](https://cloud.digitalocean.com/apps/new?repo=https://github.com/charliewwdev/OpenMontage/tree/main)
-
-| | What you get |
-|:---|:---|
-| **Heroku** | Container dyno + Postgres + Redis (`app.json` / `heroku.yml`) |
-| **DigitalOcean** | App Platform service + Dev Postgres (`.do/deploy.template.yaml`) |
-
-After deploy, open the app → **Demo**, then paste LLM / image / video keys in *Model settings* (or set them in the platform env form). Set `STUDIO_PUBLIC_URL` to your live HTTPS URL if CORS needs it. Full notes: [`docs/SELF_HOSTING.md`](docs/SELF_HOSTING.md#one-click-heroku--digitalocean).
+One-click buttons are at the **top of this README** (Heroku / DigitalOcean). Details: [`docs/SELF_HOSTING.md`](docs/SELF_HOSTING.md#one-click-heroku--digitalocean).
 
 ### Docker Compose (local / VPS)
 

@@ -216,6 +216,10 @@ def test_save_library_entry_keeps_attribution_and_dedupes(tmp_path, monkeypatch)
     import pg_backend
 
     monkeypatch.setattr(pg_backend, "enabled", lambda: False)
+    # Saved prompts belong to a user (per-user store follow-up); run as a logged-in user.
+    import auth_context
+
+    monkeypatch.setattr(auth_context, "current_user_id", lambda: "alice")
     origin = {
         "libraryId": "rapidata-002",
         "source": "Rapidata/text-2-video-human-preferences-veo3",

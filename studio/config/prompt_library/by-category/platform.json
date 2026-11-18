@@ -1,0 +1,354 @@
+[
+  {
+    "id": "om-plat-003",
+    "title": {
+      "zh": "B站·剧情解说式开场",
+      "en": "Bilibili: story-commentary opener"
+    },
+    "prompt_zh": "16:9 横屏：开场 5 秒用最高潮的画面 + 一句旁白设问（「如果你醒来发现回到了十年前，你会做的第一件事是什么？」），随后标题卡，再从头讲。B站观众接受更长的铺垫和更完整的故事。",
+    "prompt_en": "16:9: open with five seconds of the climax plus a voice-over question (\"If you woke up ten years in the past, what would you do first?\"), then a title card, then tell it from the start. Bilibili viewers accept longer setup and fuller stories.",
+    "model": "generic",
+    "category": "platform",
+    "subcategory": "bilibili",
+    "stage": "script",
+    "tags": [
+      "B站",
+      "解说",
+      "横屏",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-plat-001",
+    "title": {
+      "zh": "抖音·竖屏短剧单集节奏",
+      "en": "Douyin: vertical episode rhythm"
+    },
+    "prompt_zh": "9:16，单集 60–90 秒：0-3秒冲突画面；每 10–15 秒一个小反转或爽点；人物居中构图，字幕区留在画面下三分之一；最后 3 秒给悬念钩子。景别以近景为主，减少大远景。",
+    "prompt_en": "9:16, 60-90 seconds per episode: conflict in 0-3s; a small reversal or payoff every 10-15s; center-framed characters with the bottom third reserved for captions; a cliffhanger in the last 3s. Mostly close shots, few extreme wides.",
+    "model": "generic",
+    "category": "platform",
+    "subcategory": "douyin",
+    "stage": "script",
+    "tags": [
+      "抖音",
+      "竖屏",
+      "节奏",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-plat-008",
+    "title": {
+      "zh": "评论区互动式结尾",
+      "en": "Ending that invites comments"
+    },
+    "prompt_zh": "结尾让主角面对两个选择（两扇门、两个人、两条消息），画面停在她犹豫的脸上，旁白：「如果是你，你选哪一个？」引导观众讨论，而不是要求点赞。",
+    "prompt_en": "End with the protagonist facing two choices (two doors, two people, two messages), hold on her hesitating face, voice-over: \"Which would you choose?\" Invite discussion rather than asking for likes.",
+    "model": "generic",
+    "category": "platform",
+    "subcategory": "engagement",
+    "stage": "script",
+    "tags": [
+      "互动",
+      "结尾",
+      "选择题",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-plat-006",
+    "title": {
+      "zh": "竖屏构图·安全区",
+      "en": "Vertical framing: safe zones"
+    },
+    "prompt_zh": "9:16 竖屏：人物面部放在画面上方 1/3 到中间之间；底部 20% 留给字幕和平台按钮，右侧 15% 避开点赞评论按钮；重要道具不要放在边缘。提示词可写「人物居中偏上，下方留空」。",
+    "prompt_en": "In 9:16, place faces between the upper third and the middle; keep the bottom 20% for captions and platform UI and avoid the right 15% where like/comment buttons sit; keep key props off the edges. Prompt with \"subject centered slightly high, empty space below.\"",
+    "model": "generic",
+    "category": "platform",
+    "subcategory": "framing",
+    "stage": "storyboard",
+    "tags": [
+      "竖屏",
+      "构图",
+      "安全区",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-plat-009",
+    "title": {
+      "zh": "横转竖·重新构图",
+      "en": "Landscape to vertical: reframing"
+    },
+    "prompt_zh": "同一场戏要同时出横屏和竖屏时，生成时让主体始终位于画面中央 1/3 宽度内，背景两侧留出可裁切空间；双人戏改为正反打而不是双人同框。",
+    "prompt_en": "When one scene needs both landscape and vertical versions, keep the subject within the central third of the width and leave croppable space on both sides; for two-person scenes use shot-reverse-shot instead of a two-shot.",
+    "model": "generic",
+    "category": "platform",
+    "subcategory": "framing",
+    "stage": "edit",
+    "tags": [
+      "横转竖",
+      "重构图",
+      "多平台",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-plat-010",
+    "title": {
+      "zh": "平台爆款结构写法要点",
+      "en": "Platform structure checklist"
+    },
+    "prompt_zh": "先确定平台（比例、时长、观众习惯），再套结构：钩子（前 3 秒）→ 铺垫 → 升级 → 反转 → 悬念。同一个故事在不同平台改的是节奏和比例，不是故事本身。",
+    "prompt_en": "Decide the platform first (aspect ratio, length, viewer habits), then apply the structure: hook (first 3s) → setup → escalation → reversal → cliffhanger. Across platforms you change rhythm and ratio, not the story.",
+    "model": "generic",
+    "category": "platform",
+    "subcategory": "guide",
+    "stage": "script",
+    "tags": [
+      "要点",
+      "平台",
+      "结构",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-plat-007",
+    "title": {
+      "zh": "系列化·每集固定片头",
+      "en": "Series: a fixed episode opener"
+    },
+    "prompt_zh": "每集开头用同一个 1 秒画面（同一场景、同一构图、同一音效），比如女主推开公司大门的固定镜头，再接本集内容。固定元素帮助观众在信息流中认出你的剧。",
+    "prompt_en": "Open every episode with the same one-second shot (same set, framing and sound)—say, the heroine pushing open the company doors—then go into the episode. A fixed element helps viewers recognize your series in the feed.",
+    "model": "generic",
+    "category": "platform",
+    "subcategory": "series",
+    "stage": "edit",
+    "tags": [
+      "系列化",
+      "片头",
+      "品牌",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-plat-011",
+    "title": {
+      "zh": "竖屏短剧·付费卡点设计",
+      "en": "Vertical drama: designing the paywall moment"
+    },
+    "prompt_zh": "连载短剧的关键卡点放在第 8–12 集：主角的身份或秘密即将揭开的前一秒（对方张口要说出名字、信封正要拆开）。卡点前一集要把期待值拉满，卡点那一刻直接黑屏。",
+    "prompt_en": "In serialized drama, put the key cliffhanger around episodes 8-12: the second before the protagonist's identity or secret is revealed (someone about to say the name, an envelope about to be opened). Build expectation in the prior episode and cut to black at that instant.",
+    "model": "generic",
+    "category": "platform",
+    "subcategory": "series",
+    "stage": "script",
+    "tags": [
+      "卡点",
+      "付费",
+      "连载",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-plat-005",
+    "title": {
+      "zh": "YouTube Shorts·循环结尾",
+      "en": "YouTube Shorts: loop ending"
+    },
+    "prompt_zh": "最后一帧的构图和动作设计成能无缝接回第一帧：例如开头她推门进来，结尾她走到门口准备推门。观众不知不觉看第二遍。",
+    "prompt_en": "Design the last frame's composition and action to flow seamlessly back into the first: she pushes the door open at the start, and at the end walks up to the door about to push it. Viewers rewatch without noticing.",
+    "model": "generic",
+    "category": "platform",
+    "subcategory": "shorts",
+    "stage": "edit",
+    "tags": [
+      "Shorts",
+      "循环",
+      "结构",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-plat-004",
+    "title": {
+      "zh": "TikTok/Reels·无对白也能懂",
+      "en": "TikTok/Reels: readable without dialogue"
+    },
+    "prompt_zh": "面向海外短视频平台：用动作和表情讲故事，尽量少依赖台词；前 1 秒给强视觉冲击；画面中文字用英文或不放文字；时长 15–30 秒，结尾可循环接回开头。",
+    "prompt_en": "For overseas short-video platforms: tell the story through action and expression with minimal dialogue; strong visual impact in the first second; on-screen text in English or none; 15-30 seconds, with an ending that loops back to the start.",
+    "model": "generic",
+    "category": "platform",
+    "subcategory": "tiktok",
+    "stage": "script",
+    "tags": [
+      "TikTok",
+      "Reels",
+      "出海",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-plat-002",
+    "title": {
+      "zh": "小红书·氛围感 vlog 结构",
+      "en": "Xiaohongshu: aesthetic vlog structure"
+    },
+    "prompt_zh": "3:4 或 9:16：开头 1 秒成品/结果画面 → 2–5 个氛围感细节镜头（手部、光影、物件）→ 过程 → 结尾回到成品并留一句提问。色调统一偏暖或偏奶油色，节奏舒缓。",
+    "prompt_en": "3:4 or 9:16: open with one second of the finished result → two to five aesthetic detail shots (hands, light, objects) → the process → return to the result and end with a question. Consistent warm or creamy palette, relaxed pacing.",
+    "model": "generic",
+    "category": "platform",
+    "subcategory": "xiaohongshu",
+    "stage": "script",
+    "tags": [
+      "小红书",
+      "vlog",
+      "氛围感",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  }
+]

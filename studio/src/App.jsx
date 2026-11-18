@@ -547,9 +547,22 @@ export default function App() {
     if (nav === "assets") {
       body = (
         <AssetsPage
+          authed={authed}
+          onRequireAuth={requireAuth}
           onUsePrompt={(text) => {
             setAgentSeed(text);
             onNavigate("agent");
+          }}
+          onUseInNewProject={(text) => {
+            // Creating a project needs an account; browsing the library does not.
+            if (!requireAuth()) return;
+            setCreateMode({ id: "drama", seedBrief: text });
+            setProjectId("");
+            setBundle(null);
+            setStep("script");
+            setNav("workshop");
+            setScreen("create");
+            toast.info(tr("ui_prompt_library_new_project_hint"));
           }}
         />
       );

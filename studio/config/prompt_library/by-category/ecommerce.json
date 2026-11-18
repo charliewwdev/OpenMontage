@@ -1,0 +1,947 @@
+[
+  {
+    "id": "om-ecom-006",
+    "title": {
+      "zh": "电商·前后对比分屏",
+      "en": "E-commerce: split-screen before/after"
+    },
+    "prompt_zh": "左右分屏：左侧是满是油污的灶台，右侧是同一灶台被 [产品] 擦拭后光亮如新；中间一条竖线从左向右扫过，扫过的地方从脏变干净。俯拍，明亮冷白光。不夸大效果。",
+    "prompt_en": "Split screen: a greasy stovetop on the left, the same stovetop gleaming after the [product] on the right; a vertical line sweeps left to right, turning everything it passes clean. Overhead, bright cool-white light. Don't exaggerate the effect.",
+    "model": "generic",
+    "category": "ecommerce",
+    "subcategory": "before-after",
+    "stage": "storyboard",
+    "tags": [
+      "对比",
+      "分屏",
+      "清洁",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "lich-coffee-bloom-resurrection",
+    "title": {
+      "zh": "隔夜咖啡 → 新鲜一杯（前后对比）",
+      "en": "Coffee Bloom Resurrection"
+    },
+    "prompt_zh": "早上 7 点的书桌，9:16。一杯昨天剩下的冷咖啡放在灰扑扑的办公室平光里——表面结了一层膜，没有热气，毫无生气。[0-2秒] 缓慢推近那层浑浊的表面，未调色、死气沉沉，灰尘悬在静止的空气里。[2-4秒] 一只手把这杯拿出画面，[品牌] 的新鲜咖啡以微距倾注而下：深色水柱冲进杯中，粉层膨胀翻卷，金色窗光斜扫过表面。[4-6秒] 蒸汽在体积逆光中盘旋，油脂紧密地慢速旋转，前景虚化里是清晰的烘焙豆；调色转为温暖、饱和、诱人。液体物理全程一致，杯子的形状、杯沿和把手完全不变——不扭曲、不融化、液位不漂移、表面无瑕疵。暗示音效：轻柔的倾倒声，第一口满足的啜饮。",
+    "prompt_en": "7am desk, 9:16. A cold mug of yesterday's coffee sits in flat gray office light — a dull skin on the surface, no steam, no life. [0-2s] slow dolly-in on that scummy surface, ungraded and lifeless, dust hanging in the still air. [2-4s] a hand lifts the dead mug out of frame and a fresh pour from [brand] streams down in macro: the dark jet hits the cup, the bloom rises and folds, golden window light raking across it. [4-6s] steam curls in volumetric backlight, crema swirling in a tight slow rotation, roasted beans crisp in foreground bokeh; the grade pushes warm, saturated, appetizing. Liquid physics stay consistent throughout, the cup keeps its exact shape, rim, and handle — no warping, melting, level-drift, or surface artifacts. Implied sound: a quiet pour, the first satisfied sip.",
+    "model": "generic",
+    "category": "ecommerce",
+    "subcategory": "before-after",
+    "stage": "storyboard",
+    "tags": [
+      "前后对比",
+      "咖啡",
+      "竖屏",
+      "9:16",
+      "6s"
+    ],
+    "preview": null,
+    "source": {
+      "name": "LichAmnesia/awesome-ad-video-prompts",
+      "url": "https://github.com/LichAmnesia/awesome-ad-video-prompts",
+      "revision": "ac5b61177a81343e958f63212c4df7f25dc4c265",
+      "ref": "prompts.json › before-after › coffee-bloom-resurrection"
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "Prompt from LichAmnesia/awesome-ad-video-prompts by awesome-ad-video-prompts contributors, licensed CC-BY-4.0; Chinese translation by OpenMontage (AI-assisted)",
+    "lang_origin": "en",
+    "translated": "machine",
+    "modified": false
+  },
+  {
+    "id": "lich-dull-skin-to-glow",
+    "title": {
+      "zh": "暗沉肌 → 水光肌（微距对比）",
+      "en": "Dull Skin To Glow"
+    },
+    "prompt_zh": "极致美妆微距，9:16。清晨冷光下的一侧脸颊——皮肤疲惫干燥，表面有细小起皮，毛孔真实，带一点灰绿色调。[0-2秒] 静止微距、浅景深，每一处暗沉纹理都如实呈现，不磨皮。[2-4秒] 指尖按下一颗 [品牌] 精华，在脸颊上滑开；液滴映着光，摊成一层薄膜。[4-7秒] 皮肤转为柔软有弹性的水润状态，细纹舒展，美人碟主光下泛起健康的暖金光泽，眼中有眼神光。[7-8秒] 镜头微微拉远，露出平静、均匀、透亮的肤色。整个镜头中脸部结构、雀斑、骨相完全一致——不过度磨皮成塑料感、不融化、脸部不漂移。暗示音效：指尖轻点皮肤的声音，一声轻柔的呼气。",
+    "prompt_en": "Extreme beauty macro, 9:16. A cheek in cold morning light — skin tired and dry, fine flaking at the surface, pores honest, a gray-green cast. [0-2s] static macro, shallow focus, every dull texture detail rendered truthfully, no smoothing. [2-4s] a fingertip presses a single pearl of [brand] serum and glides it across the cheek; the droplet catches light and spreads into a thin film. [4-7s] the skin shifts to a soft hydrated bounce, fine lines easing, a healthy warm-gold sheen blooming under a beauty-dish key with a catchlight in the down. [7-8s] a slight pull-back reveals a calm, even, luminous complexion. Same face geometry, same freckles, same bone structure across the whole shot — no plastic over-smoothing, melting, or facial drift. Implied sound: a gentle tap of fingertip on skin, a soft exhale.",
+    "model": "generic",
+    "category": "ecommerce",
+    "subcategory": "before-after",
+    "stage": "storyboard",
+    "tags": [
+      "前后对比",
+      "护肤",
+      "微距",
+      "9:16",
+      "8s"
+    ],
+    "preview": null,
+    "source": {
+      "name": "LichAmnesia/awesome-ad-video-prompts",
+      "url": "https://github.com/LichAmnesia/awesome-ad-video-prompts",
+      "revision": "ac5b61177a81343e958f63212c4df7f25dc4c265",
+      "ref": "prompts.json › before-after › dull-skin-to-glow"
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "Prompt from LichAmnesia/awesome-ad-video-prompts by awesome-ad-video-prompts contributors, licensed CC-BY-4.0; Chinese translation by OpenMontage (AI-assisted)",
+    "lang_origin": "en",
+    "translated": "machine",
+    "modified": false
+  },
+  {
+    "id": "lich-sneaker-out-of-mud",
+    "title": {
+      "zh": "泥鞋变新鞋（甩镜转场）",
+      "en": "Sneaker Out Of Mud"
+    },
+    "prompt_zh": "从棚拍到英雄镜头的转变，1:1。开场是一只沾满干泥的旧白球鞋，在刺眼的阴天平光下——磨损、发灰、毫无生气。[0-2秒] 固定低角度英雄镜头，尘埃飘动，画面完全去饱和。[2-3秒] 一块布从镜头前擦过，形成快速甩镜擦除转场，运动模糊抹过画面。[3-6秒] 擦除后露出同一款 [产品] 轮廓，干净利落——针织纹理清晰、中底亮白，一道柔和轮廓光沿鞋带勾勒，配干净的棚拍主光。[6-8秒] 绕鞋跟缓慢环绕，细微反光滑过崭新的网面，地面阴影紧实。两种状态下鞋的比例、Logo 位置、鞋眼数量和鞋带样式完全一致——不变形、不形变、不凭空添加细节。暗示音效：硬毛刷扫过，鞋带拉紧的利落一声。",
+    "prompt_en": "Studio-to-hero transformation, 1:1. Open on a battered white sneaker caked in dried mud under harsh flat overcast — scuffed, gray, joyless. [0-2s] locked low-angle hero shot, dust motes drifting, fully desaturated. [2-3s] a passing cloth swipes the lens for a fast whip-pan wipe transition, motion-blur smearing the frame. [3-6s] the wipe clears to reveal the same [product] silhouette spotless and crisp — knit texture sharp, midsole bright white, a soft rim light tracing the laces against clean studio key. [6-8s] slow orbit around the heel, micro-reflections gliding across fresh mesh, ground shadow tight and grounded. The shoe keeps identical proportions, logo placement, eyelet count, and lace pattern across both states — no deformation, morphing, or invented detailing. Implied sound: a stiff brush sweep, the clean snap of laces pulled tight.",
+    "model": "generic",
+    "category": "ecommerce",
+    "subcategory": "before-after",
+    "stage": "storyboard",
+    "tags": [
+      "前后对比",
+      "球鞋",
+      "转场",
+      "1:1",
+      "8s"
+    ],
+    "preview": null,
+    "source": {
+      "name": "LichAmnesia/awesome-ad-video-prompts",
+      "url": "https://github.com/LichAmnesia/awesome-ad-video-prompts",
+      "revision": "ac5b61177a81343e958f63212c4df7f25dc4c265",
+      "ref": "prompts.json › before-after › sneaker-out-of-mud"
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "Prompt from LichAmnesia/awesome-ad-video-prompts by awesome-ad-video-prompts contributors, licensed CC-BY-4.0; Chinese translation by OpenMontage (AI-assisted)",
+    "lang_origin": "en",
+    "translated": "machine",
+    "modified": false
+  },
+  {
+    "id": "om-ecom-005",
+    "title": {
+      "zh": "电商·服装上身转圈",
+      "en": "E-commerce: outfit spin"
+    },
+    "prompt_zh": "浅色背景墙前，模特穿着 [产品] 连衣裙，原地慢慢转一圈，裙摆自然展开，最后面向镜头停住，双手轻提裙摆。全身固定机位，柔和均匀光，面料质感清晰。",
+    "prompt_en": "Against a light backdrop the model in the [product] dress turns a slow full circle, hem flaring naturally, then stops facing the camera, lightly lifting the skirt. Locked full-body framing, soft even light, visible fabric texture.",
+    "model": "generic",
+    "category": "ecommerce",
+    "subcategory": "fashion",
+    "stage": "storyboard",
+    "tags": [
+      "服装",
+      "穿搭",
+      "转身",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-ecom-008",
+    "title": {
+      "zh": "电商·细节卖点特写",
+      "en": "E-commerce: feature close-ups"
+    },
+    "prompt_zh": "镜头1：拉链顺滑拉开的微距；镜头2：面料泼水后水珠滚落；镜头3：手指按压鞋垫回弹；镜头4：产品全貌。每个镜头 1.5 秒，展示 [产品] 的三个卖点，白色背景。",
+    "prompt_en": "Shot 1: macro of the zipper sliding open. Shot 2: water poured on the fabric beads and rolls off. Shot 3: a finger presses the insole and it springs back. Shot 4: the full product. 1.5s each, showing three selling points of the [product], white background.",
+    "model": "Seedance",
+    "category": "ecommerce",
+    "subcategory": "feature",
+    "stage": "storyboard",
+    "tags": [
+      "卖点",
+      "特写",
+      "多镜头",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-ecom-004",
+    "title": {
+      "zh": "电商·美食出锅瞬间",
+      "en": "E-commerce: the food reveal"
+    },
+    "prompt_zh": "锅盖掀开的瞬间，大团热气涌出，慢动作中露出红亮的红烧肉，汤汁咕嘟冒泡；筷子夹起一块，肉质颤动，酱汁缓缓滴落。暖色侧逆光，微距。",
+    "prompt_en": "The lid lifts and a cloud of steam bursts out; in slow motion, glossy red-braised pork is revealed, sauce bubbling. Chopsticks lift a piece that jiggles as glaze drips slowly. Warm side-backlight, macro.",
+    "model": "generic",
+    "category": "ecommerce",
+    "subcategory": "food-beverage",
+    "stage": "storyboard",
+    "tags": [
+      "美食",
+      "热气",
+      "慢动作",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-ecom-011",
+    "title": {
+      "zh": "电商·饮品倒入慢动作",
+      "en": "E-commerce: slow-motion drink pour"
+    },
+    "prompt_zh": "透明玻璃杯装满冰块，[产品] 果汁从上方倒入，慢动作中液体冲击冰块溅起水花，气泡沿杯壁上升，杯壁凝结水珠；最后一片柠檬落在杯沿。逆光，背景虚化。",
+    "prompt_en": "A clear glass full of ice; [product] juice pours in from above, and in slow motion the liquid crashes over the ice, splashing as bubbles rise along the glass and condensation beads on the outside; a lemon slice lands on the rim. Backlit, blurred background.",
+    "model": "generic",
+    "category": "ecommerce",
+    "subcategory": "food-beverage",
+    "stage": "storyboard",
+    "tags": [
+      "饮品",
+      "慢动作",
+      "冰块",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "lich-cold-brew-pour-cascade",
+    "title": {
+      "zh": "冷萃咖啡·倾注墨韵",
+      "en": "Cold Brew Pour Cascade"
+    },
+    "prompt_zh": "深色石板台面上，一只高高的多棱面高球杯装着冰冷萃，微距英雄镜头。0-2秒：一块冰以慢动作翻落，溅起的水珠悬停在空中，杯壁上新鲜的凝水缓缓爬下；2-4秒：一缕细细的琥珀色 [产品] 冷萃从铜壶倒出，与清水交织，烟雾般的咖啡丝像墨一样向下绽开；4-6秒：镜头缓缓后拉，露出整杯：顶上一层淡色油脂、一枝薄荷、一个压印着 [品牌] 的杯垫。100mm 微距，电动轨道缓慢推进，最后柔和减速停下。单一低位侧窗主光，暖色轮廓光掠过杯沿，阴影深沉。杯子棱面和冰块形状严格不变，液流始终是一个连续整体，不变形、不漂移、不跳帧、无渲染瑕疵。暗示音效：冰块碰撞、轻微气泡声、倾倒的沙沙声。",
+    "prompt_en": "Macro hero of an iced cold brew in a tall faceted highball on a dark slate counter. 0-2s: a single ice cube tumbles in slow motion, splash beads suspended mid-air, fresh condensation crawling down the glass; 2-4s: a thin amber ribbon of [product] cold brew pours from a copper carafe and braids into clear water, smoky coffee tendrils blooming downward like ink; 4-6s: the camera eases back to reveal the full glass capped with pale crema, a mint sprig, and a brand-debossed coaster reading [brand]. 100mm macro on a slow motorized dolly-in, settling into a gentle ease-out. Single low side-window key, warm rim light skimming the rim, deep crushed shadows. The glass facets and ice hold exact shape, the liquid stream stays one continuous body with no deformation, drift, popping, or rendering artifacts. Implied sound: ice clink, soft fizz, the hush of the pour.",
+    "model": "generic",
+    "category": "ecommerce",
+    "subcategory": "food-beverage",
+    "stage": "storyboard",
+    "tags": [
+      "冷萃",
+      "饮品",
+      "微距",
+      "9:16",
+      "6s"
+    ],
+    "preview": null,
+    "source": {
+      "name": "LichAmnesia/awesome-ad-video-prompts",
+      "url": "https://github.com/LichAmnesia/awesome-ad-video-prompts",
+      "revision": "ac5b61177a81343e958f63212c4df7f25dc4c265",
+      "ref": "prompts.json › food-beverage › cold-brew-pour-cascade"
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "Prompt from LichAmnesia/awesome-ad-video-prompts by awesome-ad-video-prompts contributors, licensed CC-BY-4.0; Chinese translation by OpenMontage (AI-assisted)",
+    "lang_origin": "en",
+    "translated": "machine",
+    "modified": false
+  },
+  {
+    "id": "lich-espresso-pour-crema-physics",
+    "title": {
+      "zh": "意式浓缩·油脂流体物理",
+      "en": "Espresso Pour, Crema Physics"
+    },
+    "prompt_zh": "一只哑光陶瓷杯放在暖色洞石台面正中，清晨侧窗硬光斜照。0-2秒：俯拍微距，一股浓稠带油脂的浓缩咖啡从抛光冲煮手柄落下，表面绽开虎斑纹油脂，蒸汽升腾。2-3秒：镜头下摇到桌面低角度，金色逆光点亮上升的水汽，背景是深色阴影。3-5秒：绕杯缓慢横移，一块方糖落下，同心涟漪以慢动作在油脂层中扩散。5-8秒：停在四分之三英雄角度，[品牌] 铝箔咖啡袋在后方闪光。液体保持可信的黏稠度，油脂层是连续的一层——不拖影、不重影、水流不断裂、不沸腾翻涌。音效：萃取的咕嘟声、蒸汽嘶声、一声陶瓷轻碰。",
+    "prompt_en": "A matte ceramic cup sits centered on warm travertine, hard morning side-window light slanting across the scene. 0-2s: top-down macro of a thick crema-rich espresso stream falling from a polished portafilter, the surface blooming into a tiger-striped crema as steam curls off it. 2-3s: tilt to a low table-level angle, golden backlight igniting the rising vapor against deep shadow. 3-5s: a slow lateral truck around the cup as a single sugar cube drops, concentric ripples spreading through the crema in slow motion. 5-8s: settle on a hero three-quarter with the [brand] foil bag glinting behind. Liquid keeps believable viscosity and the crema reads as a continuous skin — no smearing, ghosting, broken-stream artifacts, or boil-up. Sound: gurgle of extraction, hiss of steam, a single ceramic clink.",
+    "model": "generic",
+    "category": "ecommerce",
+    "subcategory": "food-beverage",
+    "stage": "storyboard",
+    "tags": [
+      "咖啡",
+      "流体",
+      "微距",
+      "9:16",
+      "8s"
+    ],
+    "preview": null,
+    "source": {
+      "name": "LichAmnesia/awesome-ad-video-prompts",
+      "url": "https://github.com/LichAmnesia/awesome-ad-video-prompts",
+      "revision": "ac5b61177a81343e958f63212c4df7f25dc4c265",
+      "ref": "prompts.json › product-showcase › espresso-pour-crema-physics"
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "Prompt from LichAmnesia/awesome-ad-video-prompts by awesome-ad-video-prompts contributors, licensed CC-BY-4.0; Chinese translation by OpenMontage (AI-assisted)",
+    "lang_origin": "en",
+    "translated": "machine",
+    "modified": false
+  },
+  {
+    "id": "lich-honey-drizzle-on-toast",
+    "title": {
+      "zh": "蜂蜜淋吐司·拉丝慢动作",
+      "en": "Honey Drizzle On Toast"
+    },
+    "prompt_zh": "棚拍，镜头从正俯视缓缓过渡到四分之三角度，手工酸面包吐司放在开片釉陶盘上。0-2秒：木质蜂蜜棒从一罐 [品牌] 生蜂蜜中提起，一条不断的金色蜜丝在蜂蜜棒和罐子之间绷直；2-4秒：蜜丝落下，在融化的黄油上积成一汪，慢动作同心涟漪扩散，烤面包屑映着光，一撮片状海盐像火花般落下；4-6秒：一只手倾斜吐司，蜂蜜流向面包边缘，聚成一滴颤动的蜜滴，悬而不落。镜头带着轻微手持呼吸感弧形移动 30 度，浅景深。柔和的北窗日光，蜂蜜色反光板，低对比哑光质感。蜂蜜始终是一条连续黏稠的蜜丝，面包屑数量和面包质地帧间固定，不扭曲、不出现融化故障、不漂移、无瑕疵。暗示音效：干脆的咬碎声、蜂蜜缓慢拉伸的声音、安静的厨房。",
+    "prompt_en": "Studio shot easing from flat overhead to three-quarter, artisan sourdough toast on cracked glazed ceramic. 0-2s: a wooden honey dipper lifts from a jar of [brand] raw honey, an unbroken golden thread stretching taut between dipper and jar; 2-4s: the drizzle lands and pools across melting butter, slow-motion concentric ripples spreading, toasted crumbs catching light while a pinch of flaky sea salt falls like sparks; 4-6s: a hand tilts the slice, honey creeps to the crust edge and gathers into one trembling drop that hangs without falling. Camera arcs 30 degrees on a subtle handheld breath, shallow depth. Soft north-window daylight, honey-gold bounce card, low matte contrast. The honey reads as a single continuous viscous strand, crumb count and bread texture stay fixed across frames, no warping, melt-glitch, drift, or artifacts. Implied sound: dry crunch, the slow stretch of honey, a quiet kitchen.",
+    "model": "generic",
+    "category": "ecommerce",
+    "subcategory": "food-beverage",
+    "stage": "storyboard",
+    "tags": [
+      "美食",
+      "慢动作",
+      "1:1",
+      "1:1",
+      "6s"
+    ],
+    "preview": null,
+    "source": {
+      "name": "LichAmnesia/awesome-ad-video-prompts",
+      "url": "https://github.com/LichAmnesia/awesome-ad-video-prompts",
+      "revision": "ac5b61177a81343e958f63212c4df7f25dc4c265",
+      "ref": "prompts.json › food-beverage › honey-drizzle-on-toast"
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "Prompt from LichAmnesia/awesome-ad-video-prompts by awesome-ad-video-prompts contributors, licensed CC-BY-4.0; Chinese translation by OpenMontage (AI-assisted)",
+    "lang_origin": "en",
+    "translated": "machine",
+    "modified": false
+  },
+  {
+    "id": "lich-ramen-steam-ritual",
+    "title": {
+      "zh": "拉面·热气仪式感",
+      "en": "Ramen Steam Ritual"
+    },
+    "prompt_zh": "氛围感居酒屋桌面，一碗黑漆碗装的豚骨拉面，上方挂着纸灯笼。0-2秒：热气以缓慢卷曲的柱状上升，汤面闪着金色油珠，半颗溏心蛋泛着橙光；2-3.5秒：筷子挑起一团面，汤汁细细落下，海苔和葱花轻颤；3.5-5.5秒：汤勺拖出一道辣油，红色在汤面上绽开；5.5-8秒：镜头穿过上升的热气向前滑行，停在碗旁的 [品牌] 调料包上，移焦到 Logo。缓慢电影感推进，50mm，有意识的移焦。暖色钨丝灯主光，琥珀色实景光源，周围近乎全黑。蛋、面和碗的几何形状保持一致，热气自然流动，不闪烁、不循环、不变形、无瑕疵。暗示音效：轻微咕嘟声、一声吸面、灯笼的低鸣。",
+    "prompt_en": "Moody izakaya tabletop, a black lacquer bowl of tonkotsu ramen beneath a hanging paper lantern. 0-2s: steam climbs in slow curling columns, the broth surface glistening with golden fat pearls, a halved soft egg glowing orange; 2-3.5s: chopsticks raise a noodle nest, broth falling in fine strands while nori and scallion quiver; 3.5-5.5s: a ladle drags a stroke of chili oil that blooms red across the surface; 5.5-8s: the camera glides forward through the rising steam and settles on a [brand] sachet resting beside the bowl, rack-focusing onto its logo. Slow cinematic dolly-in, 50mm, deliberate focus pull. Warm tungsten key, amber practicals, rich near-black surround. Egg, noodles, and bowl keep consistent geometry, steam advects naturally with no flicker, looping, deformation, or artifacts. Implied sound: gentle bubbling, a single slurp, lantern hum.",
+    "model": "generic",
+    "category": "ecommerce",
+    "subcategory": "food-beverage",
+    "stage": "storyboard",
+    "tags": [
+      "美食",
+      "拉面",
+      "氛围",
+      "16:9",
+      "8s"
+    ],
+    "preview": null,
+    "source": {
+      "name": "LichAmnesia/awesome-ad-video-prompts",
+      "url": "https://github.com/LichAmnesia/awesome-ad-video-prompts",
+      "revision": "ac5b61177a81343e958f63212c4df7f25dc4c265",
+      "ref": "prompts.json › food-beverage › ramen-steam-ritual"
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "Prompt from LichAmnesia/awesome-ad-video-prompts by awesome-ad-video-prompts contributors, licensed CC-BY-4.0; Chinese translation by OpenMontage (AI-assisted)",
+    "lang_origin": "en",
+    "translated": "machine",
+    "modified": false
+  },
+  {
+    "id": "om-ecom-010",
+    "title": {
+      "zh": "电商广告写法要点",
+      "en": "E-commerce prompt checklist"
+    },
+    "prompt_zh": "①用 [产品]/[品牌] 占位，生成后替换；②写「产品形状、标签、颜色全程一致，不变形」；③效果对比不要夸大（避免「瞬间」「100%」）；④不出现真实名人和其他品牌；⑤前 2 秒就让产品出现。",
+    "prompt_en": "(1) Use [product]/[brand] placeholders and swap after generating; (2) add \"product shape, label and color stay consistent, no deformation\"; (3) don't exaggerate before/after claims (avoid \"instantly,\" \"100%\"); (4) no real celebrities or other brands; (5) show the product within the first two seconds.",
+    "model": "generic",
+    "category": "ecommerce",
+    "subcategory": "guide",
+    "stage": "storyboard",
+    "tags": [
+      "要点",
+      "电商",
+      "合规",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-ecom-007",
+    "title": {
+      "zh": "电商·场景化使用",
+      "en": "E-commerce: product in context"
+    },
+    "prompt_zh": "周末清晨阳台，女生盘腿坐在藤椅上，用 [产品] 保温杯喝了一口热茶，看着楼下的街道；杯身水汽清晰，镜头从杯子特写拉到全景。暖色晨光，生活感。",
+    "prompt_en": "Weekend morning on a balcony; a woman sits cross-legged in a rattan chair, sips hot tea from the [product] tumbler and looks down at the street. Condensation on the cup is crisp; the camera pulls from the cup to a wide shot. Warm morning light, lived-in feel.",
+    "model": "generic",
+    "category": "ecommerce",
+    "subcategory": "lifestyle",
+    "stage": "storyboard",
+    "tags": [
+      "场景化",
+      "生活方式",
+      "氛围",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "lich-black-serum-cold-marble",
+    "title": {
+      "zh": "黑色精华·冷调大理石",
+      "en": "Black Serum, Cold Marble"
+    },
+    "prompt_zh": "[品牌] 视黄醇精华的杂志感美妆广告，置于一块哑光黑大理石上。0-2秒：极致微距对准玻璃滴管尖端，一滴琥珀色液滴鼓起、颤动，然后以真实慢动作落下，在光滑的液面上荡开涟漪，棚光在液珠中折射。2-3秒：切到磨砂玻璃瓶随电动轨道滑入画面，硬主光低角度扫过刻字瓶盖，柔和衰减让瓶底融进阴影。3-5秒：平滑地绕瓶 180 度，标签清晰可读，一道细长高光沿玻璃边缘流下。5-6秒：固定英雄镜头，液滴最后一圈涟漪在大理石上平息。瓶子形状、磨砂质感、瓶盖刻字和标签文字每帧一致——不变形、不漂移、不扭曲、不重影、无瑕疵。冷静的临床感布光，深邃饱和的黑，液态玻璃质感，一滴液体落在冰冷石面上的轻响。",
+    "prompt_en": "Editorial beauty commercial for a [brand] retinol serum staged on a slab of honed black marble. 0-2s: extreme macro on the glass dropper tip, a single amber droplet swelling, trembling, then releasing in true slow motion to ripple across a glossy pool, studio light refracting through the bead. 2-3s: snap to the frosted-glass bottle gliding in on a motorized dolly, hard key light raking low across the engraved cap, soft falloff dissolving the base into shadow. 3-5s: a smooth 180-degree orbit around the bottle, the label resolving crisp and legible, a thin column of specular light tracing down the glass edge. 5-6s: lock-off hero, the droplet's last ring settling on the marble. The bottle holds consistent shape, frosted finish, cap engraving, and label text across every frame — no deformation, drift, warping, doubling, or artifacts. Cool clinical lighting, deep saturated blacks, liquid-glass texture, faint hush of a single droplet meeting cold stone.",
+    "model": "generic",
+    "category": "ecommerce",
+    "subcategory": "luxury",
+    "stage": "storyboard",
+    "tags": [
+      "奢品",
+      "护肤",
+      "环绕",
+      "9:16",
+      "6s"
+    ],
+    "preview": null,
+    "source": {
+      "name": "LichAmnesia/awesome-ad-video-prompts",
+      "url": "https://github.com/LichAmnesia/awesome-ad-video-prompts",
+      "revision": "ac5b61177a81343e958f63212c4df7f25dc4c265",
+      "ref": "prompts.json › luxury-premium › black-serum-cold-marble"
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "Prompt from LichAmnesia/awesome-ad-video-prompts by awesome-ad-video-prompts contributors, licensed CC-BY-4.0; Chinese translation by OpenMontage (AI-assisted)",
+    "lang_origin": "en",
+    "translated": "machine",
+    "modified": false
+  },
+  {
+    "id": "lich-espresso-slow-pour",
+    "title": {
+      "zh": "意式浓缩·慢倒高级感",
+      "en": "Espresso, Slow Pour"
+    },
+    "prompt_zh": "[品牌] 意式浓缩的高端单品咖啡广告。0-2秒：俯拍微距，白瓷小杯里油脂绽开，榛子色虎斑纹向外旋开，蒸汽以缓慢半透明的丝带状上升。2-4秒：镜头上摇并推近，咖啡师的手把杯子放到拉丝胡桃木台面上，暖色窗光从画面左侧照入，尘埃在光束中飘动。4-6秒：缓慢 45 度弧线运动，露出散落在杯碟旁的深烘咖啡豆，浅景深从咖啡豆移焦到杯沿。6-8秒：最终固定镜头，一缕蒸汽横过压印在杯碟上的品牌标志。杯子、油脂纹理和 Logo 全程一致——不融化、不重影、不扭曲、不多手指、无瑕疵。金色暖调，陶瓷与蒸汽质感，轻微的杯碟碰撞声和一段轻柔的余音倾倒声。",
+    "prompt_en": "Premium single-origin coffee commercial for [brand] espresso. 0-2s: top-down macro of crema blooming in a white porcelain demitasse, hazelnut tiger-stripe marbling swirling outward, steam rising in slow translucent ribbons. 2-4s: camera tilts up and pushes in on a barista's hand lowering the cup onto a brushed-walnut counter, warm window light from frame-left, dust motes drifting through the beam. 4-6s: a slow 45-degree arc reveals dark-roasted beans scattered beside the saucer, shallow depth of field racking focus from the beans to the cup rim. 6-8s: final lock-off as a single thread of steam crosses the brand mark stamped into the saucer. The cup, crema marbling, and logo stay consistent throughout — no melting, ghosting, warping, extra fingers, or artifacts. Golden warmth, ceramic-and-steam texture, faint cup clink and a soft trailing pour.",
+    "model": "generic",
+    "category": "ecommerce",
+    "subcategory": "luxury",
+    "stage": "storyboard",
+    "tags": [
+      "咖啡",
+      "奢品",
+      "移焦",
+      "16:9",
+      "8s"
+    ],
+    "preview": null,
+    "source": {
+      "name": "LichAmnesia/awesome-ad-video-prompts",
+      "url": "https://github.com/LichAmnesia/awesome-ad-video-prompts",
+      "revision": "ac5b61177a81343e958f63212c4df7f25dc4c265",
+      "ref": "prompts.json › luxury-premium › espresso-slow-pour"
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "Prompt from LichAmnesia/awesome-ad-video-prompts by awesome-ad-video-prompts contributors, licensed CC-BY-4.0; Chinese translation by OpenMontage (AI-assisted)",
+    "lang_origin": "en",
+    "translated": "machine",
+    "modified": false
+  },
+  {
+    "id": "lich-sneaker-wet-concrete",
+    "title": {
+      "zh": "球鞋·雨夜湿地广告",
+      "en": "Sneaker, Wet Concrete"
+    },
+    "prompt_zh": "[品牌] 旗舰鞋款的高端广告，黄昏雨后湿滑的水泥地。0-2秒：低角度微距，大底踩下，水被挤出形成一圈细密的水花皇冠，脚下倒影里霓虹店招被拉成光带。2-4秒：快速横向跟拍轨道追着迈步中的鞋，背景强烈运动模糊，而鞋面、网布和缝线保持锐利。4-6秒：穿鞋者落脚转身；镜头甩进紧凑环绕，捕捉鞋跟 Logo，一道品红轮廓光包住鞋身轮廓。6-8秒：缓慢推进到英雄定格，雾气沉降，一滴水从鞋带尖落下。每一帧鞋的形状、配色、拼接布局和 Logo 位置一致——不变形、不漂移、不重影、无瑕疵。青品红氛围光，湿橡胶和科技网布质感，远处城市低鸣和一声清脆脚步。",
+    "prompt_en": "High-end sneaker commercial for the [brand] flagship silhouette on rain-slicked concrete at dusk. 0-2s: low-angle macro of the outsole pressing down, water displacing in a fine crown of droplets, neon shop signs smearing in the reflection underfoot. 2-4s: a fast lateral tracking dolly follows the shoe mid-stride, heavy motion blur on the background while the upper, mesh, and stitching stay tack-sharp. 4-6s: the wearer plants and pivots; the camera whips into a tight orbit catching the heel logo, a streak of magenta rim light wrapping the silhouette. 6-8s: slow push into a hero freeze, mist settling, a single drop falling from the lace tip. The shoe keeps consistent shape, colorway, panel layout, and logo placement across every frame — no deformation, drift, doubling, or artifacts. Moody cyan-magenta lighting, wet rubber and technical-mesh texture, distant city hum and one crisp footstep.",
+    "model": "generic",
+    "category": "ecommerce",
+    "subcategory": "luxury",
+    "stage": "storyboard",
+    "tags": [
+      "球鞋",
+      "雨夜",
+      "霓虹",
+      "9:16",
+      "8s"
+    ],
+    "preview": null,
+    "source": {
+      "name": "LichAmnesia/awesome-ad-video-prompts",
+      "url": "https://github.com/LichAmnesia/awesome-ad-video-prompts",
+      "revision": "ac5b61177a81343e958f63212c4df7f25dc4c265",
+      "ref": "prompts.json › luxury-premium › sneaker-wet-concrete"
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "Prompt from LichAmnesia/awesome-ad-video-prompts by awesome-ad-video-prompts contributors, licensed CC-BY-4.0; Chinese translation by OpenMontage (AI-assisted)",
+    "lang_origin": "en",
+    "translated": "machine",
+    "modified": false
+  },
+  {
+    "id": "om-ecom-002",
+    "title": {
+      "zh": "电商·痛点-方案三段",
+      "en": "E-commerce: pain-point to solution"
+    },
+    "prompt_zh": "镜头1（0-2秒）：痛点——早上手忙脚乱找不到钥匙，包里东西倒了一桌；镜头2（2-4秒）：方案——拿起 [产品] 收纳包，物品各归其位；镜头3（4-6秒）：结果——她从容拉上拉链出门，对镜头一笑。明亮自然光。",
+    "prompt_en": "Shot 1 (0-2s): pain point—a frantic morning, can't find the keys, bag dumped across the table. Shot 2 (2-4s): solution—she picks up the [product] organizer and everything finds its place. Shot 3 (4-6s): result—she calmly zips it up, heads out and smiles at the camera. Bright natural light.",
+    "model": "Seedance",
+    "category": "ecommerce",
+    "subcategory": "problem-solution",
+    "stage": "storyboard",
+    "tags": [
+      "痛点",
+      "方案",
+      "结构",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-ecom-003",
+    "title": {
+      "zh": "电商·产品英雄镜头",
+      "en": "E-commerce: product hero shot"
+    },
+    "prompt_zh": "[产品] 放在深色亚克力台面上，背景渐变深蓝，镜头从低角度缓慢环绕 90 度，一道条形柔光从产品表面扫过，台面映出清晰倒影；最后定格在产品正面，Logo 位置留白。产品形状和细节全程不变。",
+    "prompt_en": "[Product] on a dark acrylic surface against a deep-blue gradient; the camera slowly orbits 90 degrees from a low angle as a strip softbox sweeps across the surface, a crisp reflection below; it settles on the front with space reserved for the logo. Product shape and details stay constant.",
+    "model": "generic",
+    "category": "ecommerce",
+    "subcategory": "product-hero",
+    "stage": "storyboard",
+    "tags": [
+      "产品",
+      "棚拍",
+      "高级感",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "lich-frost-glass-serum-condensation-macro",
+    "title": {
+      "zh": "磨砂玻璃精华·冷雾凝珠微距",
+      "en": "Frost-Glass Serum, Condensation Macro"
+    },
+    "prompt_zh": "一支磨砂玻璃精华瓶立在湿润的黑色石板上，半埋在低低翻滚的冷雾里，一盏冷色主光从画面左侧斜扫。0-2秒：极致微距推进，掠过瓶身凝结的水珠，水珠颤动、滑落，f2.8 下湿润质感锐利、焦外柔和。2-4秒：雾气像一口缓慢的呼气般变薄，玻璃滴管抬起，一滴琥珀色液体慢动作落下，表面张力让它保持完美的圆珠直到落地。4-6秒：镜头顺时针环绕 30 度，一道暖色轮廓光包住 [品牌] 标签，玻璃边缘泛出淡淡棱镜光。瓶身形状、液位、哑光质感全程不变——不变形、不漂移、不融化、不闪烁。暗示音效：低沉环境底噪、一声轻轻的玻璃碰响、一滴水落下的叮声。",
+    "prompt_en": "A frosted-glass serum bottle stands on wet black slate, half-buried in low-rolling cold fog, a single cool key light raking from camera-left. 0-2s: extreme macro push-in across the condensation field, beads trembling and sliding, dewy texture razor-sharp at f2.8 with creamy fall-off. 2-4s: the mist thins on a slow exhale, the glass pipette lifts and one amber drop releases in slow motion, surface tension holding a perfect bead before it lands. 4-6s: a 30-degree clockwise orbit wraps a warm rim light around the [brand] label, the glass throwing a faint prismatic edge. Bottle holds constant shape, fill level, and matte finish throughout — no deformation, drift, melting, or flicker. Implied sound: low room tone, a soft glass tick, one droplet plink.",
+    "model": "generic",
+    "category": "ecommerce",
+    "subcategory": "product-hero",
+    "stage": "storyboard",
+    "tags": [
+      "护肤",
+      "微距",
+      "冷雾",
+      "9:16",
+      "6s"
+    ],
+    "preview": null,
+    "source": {
+      "name": "LichAmnesia/awesome-ad-video-prompts",
+      "url": "https://github.com/LichAmnesia/awesome-ad-video-prompts",
+      "revision": "ac5b61177a81343e958f63212c4df7f25dc4c265",
+      "ref": "prompts.json › product-showcase › frost-glass-serum-condensation-macro"
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "Prompt from LichAmnesia/awesome-ad-video-prompts by awesome-ad-video-prompts contributors, licensed CC-BY-4.0; Chinese translation by OpenMontage (AI-assisted)",
+    "lang_origin": "en",
+    "translated": "machine",
+    "modified": false
+  },
+  {
+    "id": "lich-sneaker-360-turntable-studio",
+    "title": {
+      "zh": "球鞋·360 度转台棚拍",
+      "en": "Sneaker, 360 Turntable Studio"
+    },
+    "prompt_zh": "一只主角球鞋放在隐形亚克力转台上，背景是无缝石墨灰影棚，光里飘着细尘。0-2秒：低机位英雄角度，缓慢推近，硬顶光扫过针织鞋面，每一道缝线和中底从哑光到亮面的渐变都清晰呈现。2-4秒：鞋沿长轴受控旋转 180 度，一道品红到青色的色片光扫过大底纹路。4-6秒：旋转缓停在干净的四分之三正面，鞋底自然轻弹一次，[品牌] 鞋跟 Logo 清晰锐利。整个旋转过程中鞋带样式、配色、轮廓保持一致——不扭曲、不拖影、不出现重复鞋眼、不闪烁。音效：轻盈的风声、一声橡胶轻响、定格时一记低频重音。",
+    "prompt_en": "A single hero sneaker rests on an invisible acrylic turntable inside a seamless graphite cyclorama, dust motes drifting in the light. 0-2s: low hero angle, slow dolly-in as a hard top light rakes the knit upper, every stitch and the matte-to-gloss midsole gradient resolving crisply. 2-4s: the shoe makes a controlled 180-degree turntable rotation on its long axis while a magenta-to-teal gel sweep travels the outsole lugs. 4-6s: the spin eases to a clean three-quarter front, the sole flexing once with a subtle natural bounce, the [brand] heel logo tack-sharp. Upper keeps the same lace pattern, colorway, and silhouette across the full turn — no warping, smearing, duplicated eyelets, or temporal flicker. Sound: airy whoosh, faint rubber squeak, a deep sub hit on the lock.",
+    "model": "generic",
+    "category": "ecommerce",
+    "subcategory": "product-hero",
+    "stage": "storyboard",
+    "tags": [
+      "球鞋",
+      "转台",
+      "棚拍",
+      "1:1",
+      "6s"
+    ],
+    "preview": null,
+    "source": {
+      "name": "LichAmnesia/awesome-ad-video-prompts",
+      "url": "https://github.com/LichAmnesia/awesome-ad-video-prompts",
+      "revision": "ac5b61177a81343e958f63212c4df7f25dc4c265",
+      "ref": "prompts.json › product-showcase › sneaker-360-turntable-studio"
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "Prompt from LichAmnesia/awesome-ad-video-prompts by awesome-ad-video-prompts contributors, licensed CC-BY-4.0; Chinese translation by OpenMontage (AI-assisted)",
+    "lang_origin": "en",
+    "translated": "machine",
+    "modified": false
+  },
+  {
+    "id": "om-ecom-001",
+    "title": {
+      "zh": "电商·口播测评开场",
+      "en": "E-commerce: talking-head review opener"
+    },
+    "prompt_zh": "9:16 竖屏，自然光卧室，一位 25 岁女生对着手机镜头举起产品，开口第一句：「这个我用了三周，说点真实感受。」随后把产品转到镜头前展示包装，表情自然，轻微手持。产品为 [产品]，不出现其他品牌标志。",
+    "prompt_en": "9:16, naturally lit bedroom; a 25-year-old woman holds the product up to her phone camera and opens with, \"I've used this for three weeks—here's my honest take,\" then turns the packaging toward the lens. Natural expression, slight handheld. Product is [product]; no other brand logos.",
+    "model": "Veo",
+    "category": "ecommerce",
+    "subcategory": "ugc",
+    "stage": "storyboard",
+    "tags": [
+      "口播",
+      "测评",
+      "UGC",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-ecom-009",
+    "title": {
+      "zh": "电商·直播间切片感",
+      "en": "E-commerce: livestream clip feel"
+    },
+    "prompt_zh": "直播间环形灯下，主播把 [产品] 举到镜头前，快速翻转展示正反面，另一只手比出数字手势；背景货架整齐，画面轻微压缩质感，节奏快。不出现真实品牌和平台标志。",
+    "prompt_en": "Under a livestream ring light the host holds the [product] up to the lens, flipping it quickly front to back while gesturing a number with the other hand; neat shelves behind, slightly compressed look, fast pace. No real brands or platform logos.",
+    "model": "generic",
+    "category": "ecommerce",
+    "subcategory": "ugc",
+    "stage": "storyboard",
+    "tags": [
+      "直播",
+      "切片",
+      "口播",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "lich-bathroom-mirror-skincare-truth",
+    "title": {
+      "zh": "浴室镜前·素颜护肤真实分享",
+      "en": "Bathroom Mirror Skincare Truth"
+    },
+    "prompt_zh": "手持手机对着微微起雾的浴室镜自拍，三十出头的女性穿着宽大 T 恤，素颜、皮肤水润。0-2秒：她凑近镜子，把 [品牌] 精华瓶朝镜头轻轻一点，话说到一半笑出声。2-4秒：画面微微推近，她把两滴精华按在颧骨上，指尖打小圈抹开，窗光照出光泽。4-6秒：她慢慢左右转脸，对着镜中的自己挑起一边眉毛，像是真的被惊到了。温暖的清晨窗光，皮肤质感柔和、毛孔可见，镜面上有细小水痕。各节拍之间脸型和肤质保持一致，不变形、不漂移、无瑕疵。暗示音效：隔着门的流水声，一句轻声的「嗯……哇」。",
+    "prompt_en": "Handheld phone selfie shot into a slightly steamed bathroom mirror, woman early-30s in an oversized tee, dewy bare skin, no makeup. 0-2s: she leans toward the glass and taps the [brand] serum bottle against the camera, half-laughing mid-sentence. 2-4s: micro-zoom in as she presses two drops onto her cheekbone, fingertips spreading in small circles, window light catching the sheen. 4-6s: she turns her face slowly side to side, raising one eyebrow at her own reflection, caught genuinely off guard. Warm morning window light, soft skin texture with visible pores, faint water droplets streaking the mirror. Face shape and skin finish stay consistent across beats, no deformation, drift, or artifacts. Implied sound: muffled running tap, a quiet 'okay... wow.'",
+    "model": "generic",
+    "category": "ecommerce",
+    "subcategory": "ugc",
+    "stage": "storyboard",
+    "tags": [
+      "UGC",
+      "护肤",
+      "手持自拍",
+      "9:16",
+      "6s"
+    ],
+    "preview": null,
+    "source": {
+      "name": "LichAmnesia/awesome-ad-video-prompts",
+      "url": "https://github.com/LichAmnesia/awesome-ad-video-prompts",
+      "revision": "ac5b61177a81343e958f63212c4df7f25dc4c265",
+      "ref": "prompts.json › ugc-authentic › bathroom-mirror-skincare-truth"
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "Prompt from LichAmnesia/awesome-ad-video-prompts by awesome-ad-video-prompts contributors, licensed CC-BY-4.0; Chinese translation by OpenMontage (AI-assisted)",
+    "lang_origin": "en",
+    "translated": "machine",
+    "modified": false
+  },
+  {
+    "id": "lich-desk-coffee-morning-ritual",
+    "title": {
+      "zh": "书桌前的晨间咖啡仪式",
+      "en": "Desk Coffee Morning Ritual"
+    },
+    "prompt_zh": "清晨第一缕光里，一张杂乱的居家书桌，自由职业者戴着卫衣帽子伸臂自拍，一袋 [品牌] 单一产地咖啡豆靠在显示器旁。0-2秒：她对着镜头打哈欠，懒懒地指了指那袋豆子，嘴型说「就这个」。2-4秒：切到更紧的镜头，咖啡豆滚进磨豆机，接着一杯刚冲好的手冲在有缺口的陶瓷杯上冒着热气。4-6秒：她双手捧杯喝了一口，眼睛慢慢睁大，真诚地点头。6-8秒：她向后一靠，把杯子贴在胸前，对着镜头满足地呼出一口气。冷蓝色晨光逐渐转为琥珀色，蒸汽清晰可见，木纹和釉面陶瓷有颗粒质感。杯子和豆袋的形状、标签、表面保持一致，不变形、不漂移、无瑕疵。暗示音效：磨豆机嗡嗡声、细细的注水声、一声迷糊的轻笑。",
+    "prompt_en": "Arm's-length selfie at a cluttered home desk in first light, freelancer with her hood up, a bag of [brand] single-origin beans propped against the monitor. 0-2s: she yawns into the camera, points lazily at the bag, mouths 'this one.' 2-4s: cut to a tighter shot of beans tumbling into a grinder, then steam curling off a fresh pour-over into a chipped ceramic mug. 4-6s: she cups the mug in both hands, takes a sip, eyes widening into a slow, honest nod. 6-8s: she leans back with the mug pressed to her chest, exhaling a soft satisfied breath toward the lens. Cool dawn-blue window light warming to amber, visible rising steam, grain of wood and glazed ceramic. Mug and bean bag keep consistent shape, label, and finish, no deformation, drift, or artifacts. Implied sound: grinder whir, the trickle of a pour, a sleepy half-laugh.",
+    "model": "generic",
+    "category": "ecommerce",
+    "subcategory": "ugc",
+    "stage": "storyboard",
+    "tags": [
+      "UGC",
+      "咖啡",
+      "自拍",
+      "1:1",
+      "8s"
+    ],
+    "preview": null,
+    "source": {
+      "name": "LichAmnesia/awesome-ad-video-prompts",
+      "url": "https://github.com/LichAmnesia/awesome-ad-video-prompts",
+      "revision": "ac5b61177a81343e958f63212c4df7f25dc4c265",
+      "ref": "prompts.json › ugc-authentic › desk-coffee-morning-ritual"
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "Prompt from LichAmnesia/awesome-ad-video-prompts by awesome-ad-video-prompts contributors, licensed CC-BY-4.0; Chinese translation by OpenMontage (AI-assisted)",
+    "lang_origin": "en",
+    "translated": "machine",
+    "modified": false
+  },
+  {
+    "id": "lich-sneaker-unboxing-on-stairs",
+    "title": {
+      "zh": "楼梯上的球鞋开箱",
+      "en": "Sneaker Unboxing On Stairs"
+    },
+    "prompt_zh": "近似第一人称的手持镜头，一个大学生模样的男生坐在公寓水泥楼梯上，[品牌] 鞋盒放在膝盖上，傍晚的阳光从侧面斜照进来。0-2秒：他掀开盒盖，把盒子朝镜头一倾，包装纸沙沙作响，咧嘴一笑。2-3秒：快速甩镜下摇到他的手，拿出一只鞋转动，缝线和大底在金色光线里闪光。3-5秒：他把鞋穿上，飞快系了个双结，然后用鞋尖在台阶上点两下。5-8秒：他站起来走开两步，镜头跟着上下晃动，他回头一瞥，嘴角带笑。粗糙的水泥质感、暖色镜头光晕、轻微手持晃动。鞋的轮廓、Logo 位置和表面处理保持一致，不变形、不漂移、无瑕疵。暗示音效：远处街道车声、纸张摩擦声、一声鞋底擦地。",
+    "prompt_en": "Handheld near-POV clip, college-age guy sitting on concrete apartment stairs, [brand] shoebox balanced on his knees, late-afternoon sun raking in sideways. 0-2s: he flips the lid off and tilts the box toward the lens, tissue paper crinkling, a wide grin. 2-3s: fast snap-pan down to his hands lifting one sneaker out and rotating it so the stitching and outsole flare in the golden light. 3-5s: he slides it on and double-knots quickly, then taps the toe twice against the step. 5-8s: he stands and walks two paces away as the camera bobs after him, glancing back over his shoulder with a smirk. Gritty concrete texture, warm lens flare, slight handheld shake. Footwear holds consistent silhouette, logo placement, and finish, no deformation, drift, or artifacts. Implied sound: distant street traffic, paper crinkle, a single sole scuff.",
+    "model": "generic",
+    "category": "ecommerce",
+    "subcategory": "ugc",
+    "stage": "storyboard",
+    "tags": [
+      "UGC",
+      "开箱",
+      "手持",
+      "9:16",
+      "8s"
+    ],
+    "preview": null,
+    "source": {
+      "name": "LichAmnesia/awesome-ad-video-prompts",
+      "url": "https://github.com/LichAmnesia/awesome-ad-video-prompts",
+      "revision": "ac5b61177a81343e958f63212c4df7f25dc4c265",
+      "ref": "prompts.json › ugc-authentic › sneaker-unboxing-on-stairs"
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "Prompt from LichAmnesia/awesome-ad-video-prompts by awesome-ad-video-prompts contributors, licensed CC-BY-4.0; Chinese translation by OpenMontage (AI-assisted)",
+    "lang_origin": "en",
+    "translated": "machine",
+    "modified": false
+  },
+  {
+    "id": "om-ecom-012",
+    "title": {
+      "zh": "电商·开箱第一视角",
+      "en": "E-commerce: first-person unboxing"
+    },
+    "prompt_zh": "第一人称视角，双手放在木桌上的 [产品] 包装盒两侧，拇指推开盒盖，揭开保护膜，取出产品转动展示；纸张摩擦和撕膜声清晰。自然窗光，俯视角。",
+    "prompt_en": "First-person view: both hands on either side of the [product] box on a wooden table, thumbs push the lid open, peel back the protective film, lift the product out and turn it; paper rustle and film peel are crisp. Natural window light, top-down angle.",
+    "model": "generic",
+    "category": "ecommerce",
+    "subcategory": "unboxing-asmr",
+    "stage": "storyboard",
+    "tags": [
+      "开箱",
+      "第一视角",
+      "ASMR",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "lich-glass-serum-unbox",
+    "title": {
+      "zh": "玻璃精华开箱·冷雾溢出",
+      "en": "Glass Serum Unbox"
+    },
+    "prompt_zh": "俯拍微距，一只触感细腻的哑光白盒装着 [品牌][产品]（一款补水精华），放在冷灰色河石上。0-2秒：两只拇指按住磁吸盒盖，盒盖带着一声轻柔的气压声抬起，一缕冷雾从冰凉的盒内飘出。2-4秒：磨砂玻璃滴管瓶被笔直地从模切托槽中取出，琥珀色液体以缓慢黏稠的波浪晃动，冰凉的玻璃上凝结水珠、拖出水痕。4-6秒：橡胶滴头被按压，一滴饱满的金色液滴在滴管尖端鼓起、颤动着悬停，然后落下，在黑色镜面上荡开涟漪。顶部柔光箱漫射照明，湿润的高光，轻微的环境底噪，液滴落下时一声湿润的拨弦般声响。瓶子的形状、标签字体和磨砂质感每一帧都保持一致；不变形、不漂移、不融化、不出现重复滴管、文字不扭曲。",
+    "prompt_en": "Top-down macro on a fingertip-smooth matte-white box for [brand] [product], a hydrating face serum, resting on cool gray riverstone. 0-2s: two thumbs press the magnetic lid, which lifts with a soft pneumatic sigh as a thin ribbon of breath-mist curls out of the cold interior. 2-4s: the frosted glass dropper bottle is drawn straight up out of its die-cut cradle, amber liquid sloshing in slow viscous waves, condensation beading and trailing down the chilled glass. 4-6s: the rubber bulb compresses and one fat golden droplet swells at the pipette tip, hangs trembling, then falls and ripples outward across a black mirror surface. Diffused overhead softbox, dewy specular highlights, faint room tone with a single wet pluck on the droplet impact. The bottle holds a consistent shape, label typography, and frosted finish across every frame; no deformation, drift, melting, duplicate droppers, or warped text.",
+    "model": "generic",
+    "category": "ecommerce",
+    "subcategory": "unboxing-asmr",
+    "stage": "storyboard",
+    "tags": [
+      "开箱",
+      "ASMR",
+      "俯拍",
+      "9:16",
+      "6s"
+    ],
+    "preview": null,
+    "source": {
+      "name": "LichAmnesia/awesome-ad-video-prompts",
+      "url": "https://github.com/LichAmnesia/awesome-ad-video-prompts",
+      "revision": "ac5b61177a81343e958f63212c4df7f25dc4c265",
+      "ref": "prompts.json › unboxing-asmr › glass-serum-unbox"
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "Prompt from LichAmnesia/awesome-ad-video-prompts by awesome-ad-video-prompts contributors, licensed CC-BY-4.0; Chinese translation by OpenMontage (AI-assisted)",
+    "lang_origin": "en",
+    "translated": "machine",
+    "modified": false
+  },
+  {
+    "id": "lich-watch-drawer-slide",
+    "title": {
+      "zh": "腕表抽屉开启·上链特写",
+      "en": "Watch Drawer Slide"
+    },
+    "prompt_zh": "低位四分之三微距，一只漆面胡桃木展示盒装着 [品牌][产品]（一款自动机械表），在深炭灰天鹅绒背景前打暖光。0-2秒：指尖勾住黄铜拉手，绒面抽屉伴着平滑低沉的滑动声打开，露出卧在弧形表枕上的腕表。2-4秒：腕表被取出并倾斜，一道硬主光扫过拉丝钢表壳和太阳纹表盘，一道亮反光在表镜上移动。4-6秒：拇指和食指转动表冠，发出细密的棘轮咔哒声，秒针开始连续顺滑地走动。6-8秒：表带平放，折叠扣以一声精准的金属咔嗒扣上，镜头移焦到刻字表背。氛围感产品布光、丰富的反射、清脆的制表 ASMR。表壳几何、表盘刻度和指针数量每帧一致；不形变、不出现双重指针、刻字不模糊、无瑕疵。",
+    "prompt_en": "Low three-quarter macro on a lacquered walnut presentation box for [brand] [product], an automatic wristwatch, lit warm against deep charcoal velvet. 0-2s: a fingertip hooks the brass pull and a felt-lined drawer glides open with a smooth low rumble, revealing the watch nested in a curved pillow. 2-4s: the watch is lifted out and tilted so a hard key light sweeps across the brushed steel case and sunburst dial, sending a bright reflection traveling over the crystal. 4-6s: a thumb and forefinger wind the crown with a fine ratcheting tick, the second hand sweeping to life in a continuous glide. 6-8s: the strap is laid flat and the deployant clasp snaps shut with a precise metallic click as the camera racks focus to the engraved caseback. Moody product lighting, rich reflections, crisp horological ASMR. The watch keeps consistent case geometry, dial markings, and hand count across frames; no morphing, doubled hands, smeared engraving, or artifacts.",
+    "model": "generic",
+    "category": "ecommerce",
+    "subcategory": "unboxing-asmr",
+    "stage": "storyboard",
+    "tags": [
+      "开箱",
+      "ASMR",
+      "腕表",
+      "9:16",
+      "8s"
+    ],
+    "preview": null,
+    "source": {
+      "name": "LichAmnesia/awesome-ad-video-prompts",
+      "url": "https://github.com/LichAmnesia/awesome-ad-video-prompts",
+      "revision": "ac5b61177a81343e958f63212c4df7f25dc4c265",
+      "ref": "prompts.json › unboxing-asmr › watch-drawer-slide"
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "Prompt from LichAmnesia/awesome-ad-video-prompts by awesome-ad-video-prompts contributors, licensed CC-BY-4.0; Chinese translation by OpenMontage (AI-assisted)",
+    "lang_origin": "en",
+    "translated": "machine",
+    "modified": false
+  }
+]

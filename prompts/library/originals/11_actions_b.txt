@@ -1,0 +1,157 @@
+# OpenMontage original prompts — 动作写法 (part B). License: CC BY 4.0
+## om-act-daily-001 | 日常·清晨醒来 | Waking up in the morning | generic | actions/everyday | storyboard | 日常,清晨,卧室
+ZH: 清晨窗帘缝透进一道阳光。闹钟响起，她从被子里伸出一只手摸索着按掉，停顿两秒后猛地坐起，揉着眼睛看向手机，表情瞬间清醒——「迟到了」。中景，暖色晨光。
+EN: A shaft of morning sun through a gap in the curtains. The alarm rings; her hand gropes out from under the duvet and switches it off. Two seconds later she bolts upright, rubs her eyes, looks at her phone and is instantly awake—she's late. Medium shot, warm morning light.
+## om-act-daily-002 | 日常·做饭颠勺 | Cooking: tossing the wok | generic | actions/everyday | storyboard | 做饭,颠勺,烟火气
+ZH: 小饭馆后厨，厨师左手握锅柄连续颠勺三下，炒饭在空中翻起又落回锅里，火苗从锅边窜起；右手顺势撒一把葱花。侧面中近景，油烟在灯下翻滚。
+EN: Small restaurant kitchen. The cook flips the wok three times with his left hand, fried rice tumbling in the air and landing back in the pan as flames leap from the rim; his right hand tosses in a pinch of scallions. Side medium close-up, smoke rolling under the lamp.
+## om-act-daily-003 | 日常·通勤挤地铁 | Rush-hour subway squeeze | generic | actions/everyday | storyboard | 通勤,都市,人群
+ZH: 早高峰地铁车厢，男主一手高举咖啡杯一手抓吊环，被人群挤得身体左右摇晃，咖啡在杯中晃出小波纹却始终没洒；他松了口气，露出一个苦笑。手持近景。
+EN: Packed rush-hour train. The lead holds a coffee cup high in one hand and grips a strap with the other, swaying as the crowd pushes; the coffee ripples but never spills. He exhales and gives a wry smile. Handheld close shot.
+## om-act-daily-004 | 日常·整理衣领出门 | Fixing the collar before leaving | generic | actions/everyday | storyboard | 出门,镜子,仪式感
+ZH: 玄关全身镜前，他双手捏住衬衫领口向下拉平，抬下巴扣上第一颗扣子，对着镜子深吸一口气，拿起钥匙推门而出。镜中反打，节奏利落。
+EN: In front of the hallway mirror, he pinches his shirt collar and smooths it down, lifts his chin to fasten the top button, takes a deep breath at his reflection, grabs the keys and walks out. Mirror reverse shot, brisk rhythm.
+## om-act-daily-005 | 日常·雨天收伞进门 | Closing the umbrella at the door | generic | actions/everyday | storyboard | 雨天,伞,过场
+ZH: 咖啡店门口，女孩在屋檐下收伞，抖两下甩掉雨水，伞面水珠飞溅；她推门进去，门上风铃晃动，热气让她的眼镜瞬间起雾。
+EN: At a café entrance, a girl folds her umbrella under the awning and shakes it twice, droplets flying; she pushes the door open, the chime swinging, and the warm air instantly fogs her glasses.
+## om-act-daily-006 | 日常·深夜加班伸懒腰 | Late-night overtime stretch | generic | actions/everyday | storyboard | 加班,办公室,孤独
+ZH: 深夜空荡的办公室，只剩一盏台灯。她停下敲键盘的手，双臂向上伸懒腰，脖子左右转动发出轻响，然后看了一眼窗外城市的灯，叹口气继续工作。广角远景到近景。
+EN: Empty office late at night, a single desk lamp on. She stops typing, stretches both arms overhead, rolls her neck side to side with a soft crack, glances at the city lights outside, sighs and goes back to work. Wide to close.
+## om-act-daily-007 | 日常·收拾行李 | Packing a suitcase | generic | actions/everyday | storyboard | 离开,行李,情绪
+ZH: 卧室地上摊开的行李箱，她把叠好的衣服一件件放进去，拿起一张合照时动作停住，看了几秒，把照片反扣在床上，用力合上箱子拉上拉链。俯拍接近景。
+EN: An open suitcase on the bedroom floor. She places folded clothes in one by one, pauses when she picks up a framed couple photo, looks at it for a few seconds, lays it face-down on the bed, then slams the suitcase shut and zips it. Overhead then close.
+## om-act-daily-008 | 日常·喂猫 | Feeding the cat | generic | actions/everyday | storyboard | 宠物,治愈,温馨
+ZH: 厨房地板，橘猫绕着主人的脚踝蹭来蹭去；主人蹲下把猫粮倒进碗里，猫立刻低头吃起来，尾巴竖起轻轻抖动。低机位贴地拍摄，暖色。
+EN: Kitchen floor; an orange cat weaves around its owner's ankles. The owner crouches and pours kibble into the bowl; the cat immediately dives in, tail upright and quivering. Low ground-level camera, warm tones.
+## om-act-daily-009 | 日常·写信封口 | Writing and sealing a letter | generic | actions/everyday | storyboard | 写字,手部,怀旧
+ZH: 台灯下，钢笔在信纸上写完最后一行，笔尖停顿留下一个墨点；她把信折成三折放进信封，舌尖不碰，用手指沾水抹过封口压平。微距特写，暖光。
+EN: Under a desk lamp, a fountain pen finishes the last line, the nib pausing to leave a small ink dot. She folds the letter in thirds, slides it into an envelope, dampens the flap with a fingertip and presses it flat. Macro close-up, warm light.
+## om-act-daily-010 | 日常·走路的五种写法 | Five ways to write walking | generic | actions/everyday | storyboard | 走路,词表,性格
+ZH: 「走」要写出状态：①疲惫——拖着脚步、肩膀下垂；②自信——步幅大、抬头挺胸、手臂自然摆动；③心虚——贴着墙走、频频回头；④急切——小跑几步又放慢；⑤失魂——目光空洞、被路人撞到也没反应。
+EN: Write the state into the walk: (1) exhausted—dragging feet, shoulders slumped; (2) confident—long strides, chin up, arms swinging; (3) guilty—hugging the wall, glancing back; (4) anxious—breaking into a jog then slowing; (5) dazed—vacant eyes, not reacting when a passer-by bumps into her.
+## om-act-daily-011 | 日常·坐下的潜台词 | Sitting down with subtext | generic | actions/everyday | storyboard | 坐姿,潜台词,人物
+ZH: 同一个「坐下」，不同潜台词：霸总——解开西装扣子，向后靠进沙发，双腿交叠；面试者——只坐椅子前三分之一，双手放在膝上；叛逆少年——把椅子反过来跨坐，手臂搭在椅背上。
+EN: One "sit down," different subtext: the CEO unbuttons his jacket, leans back into the sofa and crosses his legs; the interviewee perches on the front third of the chair, hands on knees; the rebellious teen flips the chair around and straddles it, arms draped over the backrest.
+## om-act-daily-012 | 日常·开门发现 | Opening the door to a surprise | generic | actions/everyday | storyboard | 开门,悬念,反应
+ZH: 她拧开家门钥匙，推门的手忽然停住——客厅灯亮着，她出门前明明关了。镜头从她身后越过肩膀看向客厅，慢慢推进，她屏住呼吸放下包。
+EN: She turns the key and starts to push the door, then her hand stops—the living-room light is on, though she switched it off before leaving. Over-the-shoulder from behind her looking into the room, slow push-in; she holds her breath and sets down her bag.
+## om-act-emo-001 | 微表情·强忍眼泪 | Micro-expression: holding back tears | generic | actions/emotion | storyboard | 微表情,哭戏,特写
+ZH: 大特写。女主眼眶慢慢泛红，下眼睑积起泪水却没有落下；她用力眨了一下眼，嘴角向下压又强行扯出一个笑，喉咙轻轻滚动。柔和侧光，背景虚化。
+EN: Extreme close-up. Her eyes slowly redden, tears pooling on the lower lids without falling; she blinks hard, the corners of her mouth press down and then force a smile, her throat bobbing once. Soft side light, blurred background.
+## om-act-emo-002 | 微表情·冷笑 | Micro-expression: cold smirk | generic | actions/emotion | storyboard | 冷笑,反派,特写
+ZH: 近景。反派听完对方的话，一侧嘴角缓慢上扬，眼睛却没有任何笑意，眼皮微微下垂，轻轻呼出一口气从鼻腔发出一声冷哼。
+EN: Close shot. Hearing the other's words, the villain lets one corner of his mouth rise slowly while his eyes stay completely unamused, lids lowering slightly, a short cold huff through his nose.
+## om-act-emo-003 | 情绪·震惊三段 | Shock in three beats | generic | actions/emotion | storyboard | 震惊,反应,三段式
+ZH: 震惊不要只写「很震惊」：①瞳孔放大、动作停住（0.5 秒）；②后退半步、手里的东西滑落；③嘴唇微张却说不出话，呼吸急促。镜头从中景快速推到特写。
+EN: Don't just write "shocked": (1) pupils widen, motion freezes (0.5s); (2) half-step back, the object in hand slips and falls; (3) lips part but no words come, breathing quickens. Quick push from medium to close-up.
+## om-act-emo-004 | 情绪·崩溃大哭 | Breaking down sobbing | generic | actions/emotion | storyboard | 哭戏,崩溃,长镜头
+ZH: 浴室地上，她背靠浴缸坐着，先是肩膀无声地抖动，然后双手捂住脸，哭声终于压不住，身体向前弯折。固定机位长镜头，冷色调，不切换。
+EN: On the bathroom floor, back against the tub, her shoulders first shake silently, then she covers her face with both hands as the sobs break through, body folding forward. Locked-off long take, cool tones, no cuts.
+## om-act-emo-005 | 情绪·暗自得意 | Secret satisfaction | generic | actions/emotion | storyboard | 得意,反转,小动作
+ZH: 会议桌旁，对手被老板当众训斥；女主低头翻文件，嘴角压不住地翘了一下，又迅速抿平，手指轻轻敲了两下桌面。镜头从全景推到她的近景。
+EN: At the conference table, her rival is scolded by the boss in front of everyone; the heroine looks down at her files, the corner of her mouth twitching up before she quickly presses it flat, fingers tapping the table twice. Push from wide to her close-up.
+## om-act-emo-006 | 情绪·愤怒压抑 | Suppressed rage | generic | actions/emotion | storyboard | 愤怒,压抑,细节
+ZH: 他听着电话，一言不发，握手机的手指关节发白，太阳穴的青筋跳动，下颌肌肉一紧一松；挂断后他把手机轻轻放在桌上，动作越轻越显得可怕。
+EN: He listens on the phone without a word, knuckles whitening around it, a vein pulsing at his temple, jaw muscle clenching and releasing; after hanging up he sets the phone down gently—the gentler the motion, the more frightening.
+## om-act-emo-007 | 情绪·恐惧 | Fear | generic | actions/emotion | storyboard | 恐惧,惊悚,呼吸
+ZH: 黑暗走廊，她背贴墙壁，一手捂住嘴防止发出声音，胸口剧烈起伏，眼睛随着门外的脚步声左右移动；一滴冷汗从鬓角滑下。低调光，近景。
+EN: Dark corridor. She presses her back to the wall, one hand clamped over her mouth to stay silent, chest heaving, eyes tracking the footsteps outside the door; a bead of cold sweat slides from her temple. Low-key light, close shot.
+## om-act-emo-008 | 情绪·心动瞬间 | The moment of falling for someone | generic | actions/emotion | storyboard | 心动,甜宠,慢动作
+ZH: 图书馆，男主从书架后探出头递来她够不着的书，她抬头的一瞬间画面进入慢动作，发丝被窗外的风轻轻吹起，她愣了一下，耳尖慢慢变红。柔光，浅景深。
+EN: Library. He leans out from behind a shelf to hand her the book she couldn't reach; as she looks up the shot slips into slow motion, a breeze from the window lifting strands of her hair. She freezes for a moment as the tips of her ears slowly turn red. Soft light, shallow depth of field.
+## om-act-emo-009 | 情绪·失望转身 | Disappointed turn away | generic | actions/emotion | storyboard | 失望,背影,留白
+ZH: 机场到达口，他举着写有名字的纸牌等到最后一个人走出，手臂慢慢垂下，纸牌被折了一下；他沉默地转身离开，背影在人群里越来越小。远景固定。
+EN: Airport arrivals. Holding a name sign, he waits until the last passenger walks out; his arm slowly lowers and the sign creases. He turns silently and leaves, his back shrinking into the crowd. Wide locked-off shot.
+## om-act-emo-010 | 情绪·眼神戏五种 | Five kinds of eye acting | generic | actions/emotion | storyboard | 眼神,词表,表演
+ZH: 眼神比台词有用：①闪躲——目光向下偏移、不敢对视；②挑衅——微抬下巴、眼皮半垂直视；③心疼——眉头微蹙、目光停在对方伤处；④怀疑——眯眼、头微微侧偏；⑤决绝——目光平稳不眨、慢慢移开。
+EN: Eyes do more than lines: (1) evasive—gaze drops away, can't hold eye contact; (2) provocative—chin slightly raised, lids half-lowered, direct stare; (3) heartache—brows slightly knit, gaze resting on the other's injury; (4) suspicious—narrowed eyes, head tilted; (5) resolute—steady unblinking gaze, then slowly looks away.
+## om-act-emo-011 | 情绪·破涕为笑 | Laughing through tears | generic | actions/emotion | storyboard | 转折,哭笑,特写
+ZH: 她还在抽泣，听到朋友一句玩笑后先是愣住，接着鼻子一皱「噗」地笑出来，一边笑一边用手背擦眼泪，眼睛还湿着。近景，暖光。
+EN: Still sniffling, she hears her friend's joke, freezes, then wrinkles her nose and bursts out laughing, wiping tears with the back of her hand, eyes still wet. Close shot, warm light.
+## om-act-emo-012 | 情绪·紧张小动作 | Nervous tics | generic | actions/emotion | storyboard | 紧张,小动作,面试
+ZH: 面试等候区，他反复把领带拉正，手指无意识地搓着裤缝，右腿轻轻抖动，看到叫号屏上的号码时咽了下口水。中近景加手部插入镜头。
+EN: Interview waiting area. He straightens his tie again and again, fingers unconsciously rubbing his trouser seam, right leg bouncing; when his number appears on the screen he swallows. Medium close-up with hand inserts.
+## om-act-emo-013 | 情绪·恍然大悟 | Sudden realization | generic | actions/emotion | storyboard | 推理,悬疑,顿悟
+ZH: 侦探盯着墙上的线索板，目光在几张照片之间来回移动，突然停住，眼睛慢慢睁大，手里的笔掉在地上；镜头快速推到他的眼睛。
+EN: The detective stares at the evidence board, eyes darting between photos, then suddenly stops; his eyes slowly widen and the pen drops from his hand. Fast push-in to his eyes.
+## om-act-emo-014 | 微表情写法要点 | Micro-expression checklist | generic | actions/emotion | storyboard | 要点,特写,表演
+ZH: 微表情要配特写或大特写，并只写 1–2 个面部变化：眉（蹙、挑）、眼（眯、睁、眨、泛红）、嘴（抿、颤、上扬一侧）、喉咙（吞咽）、鼻（皱、翕动）。加「表情变化细微自然，不夸张」避免模型做成鬼脸。
+EN: Pair micro-expressions with a close-up or extreme close-up and describe only one or two facial changes: brows (knit, raise), eyes (narrow, widen, blink, redden), mouth (press, tremble, one corner rising), throat (swallow), nose (wrinkle, flare). Add "subtle, natural, not exaggerated" so the model doesn't produce a grimace.
+## om-act-inter-001 | 多人·递东西被打掉 | Offered object slapped away | generic | actions/interaction | storyboard | 冲突,多人,道具
+ZH: 婆婆递过一碗汤，儿媳伸手去接，小姑子突然从旁边一掌把碗打翻，汤洒了一地；三人同时愣住，镜头从三人中景切到地上碎碗特写。
+EN: The mother-in-law offers a bowl of soup; as the daughter-in-law reaches for it, the sister-in-law slaps it out of her hands, soup splashing across the floor. All three freeze; cut from a three-shot to a close-up of the broken bowl.
+## om-act-inter-002 | 多人·对峙站位 | Standoff blocking | generic | actions/interaction | storyboard | 对峙,站位,构图
+ZH: 宴会厅，女主一人站在画面左侧，对面五个亲戚站成半圆向她逼近；女主不退反进一步，众人下意识后退。俯拍全景展示站位关系，再切女主低角度仰拍。
+EN: Banquet hall. The heroine stands alone frame left while five relatives form a semicircle closing in from the right; instead of retreating she steps forward and they instinctively step back. High wide shot to show the blocking, then a low-angle shot of the heroine.
+## om-act-inter-003 | 多人·握手较劲 | A handshake power struggle | generic | actions/interaction | storyboard | 握手,较劲,商战
+ZH: 谈判桌旁两人握手，镜头推到手部特写：两只手同时加力，指节泛白，谁也不先松开；切两人脸部，都保持着礼貌的微笑。
+EN: Two people shake hands across the negotiating table. Push in to the hands: both squeeze harder, knuckles whitening, neither letting go first. Cut to their faces, both keeping polite smiles.
+## om-act-inter-004 | 多人·拉架 | Breaking up a fight | generic | actions/interaction | storyboard | 拉架,混乱,手持
+ZH: 两名男子扭打在一起，第三人从背后抱住其中一人的腰往后拖，另一人被朋友拉住手臂；双方还在隔空伸手指着对方。手持晃动中景，无血腥。
+EN: Two men grapple; a third man wraps his arms around one's waist from behind and drags him back while a friend holds the other's arm. Both keep jabbing fingers at each other across the gap. Shaky handheld medium shot, no gore.
+## om-act-inter-005 | 多人·餐桌传菜 | Passing dishes at a family dinner | generic | actions/interaction | storyboard | 家庭,餐桌,温馨
+ZH: 年夜饭圆桌，奶奶给孙子夹了一块鱼，爸爸转动转盘把饺子转到女儿面前，妈妈笑着给大家倒饮料。俯拍圆桌缓慢旋转，暖光，热气腾腾。
+EN: Round table at a New Year's Eve dinner. Grandma places a piece of fish in her grandson's bowl, Dad spins the lazy Susan to bring dumplings to his daughter, Mom smiles while pouring drinks for everyone. Slowly rotating overhead shot, warm light, steam rising.
+## om-act-inter-006 | 多人·当众下跪道歉 | Public kneeling apology | generic | actions/interaction | storyboard | 打脸,逆袭,群像
+ZH: 公司大堂，此前嘲讽女主的经理在众人注视下扑通跪下，双手撑地低头；周围员工有人捂嘴、有人举起手机；女主居高临下看着他，没有说话。环绕镜头一圈。
+EN: Company lobby. The manager who mocked the heroine drops to his knees in front of everyone, hands on the floor, head bowed; employees around cover their mouths or raise phones. The heroine looks down at him in silence. One full orbit around the scene.
+## om-act-inter-007 | 多人·击掌庆祝 | High-five celebration | generic | actions/interaction | storyboard | 庆祝,团队,活力
+ZH: 屏幕上数字跳到目标值，团队四人同时从椅子上跳起来，两两击掌，有人把文件抛向空中，纸张慢慢飘落。中景，明亮办公室。
+EN: The number on the screen hits the target; the four-person team jumps out of their chairs at once, high-fiving in pairs, someone tossing papers into the air that drift slowly down. Medium shot, bright office.
+## om-act-inter-008 | 多人·挡在身前 | Stepping in front to protect | generic | actions/interaction | storyboard | 保护,英雄救美,甜宠
+ZH: 醉汉伸手要抓女主手腕，男主从侧面一步跨到她身前，抬手挡开对方的手，把她护在身后；女主抓着他的衣角，抬头看他的侧脸。中景转过肩镜头。
+EN: A drunk reaches for the heroine's wrist; the hero steps in from the side, knocks the hand away and shields her behind him. She grips the hem of his jacket and looks up at his profile. Medium shot to over-the-shoulder.
+## om-act-inter-009 | 多人互动写法要点 | Multi-person interaction checklist | generic | actions/interaction | storyboard | 要点,多人,站位
+ZH: 多人镜头先写站位（谁在左、谁在右、谁在前景），再写谁先动、谁反应；每人用不同的服装颜色或外形区分（「穿红裙的女人」「戴眼镜的男人」），避免模型混淆身份。人数尽量不超过 4 人。
+EN: In multi-person shots, write the blocking first (who is left, right, foreground), then who moves first and who reacts. Distinguish each person by costume color or look ("the woman in the red dress," "the man with glasses") so the model doesn't swap identities. Keep it to four people or fewer.
+## om-act-hand-001 | 手部·倒茶 | Hands: pouring tea | generic | actions/hands-props | storyboard | 手部,茶,微距
+ZH: 微距：一只手提起紫砂壶，壶嘴倾斜，细细的茶汤注入白瓷杯，茶面升起热气；倒到七分满时手腕轻轻一收，壶嘴不滴水。侧逆光，背景暗。
+EN: Macro: a hand lifts a clay teapot and tilts the spout, a thin stream of tea filling a white porcelain cup as steam rises; at seven-tenths full the wrist pulls back gently and the spout doesn't drip. Side-backlight, dark background.
+## om-act-hand-002 | 手部·签合同 | Hands: signing the contract | generic | actions/hands-props | storyboard | 签字,商战,特写
+ZH: 特写：钢笔笔尖悬在签名栏上方停顿两秒，手指微微发抖，然后果断落笔，流畅签下名字，最后一笔重重一顿。浅景深，纸张纹理清晰。
+EN: Close-up: the pen nib hovers over the signature line for two seconds, fingers trembling slightly, then comes down decisively and signs in one smooth motion, pressing hard on the final stroke. Shallow depth of field, paper texture visible.
+## om-act-hand-003 | 手部·摘下戒指 | Hands: taking off the ring | generic | actions/hands-props | storyboard | 戒指,离婚,情绪
+ZH: 特写：她的右手捏住左手无名指上的婚戒，慢慢转了两圈，用力摘下，放在桌上推向对面；戒指在桌面上滑动后停住。冷色侧光。
+EN: Close-up: her right hand grips the wedding ring on her left ring finger, twists it twice, pulls it off and slides it across the table; the ring glides and stops. Cool side light.
+## om-act-hand-004 | 手部·打字到停顿 | Hands: typing, then hesitating | generic | actions/hands-props | storyboard | 打字,犹豫,手机
+ZH: 手机屏幕特写：拇指快速打出一行字，停住，删除，再打，再删；最后只发出一个「好」。屏幕光映在脸上，近景切换。
+EN: Phone screen close-up: a thumb quickly types a line, stops, deletes it, types again, deletes again, and finally sends just "OK." Screen glow on the face, cutting between close shots.
+## om-act-hand-005 | 手部·撕照片 | Hands: tearing a photo | generic | actions/hands-props | storyboard | 撕照片,决裂,慢动作
+ZH: 双手捏住一张合照的上沿，从中间缓缓撕开，裂口正好把两个人分开；她把两半叠起再撕一次，碎片从指间落下，慢动作。
+EN: Two hands pinch the top edge of a couple photo and slowly tear it down the middle, the rip separating the two people; she stacks the halves and tears again, pieces falling from her fingers in slow motion.
+## om-act-hand-006 | 手部·点燃火柴 | Hands: striking a match | generic | actions/hands-props | storyboard | 火柴,暗调,氛围
+ZH: 漆黑中一根火柴划过火柴盒，火光「嗤」地亮起，照亮一只手和半张脸；手掌拢住火苗点燃桌上的蜡烛，火柴被轻轻甩灭，一缕青烟升起。
+EN: In darkness a match strikes the box and flares with a hiss, lighting a hand and half a face; the palm cups the flame to light a candle on the table, then the match is flicked out and a wisp of smoke rises.
+## om-act-hand-007 | 手部·整理领带（双人） | Hands: straightening his tie | generic | actions/hands-props | storyboard | 领带,亲密,甜宠
+ZH: 玄关，她踮起脚帮他整理歪掉的领带，双手把领结推正，再轻轻拍了两下他的胸口；他低头看着她笑。近景，暖光。
+EN: In the entryway she rises onto her toes to fix his crooked tie, pushing the knot straight with both hands and patting his chest twice; he looks down at her and smiles. Close shot, warm light.
+## om-act-hand-008 | 手部·拆快递 | Hands: opening a package | generic | actions/hands-props | storyboard | 开箱,生活,俯拍
+ZH: 俯拍桌面，美工刀沿胶带划开纸箱，双手掀开两侧盒盖，拨开填充纸，取出一个包装精致的小盒子举到镜头前。节奏利落，自然光。
+EN: Overhead tabletop. A box cutter slices the tape, both hands fold back the flaps, push aside the packing paper and lift out a neatly wrapped small box toward the camera. Brisk rhythm, natural light.
+## om-act-hand-009 | 手部·翻相册 | Hands: flipping a photo album | generic | actions/hands-props | storyboard | 回忆,怀旧,转场
+ZH: 老人布满皱纹的手一页页翻开旧相册，停在一张泛黄的黑白合照上，食指轻轻摩挲照片中人的脸；镜头推进照片，转场进入回忆。
+EN: An old man's wrinkled hands turn the pages of an old album and stop at a yellowed black-and-white photo; his forefinger gently strokes a face in the picture. Push into the photo, transitioning into a flashback.
+## om-act-hand-010 | 手部写法要点 | Hand action checklist | generic | actions/hands-props | storyboard | 要点,手部,稳定性
+ZH: 手部最容易出现多指、融合。写法：①明确是左手还是右手；②每次只写一个手部动作；③给出道具的材质和大小（「一支细长的黑色钢笔」）；④加约束「五指清晰、手部结构正确」；⑤优先用特写，背景简单。
+EN: Hands are prone to extra or fused fingers. (1) Specify left or right hand; (2) one hand action at a time; (3) give the prop's material and size ("a slim black fountain pen"); (4) add "five distinct fingers, correct hand anatomy"; (5) favor close-ups with simple backgrounds.
+## om-act-rom-001 | 浪漫·十指相扣 | Romance: interlacing fingers | generic | actions/romance | storyboard | 牵手,甜宠,特写
+ZH: 夜晚街头，两人并肩走着，他的手几次靠近她的手又缩回；终于他轻轻碰了一下她的小指，她没有躲开，两人的手慢慢十指相扣。手部特写，背景霓虹虚化。
+EN: Walking side by side on a night street, his hand drifts toward hers a few times and retreats; finally he brushes her little finger, she doesn't pull away, and their fingers slowly interlace. Hand close-up, neon bokeh behind.
+## om-act-rom-002 | 浪漫·重逢拥抱 | Romance: reunion hug | generic | actions/romance | storyboard | 拥抱,重逢,慢动作
+ZH: 火车站台，她看到人群中的他，先是愣住，随即放下行李箱跑过去，扑进他怀里；他张开双臂接住她，原地转了半圈。慢动作，逆光，衣着得体。
+EN: Train platform. She spots him in the crowd, freezes, then drops her suitcase and runs into his arms; he catches her and turns half a circle. Slow motion, backlit, modest clothing.
+## om-act-rom-003 | 浪漫·额头相抵 | Romance: foreheads touching | generic | actions/romance | storyboard | 温柔,近景,治愈
+ZH: 雨后屋檐下，他低头，她仰起脸，两人额头轻轻相抵，闭上眼睛，呼吸慢慢平稳下来，嘴角带笑。近景侧面剪影，柔光。
+EN: Under the eaves after the rain, he lowers his head and she tilts hers up; their foreheads gently touch, eyes closed, breathing slowly settling, small smiles. Close side-profile silhouette, soft light.
+## om-act-rom-004 | 浪漫·轻吻额头 | Romance: a kiss on the forehead | generic | actions/romance | storyboard | 吻额头,告别,温柔
+ZH: 机场安检口前，他双手捧住她的脸，在她额头上落下一个轻吻，然后松开手后退一步，挥手告别。中近景，克制温柔，衣着得体。
+EN: At airport security, he cups her face in both hands and places a light kiss on her forehead, then lets go, steps back and waves goodbye. Medium close, restrained and tender, modest clothing.
+## om-act-rom-005 | 浪漫·樱花树下的吻 | Romance: kiss under the cherry blossoms | generic | actions/romance | storyboard | 接吻,樱花,唯美
+ZH: 樱花树下，花瓣缓缓飘落。两人面对面站着，他微微低头，她踮起脚，嘴唇轻轻一碰后分开，相视而笑。远景侧面，镜头缓慢环绕，克制唯美，衣着得体，非露骨。
+EN: Under a cherry tree, petals drifting down. Facing each other, he lowers his head slightly and she rises onto her toes; their lips meet briefly, part, and they smile at each other. Wide side angle, slow orbit, restrained and lyrical, modest clothing, not explicit.
+## om-act-rom-006 | 浪漫·披外套 | Romance: draping a coat | generic | actions/romance | storyboard | 细节,照顾,冬夜
+ZH: 冬夜江边，她抱着胳膊打了个寒颤；他默默脱下外套披在她肩上，帮她把领口拢紧。她低头闻到外套上的味道，偷偷笑了。中景转近景。
+EN: Riverside on a winter night, she hugs her arms and shivers; he silently takes off his coat, drapes it over her shoulders and pulls the collar closed. She lowers her head, catches its scent and smiles secretly. Medium to close.
+## om-act-rom-007 | 浪漫戏尺度说明 | Romance scenes: content limits | generic | actions/romance | storyboard | 尺度,安全,说明
+ZH: 本库的亲密戏只收录牵手、拥抱、额头相抵、轻吻额头和点到为止的接吻。写法上用「克制」「点到为止」「衣着得体」等词，并避免描写身体部位，这样更符合各平台审核规范。
+EN: Intimate scenes in this library are limited to holding hands, hugs, foreheads touching, forehead kisses and brief kisses. Use words like "restrained," "brief," "modest clothing," and avoid describing body parts; this fits platform moderation rules.

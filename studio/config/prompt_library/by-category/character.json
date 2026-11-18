@@ -1,0 +1,418 @@
+[
+  {
+    "id": "om-char-010",
+    "title": {
+      "zh": "角色设定·童年与成年对照",
+      "en": "Character: child and adult versions"
+    },
+    "prompt_zh": "同一角色的年龄对照设定图：左边 8 岁女孩，右边 28 岁女性；保持相同的眉眼特征、左眼角一颗泪痣和相同的发色，白色背景，全身站姿，无文字。用于回忆段落。",
+    "prompt_en": "Age comparison sheet for one character: an 8-year-old girl on the left, a 28-year-old woman on the right, sharing the same eye shape, a beauty mark under the left eye and the same hair color; white background, full-body standing, no text. For flashback sequences.",
+    "model": "generic",
+    "category": "character",
+    "subcategory": "age",
+    "stage": "character",
+    "tags": [
+      "年龄对照",
+      "回忆",
+      "一致性",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-char-008",
+    "title": {
+      "zh": "角色一致性锁定写法",
+      "en": "Locking character consistency"
+    },
+    "prompt_zh": "使用角色参考图时，在每个镜头提示词开头加「参考图1中的女性」，并重复 2–3 个最显眼的特征（「黑色齐肩短发、米白色西装」），结尾加「人物面部、发型、服装与参考图保持一致」。不要在后续镜头里改写外貌描述。",
+    "prompt_en": "When using a character reference, start each shot prompt with \"the woman from reference image 1,\" repeat two or three of the most visible traits (\"black shoulder-length bob, cream blazer\") and end with \"face, hair and outfit consistent with the reference.\" Don't rephrase the appearance in later shots.",
+    "model": "Seedance",
+    "category": "character",
+    "subcategory": "consistency",
+    "stage": "storyboard",
+    "tags": [
+      "一致性",
+      "参考图",
+      "锁定",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-char-006",
+    "title": {
+      "zh": "服装造型表·一人四套",
+      "en": "Costume sheet: four outfits"
+    },
+    "prompt_zh": "同一角色的服装造型表，四个全身像并排：日常休闲装、正式晚礼服、职业套装、睡衣；脸、发型、身材比例保持一致，白色背景，平光，无文字。",
+    "prompt_en": "Costume sheet for one character, four full-body figures side by side: casual daywear, formal evening gown, business suit, pajamas; same face, hairstyle and body proportions, white background, flat light, no text.",
+    "model": "generic",
+    "category": "character",
+    "subcategory": "costume",
+    "stage": "character",
+    "tags": [
+      "服装",
+      "造型",
+      "一致性",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-char-005",
+    "title": {
+      "zh": "表情表·六种情绪",
+      "en": "Expression sheet: six emotions"
+    },
+    "prompt_zh": "同一角色的表情设定表，2×3 网格，白色背景，头肩近景：平静、微笑、愤怒、哭泣、震惊、冷笑；每格脸型、发型、服装完全一致，只改变表情，无文字。",
+    "prompt_en": "Expression sheet for one character, 2x3 grid on white, head-and-shoulders: neutral, smiling, angry, crying, shocked, smirking; identical face shape, hair and costume in every cell, only the expression changes, no text.",
+    "model": "generic",
+    "category": "character",
+    "subcategory": "expression",
+    "stage": "character",
+    "tags": [
+      "表情表",
+      "情绪",
+      "一致性",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-char-013",
+    "title": {
+      "zh": "角色描述写法要点",
+      "en": "Writing character descriptions"
+    },
+    "prompt_zh": "角色描述按「年龄+性别+体型→发型发色→五官一个特征→上衣→下装→鞋→配饰」的顺序写，每项一个词组；只写看得见的，不写性格形容词（「善良」画不出来）。",
+    "prompt_en": "Describe characters in order: age + gender + build → hairstyle and color → one facial feature → top → bottom → shoes → accessories, one phrase each. Write only what's visible; personality adjectives (\"kind\") can't be drawn.",
+    "model": "generic",
+    "category": "character",
+    "subcategory": "guide",
+    "stage": "character",
+    "tags": [
+      "要点",
+      "角色",
+      "外貌",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-char-012",
+    "title": {
+      "zh": "道具设定·关键信物",
+      "en": "Prop design: the key keepsake"
+    },
+    "prompt_zh": "道具设定图，白色背景：一枚旧银质吊坠，椭圆形，正面刻有半朵玉兰花，背面刻着两个字母缩写，挂在一条细银链上；正面、背面、侧面三个角度，微距质感。",
+    "prompt_en": "Prop design on white: an old oval silver pendant engraved with half a magnolia blossom on the front and two initials on the back, on a thin silver chain; front, back and side views, macro detail.",
+    "model": "generic",
+    "category": "character",
+    "subcategory": "prop",
+    "stage": "prop",
+    "tags": [
+      "道具",
+      "信物",
+      "特写",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-char-011",
+    "title": {
+      "zh": "场景设定·豪宅客厅",
+      "en": "Set design: mansion living room"
+    },
+    "prompt_zh": "场景设定图，无人物：现代豪宅客厅，双层挑高，整面落地窗，浅灰大理石地面，米色长沙发，水晶吊灯，墙上一幅抽象油画；白天自然光，广角，适合多次复用的固定场景。",
+    "prompt_en": "Set design, no people: a modern mansion living room with double-height ceilings, full-wall windows, pale grey marble floor, long beige sofa, crystal chandelier and an abstract oil painting; natural daylight, wide angle, a reusable standing set.",
+    "model": "generic",
+    "category": "character",
+    "subcategory": "set",
+    "stage": "scene",
+    "tags": [
+      "场景",
+      "豪宅",
+      "空镜",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-char-001",
+    "title": {
+      "zh": "角色三视图·标准模板",
+      "en": "Character turnaround: standard template"
+    },
+    "prompt_zh": "角色设定图，纯白背景，同一角色的正面、侧面、背面三视图并排站立，全身，比例一致，T 字站姿或自然站姿；【角色描述：年龄、发型、发色、服装、配饰】；平光照明，无阴影，无文字，无多余道具。",
+    "prompt_en": "Character sheet on a pure white background: front, side and back views of the same character standing side by side, full body, consistent proportions, T-pose or relaxed stance; [character description: age, hairstyle, hair color, outfit, accessories]; flat lighting, no shadows, no text, no extra props.",
+    "model": "generic",
+    "category": "character",
+    "subcategory": "turnaround",
+    "stage": "character",
+    "tags": [
+      "三视图",
+      "角色设定",
+      "模板",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-char-002",
+    "title": {
+      "zh": "女主三视图·都市职场",
+      "en": "Heroine turnaround: urban professional"
+    },
+    "prompt_zh": "角色三视图，白色背景：25 岁亚洲女性，黑色齐肩短发，眉眼清冷，身穿米白色西装外套、黑色直筒裤和黑色尖头低跟鞋，左手腕戴细银表；正面、侧面、背面全身并排，比例一致，平光。",
+    "prompt_en": "Character turnaround on white: a 25-year-old Asian woman, black shoulder-length bob, cool composed features, cream blazer, black straight trousers, black pointed low heels, a thin silver watch on her left wrist; front, side and back full-body views side by side, consistent proportions, flat light.",
+    "model": "generic",
+    "category": "character",
+    "subcategory": "turnaround",
+    "stage": "character",
+    "tags": [
+      "三视图",
+      "女主",
+      "职场",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-char-003",
+    "title": {
+      "zh": "男主三视图·霸总",
+      "en": "Hero turnaround: CEO"
+    },
+    "prompt_zh": "角色三视图，白色背景：30 岁亚洲男性，身高 185cm，短发向后梳，剑眉，深灰色三件套西装，白衬衫，深蓝色领带，黑色牛津鞋；正面、侧面、背面全身，比例一致，平光，无阴影。",
+    "prompt_en": "Character turnaround on white: a 30-year-old Asian man, 185 cm, short slicked-back hair, strong brows, charcoal three-piece suit, white shirt, navy tie, black oxfords; front, side and back full body, consistent proportions, flat light, no shadows.",
+    "model": "generic",
+    "category": "character",
+    "subcategory": "turnaround",
+    "stage": "character",
+    "tags": [
+      "三视图",
+      "男主",
+      "霸总",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-char-004",
+    "title": {
+      "zh": "古装女侠三视图",
+      "en": "Wuxia heroine turnaround"
+    },
+    "prompt_zh": "角色三视图，浅灰背景：20 岁女侠，高马尾配银色发冠，白色交领窄袖劲装，腰束红色布带，黑色护腕，背负长剑，黑色布靴；正面、侧面、背面全身，比例一致。",
+    "prompt_en": "Character turnaround on light grey: a 20-year-old swordswoman, high ponytail with a silver hair crown, white cross-collar narrow-sleeved martial outfit, red sash at the waist, black bracers, long sword on her back, black cloth boots; front, side and back full body, consistent proportions.",
+    "model": "generic",
+    "category": "character",
+    "subcategory": "turnaround",
+    "stage": "character",
+    "tags": [
+      "三视图",
+      "古装",
+      "武侠",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-char-007",
+    "title": {
+      "zh": "反派三视图·豪门贵妇",
+      "en": "Villain turnaround: wealthy matriarch"
+    },
+    "prompt_zh": "角色三视图，白色背景：50 岁女性，盘发，珍珠耳环和项链，深酒红色丝绒旗袍外搭黑色披肩，手拿小手包，神情高傲；正面、侧面、背面全身，比例一致。",
+    "prompt_en": "Character turnaround on white: a 50-year-old woman, hair in a chignon, pearl earrings and necklace, deep burgundy velvet qipao with a black shawl, small clutch in hand, haughty expression; front, side and back full body, consistent proportions.",
+    "model": "generic",
+    "category": "character",
+    "subcategory": "turnaround",
+    "stage": "character",
+    "tags": [
+      "三视图",
+      "反派",
+      "贵妇",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-char-009",
+    "title": {
+      "zh": "角色设定·少年感男二",
+      "en": "Character: youthful second lead"
+    },
+    "prompt_zh": "角色三视图，白色背景：19 岁男生，蓬松黑色碎发，单眼皮，笑起来有虎牙，白色连帽卫衣配浅蓝牛仔裤和白色帆布鞋，单肩背黑色双肩包；正面、侧面、背面全身。",
+    "prompt_en": "Character turnaround on white: a 19-year-old young man, fluffy black fringe, monolid eyes, a snaggletooth smile, white hoodie, light-blue jeans, white canvas sneakers, a black backpack over one shoulder; front, side and back full body.",
+    "model": "generic",
+    "category": "character",
+    "subcategory": "turnaround",
+    "stage": "character",
+    "tags": [
+      "三视图",
+      "男二",
+      "校园",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  }
+]

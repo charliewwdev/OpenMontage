@@ -1,0 +1,827 @@
+[
+  {
+    "key": "actions",
+    "emoji": "🏃",
+    "zh": "动作写法",
+    "en": "How to write actions",
+    "count": 219,
+    "subcategories": [
+      {
+        "key": "chase",
+        "count": 12,
+        "zh": "追逐",
+        "en": "Chases"
+      },
+      {
+        "key": "dance",
+        "count": 18,
+        "zh": "舞蹈",
+        "en": "Dance"
+      },
+      {
+        "key": "emotion",
+        "count": 21,
+        "zh": "情绪表演与微表情",
+        "en": "Emotional acting & micro-expressions"
+      },
+      {
+        "key": "everyday",
+        "count": 39,
+        "zh": "日常动作",
+        "en": "Everyday actions"
+      },
+      {
+        "key": "fighting",
+        "count": 16,
+        "zh": "打斗与武术",
+        "en": "Fighting & martial arts"
+      },
+      {
+        "key": "formula",
+        "count": 5,
+        "zh": "动作公式与原则",
+        "en": "Formulas & principles"
+      },
+      {
+        "key": "hands-props",
+        "count": 36,
+        "zh": "手部与道具",
+        "en": "Hands & props"
+      },
+      {
+        "key": "interaction",
+        "count": 17,
+        "zh": "多人互动",
+        "en": "Multi-person interaction"
+      },
+      {
+        "key": "romance",
+        "count": 11,
+        "zh": "浪漫（牵手/拥抱/吻）",
+        "en": "Romance (hands, hugs, kisses)"
+      },
+      {
+        "key": "sports",
+        "count": 44,
+        "zh": "运动",
+        "en": "Sports"
+      }
+    ]
+  },
+  {
+    "key": "genres",
+    "emoji": "🎬",
+    "zh": "短剧题材",
+    "en": "Short-drama genres",
+    "count": 37,
+    "subcategories": [
+      {
+        "key": "campus",
+        "count": 2,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "ceo",
+        "count": 3,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "comedy",
+        "count": 2,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "family",
+        "count": 2,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "mystery",
+        "count": 3,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "period",
+        "count": 2,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "rebirth",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "revenge",
+        "count": 3,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "sci-fi",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "script-method",
+        "count": 6,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "sweet-romance",
+        "count": 3,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "template",
+        "count": 2,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "thriller",
+        "count": 2,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "time-travel",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "urban",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "workplace",
+        "count": 2,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "wuxia",
+        "count": 1,
+        "zh": null,
+        "en": null
+      }
+    ]
+  },
+  {
+    "key": "hooks",
+    "emoji": "🪝",
+    "zh": "钩子与节拍",
+    "en": "Hooks & beats",
+    "count": 20,
+    "subcategories": [
+      {
+        "key": "cliffhanger",
+        "count": 3,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "cold-open",
+        "count": 7,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "confession",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "guide",
+        "count": 2,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "payoff",
+        "count": 4,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "reversal",
+        "count": 2,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "standoff",
+        "count": 1,
+        "zh": null,
+        "en": null
+      }
+    ]
+  },
+  {
+    "key": "camera",
+    "emoji": "🎥",
+    "zh": "镜头与运镜",
+    "en": "Camera & movement",
+    "count": 56,
+    "subcategories": [
+      {
+        "key": "aerial",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "angle",
+        "count": 3,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "bullet-time",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "combo",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "composition",
+        "count": 3,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "crane",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "dolly-zoom",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "guide",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "handheld",
+        "count": 4,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "long-take",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "orbit",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "ots",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "pan",
+        "count": 7,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "pov",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "pull",
+        "count": 4,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "push",
+        "count": 4,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "rack-focus",
+        "count": 4,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "shot-size",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "slow-motion",
+        "count": 3,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "stabilized",
+        "count": 3,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "static",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "tilt",
+        "count": 6,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "tracking",
+        "count": 2,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "whip-pan",
+        "count": 1,
+        "zh": null,
+        "en": null
+      }
+    ]
+  },
+  {
+    "key": "lighting",
+    "emoji": "💡",
+    "zh": "光影与调色",
+    "en": "Lighting & color",
+    "count": 26,
+    "subcategories": [
+      {
+        "key": "atmosphere",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "grade",
+        "count": 3,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "guide",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "mood",
+        "count": 3,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "natural",
+        "count": 3,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "portrait",
+        "count": 2,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "practical",
+        "count": 3,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "style",
+        "count": 9,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "stylized",
+        "count": 1,
+        "zh": null,
+        "en": null
+      }
+    ]
+  },
+  {
+    "key": "character",
+    "emoji": "👤",
+    "zh": "角色三视图与设定",
+    "en": "Character turnarounds & design",
+    "count": 13,
+    "subcategories": [
+      {
+        "key": "age",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "consistency",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "costume",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "expression",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "guide",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "prop",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "set",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "turnaround",
+        "count": 6,
+        "zh": null,
+        "en": null
+      }
+    ]
+  },
+  {
+    "key": "storyboard",
+    "emoji": "🗂️",
+    "zh": "分镜时序",
+    "en": "Storyboard timing",
+    "count": 13,
+    "subcategories": [
+      {
+        "key": "grid",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "guide",
+        "count": 2,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "keyframe",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "montage",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "panel-template",
+        "count": 2,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "template",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "timing",
+        "count": 3,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "transition",
+        "count": 2,
+        "zh": null,
+        "en": null
+      }
+    ]
+  },
+  {
+    "key": "ecommerce",
+    "emoji": "🛍️",
+    "zh": "电商广告",
+    "en": "E-commerce ads",
+    "count": 29,
+    "subcategories": [
+      {
+        "key": "before-after",
+        "count": 4,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "fashion",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "feature",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "food-beverage",
+        "count": 6,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "guide",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "lifestyle",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "luxury",
+        "count": 3,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "problem-solution",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "product-hero",
+        "count": 3,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "ugc",
+        "count": 5,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "unboxing-asmr",
+        "count": 3,
+        "zh": null,
+        "en": null
+      }
+    ]
+  },
+  {
+    "key": "platform",
+    "emoji": "📱",
+    "zh": "平台爆款结构",
+    "en": "Platform structures",
+    "count": 11,
+    "subcategories": [
+      {
+        "key": "bilibili",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "douyin",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "engagement",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "framing",
+        "count": 2,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "guide",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "series",
+        "count": 2,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "shorts",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "tiktok",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "xiaohongshu",
+        "count": 1,
+        "zh": null,
+        "en": null
+      }
+    ]
+  },
+  {
+    "key": "sound",
+    "emoji": "🔊",
+    "zh": "声音与配音",
+    "en": "Sound & voice",
+    "count": 11,
+    "subcategories": [
+      {
+        "key": "design",
+        "count": 2,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "dialogue",
+        "count": 3,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "guide",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "music",
+        "count": 2,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "sfx",
+        "count": 2,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "voiceover",
+        "count": 1,
+        "zh": null,
+        "en": null
+      }
+    ]
+  },
+  {
+    "key": "negative",
+    "emoji": "🚫",
+    "zh": "约束词",
+    "en": "Constraint words",
+    "count": 12,
+    "subcategories": [
+      {
+        "key": "anatomy",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "camera",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "consistency",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "framing",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "general",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "guide",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "motion",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "period",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "product",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "quality",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "safety",
+        "count": 1,
+        "zh": null,
+        "en": null
+      },
+      {
+        "key": "style",
+        "count": 1,
+        "zh": null,
+        "en": null
+      }
+    ]
+  }
+]

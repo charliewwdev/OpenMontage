@@ -349,6 +349,22 @@ def list_prompts(
     return items
 
 
+def _library_origin(body: dict[str, Any]) -> dict[str, str] | None:
+    """Keep source / license / attribution when a prompt-library entry is saved."""
+    raw = body.get("origin")
+    if not isinstance(raw, dict):
+        return None
+    library_id = str(raw.get("libraryId") or "").strip()[:120]
+    if not library_id:
+        return None
+    out = {"libraryId": library_id}
+    for key in ("source", "sourceUrl", "license", "licenseUrl", "attribution"):
+        val = str(raw.get(key) or "").strip()
+        if val:
+            out[key] = val[:500]
+    return out
+
+
 def upsert_prompt(projects_root: Path, body: dict[str, Any]) -> dict[str, Any]:
     items = load_prompts(projects_root)
     prompt_id = str(body.get("id") or "").strip()
@@ -358,6 +374,13 @@ def upsert_prompt(projects_root: Path, body: dict[str, Any]) -> dict[str, Any]:
     if not text:
         raise ValueError("text required")
     now = time.time()
+    origin = _library_origin(body)
+    if origin and not prompt_id:
+        # Saving the same prompt-library entry twice updates the existing copy.
+        for item in items:
+            if (item.get("origin") or {}).get("libraryId") == origin["libraryId"]:
+                prompt_id = str(item.get("id") or "")
+                break
     if prompt_id:
         for item in items:
             if str(item.get("id")) == prompt_id:
@@ -365,6 +388,8 @@ def upsert_prompt(projects_root: Path, body: dict[str, Any]) -> dict[str, Any]:
                 item["text"] = text
                 item["category"] = category
                 item["updatedAt"] = now
+                if origin:
+                    item["origin"] = origin
                 save_prompts(projects_root, items)
                 return item
     item = {
@@ -375,6 +400,8 @@ def upsert_prompt(projects_root: Path, body: dict[str, Any]) -> dict[str, Any]:
         "createdAt": now,
         "updatedAt": now,
     }
+    if origin:
+        item["origin"] = origin
     items.insert(0, item)
     save_prompts(projects_root, items)
     return item

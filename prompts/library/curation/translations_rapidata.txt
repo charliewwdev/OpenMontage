@@ -1,0 +1,42 @@
+# Chinese translations (by OpenMontage) for selected prompts from Rapidata/text-2-video-human-preferences-veo3 (Apache-2.0).
+# Key = prompt prefix. Format: ## key | 中文标题 | English title | category/subcategory | stage | tags
+## A ballet dancer in a flowing | 芭蕾·晨雾河岸红裙独舞 | Ballet solo on a misty riverbank | actions/dance | storyboard | 芭蕾,晨光,舞蹈
+ZH: 一位芭蕾舞者身穿飘逸的红裙，在黎明薄雾笼罩的河岸上优雅起舞。镜头捕捉她优美的动作，背景是倒映在水面上的柔和日出色彩。
+## A 3D animated ninja | 3D 忍者·赛博城市跑酷 | 3D ninja parkour through a cyberpunk city | actions/chase | storyboard | 跑酷,赛博朋克,3D动画
+ZH: 一个 3D 动画忍者冲过霓虹闪烁的赛博朋克城市，在摩天楼之间跳跃，躲避全息广告牌。雨中灯光下刀光闪烁，忍者在熙攘的城市中穿行。
+## A daring escape | 赛博夜城·无人机追捕下的逃亡 | Neon-city escape from hunting drones | actions/chase | storyboard | 追逐,逃亡,赛博朋克
+ZH: 夜晚霓虹赛博城市里的一场惊险逃亡。主角在高耸的摩天楼之间穿梭，无人机在身后追捕，随后他跃上一辆悬浮摩托，冲向绚烂的天际线。
+## A firefighter in action | 消防员·火场救援交叉剪辑 | Firefighter rescue, cutting between face and blaze | actions/emotion | storyboard | 救援,交叉剪辑,紧张
+ZH: 一名消防员在火场中奋力灭火，镜头在他坚毅的面孔和熊熊烈火之间来回切换，他正在救出身处危险的人。
+## A cinematic close-up of a barista | 咖啡师拉花·手部与顾客反应 | Barista latte art: hands and reactions | actions/hands-props | storyboard | 手部动作,咖啡,特写
+ZH: 电影感特写，一位咖啡师在热闹的咖啡馆里制作拉花。画面在她专注娴熟的双手和满怀欣赏的顾客之间交替，凸显日常工作中的手艺与用心。
+## A violinist plays | 街角小提琴手·夜色演奏 | Violinist on a dim street corner | actions/hands-props | storyboard | 乐器,夜景,街头
+ZH: 一位小提琴手在昏暗的街角深情演奏，旋律在夜色中回荡，行人驻足聆听，背景城市灯光闪烁。
+## Aerial view of synchronized | 航拍·湖面花样游泳队形 | Aerial synchronized swimming patterns | actions/sports | storyboard | 航拍,花样游泳,群体
+ZH: 航拍视角，花样游泳队员在清澈的湖面上组成复杂的队形，在晨光柔和的照耀下，动作流畅而优雅。
+## A vibrant 2D animation of a young skateboarder | 2D 动画·公园滑板少年 | 2D skateboarder in a city park | actions/sports | storyboard | 滑板,2D动画,活力
+ZH: 一段色彩鲜明的 2D 动画，一个穿着彩色衣服的少年在热闹的城市公园里玩滑板技巧。粗线条和明亮色彩营造出充满活力、轻松有趣的氛围，滑板少年灵活绕过各种障碍。
+## A hyper-realistic view of a motorcycle | 雨夜霓虹·摩托压弯跟拍 | Motorcycle leaning into turns on wet neon streets | actions/chase | storyboard | 摩托,跟拍,速度感
+ZH: 超写实画面，一辆摩托车在夜晚霓虹城市中飞驰，湿漉漉的街道映出倒影。镜头紧紧跟随，骑手压弯过急弯，表现出速度与灵活。
+## A lone surfer | 黎明冲浪·巨浪剪影 | Lone surfer silhouette at dawn | actions/sports | storyboard | 冲浪,剪影,日出
+ZH: 黎明时分，一名冲浪者独自驾驭一道高耸的巨浪，他的剪影与日出的绚丽色彩融为一体，身后是无边无际的大海。
+## A street musician | 街头萨克斯·人群围观大全景 | Street saxophonist with a crowd, wide shot | actions/hands-props | storyboard | 乐器,街头,大全景
+ZH: 一位二十多岁的街头音乐人用萨克斯吹奏一段深情的旋律，周围聚着热闹的人群，城市傍晚的灯光闪烁，电影感大全景。
+## A young artist paints | 年轻画家·街头墙绘 | Young artist painting a street mural | actions/hands-props | storyboard | 绘画,手部动作,街头
+ZH: 一位年轻画家在热闹的城市墙面上绘制鲜艳的壁画，大胆的色彩与有力的笔触交融，午后明亮的阳光下，路人驻足惊叹。
+## A bustling kitchen | 后厨·大厨热锅推镜 | Busy kitchen, push-in on sizzling pans | actions/hands-props | storyboard | 厨房,推镜,美食
+ZH: 一个忙碌的厨房里，厨师们熟练地烹制精致菜肴。镜头推近滋滋作响的煎锅和色彩缤纷的食材，捕捉每一步的精准与手艺，火焰跳动，香气交融。
+## A graceful ballerina | 剧场芭蕾·追光独舞 | Ballerina under theater spotlights | actions/dance | storyboard | 芭蕾,舞台,追光
+ZH: 一位优雅的芭蕾舞者在宏伟的剧场舞台上表演一段复杂的舞蹈。聚光灯照亮她的每一个动作，影子在她周围舞动，背景在白昼与夜晚的场景之间无缝切换。
+## A 2D animated scene of a kindergarten | 2D 动画·幼儿园手工课 | 2D kindergarten art class | actions/interaction | storyboard | 多人互动,2D动画,儿童
+ZH: 一段 2D 动画场景，幼儿园老师带着兴奋的孩子们做一个色彩缤纷的手工项目，孩子们的小手忙着涂颜料，笑容灿烂，教室里充满欢乐的创造力。
+## A 'day in the life' | 街舞团·备赛的一天 | Day in the life of a street dance crew | actions/dance | storyboard | 街舞,群舞,纪实
+ZH: 一支前沿的城市街舞团为全球大赛排练的「一天」。展现他们高强度的训练、富有创意的编舞过程、高科技的舞台搭建、团队之间的默契，以及在城市灯光下肾上腺素飙升的精彩演出时刻。
+## A 2D animated fire dancer | 2D 动画·霓虹火焰丝带舞 | 2D fire-ribbon dancer under neon | actions/dance | storyboard | 舞蹈,2D动画,火焰
+ZH: 一个 2D 动画火舞者在霓虹灯下挥舞燃烧的丝带，画风动感多彩，利落的动作和鲜艳的色彩让欢呼的观众看得入迷。
+## A seasoned professor | 教授讲题·粉笔板书 | Professor explaining an equation at a chalkboard | actions/everyday | storyboard | 日常,讲解,课堂
+ZH: 一位五十多岁的资深教授站在黑板旁，生动地讲解一道物理方程，粉笔划出公式，明亮现代的教室里学生们专注地听讲。
+## A snow leopard | 雪豹·晨雾林间潜行跟拍 | Snow leopard prowling, tracking shot | camera/tracking | storyboard | 跟拍,动物,晨雾
+ZH: 黎明时分，一只雪豹在薄雾笼罩的高山森林中优雅潜行。镜头跟随它无声的步伐，阳光透过树林照亮它光滑的皮毛，它在一块岩石上停下，俯瞰宁静的风景。
+## A lone kayaker navigates | 独木舟·雾林河道 | Kayaker through a misty forest river | actions/sports | storyboard | 皮划艇,雾气,自然
+ZH: 一名皮划艇手独自穿过雾气弥漫的林间河道，高大的古树在头顶交织成拱，树叶挂着露珠闪闪发光，阳光透过树冠洒下。

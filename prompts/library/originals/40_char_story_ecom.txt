@@ -1,0 +1,100 @@
+# OpenMontage original prompts — 角色三视图 / 分镜时序 / 电商广告. License: CC BY 4.0
+## om-char-001 | 角色三视图·标准模板 | Character turnaround: standard template | generic | character/turnaround | character | 三视图,角色设定,模板
+ZH: 角色设定图，纯白背景，同一角色的正面、侧面、背面三视图并排站立，全身，比例一致，T 字站姿或自然站姿；【角色描述：年龄、发型、发色、服装、配饰】；平光照明，无阴影，无文字，无多余道具。
+EN: Character sheet on a pure white background: front, side and back views of the same character standing side by side, full body, consistent proportions, T-pose or relaxed stance; [character description: age, hairstyle, hair color, outfit, accessories]; flat lighting, no shadows, no text, no extra props.
+## om-char-002 | 女主三视图·都市职场 | Heroine turnaround: urban professional | generic | character/turnaround | character | 三视图,女主,职场
+ZH: 角色三视图，白色背景：25 岁亚洲女性，黑色齐肩短发，眉眼清冷，身穿米白色西装外套、黑色直筒裤和黑色尖头低跟鞋，左手腕戴细银表；正面、侧面、背面全身并排，比例一致，平光。
+EN: Character turnaround on white: a 25-year-old Asian woman, black shoulder-length bob, cool composed features, cream blazer, black straight trousers, black pointed low heels, a thin silver watch on her left wrist; front, side and back full-body views side by side, consistent proportions, flat light.
+## om-char-003 | 男主三视图·霸总 | Hero turnaround: CEO | generic | character/turnaround | character | 三视图,男主,霸总
+ZH: 角色三视图，白色背景：30 岁亚洲男性，身高 185cm，短发向后梳，剑眉，深灰色三件套西装，白衬衫，深蓝色领带，黑色牛津鞋；正面、侧面、背面全身，比例一致，平光，无阴影。
+EN: Character turnaround on white: a 30-year-old Asian man, 185 cm, short slicked-back hair, strong brows, charcoal three-piece suit, white shirt, navy tie, black oxfords; front, side and back full body, consistent proportions, flat light, no shadows.
+## om-char-004 | 古装女侠三视图 | Wuxia heroine turnaround | generic | character/turnaround | character | 三视图,古装,武侠
+ZH: 角色三视图，浅灰背景：20 岁女侠，高马尾配银色发冠，白色交领窄袖劲装，腰束红色布带，黑色护腕，背负长剑，黑色布靴；正面、侧面、背面全身，比例一致。
+EN: Character turnaround on light grey: a 20-year-old swordswoman, high ponytail with a silver hair crown, white cross-collar narrow-sleeved martial outfit, red sash at the waist, black bracers, long sword on her back, black cloth boots; front, side and back full body, consistent proportions.
+## om-char-005 | 表情表·六种情绪 | Expression sheet: six emotions | generic | character/expression | character | 表情表,情绪,一致性
+ZH: 同一角色的表情设定表，2×3 网格，白色背景，头肩近景：平静、微笑、愤怒、哭泣、震惊、冷笑；每格脸型、发型、服装完全一致，只改变表情，无文字。
+EN: Expression sheet for one character, 2x3 grid on white, head-and-shoulders: neutral, smiling, angry, crying, shocked, smirking; identical face shape, hair and costume in every cell, only the expression changes, no text.
+## om-char-006 | 服装造型表·一人四套 | Costume sheet: four outfits | generic | character/costume | character | 服装,造型,一致性
+ZH: 同一角色的服装造型表，四个全身像并排：日常休闲装、正式晚礼服、职业套装、睡衣；脸、发型、身材比例保持一致，白色背景，平光，无文字。
+EN: Costume sheet for one character, four full-body figures side by side: casual daywear, formal evening gown, business suit, pajamas; same face, hairstyle and body proportions, white background, flat light, no text.
+## om-char-007 | 反派三视图·豪门贵妇 | Villain turnaround: wealthy matriarch | generic | character/turnaround | character | 三视图,反派,贵妇
+ZH: 角色三视图，白色背景：50 岁女性，盘发，珍珠耳环和项链，深酒红色丝绒旗袍外搭黑色披肩，手拿小手包，神情高傲；正面、侧面、背面全身，比例一致。
+EN: Character turnaround on white: a 50-year-old woman, hair in a chignon, pearl earrings and necklace, deep burgundy velvet qipao with a black shawl, small clutch in hand, haughty expression; front, side and back full body, consistent proportions.
+## om-char-008 | 角色一致性锁定写法 | Locking character consistency | Seedance | character/consistency | storyboard | 一致性,参考图,锁定
+ZH: 使用角色参考图时，在每个镜头提示词开头加「参考图1中的女性」，并重复 2–3 个最显眼的特征（「黑色齐肩短发、米白色西装」），结尾加「人物面部、发型、服装与参考图保持一致」。不要在后续镜头里改写外貌描述。
+EN: When using a character reference, start each shot prompt with "the woman from reference image 1," repeat two or three of the most visible traits ("black shoulder-length bob, cream blazer") and end with "face, hair and outfit consistent with the reference." Don't rephrase the appearance in later shots.
+## om-char-009 | 角色设定·少年感男二 | Character: youthful second lead | generic | character/turnaround | character | 三视图,男二,校园
+ZH: 角色三视图，白色背景：19 岁男生，蓬松黑色碎发，单眼皮，笑起来有虎牙，白色连帽卫衣配浅蓝牛仔裤和白色帆布鞋，单肩背黑色双肩包；正面、侧面、背面全身。
+EN: Character turnaround on white: a 19-year-old young man, fluffy black fringe, monolid eyes, a snaggletooth smile, white hoodie, light-blue jeans, white canvas sneakers, a black backpack over one shoulder; front, side and back full body.
+## om-char-010 | 角色设定·童年与成年对照 | Character: child and adult versions | generic | character/age | character | 年龄对照,回忆,一致性
+ZH: 同一角色的年龄对照设定图：左边 8 岁女孩，右边 28 岁女性；保持相同的眉眼特征、左眼角一颗泪痣和相同的发色，白色背景，全身站姿，无文字。用于回忆段落。
+EN: Age comparison sheet for one character: an 8-year-old girl on the left, a 28-year-old woman on the right, sharing the same eye shape, a beauty mark under the left eye and the same hair color; white background, full-body standing, no text. For flashback sequences.
+## om-char-011 | 场景设定·豪宅客厅 | Set design: mansion living room | generic | character/set | scene | 场景,豪宅,空镜
+ZH: 场景设定图，无人物：现代豪宅客厅，双层挑高，整面落地窗，浅灰大理石地面，米色长沙发，水晶吊灯，墙上一幅抽象油画；白天自然光，广角，适合多次复用的固定场景。
+EN: Set design, no people: a modern mansion living room with double-height ceilings, full-wall windows, pale grey marble floor, long beige sofa, crystal chandelier and an abstract oil painting; natural daylight, wide angle, a reusable standing set.
+## om-char-012 | 道具设定·关键信物 | Prop design: the key keepsake | generic | character/prop | prop | 道具,信物,特写
+ZH: 道具设定图，白色背景：一枚旧银质吊坠，椭圆形，正面刻有半朵玉兰花，背面刻着两个字母缩写，挂在一条细银链上；正面、背面、侧面三个角度，微距质感。
+EN: Prop design on white: an old oval silver pendant engraved with half a magnolia blossom on the front and two initials on the back, on a thin silver chain; front, back and side views, macro detail.
+## om-char-013 | 角色描述写法要点 | Writing character descriptions | generic | character/guide | character | 要点,角色,外貌
+ZH: 角色描述按「年龄+性别+体型→发型发色→五官一个特征→上衣→下装→鞋→配饰」的顺序写，每项一个词组；只写看得见的，不写性格形容词（「善良」画不出来）。
+EN: Describe characters in order: age + gender + build → hairstyle and color → one facial feature → top → bottom → shoes → accessories, one phrase each. Write only what's visible; personality adjectives ("kind") can't be drawn.
+## om-story-001 | 分镜时序·三镜头 5 秒 | Storyboard timing: three shots in 5s | Seedance | storyboard/timing | storyboard | 时序,多镜头,模板
+ZH: 镜头1（0-1.5秒）：【景别】【画面内容】；镜头2（1.5-3.5秒）：【景别】【动作】；镜头3（3.5-5秒）：【景别】【结果/反应】。每个镜头一个动作，镜头之间人物、服装、场景保持一致。
+EN: Shot 1 (0-1.5s): [shot size] [content]; Shot 2 (1.5-3.5s): [shot size] [action]; Shot 3 (3.5-5s): [shot size] [result/reaction]. One action per shot; keep characters, costumes and setting consistent across shots.
+## om-story-002 | 分镜时序·正反打对话 | Storyboard timing: shot-reverse-shot | Seedance | storyboard/timing | storyboard | 正反打,对话,时序
+ZH: 镜头1（0-2秒）：过肩镜头，女主说「你早就知道了？」；镜头2（2-4秒）：反打男主近景，他沉默地移开目光；镜头3（4-5秒）：女主近景，眼眶泛红。办公室，傍晚窗光。
+EN: Shot 1 (0-2s): over-the-shoulder, she says, "You knew all along?" Shot 2 (2-4s): reverse close shot of him silently looking away. Shot 3 (4-5s): her close-up, eyes reddening. Office, late-afternoon window light.
+## om-story-003 | 分镜时序·10 秒动作段落 | Storyboard timing: 10-second action sequence | Seedance | storyboard/timing | storyboard | 动作,时序,10秒
+ZH: 镜头1（0-2秒）：全景，男主推开仓库大门；镜头2（2-4秒）：中景，三名打手转身围上；镜头3（4-7秒）：跟拍，男主连续格挡两人；镜头4（7-9秒）：慢动作，第三人被踢飞撞上纸箱；镜头5（9-10秒）：近景，男主整理袖口。
+EN: Shot 1 (0-2s): wide, the lead pushes open the warehouse door. Shot 2 (2-4s): medium, three thugs turn and close in. Shot 3 (4-7s): tracking, he blocks two of them in succession. Shot 4 (7-9s): slow motion, the third is kicked into a stack of boxes. Shot 5 (9-10s): close-up, he straightens his cuffs.
+## om-story-004 | 九宫格分镜→视频 | 3x3 storyboard grid to video | Seedance | storyboard/grid | storyboard | 九宫格,分镜,图生视频
+ZH: 先生成一张 3×3 九宫格分镜图（同一角色、同一场景、按阅读顺序编号 1–9），再用该图作为参考，提示「按照参考图中 1 到 9 的顺序依次呈现画面，每格约 1 秒，人物与场景保持一致」。
+EN: First generate a 3x3 storyboard grid (same character and setting, numbered 1-9 in reading order), then use it as a reference with: "Present the panels from the reference in order 1 to 9, about one second each, keeping characters and setting consistent."
+## om-story-005 | 分镜表格模板 | Storyboard table template | generic | storyboard/template | storyboard | 分镜表,模板,剧本到镜头
+ZH: 镜号｜时长｜景别｜运镜｜画面内容｜人物动作｜台词/音效｜转场。示例：3｜2秒｜近景｜缓推｜女主看手机｜手指停住、瞳孔放大｜手机震动声｜硬切。
+EN: Shot # | duration | shot size | camera move | content | action | dialogue/SFX | transition. Example: 3 | 2s | close shot | slow push | heroine reads her phone | finger freezes, pupils widen | phone buzz | hard cut.
+## om-story-006 | 分镜·匹配剪辑转场 | Storyboard: match cut | generic | storyboard/transition | edit | 匹配剪辑,转场,时间跳跃
+ZH: 镜头A：小女孩吹灭生日蜡烛的特写；镜头B：同样构图，成年后的她在空荡的公寓里吹灭一支蜡烛。两个镜头的构图、位置、动作完全对齐，用硬切连接，表现时间流逝。
+EN: Shot A: close-up of a little girl blowing out birthday candles. Shot B: same framing, the grown woman blowing out a single candle in an empty apartment. Composition, position and action align exactly; join with a hard cut to show time passing.
+## om-story-007 | 分镜·时长分配原则 | Storyboard: allocating duration | generic | storyboard/guide | storyboard | 时长,节奏,要点
+ZH: 竖屏短剧单镜头一般 1.5–3 秒；动作镜头 1–2 秒，情绪特写 2–3 秒，建立镜头不超过 2 秒。生成模型单次 5–10 秒时，拆成 2–4 个镜头比一个长镜头更稳定。
+EN: In vertical shorts a single shot usually runs 1.5-3s: action shots 1-2s, emotional close-ups 2-3s, establishing shots no more than 2s. When the model generates 5-10s per run, splitting into two to four shots is steadier than one long take.
+## om-story-008 | 分镜·连续性检查 | Storyboard: continuity check | generic | storyboard/guide | storyboard | 连续性,穿帮,检查
+ZH: 每个镜头生成前检查：①人物左右位置是否和上一镜一致（不越轴）；②手里的道具是否还在同一只手；③服装、发型、天气、光线方向是否一致。在提示词里显式写出这些状态。
+EN: Before each shot, check: (1) are characters on the same sides as the last shot (don't cross the line)? (2) is the prop still in the same hand? (3) are costume, hair, weather and light direction consistent? State these explicitly in the prompt.
+## om-story-009 | 分镜·首尾帧控制 | Storyboard: first and last frame control | generic | storyboard/keyframe | storyboard | 首尾帧,图生视频,控制
+ZH: 用首帧图（女主站在门口）+ 尾帧图（女主坐在沙发上），提示词只写中间过程：「她慢慢走进客厅，把包放在茶几上，疲惫地坐下」。首尾帧决定构图，提示词负责动作。
+EN: Use a first-frame image (heroine at the door) and last-frame image (heroine on the sofa); the prompt only describes the transition: "She walks slowly into the living room, sets her bag on the coffee table and sits down wearily." Keyframes fix the composition; the prompt drives the action.
+## om-story-010 | 分镜·六格情绪弧线 | Storyboard: six-panel emotional arc | generic | storyboard/panel-template | storyboard | 六格,情绪弧线,模板
+ZH: 1 平静（全景日常）→ 2 打破（近景收到消息）→ 3 否认（中景摇头）→ 4 崩溃（特写落泪）→ 5 决定（近景擦泪抬头）→ 6 行动（全景起身出门）。同一角色、同一服装。
+EN: 1 calm (wide, daily routine) → 2 disruption (close, receives the news) → 3 denial (medium, shaking head) → 4 breakdown (close-up, tears) → 5 decision (close, wipes tears, looks up) → 6 action (wide, gets up and leaves). Same character, same outfit.
+## om-ecom-001 | 电商·口播测评开场 | E-commerce: talking-head review opener | Veo | ecommerce/ugc | storyboard | 口播,测评,UGC
+ZH: 9:16 竖屏，自然光卧室，一位 25 岁女生对着手机镜头举起产品，开口第一句：「这个我用了三周，说点真实感受。」随后把产品转到镜头前展示包装，表情自然，轻微手持。产品为 [产品]，不出现其他品牌标志。
+EN: 9:16, naturally lit bedroom; a 25-year-old woman holds the product up to her phone camera and opens with, "I've used this for three weeks—here's my honest take," then turns the packaging toward the lens. Natural expression, slight handheld. Product is [product]; no other brand logos.
+## om-ecom-002 | 电商·痛点-方案三段 | E-commerce: pain-point to solution | Seedance | ecommerce/problem-solution | storyboard | 痛点,方案,结构
+ZH: 镜头1（0-2秒）：痛点——早上手忙脚乱找不到钥匙，包里东西倒了一桌；镜头2（2-4秒）：方案——拿起 [产品] 收纳包，物品各归其位；镜头3（4-6秒）：结果——她从容拉上拉链出门，对镜头一笑。明亮自然光。
+EN: Shot 1 (0-2s): pain point—a frantic morning, can't find the keys, bag dumped across the table. Shot 2 (2-4s): solution—she picks up the [product] organizer and everything finds its place. Shot 3 (4-6s): result—she calmly zips it up, heads out and smiles at the camera. Bright natural light.
+## om-ecom-003 | 电商·产品英雄镜头 | E-commerce: product hero shot | generic | ecommerce/product-hero | storyboard | 产品,棚拍,高级感
+ZH: [产品] 放在深色亚克力台面上，背景渐变深蓝，镜头从低角度缓慢环绕 90 度，一道条形柔光从产品表面扫过，台面映出清晰倒影；最后定格在产品正面，Logo 位置留白。产品形状和细节全程不变。
+EN: [Product] on a dark acrylic surface against a deep-blue gradient; the camera slowly orbits 90 degrees from a low angle as a strip softbox sweeps across the surface, a crisp reflection below; it settles on the front with space reserved for the logo. Product shape and details stay constant.
+## om-ecom-004 | 电商·美食出锅瞬间 | E-commerce: the food reveal | generic | ecommerce/food-beverage | storyboard | 美食,热气,慢动作
+ZH: 锅盖掀开的瞬间，大团热气涌出，慢动作中露出红亮的红烧肉，汤汁咕嘟冒泡；筷子夹起一块，肉质颤动，酱汁缓缓滴落。暖色侧逆光，微距。
+EN: The lid lifts and a cloud of steam bursts out; in slow motion, glossy red-braised pork is revealed, sauce bubbling. Chopsticks lift a piece that jiggles as glaze drips slowly. Warm side-backlight, macro.
+## om-ecom-005 | 电商·服装上身转圈 | E-commerce: outfit spin | generic | ecommerce/fashion | storyboard | 服装,穿搭,转身
+ZH: 浅色背景墙前，模特穿着 [产品] 连衣裙，原地慢慢转一圈，裙摆自然展开，最后面向镜头停住，双手轻提裙摆。全身固定机位，柔和均匀光，面料质感清晰。
+EN: Against a light backdrop the model in the [product] dress turns a slow full circle, hem flaring naturally, then stops facing the camera, lightly lifting the skirt. Locked full-body framing, soft even light, visible fabric texture.
+## om-ecom-006 | 电商·前后对比分屏 | E-commerce: split-screen before/after | generic | ecommerce/before-after | storyboard | 对比,分屏,清洁
+ZH: 左右分屏：左侧是满是油污的灶台，右侧是同一灶台被 [产品] 擦拭后光亮如新；中间一条竖线从左向右扫过，扫过的地方从脏变干净。俯拍，明亮冷白光。不夸大效果。
+EN: Split screen: a greasy stovetop on the left, the same stovetop gleaming after the [product] on the right; a vertical line sweeps left to right, turning everything it passes clean. Overhead, bright cool-white light. Don't exaggerate the effect.
+## om-ecom-007 | 电商·场景化使用 | E-commerce: product in context | generic | ecommerce/lifestyle | storyboard | 场景化,生活方式,氛围
+ZH: 周末清晨阳台，女生盘腿坐在藤椅上，用 [产品] 保温杯喝了一口热茶，看着楼下的街道；杯身水汽清晰，镜头从杯子特写拉到全景。暖色晨光，生活感。
+EN: Weekend morning on a balcony; a woman sits cross-legged in a rattan chair, sips hot tea from the [product] tumbler and looks down at the street. Condensation on the cup is crisp; the camera pulls from the cup to a wide shot. Warm morning light, lived-in feel.
+## om-ecom-008 | 电商·细节卖点特写 | E-commerce: feature close-ups | Seedance | ecommerce/feature | storyboard | 卖点,特写,多镜头
+ZH: 镜头1：拉链顺滑拉开的微距；镜头2：面料泼水后水珠滚落；镜头3：手指按压鞋垫回弹；镜头4：产品全貌。每个镜头 1.5 秒，展示 [产品] 的三个卖点，白色背景。
+EN: Shot 1: macro of the zipper sliding open. Shot 2: water poured on the fabric beads and rolls off. Shot 3: a finger presses the insole and it springs back. Shot 4: the full product. 1.5s each, showing three selling points of the [product], white background.
+## om-ecom-009 | 电商·直播间切片感 | E-commerce: livestream clip feel | generic | ecommerce/ugc | storyboard | 直播,切片,口播
+ZH: 直播间环形灯下，主播把 [产品] 举到镜头前，快速翻转展示正反面，另一只手比出数字手势；背景货架整齐，画面轻微压缩质感，节奏快。不出现真实品牌和平台标志。
+EN: Under a livestream ring light the host holds the [product] up to the lens, flipping it quickly front to back while gesturing a number with the other hand; neat shelves behind, slightly compressed look, fast pace. No real brands or platform logos.
+## om-ecom-010 | 电商广告写法要点 | E-commerce prompt checklist | generic | ecommerce/guide | storyboard | 要点,电商,合规
+ZH: ①用 [产品]/[品牌] 占位，生成后替换；②写「产品形状、标签、颜色全程一致，不变形」；③效果对比不要夸大（避免「瞬间」「100%」）；④不出现真实名人和其他品牌；⑤前 2 秒就让产品出现。
+EN: (1) Use [product]/[brand] placeholders and swap after generating; (2) add "product shape, label and color stay consistent, no deformation"; (3) don't exaggerate before/after claims (avoid "instantly," "100%"); (4) no real celebrities or other brands; (5) show the product within the first two seconds.

@@ -104,3 +104,6 @@ venv/
 
 # Local Wan / diffusers GPU environment
 .venv-wan/
+
+# Prompt library: third-party source files (re-fetch with scripts/fetch_prompt_sources.sh)
+prompts/library/sources/

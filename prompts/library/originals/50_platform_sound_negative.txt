@@ -1,0 +1,91 @@
+# OpenMontage original prompts — 平台爆款结构 / 声音与配音 / 约束词. License: CC BY 4.0
+## om-plat-001 | 抖音·竖屏短剧单集节奏 | Douyin: vertical episode rhythm | generic | platform/douyin | script | 抖音,竖屏,节奏
+ZH: 9:16，单集 60–90 秒：0-3秒冲突画面；每 10–15 秒一个小反转或爽点；人物居中构图，字幕区留在画面下三分之一；最后 3 秒给悬念钩子。景别以近景为主，减少大远景。
+EN: 9:16, 60-90 seconds per episode: conflict in 0-3s; a small reversal or payoff every 10-15s; center-framed characters with the bottom third reserved for captions; a cliffhanger in the last 3s. Mostly close shots, few extreme wides.
+## om-plat-002 | 小红书·氛围感 vlog 结构 | Xiaohongshu: aesthetic vlog structure | generic | platform/xiaohongshu | script | 小红书,vlog,氛围感
+ZH: 3:4 或 9:16：开头 1 秒成品/结果画面 → 2–5 个氛围感细节镜头（手部、光影、物件）→ 过程 → 结尾回到成品并留一句提问。色调统一偏暖或偏奶油色，节奏舒缓。
+EN: 3:4 or 9:16: open with one second of the finished result → two to five aesthetic detail shots (hands, light, objects) → the process → return to the result and end with a question. Consistent warm or creamy palette, relaxed pacing.
+## om-plat-003 | B站·剧情解说式开场 | Bilibili: story-commentary opener | generic | platform/bilibili | script | B站,解说,横屏
+ZH: 16:9 横屏：开场 5 秒用最高潮的画面 + 一句旁白设问（「如果你醒来发现回到了十年前，你会做的第一件事是什么？」），随后标题卡，再从头讲。B站观众接受更长的铺垫和更完整的故事。
+EN: 16:9: open with five seconds of the climax plus a voice-over question ("If you woke up ten years in the past, what would you do first?"), then a title card, then tell it from the start. Bilibili viewers accept longer setup and fuller stories.
+## om-plat-004 | TikTok/Reels·无对白也能懂 | TikTok/Reels: readable without dialogue | generic | platform/tiktok | script | TikTok,Reels,出海
+ZH: 面向海外短视频平台：用动作和表情讲故事，尽量少依赖台词；前 1 秒给强视觉冲击；画面中文字用英文或不放文字；时长 15–30 秒，结尾可循环接回开头。
+EN: For overseas short-video platforms: tell the story through action and expression with minimal dialogue; strong visual impact in the first second; on-screen text in English or none; 15-30 seconds, with an ending that loops back to the start.
+## om-plat-005 | YouTube Shorts·循环结尾 | YouTube Shorts: loop ending | generic | platform/shorts | edit | Shorts,循环,结构
+ZH: 最后一帧的构图和动作设计成能无缝接回第一帧：例如开头她推门进来，结尾她走到门口准备推门。观众不知不觉看第二遍。
+EN: Design the last frame's composition and action to flow seamlessly back into the first: she pushes the door open at the start, and at the end walks up to the door about to push it. Viewers rewatch without noticing.
+## om-plat-006 | 竖屏构图·安全区 | Vertical framing: safe zones | generic | platform/framing | storyboard | 竖屏,构图,安全区
+ZH: 9:16 竖屏：人物面部放在画面上方 1/3 到中间之间；底部 20% 留给字幕和平台按钮，右侧 15% 避开点赞评论按钮；重要道具不要放在边缘。提示词可写「人物居中偏上，下方留空」。
+EN: In 9:16, place faces between the upper third and the middle; keep the bottom 20% for captions and platform UI and avoid the right 15% where like/comment buttons sit; keep key props off the edges. Prompt with "subject centered slightly high, empty space below."
+## om-plat-007 | 系列化·每集固定片头 | Series: a fixed episode opener | generic | platform/series | edit | 系列化,片头,品牌
+ZH: 每集开头用同一个 1 秒画面（同一场景、同一构图、同一音效），比如女主推开公司大门的固定镜头，再接本集内容。固定元素帮助观众在信息流中认出你的剧。
+EN: Open every episode with the same one-second shot (same set, framing and sound)—say, the heroine pushing open the company doors—then go into the episode. A fixed element helps viewers recognize your series in the feed.
+## om-plat-008 | 评论区互动式结尾 | Ending that invites comments | generic | platform/engagement | script | 互动,结尾,选择题
+ZH: 结尾让主角面对两个选择（两扇门、两个人、两条消息），画面停在她犹豫的脸上，旁白：「如果是你，你选哪一个？」引导观众讨论，而不是要求点赞。
+EN: End with the protagonist facing two choices (two doors, two people, two messages), hold on her hesitating face, voice-over: "Which would you choose?" Invite discussion rather than asking for likes.
+## om-plat-009 | 横转竖·重新构图 | Landscape to vertical: reframing | generic | platform/framing | edit | 横转竖,重构图,多平台
+ZH: 同一场戏要同时出横屏和竖屏时，生成时让主体始终位于画面中央 1/3 宽度内，背景两侧留出可裁切空间；双人戏改为正反打而不是双人同框。
+EN: When one scene needs both landscape and vertical versions, keep the subject within the central third of the width and leave croppable space on both sides; for two-person scenes use shot-reverse-shot instead of a two-shot.
+## om-plat-010 | 平台爆款结构写法要点 | Platform structure checklist | generic | platform/guide | script | 要点,平台,结构
+ZH: 先确定平台（比例、时长、观众习惯），再套结构：钩子（前 3 秒）→ 铺垫 → 升级 → 反转 → 悬念。同一个故事在不同平台改的是节奏和比例，不是故事本身。
+EN: Decide the platform first (aspect ratio, length, viewer habits), then apply the structure: hook (first 3s) → setup → escalation → reversal → cliffhanger. Across platforms you change rhythm and ratio, not the story.
+## om-sound-001 | 对白·口型同步写法 | Dialogue: writing for lip sync | Veo | sound/dialogue | voice | 对白,口型,台词
+ZH: 台词用引号单独写出，并注明说话人和语气：女主（压低声音，带着颤抖）说：「你骗了我整整三年。」一个镜头只放一句短台词，长度控制在 3 秒内，口型更容易对上。
+EN: Put dialogue in quotes and name the speaker and tone: the heroine (low, trembling voice) says, "You lied to me for three whole years." One short line per shot, under three seconds, for better lip sync.
+## om-sound-002 | 音效·环境声分层 | SFX: layering ambience | generic | sound/sfx | voice | 音效,环境声,氛围
+ZH: 环境声分三层写：底层（雨声、城市低鸣）、中层（脚步、关门、杯碟）、点缀（远处狗叫、一声汽车喇叭）。示例：雨夜小巷，持续的雨声，积水中的脚步声，远处偶尔一声警笛。
+EN: Layer ambience in three: bed (rain, city hum), mid (footsteps, doors, dishes), accents (a distant dog, one car horn). Example: rainy alley at night—steady rain, footsteps in puddles, an occasional distant siren.
+## om-sound-003 | 配乐·情绪关键词 | Music: mood keywords | generic | sound/music | edit | 配乐,情绪,词表
+ZH: 配乐用「情绪+乐器+节奏」描述：紧张——低音弦乐持续音、渐强鼓点；甜宠——轻快钢琴、拨弦、口哨；悲伤——慢速大提琴独奏；爽点——电子鼓点骤起、重低音落点。
+EN: Describe music as mood + instruments + tempo: tension—sustained low strings, building drums; sweet romance—light piano, pizzicato, whistling; sadness—slow solo cello; payoff—sudden electronic beat, heavy bass drop.
+## om-sound-004 | 声音·无声的力量 | Sound: the power of silence | generic | sound/design | edit | 静音,留白,情绪
+ZH: 情绪最高点把所有音乐和环境声抽掉，只留一个细小的声音（心跳、钟表、呼吸）2–3 秒，然后音乐重新进入。比一直铺满音乐更有冲击力。
+EN: At the emotional peak, strip out all music and ambience and leave one small sound (heartbeat, clock, breath) for two to three seconds before the music returns. More impact than wall-to-wall score.
+## om-sound-005 | 旁白·第一人称内心独白 | Voice-over: first-person monologue | generic | sound/voiceover | voice | 旁白,独白,内心
+ZH: 旁白语气平静、语速偏慢、贴近麦克风的气声：「那天我才知道，原来他口中的『出差』，是去见另一个人。」画面配女主独自坐在车里的近景。
+EN: Calm, slightly slow, close-mic breathy voice-over: "That day I finally learned his 'business trips' meant seeing someone else." Paired with a close shot of the heroine alone in her car.
+## om-sound-006 | 音效·打斗拟音 | SFX: fight foley | generic | sound/sfx | voice | 拟音,打斗,音效
+ZH: 打斗音效按动作写：出拳——短促破风声；命中——闷响加衣料摩擦；格挡——手臂相撞的硬响；倒地——身体撞地加尘土声；武器——金属碰撞的清脆回响。
+EN: Write fight SFX per action: punch—short whoosh; hit—dull thud plus cloth rustle; block—hard clack of forearms; fall—body hitting the floor with dust; weapons—bright metallic ring.
+## om-sound-007 | 声音转场·声音先行 | Sound bridge: audio leads | generic | sound/design | edit | 声音转场,J-cut,剪辑
+ZH: 下一场的声音提前 1 秒进入（J-cut）：画面还是女主在办公室发呆，已经听到婚礼进行曲，随后切到婚礼现场。让转场更流畅、更有悬念。
+EN: Bring the next scene's sound in one second early (J-cut): we're still on the heroine zoning out at the office when the wedding march begins, then cut to the wedding. Smoother, more suspenseful transitions.
+## om-sound-008 | 台词语气标注词表 | Dialogue tone tags | generic | sound/dialogue | voice | 语气,台词,配音
+ZH: 常用语气标注：冷笑着、咬牙切齿、哽咽、轻描淡写、压低声音、几乎是喊出来、带着笑意、一字一顿、不耐烦地、颤抖着。配音或口型生成时把标注放在台词前面。
+EN: Useful tone tags: with a cold laugh, through gritted teeth, choking up, offhandedly, in a low voice, almost shouting, smiling, word by word, impatiently, trembling. Put the tag before the line for voice or lip-sync generation.
+## om-sound-009 | 音画同步·关键动作卡点 | Sync key actions to the beat | generic | sound/music | edit | 卡点,节奏,剪辑
+ZH: 把关键动作（摔门、耳光、转身、抬眼）放在音乐重拍上；生成时在提示词里写「动作发生在第 2 秒和第 4 秒」，剪辑时对齐鼓点。
+EN: Land key actions (door slam, slap, turn, eyes lifting) on the music's downbeats; prompt "the action happens at second 2 and second 4," then align to the drum hits in the edit.
+## om-sound-010 | 声音写法要点 | Sound prompt checklist | generic | sound/guide | voice | 要点,声音,写法
+ZH: 支持音视频联合生成的模型（如 Seedance 2.x、Veo 3）可以在提示词末尾单独写一段「声音：」，包括对白、音效、环境声和音乐；不支持的模型就把声音留给配音和剪辑阶段处理，避免干扰画面生成。
+EN: For models that generate audio with video (e.g., Seedance 2.x, Veo 3), add a separate "Sound:" section at the end covering dialogue, SFX, ambience and music. For models without audio, leave sound to the voice and edit stages so it doesn't distract the image generation.
+## om-neg-001 | 通用约束词·画面干净 | Universal constraints: clean frame | generic | negative/general | storyboard | 约束词,无字幕,无水印
+ZH: 无字幕，无文字，无水印，无 Logo，无边框，画面干净。
+EN: no subtitles, no text, no watermark, no logo, no borders, clean frame.
+## om-neg-002 | 人体结构约束 | Anatomy constraints | generic | negative/anatomy | storyboard | 约束词,手部,肢体
+ZH: 人体结构正确，五指清晰，四肢完整，无多余手指，无多余肢体，无肢体融合，面部不变形。
+EN: correct anatomy, five distinct fingers, complete limbs, no extra fingers, no extra limbs, no fused limbs, no facial distortion.
+## om-neg-003 | 一致性约束 | Consistency constraints | generic | negative/consistency | storyboard | 约束词,一致性,角色
+ZH: 人物面部、发型、服装在全片保持一致，不换脸，不突变，场景与道具位置保持不变。
+EN: character face, hairstyle and outfit stay consistent throughout, no identity change, no sudden morphing, set and props stay in place.
+## om-neg-004 | 运动稳定约束 | Motion stability constraints | generic | negative/motion | storyboard | 约束词,稳定,闪烁
+ZH: 动作连贯自然，无闪烁，无抖动跳帧，无画面撕裂，物体不凭空出现或消失，镜头运动平滑。
+EN: smooth natural motion, no flicker, no jitter or dropped frames, no tearing, objects don't appear or vanish, smooth camera movement.
+## om-neg-005 | 风格约束·写实 | Style constraints: realism | generic | negative/style | storyboard | 约束词,写实,质感
+ZH: 写实风格，不要卡通，不要动漫，不要过度磨皮，不要塑料质感，不要过饱和。
+EN: realistic style, not cartoon, not anime, no over-smoothed skin, no plastic look, not oversaturated.
+## om-neg-006 | 产品约束·电商 | Product constraints for ads | generic | negative/product | storyboard | 约束词,产品,电商
+ZH: 产品形状、比例、颜色和标签文字保持一致，不变形，不融化，标签文字不扭曲，不出现其他品牌标志。
+EN: product shape, proportions, color and label text stay consistent, no deformation, no melting, no warped label text, no other brand logos.
+## om-neg-007 | 内容安全约束 | Content safety constraints | generic | negative/safety | storyboard | 约束词,安全,审核
+ZH: 无血腥，无暴露，衣着得体，不出现真实名人，不出现武器特写（动作戏用拳脚或道具剑），符合平台内容规范。
+EN: no gore, no nudity, modest clothing, no real celebrities, no close-ups of firearms (use fists or prop swords in action scenes), compliant with platform content rules.
+## om-neg-008 | 画质约束 | Image quality constraints | generic | negative/quality | storyboard | 约束词,画质,清晰
+ZH: 高清，细节清晰，无模糊，无噪点，无压缩伪影，无过曝，无欠曝。
+EN: high definition, crisp detail, no blur, no noise, no compression artifacts, no overexposure, no underexposure.
+## om-neg-009 | 镜头约束·不切镜 | Camera constraint: no cuts | generic | negative/camera | storyboard | 约束词,一镜到底,镜头
+ZH: 单一连续镜头，不切换镜头，不跳切，机位保持稳定。适用于需要一镜到底或固定机位的生成。
+EN: single continuous shot, no cuts, no jump cuts, stable camera position. For generations that need one take or a locked-off camera.
+## om-neg-010 | 约束词使用要点 | Using constraint words | generic | negative/guide | storyboard | 要点,约束词,写法
+ZH: 不支持负面提示词输入框的模型，把约束直接写在提示词末尾，用肯定句更有效（「五指清晰」优于「不要多手指」）；约束不超过 5 条，太多反而稀释主体描述。
+EN: For models without a negative-prompt field, put constraints at the end of the prompt; positive phrasing works better ("five distinct fingers" beats "no extra fingers"). Keep it to five constraints or fewer—too many dilute the main description.

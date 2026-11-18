@@ -1,0 +1,94 @@
+# OpenMontage original prompts — 短剧题材 / Short-drama genres. License: CC BY 4.0
+## om-genre-revenge-001 | 复仇爽剧·婚礼现场揭穿 | Revenge: exposing the truth at the wedding | Seedance | genres/revenge | storyboard | 复仇,打脸,婚礼
+ZH: 9:16 竖屏。镜头1（0-3秒）：豪华婚礼现场，新郎正要戴戒指，大屏幕突然切换成一段聊天记录截图，宾客哗然；镜头2（3-6秒）：宴会厅大门推开，一身黑色西装裙的女主踩着高跟鞋走进来，逆光剪影；镜头3（6-8秒）：新郎脸色骤变，手里的戒指掉在地上。电影感调色，冷暖对比。
+EN: 9:16. Shot 1 (0-3s): a lavish wedding; as the groom is about to slip on the ring, the big screen suddenly switches to a chat-log screenshot and guests gasp. Shot 2 (3-6s): the banquet doors swing open and the heroine in a black suit dress strides in on heels, backlit silhouette. Shot 3 (6-8s): the groom's face drops and the ring falls to the floor. Cinematic grade, warm-cool contrast.
+## om-genre-revenge-002 | 复仇爽剧·重生回到出事前 | Revenge: reborn before the tragedy | Seedance | genres/revenge | storyboard | 重生,复仇,反转
+ZH: 镜头1：女主在病床上猛地睁眼，大口喘气，看向床头的日历——三年前；镜头2：她走到镜子前，摸着自己没有伤疤的脸，眼神从迷茫变得冰冷；镜头3：手机响起，屏幕上是那个害死她的人的名字，她勾起嘴角接通。冷色调，悬疑配乐氛围。
+EN: Shot 1: the heroine jolts awake in a hospital bed, gasping, and looks at the calendar—three years ago. Shot 2: she walks to the mirror and touches her unscarred face, her eyes shifting from confusion to ice. Shot 3: her phone rings with the name of the person who killed her; she smirks and answers. Cool tones, suspenseful mood.
+## om-genre-revenge-003 | 复仇爽剧·被赶出家门的大雨夜 | Revenge: thrown out on a stormy night | generic | genres/revenge | storyboard | 低谷,雨夜,开篇
+ZH: 暴雨夜，别墅大门前，行李箱被扔出来摔开，衣服散落在积水里；女主跪在地上一件件捡起，抬头看向二楼窗口里搂在一起的两个身影，雨水和眼泪混在一起，眼神逐渐坚定。俯拍接仰拍。
+EN: Stormy night outside a villa; a suitcase is hurled out and bursts open, clothes scattering into puddles. The heroine kneels and picks them up one by one, then looks up at two figures embracing in a second-floor window, rain mixing with tears as her gaze hardens. High angle then low angle.
+## om-genre-sweet-001 | 甜宠·电梯里的意外靠近 | Sweet romance: elevator closeness | generic | genres/sweet-romance | storyboard | 甜宠,电梯,心动
+ZH: 拥挤的电梯里，门口又挤进几个人，女主被推得后退，背撞进男主怀里；男主一手撑在她身侧的电梯壁上替她隔开人群，低头说「小心」。女主耳尖泛红。近景，柔光，粉橙色调。
+EN: In a crowded elevator, more people squeeze in and the heroine is pushed back into the hero's chest; he braces one hand on the wall beside her to keep the crowd off and murmurs "careful." The tips of her ears turn red. Close shot, soft light, pink-orange tones.
+## om-genre-sweet-002 | 甜宠·撑伞的偏心 | Sweet romance: the tilted umbrella | generic | genres/sweet-romance | storyboard | 甜宠,雨天,细节
+ZH: 下雨的放学路上，男生撑着一把伞和女生并肩走，伞明显偏向她那边；镜头绕到男生背后，他的左肩已经湿透。女生发现后停下，把伞往他那边推了推。中景，清新色调。
+EN: Walking home after school in the rain, a boy holds one umbrella over himself and a girl, clearly tilted toward her. The camera circles behind him: his left shoulder is soaked. She notices, stops, and pushes the umbrella back toward him. Medium shot, fresh color palette.
+## om-genre-sweet-003 | 甜宠·深夜投喂 | Sweet romance: late-night snack | generic | genres/sweet-romance | storyboard | 甜宠,加班,温暖
+ZH: 深夜加班的工位，女主趴在桌上打瞌睡，一只手轻轻把一杯热奶茶和一盒饭团放在她手边，再把一张便利贴贴在屏幕上「吃完再睡」。她醒来看到，捂嘴笑。暖色台灯。
+EN: Late-night overtime; the heroine dozes on her desk. A hand quietly sets a hot milk tea and a box of rice balls by her arm and sticks a note on her monitor: "Eat first, then sleep." She wakes, sees it and covers her smile. Warm desk lamp.
+## om-genre-ceo-001 | 霸总·会议室登场 | CEO drama: boardroom entrance | generic | genres/ceo | storyboard | 霸总,登场,压迫感
+ZH: 顶层会议室，众高管正在争吵；门被助理推开，男主一身深灰定制西装走进来，边走边解开西装扣子，所有人瞬间安静起身。低角度跟拍其步伐，再切正面中景，冷峻高级灰调。
+EN: Top-floor boardroom, executives arguing. An assistant opens the door and the lead walks in in a tailored charcoal suit, unbuttoning his jacket as he goes; everyone falls silent and stands. Low-angle tracking on his steps, then a frontal medium shot, cool premium grey grade.
+## om-genre-ceo-002 | 霸总·一张黑卡 | CEO drama: the black card | generic | genres/ceo | storyboard | 霸总,打脸,商场
+ZH: 奢侈品店里，店员对女主冷嘲热讽；男主从她身后走来，两指夹着一张黑卡放在柜台上，淡淡一句「这层楼的都包起来」。店员手里的包装盒掉在地上。中景加卡片特写。
+EN: In a luxury boutique the clerk sneers at the heroine; the hero walks up behind her, sets a black card on the counter between two fingers and says flatly, "Wrap up everything on this floor." The box in the clerk's hands drops. Medium shot with a card insert.
+## om-genre-ceo-003 | 霸总·落地窗前的背影 | CEO drama: silhouette at the window | generic | genres/ceo | scene | 霸总,城市夜景,空镜
+ZH: 夜晚顶层办公室，落地窗外是整座城市的灯海；男主背对镜头站在窗前，手里握着一杯水，倒影映在玻璃上。镜头从门口缓慢推进，冷蓝色调，只有桌上一盏台灯。
+EN: Penthouse office at night, the whole city's lights beyond the floor-to-ceiling windows. The lead stands with his back to the camera holding a glass of water, his reflection in the glass. Slow push-in from the doorway, cool blue tones, only a desk lamp lit.
+## om-genre-mystery-001 | 悬疑·监控里的第二个人 | Mystery: the second person on CCTV | Seedance | genres/mystery | storyboard | 悬疑,监控,反转
+ZH: 镜头1：保安室屏幕上的黑白监控画面，女主独自走进电梯；镜头2：画面放大，电梯镜面里映出她身后还站着一个模糊人影；镜头3：保安猛地回头看向身后的门，门缝下有影子一闪而过。监控噪点质感，低饱和。
+EN: Shot 1: black-and-white CCTV on the security monitor—the heroine walks into the elevator alone. Shot 2: the image zooms in; in the elevator's mirrored wall a blurred figure stands behind her. Shot 3: the guard spins toward the door behind him as a shadow flits past the gap underneath. CCTV noise texture, desaturated.
+## om-genre-mystery-002 | 悬疑·雨夜旅馆来客 | Mystery: a guest on a rainy night | generic | genres/mystery | storyboard | 悬疑,旅馆,氛围
+ZH: 山间旅馆前台，暴雨拍打窗户，老板娘正在记账；门铃响起，一个穿黑雨衣、看不清脸的人站在门口，雨水顺着帽檐滴落。他把一把沾泥的钥匙放在柜台上：「我来取 203 的东西。」昏黄灯光，冷暖对比。
+EN: A mountain inn's front desk, rain lashing the windows, the landlady doing the books. The bell rings; a figure in a black raincoat, face hidden, stands at the door, water dripping from the hood. He sets a muddy key on the counter: "I'm here for the things in 203." Dim yellow light, warm-cool contrast.
+## om-genre-mystery-003 | 悬疑·反转揭示真凶 | Mystery: revealing the culprit | generic | genres/mystery | storyboard | 反转,真凶,推镜
+ZH: 客厅里所有人围坐，侦探逐一扫视众人，最后目光停在一直安慰受害者家属的管家身上；管家端茶的手微微一顿，茶杯在碟子上发出轻响。镜头从全景缓慢推到管家的手部特写。
+EN: Everyone sits around the living room; the detective scans each face and finally stops on the butler who has been comforting the victim's family. The butler's hand pauses as he serves tea, the cup clinking softly on the saucer. Slow push from wide to a close-up of his hand.
+## om-genre-wuxia-001 | 古装武侠·客栈对决前夜 | Wuxia: the inn before the duel | generic | genres/wuxia | storyboard | 武侠,客栈,氛围
+ZH: 风雪夜的客栈，烛火摇晃。角落里斗笠客独饮，长剑横放桌上；门被风吹开，雪花卷入，一名白衣剑客站在门口。两人目光相对，满堂食客悄悄放下碗筷。中景慢推，暖烛光对冷雪光。
+EN: An inn on a snowy night, candlelight flickering. In the corner a man in a bamboo hat drinks alone, his sword across the table. The wind blows the door open, snow swirling in, and a swordsman in white stands at the threshold. Their eyes meet and the diners quietly set down their bowls. Medium slow push, warm candlelight against cold snow light.
+## om-genre-wuxia-002 | 古装·宫墙下的诀别 | Period drama: farewell below the palace wall | generic | genres/period | storyboard | 古装,宫廷,诀别
+ZH: 朱红宫墙下，落叶飘零。身着宫装的女子停下脚步，回头望向远处的侍卫，欲言又止，最终转身走进宫门，宫门缓缓合上。航拍上升展示宫墙纵深，古典配色。
+EN: Below vermilion palace walls, leaves falling. A woman in court robes stops, looks back at a distant guard, hesitates, then turns and walks through the gate as it slowly closes. Rising aerial shows the depth of the walls, classical palette.
+## om-genre-wuxia-003 | 古装·女将出征 | Period drama: the general rides out | generic | genres/period | storyboard | 古装,女将,史诗
+ZH: 城门外黄沙漫天，女将军身披银甲跨上战马，勒缰回望城楼上的母亲，抱拳一拜，随即调转马头率军出征，旌旗猎猎。大远景接马背近景，史诗感暖色。
+EN: Outside the city gate, sand swirling, a female general in silver armor mounts her warhorse, reins in to look back at her mother on the wall, salutes with fist to palm, then wheels around and leads the army out, banners snapping. Extreme wide to close shot on horseback, epic warm grade.
+## om-genre-rebirth-001 | 穿越·醒来在陌生朝代 | Time travel: waking in another dynasty | generic | genres/time-travel | storyboard | 穿越,古装,喜剧
+ZH: 现代女孩在古色古香的床榻上醒来，摸到身上的古装一脸茫然；丫鬟端着铜盆进门惊呼「小姐醒了」。女孩低头看铜盆水面倒影里陌生的脸，愣了三秒后大叫。喜剧节奏，暖色。
+EN: A modern girl wakes on an antique canopy bed and stares in confusion at the period robes she's wearing; a maid enters with a brass basin and cries, "Miss is awake!" The girl looks at an unfamiliar face reflected in the water, freezes for three seconds, then screams. Comedic rhythm, warm tones.
+## om-genre-rebirth-002 | 重生·撕毁协议 | Rebirth: tearing up the agreement | generic | genres/rebirth | storyboard | 重生,觉醒,打脸
+ZH: 律师事务所，前世让她签下放弃财产协议的场景重现；女主拿起协议看了一眼，当着所有人的面把它撕成两半，扔进垃圾桶：「这一次，我不签。」对面的人脸色铁青。近景切中景。
+EN: A law office—the same scene where, in her past life, she signed away her assets. The heroine picks up the agreement, glances at it, tears it in half in front of everyone and drops it in the bin: "This time, I'm not signing." The faces opposite turn grey. Close to medium.
+## om-genre-family-001 | 家庭伦理·饭桌上的偏心 | Family drama: favoritism at dinner | generic | genres/family | storyboard | 家庭,偏心,现实
+ZH: 一家人吃饭，妈妈把唯一的鸡腿夹给弟弟，又把剩下的鱼头放进女儿碗里；女儿低头扒饭，筷子停了一下。镜头从圆桌全景推到女儿垂下的眼睛。写实暖色，生活质感。
+EN: A family dinner. Mom gives the only drumstick to the son and puts the leftover fish head in her daughter's bowl; the daughter keeps her head down eating, chopsticks pausing for a moment. Push from the round table to the daughter's lowered eyes. Realistic warm tones, lived-in texture.
+## om-genre-family-002 | 家庭·父亲的背影 | Family: father's back | generic | genres/family | storyboard | 亲情,背影,车站
+ZH: 小县城车站，父亲坚持帮女儿把沉重的行李扛上大巴，下车后站在窗外挥手，转身离开时微微驼着背，拍了拍裤子上的灰。女儿在车窗里捂住嘴。长焦，阴天柔光。
+EN: Small-town bus station. The father insists on hauling his daughter's heavy luggage onto the bus, then stands outside the window waving; turning to leave, slightly hunched, he brushes dust off his trousers. Inside, the daughter covers her mouth. Long lens, overcast soft light.
+## om-genre-office-001 | 职场·方案被抢 | Workplace: the stolen proposal | generic | genres/workplace | storyboard | 职场,背叛,会议
+ZH: 汇报会上，同事在大屏幕上展示的方案正是女主熬夜做的那份；女主握紧手里的 U 盘，深吸一口气站起来：「第 12 页的数据，是我上周三改的。」全场安静。过肩镜头切近景。
+EN: At the presentation, a colleague shows on the big screen the exact proposal the heroine stayed up all night writing. She grips the USB drive in her hand, takes a breath and stands: "The figures on page 12—I revised those last Wednesday." The room goes silent. Over-the-shoulder to close-up.
+## om-genre-office-002 | 职场·实习生逆袭 | Workplace: the intern turns the tables | generic | genres/workplace | storyboard | 职场,逆袭,反转
+ZH: 外方客户突然用外语提出刁钻问题，全场高管面面相觑；角落里一直被使唤倒咖啡的实习生放下杯子，流利作答，客户频频点头。镜头从全景快速推近实习生，众人表情依次插入。
+EN: The foreign client suddenly asks a tough question in another language and the executives exchange blank looks; in the corner, the intern who has only been fetching coffee sets down the cup and answers fluently as the client nods. Fast push from wide to the intern, with reaction inserts.
+## om-genre-campus-001 | 校园·毕业季告白未遂 | Campus: graduation confession that never happens | generic | genres/campus | storyboard | 校园,青春,遗憾
+ZH: 毕业典礼后的操场，女孩攥着一封信走向人群中的男孩，走到一半看到他正和别人合影大笑；她停下脚步，把信塞回书包，转身加入自己班级的合影，笑得很灿烂。逆光，青春胶片质感。
+EN: Sports field after graduation; a girl clutching a letter walks toward a boy in the crowd, then halfway there sees him laughing in a photo with someone else. She stops, tucks the letter back into her bag, turns and joins her own class photo, smiling brightly. Backlit, youthful film texture.
+## om-genre-campus-002 | 校园·天台上的约定 | Campus: a promise on the rooftop | generic | genres/campus | storyboard | 校园,友情,夕阳
+ZH: 夕阳下的教学楼天台，两个少年并肩坐在栏杆边，一个把耳机分一只给另一个，两人望着远处的城市说好「考同一所大学」。侧面剪影，暖橙色。
+EN: Rooftop of the school building at sunset; two teens sit side by side by the railing, one hands the other an earbud, and looking at the distant city they promise to get into the same university. Side silhouette, warm orange.
+## om-genre-thriller-001 | 惊悚·停电的走廊 | Thriller: the blackout corridor | generic | genres/thriller | storyboard | 惊悚,停电,手电
+ZH: 老式公寓走廊突然停电，只剩应急灯闪烁的红光；女主举着手机手电往前走，光束扫过尽头时照到一扇原本紧闭、此刻半开的门。镜头紧跟她的后脑勺，呼吸声清晰。
+EN: An old apartment corridor suddenly loses power, only the red emergency light flickering. The heroine walks forward with her phone flashlight; as the beam sweeps the far end it catches a door that was shut and now stands half open. Camera tight behind her head, breathing audible.
+## om-genre-thriller-002 | 惊悚·后视镜 | Thriller: the rear-view mirror | generic | genres/thriller | storyboard | 惊悚,车内,惊吓
+ZH: 深夜山路，女司机看了一眼后视镜，后座空无一人；她松了口气继续开，几秒后再看后视镜，后座上多了一件湿漉漉的外套。车内近景，仪表盘蓝光。无血腥。
+EN: Mountain road at night; the driver glances at the rear-view mirror—the back seat is empty. She exhales and drives on; seconds later she checks again and a soaking-wet coat now lies on the back seat. Interior close shot, blue dashboard glow. No gore.
+## om-genre-comedy-001 | 喜剧·相亲连环误会 | Comedy: blind-date mix-up | generic | genres/comedy | storyboard | 喜剧,相亲,误会
+ZH: 咖啡馆，女主对着手机照片找到「相亲对象」，坐下就开始自我介绍；对方一脸懵地听完，指了指旁边桌：「你找的应该是他。」旁边桌的男人举手示意。三机位切换，明亮色调，喜剧停顿。
+EN: In a café the heroine matches a man to the photo on her phone, sits down and starts introducing herself; he listens blankly, then points to the next table: "I think you're looking for him." The man at the next table raises a hand. Three-camera coverage, bright palette, comedic pauses.
+## om-genre-comedy-002 | 喜剧·社死现场 | Comedy: public embarrassment | generic | genres/comedy | storyboard | 喜剧,社死,反应
+ZH: 公司年会，男主对着麦克风小声吐槽老板，结果发现麦克风开着，全场回荡着他的声音；他僵在原地，缓慢转头看向台上的老板，老板微笑着朝他挥手。慢推加反应镜头。
+EN: At the company party the lead mutters a complaint about the boss into a mic—only to realize it's on and his voice echoes through the hall. He freezes, slowly turns to the boss on stage, who smiles and waves at him. Slow push plus reaction shots.
+## om-genre-scifi-001 | 科幻短剧·记忆删除 | Sci-fi drama: memory deletion | generic | genres/sci-fi | storyboard | 科幻,记忆,情感
+ZH: 白色实验室，女主躺在仪器中，屏幕上一段段回忆缩略图被逐个删除；删到最后一张两人合照时，她的手指突然动了一下，按住了确认键旁的「暂停」。冷白光，蓝色界面光。
+EN: A white lab; the heroine lies inside a machine while memory thumbnails on the screen are deleted one by one. When it reaches the last photo of the two of them, her finger twitches and presses "pause" beside the confirm button. Cold white light, blue interface glow.
+## om-genre-urban-001 | 都市·外卖员的另一面 | Urban drama: the courier's other side | generic | genres/urban | storyboard | 都市,身份反转,逆袭
+ZH: 写字楼前台拒绝外卖员进入，保安推搡他；一辆黑色商务车停下，一群西装助理快步走来，对外卖员鞠躬：「董事长，会议准备好了。」他摘下头盔，前台表情凝固。全景接近景。
+EN: The office front desk refuses to let a delivery rider in and a guard shoves him. A black van pulls up and a group of suited assistants hurry over and bow to the rider: "Chairman, the meeting is ready." He takes off his helmet; the receptionist's face freezes. Wide to close.
+## om-genre-template-001 | 题材通用模板：人物+困境+反击 | Genre template: character + predicament + strike back | generic | genres/template | script | 模板,剧本,结构
+ZH: 「【人物身份】在【场景】遭遇【具体羞辱/困境】，【旁观者】的反应是【反应】；就在【时间点】，【转折事件】出现，【人物】做出【反击动作】，【对手】的表情从【A】变为【B】。」把每个括号换成可拍的画面，而不是形容词。
+EN: "[Character] faces [specific humiliation/predicament] at [location]; [bystanders] react with [reaction]. At [moment], [turning event] happens; [character] [strikes back with an action], and [opponent]'s expression shifts from [A] to [B]." Fill every bracket with something filmable, not an adjective.
+## om-genre-template-002 | 一集短剧结构（60 秒） | One-episode structure (60s) | generic | genres/template | script | 结构,单集,节奏
+ZH: 0-3秒：冲突画面直接开场；3-15秒：交代人物关系和困境；15-40秒：矛盾升级，对手步步紧逼；40-55秒：反转或反击；55-60秒：新的悬念（一个电话、一个人出现、一句话）。每段对应 1–3 个镜头。
+EN: 0-3s: open straight on the conflict; 3-15s: set up relationships and the predicament; 15-40s: escalate as the opponent presses; 40-55s: reversal or counterattack; 55-60s: a new cliffhanger (a call, an arrival, one line). One to three shots per segment.

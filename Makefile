@@ -114,10 +114,10 @@ demo: ensure-venv
 	@echo "==> Rendering zero-key demo videos (no API keys needed)..."
 	@echo "    These use only Remotion components — animated charts, text, data viz."
 	@echo ""
-	$(RUN_PYTHON) render_demo.py
+	$(RUN_PYTHON) scripts/render_demo.py
 
 demo-list: ensure-venv
-	$(RUN_PYTHON) render_demo.py --list
+	$(RUN_PYTHON) scripts/render_demo.py --list
 
 lint: ensure-venv
 	$(RUN_PYTHON) -m py_compile tools/base_tool.py

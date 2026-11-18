@@ -1,6 +1,6 @@
 # OpenMontage - Shared Project Context
 
-This is the single source of truth for project architecture and conventions. All platform-specific agent files (CLAUDE.md, CODEX.md, CURSOR.md, COPILOT.md) should point here instead of duplicating this content.
+This is the single source of truth for project architecture and conventions. All platform-specific agent files (`CLAUDE.md`, `AGENTS.md`, `.cursor/rules/`, `.github/copilot-instructions.md`) should point here instead of duplicating this content.
 
 ## Identity
 

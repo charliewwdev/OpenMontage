@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 
-ROOT_DIR = Path(__file__).resolve().parent
+ROOT_DIR = Path(__file__).resolve().parents[1]
 COMPOSER_DIR = ROOT_DIR / "remotion-composer"
 PROPS_DIR = COMPOSER_DIR / "public" / "demo-props"
 OUTPUT_DIR = ROOT_DIR / "projects" / "demos" / "renders"

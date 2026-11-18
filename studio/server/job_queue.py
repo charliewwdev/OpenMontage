@@ -76,8 +76,20 @@ def queue_backend() -> str:
     return "redis" if get_redis() is not None else "thread_pool"
 
 
+# Which daily-quota bucket a queued job draws from (hosted GitHub gate).
+JOB_QUOTA_KINDS: dict[str, str | None] = {
+    "entity_image": "image",
+    "fill_entity_stills": "image",
+    "shot_video": "video",
+    "entity_recheck_qa": None,
+}
+
+
 def enqueue(kind: str, payload: dict[str, Any], *, priority: int = 0) -> dict[str, Any]:
     """Enqueue a media job. Returns stub ``{jobId, queued, backend}``."""
+    from github_gate import tag_job_payload
+
+    payload = tag_job_payload(payload or {}, JOB_QUOTA_KINDS.get(kind))
     job_id = uuid.uuid4().hex[:16]
     job = {
         "id": job_id,
@@ -434,7 +446,10 @@ def dispatch_job(job: dict[str, Any]) -> Any:
     fn = handlers.get(kind)
     if not fn:
         raise RuntimeError(f"unknown media job kind: {kind}")
-    result = fn(payload)
+    from github_gate import job_context
+
+    with job_context(payload):
+        result = fn(payload)
     r = get_redis()
     if r is not None and job.get("id"):
         try:

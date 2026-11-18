@@ -46,9 +46,9 @@ spec:
         - key: STUDIO_GOOGLE_ENABLED
           scope: RUN_TIME
           value: "false"
-        - key: STUDIO_REQUIRE_GITHUB_STAR
+        - key: STUDIO_REQUIRE_GITHUB_LOGIN
           scope: RUN_TIME
-          value: "0"
+          value: "auto"
         - key: STUDIO_FREE_FIRST
           scope: RUN_TIME
           value: "1"

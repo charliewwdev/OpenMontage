@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "./api";
 import { AuthPage, SKIP_AUTO_DEMO_KEY } from "./components/AuthPage";
-import { GithubStarModal } from "./components/GithubStarModal";
+import { GithubLoginModal } from "./components/GithubLoginModal";
+import { clearGithubGateCache, consumeGithubCallback } from "./lib/githubGate";
 import { MaintenancePage } from "./components/MaintenancePage";
 import { clearSession, getStoredUser, getToken, setSession } from "./lib/auth";
 import { LocaleProvider, tr, useLocale } from "./lib/i18n";
@@ -27,7 +28,6 @@ import { JobsPage } from "./components/platform/JobsPage";
 import { HelpPage } from "./components/platform/HelpPage";
 import { CreditsPage } from "./components/platform/CreditsPage";
 import { ReferPage } from "./components/platform/ReferPage";
-import { UsersPage } from "./components/platform/UsersPage";
 
 const STUDIO_STEPS = new Set([
   "script",
@@ -172,16 +172,38 @@ export default function App() {
     return () => window.removeEventListener("om:need-auth", onNeedAuth);
   }, [messages]);
 
-  const [showStarGate, setShowStarGate] = useState(false);
+  const [githubGate, setGithubGate] = useState("");
 
   useEffect(() => {
-    const onStarRequired = () => {
-      toast.info(tr("ui_keys_star_required_toast"));
-      setShowStarGate(true);
+    const onGithubRequired = () => {
+      toast.info(tr("ui_github_login_required_toast"));
+      setGithubGate("login");
     };
-    window.addEventListener("om:star-required", onStarRequired);
-    return () => window.removeEventListener("om:star-required", onStarRequired);
+    const onQuotaExceeded = () => setGithubGate("quota");
+    window.addEventListener("om:github-required", onGithubRequired);
+    window.addEventListener("om:quota-exceeded", onQuotaExceeded);
+    return () => {
+      window.removeEventListener("om:github-required", onGithubRequired);
+      window.removeEventListener("om:quota-exceeded", onQuotaExceeded);
+    };
   }, [messages]);
+
+  // Back from GitHub OAuth: store a sign-in session, or confirm a linked account.
+  const [githubCallback] = useState(() => {
+    const cb = consumeGithubCallback();
+    if (cb?.token) {
+      setSession({ token: cb.token });
+    }
+    return cb;
+  });
+  useEffect(() => {
+    if (!githubCallback) return;
+    clearGithubGateCache();
+    if (githubCallback.error) toast.error(tr("ui_github_login_failed", { code: githubCallback.error }));
+    else if (githubCallback.linked) toast.success(tr("ui_github_linked_ok"));
+    else if (githubCallback.token) toast.success(tr("ui_github_login_ok"));
+    if (!githubCallback.error) window.dispatchEvent(new CustomEvent("studio-keys-changed"));
+  }, [githubCallback]);
 
   const verifySession = useCallback(async (cfg) => {
     const required = cfg?.auth?.required !== false;
@@ -713,8 +735,6 @@ export default function App() {
       body = <HelpPage config={config} onNeedKeys={goKeys} onNavigate={onNavigate} />;
     } else if (nav === "credits") {
       body = <CreditsPage config={config} onNeedKeys={goKeys} />;
-    } else if (nav === "users") {
-      body = <UsersPage config={config} />;
     } else if (nav === "refer") {
       body = <ReferPage config={config} />;
     } else {
@@ -830,14 +850,7 @@ export default function App() {
               }}
             />
           ) : null}
-          <GithubStarModal
-            open={showStarGate}
-            onClose={() => setShowStarGate(false)}
-            onVerified={() => {
-              setShowStarGate(false);
-              window.dispatchEvent(new CustomEvent("studio-keys-changed"));
-            }}
-          />
+          <GithubLoginModal open={Boolean(githubGate)} reason={githubGate} onClose={() => setGithubGate("")} />
         </>
       )}
     </LocaleProvider>

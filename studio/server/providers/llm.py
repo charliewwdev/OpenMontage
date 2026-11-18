@@ -392,9 +392,9 @@ def chat_json(
 ) -> Any:
     import time
 
-    from github_star import assert_github_star_or_raise
+    from github_gate import assert_generation_allowed
 
-    assert_github_star_or_raise()
+    assert_generation_allowed("llm")
 
     candidates = provider_candidates()
     # Free-pool: short per-provider timeout so a cold NVIDIA does not block the product.

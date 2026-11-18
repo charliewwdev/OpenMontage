@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Clapperboard, Loader2 } from "lucide-react";
+import { Clapperboard, Github, Loader2 } from "lucide-react";
 import { api } from "../api";
 import { setSession } from "../lib/auth";
+import { startGithubLogin } from "../lib/githubGate";
 import { renderGoogleButton } from "../lib/googleAuth";
 import { useLocale } from "../lib/i18n";
 import { toast } from "../lib/toast";
@@ -264,6 +265,27 @@ export function AuthPage({ brand, tagline, authConfig, onAuthed, onClose, mode =
                 {t("auth_page_google_busy")}
               </p>
             ) : null}
+          </div>
+        ) : null}
+
+        {authConfig?.github?.enabled ? (
+          <div className="mt-5 space-y-2">
+            <div className="flex items-center gap-3 text-[11px] text-white/30">
+              <span className="h-px flex-1 bg-white/10" />
+              <span>{t("auth_page_github_hint")}</span>
+              <span className="h-px flex-1 bg-white/10" />
+            </div>
+            <button
+              type="button"
+              className="btn-secondary inline-flex w-full items-center justify-center gap-2 !min-h-10"
+              disabled={busy || googleBusy}
+              onClick={() => {
+                startGithubLogin().catch((error) => toast.error(String(error?.message || error)));
+              }}
+            >
+              <Github className="h-4 w-4" />
+              {t("auth_page_github_btn")}
+            </button>
           </div>
         ) : null}
 

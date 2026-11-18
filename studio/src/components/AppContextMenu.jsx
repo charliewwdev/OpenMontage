@@ -11,7 +11,6 @@ import {
   RefreshCw,
   Sparkles,
   Tv,
-  Users,
 } from "lucide-react";
 import { useLocale } from "../lib/i18n";
 
@@ -19,7 +18,6 @@ const QUICK_NAV = [
   { id: "tv", icon: Tv },
   { id: "agent", icon: Sparkles },
   { id: "workshop", icon: Clapperboard },
-  { id: "users", icon: Users },
   { id: "keys", icon: KeyRound },
   { id: "help", icon: HelpCircle },
 ];

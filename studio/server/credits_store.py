@@ -63,7 +63,6 @@ def _empty() -> dict[str, Any]:
         "refCode": "",
         "ledger": [],
         "challengeDone": {},
-        "githubStar": {},
         "updatedAt": int(time.time()),
     }
 
@@ -74,7 +73,6 @@ def _normalize(data: dict[str, Any]) -> dict[str, Any]:
     data.setdefault("refCode", uuid.uuid4().hex[:8])
     data.setdefault("ledger", [])
     data.setdefault("challengeDone", {})
-    data.setdefault("githubStar", {})
     if not data.get("refCode"):
         data["refCode"] = uuid.uuid4().hex[:8]
     return data

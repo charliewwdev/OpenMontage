@@ -46,9 +46,25 @@
       "description": "Show Google sign-in (needs API_BASE_URL / OAuth client).",
       "value": "false"
     },
-    "STUDIO_REQUIRE_GITHUB_STAR": {
-      "description": "Require starring the GitHub repo before generate (hosted demo only).",
-      "value": "0"
+    "STUDIO_REQUIRE_GITHUB_LOGIN": {
+      "description": "GitHub sign-in before generating: auto (on only when GITHUB_OAUTH_CLIENT_ID/SECRET are set) | 1 | 0.",
+      "value": "auto"
+    },
+    "GITHUB_OAUTH_CLIENT_ID": {
+      "description": "Optional GitHub OAuth App client id (callback: https://<app>/api/auth/github/callback).",
+      "required": false
+    },
+    "GITHUB_OAUTH_CLIENT_SECRET": {
+      "description": "Optional GitHub OAuth App client secret.",
+      "required": false
+    },
+    "STUDIO_DAILY_GENERATION_QUOTA": {
+      "description": "Images + video shots per GitHub user per UTC day when the gate is on (0 = unlimited).",
+      "value": "20"
+    },
+    "STUDIO_DAILY_VIDEO_QUOTA": {
+      "description": "Video shots per GitHub user per UTC day when the gate is on (0 = unlimited).",
+      "value": "5"
     },
     "STUDIO_FREE_FIRST": {
       "description": "Prefer free LLM / image providers when configured.",

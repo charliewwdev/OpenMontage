@@ -101,9 +101,15 @@ services:
       STUDIO_IMAGE_BACKEND: ${STUDIO_IMAGE_BACKEND:-auto}
       STUDIO_VIDEO_BACKEND: ${STUDIO_VIDEO_BACKEND:-auto}
       STUDIO_FREE_FIRST: ${STUDIO_FREE_FIRST:-1}
-      # Hosted default on: require GitHub star before keys/generate. Local .env should set 0.
-      STUDIO_REQUIRE_GITHUB_STAR: ${STUDIO_REQUIRE_GITHUB_STAR:-1}
-      GITHUB_STAR_REPO: ${GITHUB_STAR_REPO:-charliewwdev/OpenMontage}
+      # Optional GitHub sign-in + per-user daily quota for public instances.
+      # auto = gate on only when the OAuth App vars are set; 1 = always; 0 = never.
+      GITHUB_OAUTH_CLIENT_ID: ${GITHUB_OAUTH_CLIENT_ID:-}
+      GITHUB_OAUTH_CLIENT_SECRET: ${GITHUB_OAUTH_CLIENT_SECRET:-}
+      GITHUB_OAUTH_CALLBACK_URL: ${GITHUB_OAUTH_CALLBACK_URL:-}
+      STUDIO_REQUIRE_GITHUB_LOGIN: ${STUDIO_REQUIRE_GITHUB_LOGIN:-auto}
+      STUDIO_DAILY_GENERATION_QUOTA: ${STUDIO_DAILY_GENERATION_QUOTA:-20}
+      STUDIO_DAILY_VIDEO_QUOTA: ${STUDIO_DAILY_VIDEO_QUOTA:-5}
+      STUDIO_SESSION_SECRET: ${STUDIO_SESSION_SECRET:-}
       GITHUB_TOKEN: ${GITHUB_TOKEN:-}
       LLM_PROVIDER: ${LLM_PROVIDER:-}
       CURSOR_API_KEY: ${CURSOR_API_KEY:-}

@@ -134,6 +134,35 @@ Summary: a full “idea → finished clip” path on self-host needs **(a)** an 
 
 Implementation pointers: `studio/server/demo_auth.py`, `studio/server/auth_proxy.py`, `POST /api/auth/demo` in `studio/server/app.py`.
 
+### Optional: GitHub sign-in + daily quota (public instances)
+
+If you run a public instance on your own model keys, you can require a GitHub sign-in before generating and
+cap how much each GitHub account can generate per day. Self-hosters who leave these variables empty are not gated.
+
+1. Create a GitHub OAuth App at <https://github.com/settings/developers> → **OAuth Apps** → **New OAuth App**:
+   - **Homepage URL:** `https://your-studio.example`
+   - **Authorization callback URL:** `https://your-studio.example/api/auth/github/callback`
+2. Set the env vars (Compose `.env`, Coolify, Heroku config vars, …):
+
+| Variable | Default | Meaning |
+|:---|:---|:---|
+| `GITHUB_OAUTH_CLIENT_ID` / `GITHUB_OAUTH_CLIENT_SECRET` | empty | OAuth App credentials. No scopes are requested; only the public id / login / avatar are read. |
+| `GITHUB_OAUTH_CALLBACK_URL` | `${STUDIO_PUBLIC_URL}/api/auth/github/callback` | Must match the OAuth App exactly. |
+| `STUDIO_REQUIRE_GITHUB_LOGIN` | `auto` | `auto` = on only when the OAuth App is configured; `1` = always on (generation is refused until OAuth is configured); `0` = off. |
+| `STUDIO_DAILY_GENERATION_QUOTA` | `20` | Images + video shots per GitHub account per UTC day. `0` = unlimited. |
+| `STUDIO_DAILY_VIDEO_QUOTA` | `5` | Video shots per GitHub account per UTC day (inside the total above). `0` = unlimited. |
+| `STUDIO_SESSION_SECRET` | `STUDIO_DEMO_SECRET` | HMAC secret for GitHub session tokens and the OAuth state. Use a long random value. |
+
+How it behaves:
+
+- Anonymous visitors and the shared **Demo** account sign in with GitHub and get their own workspace (`gh-<github id>`).
+  Users signed in with another account (password / Google) link GitHub to that account instead.
+- Text (LLM) and voice steps need the GitHub sign-in but are not counted. Each image and each video shot counts once,
+  when the worker starts it. When the quota is used up the API returns `429 quota_exceeded` and the UI explains when it resets (00:00 UTC).
+- Quota counters live in Postgres (`studio_kv`, key `github_quota:<date>`) or, without Postgres, in `$PROJECTS_ROOT/.github_quota/`.
+
+Implementation: `studio/server/github_gate.py`, routes `POST /api/auth/github/start`, `GET /api/auth/github/callback`, `GET /api/settings/github-gate`.
+
 ---
 
 ## Owner-controlled model endpoints
@@ -160,7 +189,7 @@ README badges deploy from the public GitHub repo:
 
 Notes:
 
-- **Demo auth** is on by default (`STUDIO_DEMO_ENABLED=true`, `STUDIO_REQUIRE_GITHUB_STAR=0`). Open the app and click **Demo**.
+- **Demo auth** is on by default (`STUDIO_DEMO_ENABLED=true`; the GitHub sign-in gate stays off until you set `GITHUB_OAUTH_CLIENT_ID` / `GITHUB_OAUTH_CLIENT_SECRET`). Open the app and click **Demo**.
 - **Model keys** are optional at create time — paste them in the platform form or later under *Model settings*.
 - **DigitalOcean** button allows only one Dev Database; Redis is omitted and the media queue falls back to the in-process pool. Add managed Redis later if you need multi-replica workers.
 - **MinIO** is not bundled on PaaS — media can stay in Postgres / ephemeral disk for trials; attach S3-compatible storage (`MINIO_*`) for production.

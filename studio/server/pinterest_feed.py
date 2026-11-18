@@ -89,7 +89,6 @@ def _sources() -> list[dict[str, str]]:
     if not out:
         out = [
             {"kind": "user", "user": "pinterest", "label": "Pinterest"},
-            {"kind": "user", "user": "netflix", "label": "Netflix"},
             {"kind": "user", "user": "voguemagazine", "label": "Vogue"},
         ]
     return out
@@ -438,6 +437,11 @@ def fetch_pins(
                     errors.append(f"{src.get('label') or src.get('user')}: {exc}")
                 if len(live) >= 240:
                     break
+            import inspire_store as _inspire
+
+            # Never pull advertising / sponsored pins back in (config/inspire_blocklist.json).
+            live = [x for x in live if not _inspire.is_blocked(x)]
+            seed = [x for x in seed if not _inspire.is_blocked(x)]
             if live:
                 pool = [_with_prompt(x) for x in _dedupe(live + seed)]
                 source_tag = "pinterest"

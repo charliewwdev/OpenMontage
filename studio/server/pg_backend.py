@@ -145,7 +145,7 @@ def _ensure_pool():
     # Drop empty password key noise
     if not kwargs.get("password"):
         kwargs.pop("password", None)
-    _pool = pg_pool.ThreadedConnectionPool(1, 8, **kwargs)
+    _pool = pg_pool.ThreadedConnectionPool(1, _pool_max(), **kwargs)
     logger.info(
         "Postgres pool ready host=%s port=%s db=%s user=%s",
         kwargs.get("host"),
@@ -156,12 +156,40 @@ def _ensure_pool():
     return _pool
 
 
+def _pool_max() -> int:
+    try:
+        return max(2, min(64, int(os.environ.get("STUDIO_PG_POOL_MAX") or 8)))
+    except ValueError:
+        return 8
+
+
+_pool_slots: threading.BoundedSemaphore | None = None
+
+
+def _slots() -> threading.BoundedSemaphore:
+    global _pool_slots
+    if _pool_slots is None:
+        with _lock:
+            if _pool_slots is None:
+                _pool_slots = threading.BoundedSemaphore(_pool_max())
+    return _pool_slots
+
+
 @contextmanager
 def connection() -> Iterator[Any]:
     p = _ensure_pool()
     if p is None:
         raise RuntimeError("postgres not configured")
-    conn = p.getconn()
+    # ThreadedConnectionPool raises PoolError immediately when every connection is
+    # checked out; wait for a free slot instead so request bursts queue up.
+    slots = _slots()
+    if not slots.acquire(timeout=float(os.environ.get("STUDIO_PG_POOL_TIMEOUT") or 30)):
+        raise RuntimeError("postgres connection pool exhausted")
+    try:
+        conn = p.getconn()
+    except Exception:
+        slots.release()
+        raise
     try:
         yield conn
         conn.commit()
@@ -173,6 +201,7 @@ def connection() -> Iterator[Any]:
         raise
     finally:
         p.putconn(conn)
+        slots.release()
 
 
 def init_schema() -> bool:
@@ -854,6 +883,14 @@ def migrate_disk_state_to_pg(projects_root) -> dict[str, int]:
                     stats["unchanged"] += 1
         except Exception as exc:
             logger.warning("migrate prompts failed: %s", exc)
+
+    # Per-user prompts live in the studio_prompts table (see prompt_store.py).
+    try:
+        import prompt_store
+
+        stats["prompts"] += prompt_store.import_user_files(root)
+    except Exception as exc:
+        logger.warning("migrate per-user prompts failed: %s", type(exc).__name__)
 
     usage = root / ".studio_usage.jsonl"
     if usage.is_file() and usage.stat().st_size > 0:

@@ -16,6 +16,8 @@ import {
   X,
 } from "lucide-react";
 import { api } from "../../api";
+import { getToken } from "../../lib/auth";
+import { ConfirmDialog } from "../ConfirmDialog";
 import { toast } from "../../lib/toast";
 import { PageShell } from "./PageShell";
 import { Lightbox } from "../Lightbox";
@@ -24,6 +26,7 @@ import { ModalOverlay } from "../ModalPortal";
 import { tr, localized, useLocale } from "../../lib/i18n";
 
 const PAGE_SIZE = 60;
+const PROMPT_PAGE_SIZE = 60;
 
 const KIND_FILTERS = localized(() => [
   ["all", tr("ui_assets_all")],
@@ -317,7 +320,29 @@ export function AssetsPage({ onUsePrompt }) {
   const [promptQuery, setPromptQuery] = useState("");
   const [promptSort, setPromptSort] = useState("default");
   const [promptLoading, setPromptLoading] = useState(false);
-  const [editor, setEditor] = useState(null);
+  const [editor, setEditorState] = useState(null);
+  // "My prompts" are per account. readOnly: "login" (signed out) | "shared_demo" (shared demo account) | null.
+  const [promptsReadOnly, setPromptsReadOnly] = useState(null);
+  const [promptError, setPromptError] = useState("");
+  const [promptNextOffset, setPromptNextOffset] = useState(null);
+  const [promptLoadingMore, setPromptLoadingMore] = useState(false);
+  const [promptLimits, setPromptLimits] = useState({ titleMax: 120, textMax: 8000 });
+  const [pendingDelete, setPendingDelete] = useState(null);
+  const promptReq = useRef(0);
+  const promptsNeedLogin = Boolean(promptsReadOnly);
+  // Re-fetch (and drop the previous account's list) whenever the session changes.
+  const sessionToken = getToken();
+  const askLogin = () => window.dispatchEvent(new CustomEvent("om:need-auth", { detail: { path: "/api/platform/prompts" } }));
+  const readOnlyMessage = () =>
+    promptsReadOnly === "shared_demo" ? tr("ui_assets_prompts_shared_demo") : tr("ui_assets_prompts_sign_in_to_view");
+  const setEditor = (next) => {
+    if (next && typeof next !== "function" && promptsReadOnly) {
+      toast.info(readOnlyMessage());
+      askLogin();
+      return;
+    }
+    setEditorState(next);
+  };
 
   const refreshAssets = async ({ append = false, offset = 0 } = {}) => {
     if (append) setLoadingMore(true);
@@ -348,20 +373,53 @@ export function AssetsPage({ onUsePrompt }) {
     }
   };
 
-  const refreshPrompts = async () => {
-    setPromptLoading(true);
+  const refreshPrompts = async ({ append = false } = {}) => {
+    const reqId = ++promptReq.current;
+    if (append) setPromptLoadingMore(true);
+    else {
+      setPromptLoading(true);
+      setPromptError("");
+    }
     try {
       const sortKey = promptSort === "default" ? "latest" : promptSort;
-      const q = new URLSearchParams({ category: promptCategory, sort: sortKey });
+      const offset = append ? promptNextOffset ?? prompts.length : 0;
+      const q = new URLSearchParams({
+        category: promptCategory,
+        sort: sortKey,
+        limit: String(PROMPT_PAGE_SIZE),
+        offset: String(offset),
+      });
       if (promptQuery.trim()) q.set("q", promptQuery.trim());
       const data = await api(`/api/platform/prompts?${q.toString()}`);
-      setPrompts(data.prompts || []);
+      if (reqId !== promptReq.current) return;
+      const batch = (data.prompts || []).filter((x) => x && x.id);
+      setPrompts((prev) => (append ? [...prev, ...batch.filter((b) => !prev.some((p) => p.id === b.id))] : batch));
+      setPromptNextOffset(data.nextOffset ?? null);
+      setPromptsReadOnly(data.readOnlyReason || (data.requiresLogin ? "login" : null));
+      if (data.limits) setPromptLimits((prev) => ({ ...prev, ...data.limits }));
     } catch (error) {
-      toast.error(String(error.message || error));
+      if (reqId !== promptReq.current) return;
+      const msg = String(error.message || error);
+      if (append) toast.error(msg);
+      else {
+        setPromptError(msg);
+        setPrompts([]);
+      }
     } finally {
-      setPromptLoading(false);
+      if (reqId === promptReq.current) {
+        setPromptLoading(false);
+        setPromptLoadingMore(false);
+      }
     }
   };
+
+  useEffect(() => {
+    // Never show one account's prompts to the next one while the new list loads.
+    setPrompts([]);
+    setPromptNextOffset(null);
+    setEditorState(null);
+    setPendingDelete(null);
+  }, [sessionToken]);
 
   useEffect(() => {
     if (tab !== "assets") return;
@@ -375,7 +433,7 @@ export function AssetsPage({ onUsePrompt }) {
     const timer = setTimeout(() => void refreshPrompts(), promptQuery ? 280 : 0);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, promptCategory, promptSort, promptQuery]);
+  }, [tab, promptCategory, promptSort, promptQuery, sessionToken]);
 
   useEffect(() => {
     if (tab !== "assets" || !hasMore || loadingMore) return;
@@ -459,28 +517,84 @@ export function AssetsPage({ onUsePrompt }) {
   };
 
   const savePrompt = async () => {
-    if (!editor?.text?.trim()) return toast.error(tr("ui_assets_please_enter_the_prompt_content"));
+    const draft = editor;
+    if (!draft?.text?.trim()) return toast.error(tr("ui_assets_please_enter_the_prompt_content"));
+    if (String(draft.id || "").startsWith("tmp-")) return toast.info(tr("ui_assets_prompts_wait_saving"));
+    const isEdit = Boolean(draft.id);
+    const previous = isEdit ? prompts.find((p) => p.id === draft.id) : null;
+    const tempId = isEdit ? draft.id : `tmp-${Date.now()}`;
+    const optimistic = {
+      ...(previous || {}),
+      id: tempId,
+      title: (draft.title || "").trim() || draft.text.trim().slice(0, 40),
+      text: draft.text.trim(),
+      category: draft.category || "general",
+      updatedAt: Date.now() / 1000,
+      pending: true,
+    };
+    // Optimistic update; rolled back below if the server refuses.
+    setPrompts((prev) => (isEdit ? prev.map((p) => (p.id === draft.id ? optimistic : p)) : [optimistic, ...prev]));
+    setEditorState(null);
     try {
-      await api("/api/platform/prompts", {
+      const data = await api("/api/platform/prompts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editor),
+        body: JSON.stringify({
+          id: draft.id || undefined,
+          title: draft.title || "",
+          text: draft.text,
+          category: draft.category || "general",
+          origin: draft.origin || undefined,
+        }),
       });
-      toast.success(editor.id ? tr("ui_assets_prompt_updated") : tr("ui_assets_prompt_created"));
-      setEditor(null);
-      await refreshPrompts();
+      const saved = data.prompt;
+      setPrompts((prev) => [saved, ...prev.filter((p) => p.id !== tempId && p.id !== saved.id)]);
+      toast.success(isEdit ? tr("ui_assets_prompt_updated") : tr("ui_assets_prompt_created"));
     } catch (error) {
+      setPrompts((prev) =>
+        isEdit && previous ? prev.map((p) => (p.id === draft.id ? previous : p)) : prev.filter((p) => p.id !== tempId),
+      );
+      setEditorState(draft); // keep what the user typed
+      if (error?.status === 401) {
+        toast.info(tr("ui_assets_prompts_sign_in_to_view"));
+        askLogin();
+        return;
+      }
+      if (error?.status === 404 && isEdit) {
+        setEditorState(null);
+        setPrompts((prev) => prev.filter((p) => p.id !== draft.id));
+      }
       toast.error(String(error.message || error));
     }
   };
 
-  const removePrompt = async (id) => {
-    if (!window.confirm(tr("ui_assets_delete_this_prompt"))) return;
+  const removePrompt = (id) => {
+    if (String(id || "").startsWith("tmp-")) return toast.info(tr("ui_assets_prompts_wait_saving"));
+    const item = prompts.find((p) => p.id === id);
+    if (item) setPendingDelete(item);
+  };
+
+  const confirmRemovePrompt = async () => {
+    const item = pendingDelete;
+    setPendingDelete(null);
+    if (!item) return;
+    const index = prompts.findIndex((p) => p.id === item.id);
+    setPrompts((prev) => prev.filter((p) => p.id !== item.id));
     try {
-      await api(`/api/platform/prompts/${encodeURIComponent(id)}`, { method: "DELETE" });
+      await api(`/api/platform/prompts/${encodeURIComponent(item.id)}`, { method: "DELETE" });
       toast.success(tr("ui_assets_deleted"));
-      await refreshPrompts();
     } catch (error) {
+      if (error?.status === 404) {
+        toast.info(tr("ui_assets_prompts_already_deleted"));
+        return;
+      }
+      setPrompts((prev) => {
+        if (prev.some((p) => p.id === item.id)) return prev;
+        const next = [...prev];
+        next.splice(Math.max(0, Math.min(index, next.length)), 0, item);
+        return next;
+      });
+      if (error?.status === 401) askLogin();
       toast.error(String(error.message || error));
     }
   };
@@ -755,8 +869,25 @@ export function AssetsPage({ onUsePrompt }) {
           {promptLoading && !prompts.length ? (
             <div className="panel flex items-center justify-center gap-2 py-20 text-sm text-[var(--muted)]">
               <Loader2 className="h-4 w-4 animate-spin" />{" "}{tr("ui_assets_loading_prompts")}</div>
+          ) : promptError && !prompts.length ? (
+            <div className="panel flex flex-col items-center gap-3 py-20 text-center text-sm text-[var(--muted)]" role="alert">
+              <span className="text-white/80">{tr("ui_assets_prompts_load_failed")}</span>
+              <span className="text-xs">{promptError}</span>
+              <button type="button" className="btn-secondary !min-h-9 !px-4" onClick={() => void refreshPrompts()}>
+                {tr("ui_assets_prompts_retry")}
+              </button>
+            </div>
           ) : !prompts.length ? (
-            <div className="panel py-20 text-center text-sm text-[var(--muted)]">{tr("ui_assets_no_prompts_yet_click_new_to")}</div>
+            promptsNeedLogin ? (
+              <div className="panel flex flex-col items-center gap-3 py-20 text-center text-sm text-[var(--muted)]">
+                <span className="max-w-md">{readOnlyMessage()}</span>
+                <button type="button" className="btn-primary !min-h-9 !px-4" onClick={askLogin}>
+                  {promptsReadOnly === "shared_demo" ? tr("ui_assets_prompts_switch_account") : tr("ui_assets_prompts_sign_in")}
+                </button>
+              </div>
+            ) : (
+              <div className="panel py-20 text-center text-sm text-[var(--muted)]">{tr("ui_assets_no_prompts_yet_click_new_to")}</div>
+            )
           ) : (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {prompts.map((item) => (
@@ -791,6 +922,19 @@ export function AssetsPage({ onUsePrompt }) {
               ))}
             </div>
           )}
+          {prompts.length && promptNextOffset != null ? (
+            <div className="mt-6 flex justify-center">
+              <button
+                type="button"
+                className="btn-secondary !min-h-9 !px-4"
+                disabled={promptLoadingMore}
+                onClick={() => void refreshPrompts({ append: true })}
+              >
+                {promptLoadingMore ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                {tr("ui_assets_prompts_load_more")}
+              </button>
+            </div>
+          ) : null}
         </>
       )}
 
@@ -832,6 +976,7 @@ export function AssetsPage({ onUsePrompt }) {
               <input
                 className="field mt-1"
                 value={editor.title || ""}
+                maxLength={promptLimits.titleMax}
                 onChange={(e) => setEditor((prev) => ({ ...prev, title: e.target.value }))}
                 placeholder={tr("ui_assets_optional")}
               />
@@ -855,6 +1000,7 @@ export function AssetsPage({ onUsePrompt }) {
               <textarea
                 className="field mt-1 min-h-40 resize-y leading-7"
                 value={editor.text || ""}
+                maxLength={promptLimits.textMax}
                 onChange={(e) => setEditor((prev) => ({ ...prev, text: e.target.value }))}
                 placeholder={tr("ui_assets_write_a_reusable_creative_prompt")}
               />
@@ -866,6 +1012,15 @@ export function AssetsPage({ onUsePrompt }) {
           </div>
         </ModalOverlay>
       ) : null}
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        danger
+        title={tr("ui_assets_prompts_delete_title")}
+        message={tr("ui_assets_prompts_delete_message", { title: pendingDelete?.title || tr("ui_assets_untitled") })}
+        confirmLabel={tr("ui_assets_prompts_delete_confirm")}
+        onConfirm={() => void confirmRemovePrompt()}
+        onCancel={() => setPendingDelete(null)}
+      />
     </PageShell>
   );
 }

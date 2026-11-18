@@ -75,6 +75,58 @@ MESSAGES: dict[str, dict[str, str]] = {
         "zh": "请输入一句话想法或粘贴剧本",
         "en": "Enter a one-line idea or paste a script",
     },
+    "prompts_login_required": {
+        "zh": "登录后才能保存提示词",
+        "en": "Sign in to save prompts",
+    },
+    "prompts_shared_demo": {
+        "zh": "体验账号是多人共用的，不能保存提示词。请用你自己的账号登录后再保存。",
+        "en": "The demo account is shared by everyone, so it can't save prompts. Sign in with your own account to save.",
+    },
+    "prompts_bad_request": {
+        "zh": "提示词数据格式不正确",
+        "en": "The prompt data is not valid",
+    },
+    "prompts_text_required": {
+        "zh": "请填写提示词内容",
+        "en": "Enter the prompt text",
+    },
+    "prompts_text_too_long": {
+        "zh": "提示词内容最多 {max} 个字符",
+        "en": "Prompt text can be at most {max} characters",
+    },
+    "prompts_title_too_long": {
+        "zh": "标题最多 {max} 个字符",
+        "en": "The title can be at most {max} characters",
+    },
+    "prompts_bad_category": {
+        "zh": "不支持的提示词分类",
+        "en": "Unsupported prompt category",
+    },
+    "prompts_not_found": {
+        "zh": "提示词不存在或已被删除",
+        "en": "This prompt doesn't exist or was deleted",
+    },
+    "prompts_limit_reached": {
+        "zh": "每个账号最多保存 {max} 条提示词，请先删除一些",
+        "en": "Each account can save up to {max} prompts. Delete some first.",
+    },
+    "prompts_rate_limited": {
+        "zh": "操作太频繁，请 {retryAfter} 秒后再试",
+        "en": "Too many changes. Try again in {retryAfter} s.",
+    },
+    "prompts_payload_too_large": {
+        "zh": "提交的内容太大",
+        "en": "The request is too large",
+    },
+    "prompts_conflict": {
+        "zh": "已经保存过同一条提示词",
+        "en": "This prompt is already saved",
+    },
+    "prompts_storage_error": {
+        "zh": "提示词暂时无法读取或保存，请稍后重试",
+        "en": "Prompts can't be loaded or saved right now. Try again later.",
+    },
 }
 
 

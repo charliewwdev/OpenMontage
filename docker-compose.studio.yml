@@ -83,6 +83,11 @@ services:
       # Empty = local Demo-only auth (no external account API). Set for hosted password/Google.
       API_BASE_URL: ${API_BASE_URL:-}
       STUDIO_AUTH_REQUIRED: ${STUDIO_AUTH_REQUIRED:-true}
+      # My prompts: 0 = the shared Demo account cannot save (public instances). See docs/saved-prompts.zh-CN.md.
+      STUDIO_DEMO_SAVE_PROMPTS: ${STUDIO_DEMO_SAVE_PROMPTS:-0}
+      STUDIO_LEGACY_PROMPTS_OWNER: ${STUDIO_LEGACY_PROMPTS_OWNER:-}
+      STUDIO_PROMPTS_MAX_PER_USER: ${STUDIO_PROMPTS_MAX_PER_USER:-500}
+      STUDIO_PROMPTS_RATE_LIMIT: ${STUDIO_PROMPTS_RATE_LIMIT:-30/60}
       STUDIO_DEMO_ENABLED: ${STUDIO_DEMO_ENABLED:-true}
       STUDIO_DEMO_AUTO_ENTER: ${STUDIO_DEMO_AUTO_ENTER:-false}
       STUDIO_DEMO_SECRET: ${STUDIO_DEMO_SECRET:-}

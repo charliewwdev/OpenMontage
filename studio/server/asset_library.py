@@ -271,52 +271,47 @@ def delete_asset(projects_root: Path, store: Any, project_id: str, rel_path: str
 
 
 def _prompts_path(projects_root: Path) -> Path:
+    """Legacy site-wide prompt file (before prompts were scoped per user)."""
     return ensure_library_root(projects_root) / "prompts.json"
 
 
-def load_prompts(projects_root: Path) -> list[dict[str, Any]]:
-    path = _prompts_path(projects_root)
-    data: Any = None
-    try:
-        import pg_backend as _pg
+LEGACY_PROMPTS_KEY = "prompts:_library"
+LEGACY_OWNER_ENV = "STUDIO_LEGACY_PROMPTS_OWNER"
 
-        if _pg.enabled():
-            hit = _pg.load_kv("prompts:_library")
-            if isinstance(hit, dict):
-                data = hit
-            elif path.is_file():
-                # One-shot migrate disk → PG if row missing
-                disk = json.loads(path.read_text(encoding="utf-8"))
-                if isinstance(disk, dict):
-                    _pg.upsert_kv("prompts:_library", disk)
-                    data = disk
-    except Exception:  # noqa: BLE001
-        data = None
-    if data is None and path.is_file():
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-        except Exception:  # noqa: BLE001
-            data = None
-    if data is None:
-        return []
-    items = data.get("items") if isinstance(data, dict) else data
-    out = [x for x in (items or []) if isinstance(x, dict) and str(x.get("text") or "").strip()]
-    return out
+# "My prompts" are per user and live in prompt_store (Postgres table
+# studio_prompts or PROJECTS_ROOT/.users/<owner>/prompts.json). The helpers below
+# keep the old whole-list interface for callers that still use it; the HTTP API
+# goes through prompt_store directly (owner-scoped queries, limits, locking).
 
 
-def save_prompts(projects_root: Path, items: list[dict[str, Any]]) -> None:
-    path = _prompts_path(projects_root)
-    payload = {"items": items}
-    try:
-        import pg_backend as _pg
+def prompt_scope() -> str | None:
+    """Owner of "My prompts" for the current request; None = nothing to read or write."""
+    import prompt_store
 
-        if _pg.enabled():
-            _pg.upsert_kv("prompts:_library", payload)
-            return
-    except Exception as exc:  # noqa: BLE001
-        raise RuntimeError(f"保存 prompts 到 Postgres 失败: {exc}") from exc
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return prompt_store.current_access().owner
+
+
+def load_legacy_prompts(projects_root: Path) -> list[dict[str, Any]]:
+    """Owner-less prompts from the old shared store. Never shown to ordinary users."""
+    import prompt_store
+
+    return prompt_store.legacy_prompts(projects_root)
+
+
+def load_prompts(projects_root: Path, scope: str | None = ...) -> list[dict[str, Any]]:  # type: ignore[assignment]
+    import prompt_store
+
+    if scope is ...:
+        scope = prompt_scope()
+    return prompt_store.load_all(projects_root, scope)
+
+
+def save_prompts(projects_root: Path, items: list[dict[str, Any]], scope: str | None = ...) -> None:  # type: ignore[assignment]
+    import prompt_store
+
+    if scope is ...:
+        scope = prompt_scope()
+    prompt_store.replace_all(projects_root, scope, items)
 
 
 def list_prompts(

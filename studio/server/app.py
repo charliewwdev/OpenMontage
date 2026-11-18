@@ -1124,10 +1124,14 @@ def platform_prompts(
     q: str = Query(""),
     sort: str = Query("latest"),
 ) -> dict[str, Any]:
+    # "My prompts" are per user; anonymous visitors on a login-required instance get an
+    # empty, read-only list plus requiresLogin so the UI can offer sign-in.
+    requires_login = assetlib.prompt_scope() is None
     items = assetlib.list_prompts(PROJECTS_ROOT, category=category, q=q, sort=sort)
     return {
         "prompts": items,
         "total": len(items),
+        "requiresLogin": requires_login,
         "categories": [{"id": i, "label": l} for i, l in assetlib.PROMPT_CATEGORIES],
     }
 
@@ -1137,6 +1141,8 @@ async def platform_prompts_upsert(request: Request) -> dict[str, Any]:
     body = await request.json()
     try:
         item = assetlib.upsert_prompt(PROJECTS_ROOT, body if isinstance(body, dict) else {})
+    except assetlib.PromptAccessError as exc:
+        raise _http_error(401, "login required") from exc
     except ValueError as exc:
         raise _http_error(400, str(exc)) from exc
     return {"ok": True, "prompt": item}
@@ -1144,7 +1150,10 @@ async def platform_prompts_upsert(request: Request) -> dict[str, Any]:
 
 @app.delete("/api/platform/prompts/{prompt_id}")
 def platform_prompts_delete(prompt_id: str) -> dict[str, Any]:
-    ok = assetlib.delete_prompt(PROJECTS_ROOT, unquote(prompt_id))
+    try:
+        ok = assetlib.delete_prompt(PROJECTS_ROOT, unquote(prompt_id))
+    except assetlib.PromptAccessError as exc:
+        raise _http_error(401, "login required") from exc
     if not ok:
         raise _http_error(404, "prompt not found")
     return {"ok": True, "deleted": prompt_id}

@@ -469,6 +469,8 @@
   "ui_assets_qa_failed": "质检未通过",
   "ui_assets_loading_prompts": "加载提示词…",
   "ui_assets_no_prompts_yet_click_new_to": "还没有提示词，点击新建添加",
+  "ui_assets_prompts_sign_in_to_view": "登录后才能查看和保存你自己的提示词。每个账号的提示词互相独立。",
+  "ui_assets_prompts_sign_in": "登录",
   "ui_assets_copy": "复制",
   "ui_assets_edit": "编辑",
   "ui_assets_use_it": "去创作",

@@ -16,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { api } from "../../api";
+import { getToken } from "../../lib/auth";
 import { toast } from "../../lib/toast";
 import { PageShell } from "./PageShell";
 import { Lightbox } from "../Lightbox";
@@ -318,6 +319,10 @@ export function AssetsPage({ onUsePrompt }) {
   const [promptSort, setPromptSort] = useState("default");
   const [promptLoading, setPromptLoading] = useState(false);
   const [editor, setEditor] = useState(null);
+  const [promptsNeedLogin, setPromptsNeedLogin] = useState(false);
+  // "My prompts" are per account: re-fetch when the session changes.
+  const sessionToken = getToken();
+  const askLogin = () => window.dispatchEvent(new CustomEvent("om:need-auth", { detail: { path: "/api/platform/prompts" } }));
 
   const refreshAssets = async ({ append = false, offset = 0 } = {}) => {
     if (append) setLoadingMore(true);
@@ -356,6 +361,7 @@ export function AssetsPage({ onUsePrompt }) {
       if (promptQuery.trim()) q.set("q", promptQuery.trim());
       const data = await api(`/api/platform/prompts?${q.toString()}`);
       setPrompts(data.prompts || []);
+      setPromptsNeedLogin(Boolean(data.requiresLogin));
     } catch (error) {
       toast.error(String(error.message || error));
     } finally {
@@ -375,7 +381,7 @@ export function AssetsPage({ onUsePrompt }) {
     const timer = setTimeout(() => void refreshPrompts(), promptQuery ? 280 : 0);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab, promptCategory, promptSort, promptQuery]);
+  }, [tab, promptCategory, promptSort, promptQuery, sessionToken]);
 
   useEffect(() => {
     if (tab !== "assets" || !hasMore || loadingMore) return;
@@ -470,6 +476,10 @@ export function AssetsPage({ onUsePrompt }) {
       setEditor(null);
       await refreshPrompts();
     } catch (error) {
+      if (error?.status === 401) {
+        askLogin();
+        return;
+      }
       toast.error(String(error.message || error));
     }
   };
@@ -756,7 +766,16 @@ export function AssetsPage({ onUsePrompt }) {
             <div className="panel flex items-center justify-center gap-2 py-20 text-sm text-[var(--muted)]">
               <Loader2 className="h-4 w-4 animate-spin" />{" "}{tr("ui_assets_loading_prompts")}</div>
           ) : !prompts.length ? (
-            <div className="panel py-20 text-center text-sm text-[var(--muted)]">{tr("ui_assets_no_prompts_yet_click_new_to")}</div>
+            promptsNeedLogin ? (
+              <div className="panel flex flex-col items-center gap-3 py-20 text-center text-sm text-[var(--muted)]">
+                <span>{tr("ui_assets_prompts_sign_in_to_view")}</span>
+                <button type="button" className="btn-primary !min-h-9 !px-4" onClick={askLogin}>
+                  {tr("ui_assets_prompts_sign_in")}
+                </button>
+              </div>
+            ) : (
+              <div className="panel py-20 text-center text-sm text-[var(--muted)]">{tr("ui_assets_no_prompts_yet_click_new_to")}</div>
+            )
           ) : (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {prompts.map((item) => (

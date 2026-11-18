@@ -829,6 +829,14 @@ def migrate_disk_state_to_pg(projects_root) -> dict[str, int]:
                 f"secrets:.users/{user_dir.name}/secrets.json",
             )
             _migrate_credits_file(user_dir / "credits.json", f"credits:user:{user_dir.name}")
+            user_prompts = user_dir / "prompts.json"
+            if user_prompts.is_file() and load_kv(f"prompts:user:{user_dir.name}") is None:
+                try:
+                    data = json.loads(user_prompts.read_text(encoding="utf-8"))
+                    if isinstance(data, dict):
+                        _commit(f"prompts:user:{user_dir.name}", data, created=True, bucket="prompts")
+                except Exception as exc:
+                    logger.warning("migrate user prompts failed: %s", exc)
 
     prompts = root / "_library" / "prompts.json"
     if prompts.is_file():

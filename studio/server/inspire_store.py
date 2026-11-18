@@ -20,6 +20,44 @@ _disk_lock = threading.RLock()
 _ingest_lock = threading.Lock()
 
 
+_BLOCKLIST_PATH = Path(__file__).resolve().parents[1] / "config" / "inspire_blocklist.json"
+_blocklist_cache: dict[str, Any] | None = None
+
+
+def blocklist() -> dict[str, Any]:
+    """Removed advertising pins (ids / boards / paid-social link markers)."""
+    global _blocklist_cache
+    if _blocklist_cache is None:
+        data: dict[str, Any] = {}
+        try:
+            loaded = json.loads(_BLOCKLIST_PATH.read_text(encoding="utf-8"))
+            if isinstance(loaded, dict):
+                data = loaded
+        except Exception:
+            data = {}
+        _blocklist_cache = {
+            "ids": {str(x) for x in data.get("ids") or [] if str(x).strip()},
+            "boards": {str(x).strip().lower() for x in data.get("boards") or [] if str(x).strip()},
+            "linkPatterns": [str(x).lower() for x in data.get("linkPatterns") or [] if str(x).strip()],
+        }
+    return _blocklist_cache
+
+
+def is_blocked(item: dict[str, Any] | None = None, *, item_id: str = "") -> bool:
+    bl = blocklist()
+    iid = str(item_id or (item or {}).get("id") or "").strip()
+    if iid and iid in bl["ids"]:
+        return True
+    if not item:
+        return False
+    meta = item.get("meta") if isinstance(item.get("meta"), dict) else {}
+    board = str(item.get("board") or meta.get("board") or "").strip().lower()
+    if board and board in bl["boards"]:
+        return True
+    link = str(item.get("link") or "").lower()
+    return bool(link) and any(p in link for p in bl["linkPatterns"])
+
+
 def _projects_root() -> Path:
     return Path(os.environ.get("PROJECTS_ROOT") or "/data/projects").expanduser()
 
@@ -66,7 +104,7 @@ def exists(item_id: str) -> bool:
 
 
 def load_blob(item_id: str) -> tuple[bytes, str] | None:
-    if not item_id:
+    if not item_id or is_blocked(item_id=item_id):
         return None
     try:
         import pg_backend as pg
@@ -166,12 +204,15 @@ def list_local(
         import pg_backend as pg
 
         if pg.enabled() and pg.inspire_count() > 0:
+            bl = blocklist()
             rows, total = pg.list_inspire_meta(
                 category=category,
                 media_type=media_type,
                 q=q,
                 limit=limit,
                 offset=offset,
+                exclude_ids=sorted(bl["ids"]),
+                exclude_boards=sorted(bl["boards"]),
             )
             for row in rows:
                 row["imageUrl"] = public_media_url(str(row["id"]))
@@ -194,6 +235,8 @@ def list_local(
         if not blob.is_file():
             continue
         row["id"] = iid
+        if is_blocked(row):
+            continue
         row["imageUrl"] = public_media_url(iid)
         row.pop("link", None)
         row.pop("originUrl", None)
@@ -235,6 +278,8 @@ def count_local() -> int:
 
 def ingest_remote_item(item: dict[str, Any], fetch_bytes) -> dict[str, Any] | None:
     """Download remote image once, persist, return public-safe record."""
+    if is_blocked(item):
+        return None
     origin = str(item.get("originUrl") or item.get("imageUrl") or "").strip()
     if origin.startswith("/api/inspire/"):
         # Already local

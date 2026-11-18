@@ -49,10 +49,7 @@ pinterest:
   # Live pidget users (public pins). Seed catalog fills the wall when TLS is blocked.
   users:
     - pinterest
-    - netflix
     - voguemagazine
-    - disney
-    - hbomax
     - interviewmag
     - filmgrab
     - criterion

@@ -17,12 +17,9 @@ ROOT = Path(__file__).resolve().parents[1]
 SEED = ROOT / "seed" / "welcome-ep01"
 PREVIEWS = ROOT / "public" / "style-previews"
 
+# Advertising pins (Pinterest "Ad-only Pins" board) were removed on 2026-11-18.
 PIN_ASSETS = [
     ("char_linxia_pin.jpg", "https://i.pinimg.com/474x/aa/8f/6b/aa8f6b92d1b9f7c36189511ba45fd395.jpg"),
-    ("char_zhouyu_pin.jpg", "https://i.pinimg.com/474x/5a/99/ba/5a99bae434f18b959c5917cbf8369a08.jpg"),
-    ("scene_doorway_pin.jpg", "https://i.pinimg.com/474x/08/22/f0/0822f00f15842fa94b41476686515b0d.jpg"),
-    ("scene_backrooms_pin.jpg", "https://i.pinimg.com/474x/ee/d1/4c/eed14c22f9a7e11477b9579bedeb2a2b.jpg"),
-    ("prop_atmosphere_pin.jpg", "https://i.pinimg.com/474x/32/f1/24/32f124f32308bed0de912fcf13a54908.jpg"),
 ]
 
 LOCAL_COPIES = [
@@ -121,7 +118,6 @@ def main() -> None:
     zhouyu_imgs = collect(
         ("char_zhouyu_style.webp", "img_zhouyu_style", "都市写实造型"),
         ("char_zhouyu_alt.webp", "img_zhouyu_alt", "气质参考"),
-        ("char_zhouyu_pin.jpg", "img_zhouyu_pin", "Pinterest 参考"),
     )
     linxia_imgs = collect(
         ("char_linxia_style.webp", "img_linxia_style", "韩系都市软光"),
@@ -134,13 +130,10 @@ def main() -> None:
     )
     scene_b = collect(
         ("scene_alley.webp", "img_scene_alley", "夜巷氛围"),
-        ("scene_doorway_pin.jpg", "img_scene_door", "神秘门廊"),
-        ("scene_backrooms_pin.jpg", "img_scene_back", "空旷空间"),
     )
     prop_imgs = collect(
         ("prop_detail_a.webp", "img_prop_a", "关键道具细节"),
         ("prop_detail_b.webp", "img_prop_b", "道具备选"),
-        ("prop_atmosphere_pin.jpg", "img_prop_pin", "通话氛围"),
         ("style_board.webp", "img_prop_mood", "视觉情绪板"),
     )
     shot_refs = collect(

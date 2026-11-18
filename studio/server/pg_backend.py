@@ -1133,8 +1133,10 @@ def list_inspire_meta(
     q: str = "",
     limit: int = 48,
     offset: int = 0,
+    exclude_ids: list[str] | None = None,
+    exclude_boards: list[str] | None = None,
 ) -> tuple[list[dict[str, Any]], int]:
-    """Return (rows without BYTEA, total_count)."""
+    """Return (rows without BYTEA, total_count). ``exclude_*`` hide removed ad pins."""
     if not enabled():
         return [], 0
     clauses: list[str] = []
@@ -1152,6 +1154,12 @@ def list_inspire_meta(
         like = f"%{query}%"
         clauses.append("(title ILIKE %s OR prompt ILIKE %s OR description ILIKE %s)")
         args.extend([like, like, like])
+    if exclude_ids:
+        clauses.append("NOT (id = ANY(%s))")
+        args.append(list(exclude_ids))
+    if exclude_boards:
+        clauses.append("NOT (LOWER(COALESCE(meta->>'board', '')) = ANY(%s))")
+        args.append([b.lower() for b in exclude_boards])
     where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
     page_size = max(1, min(int(limit or 48), 120))
     start = max(0, int(offset or 0))

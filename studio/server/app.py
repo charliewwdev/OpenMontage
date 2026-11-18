@@ -76,6 +76,7 @@ from platform_config import (  # noqa: E402
     seedance_models,
 )
 import asset_library as assetlib  # noqa: E402
+import prompt_store  # noqa: E402
 from pinterest_feed import fetch_pins, fetch_remote_image  # noqa: E402
 import inspire_store  # noqa: E402
 from ui_messages import set_request_locale, ui_msg  # noqa: E402
@@ -356,9 +357,10 @@ def _force_entity_qa(body: dict[str, Any]) -> bool:
 @app.exception_handler(HTTPException)
 async def http_exception_handler(_: Request, exc: HTTPException) -> JSONResponse:
     detail = exc.detail
+    headers = getattr(exc, "headers", None)
     if isinstance(detail, dict):
-        return JSONResponse(status_code=exc.status_code, content=detail)
-    return JSONResponse(status_code=exc.status_code, content={"error": str(detail)})
+        return JSONResponse(status_code=exc.status_code, content=detail, headers=headers)
+    return JSONResponse(status_code=exc.status_code, content={"error": str(detail)}, headers=headers)
 
 
 @app.exception_handler(FileNotFoundError)
@@ -1123,37 +1125,43 @@ def platform_prompts(
     category: str = Query("all"),
     q: str = Query(""),
     sort: str = Query("latest"),
+    offset: int = Query(0, ge=0),
+    limit: int = Query(prompt_store.LIST_DEFAULT_LIMIT, ge=1, le=prompt_store.LIST_MAX_LIMIT),
 ) -> dict[str, Any]:
-    # "My prompts" are per user; anonymous visitors on a login-required instance get an
-    # empty, read-only list plus requiresLogin so the UI can offer sign-in.
-    requires_login = assetlib.prompt_scope() is None
-    items = assetlib.list_prompts(PROJECTS_ROOT, category=category, q=q, sort=sort)
-    return {
-        "prompts": items,
-        "total": len(items),
-        "requiresLogin": requires_login,
-        "categories": [{"id": i, "label": l} for i, l in assetlib.PROMPT_CATEGORIES],
-    }
+    # "My prompts" are per user (prompt_store). Anonymous visitors on a login-required
+    # instance and the shared demo account get an empty read-only view with
+    # readOnlyReason so the UI can offer sign-in.
+    try:
+        view = prompt_store.list_view(PROJECTS_ROOT, category=category, q=q, sort=sort, offset=offset, limit=limit)
+    except prompt_store.PromptError as exc:
+        raise prompt_store.http_exception(exc) from exc
+    view["categories"] = [{"id": i, "label": l} for i, l in assetlib.PROMPT_CATEGORIES]
+    return view
 
 
 @app.post("/api/platform/prompts")
 async def platform_prompts_upsert(request: Request) -> dict[str, Any]:
-    body = await request.json()
+    raw = await request.body()
     try:
-        item = assetlib.upsert_prompt(PROJECTS_ROOT, body if isinstance(body, dict) else {})
-    except assetlib.PromptAccessError as exc:
-        raise _http_error(401, "login required") from exc
-    except ValueError as exc:
-        raise _http_error(400, str(exc)) from exc
-    return {"ok": True, "prompt": item}
+        if len(raw) > prompt_store.MAX_BODY_BYTES:
+            raise prompt_store.PromptError(413, "prompts_payload_too_large")
+        try:
+            body = json.loads(raw or b"{}")
+        except ValueError as exc:
+            raise prompt_store.PromptError(400, "prompts_bad_request") from exc
+        item, created = prompt_store.save_prompt(PROJECTS_ROOT, body)
+    except prompt_store.PromptError as exc:
+        raise prompt_store.http_exception(exc) from exc
+    return {"ok": True, "prompt": item, "created": created}
 
 
 @app.delete("/api/platform/prompts/{prompt_id}")
 def platform_prompts_delete(prompt_id: str) -> dict[str, Any]:
     try:
-        ok = assetlib.delete_prompt(PROJECTS_ROOT, unquote(prompt_id))
-    except assetlib.PromptAccessError as exc:
-        raise _http_error(401, "login required") from exc
+        prompt_store.delete_prompt(PROJECTS_ROOT, unquote(prompt_id))
+        ok = True
+    except prompt_store.PromptError as exc:
+        raise prompt_store.http_exception(exc) from exc
     if not ok:
         raise _http_error(404, "prompt not found")
     return {"ok": True, "deleted": prompt_id}

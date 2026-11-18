@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 import time
 import uuid
 from pathlib import Path
@@ -279,120 +278,40 @@ def _prompts_path(projects_root: Path) -> Path:
 LEGACY_PROMPTS_KEY = "prompts:_library"
 LEGACY_OWNER_ENV = "STUDIO_LEGACY_PROMPTS_OWNER"
 
-
-class PromptAccessError(PermissionError):
-    """Raised when an anonymous request tries to write the per-user prompt store."""
-
-
-def _auth_required() -> bool:
-    return os.environ.get("STUDIO_AUTH_REQUIRED", "true").strip().lower() not in ("0", "false", "no", "off")
-
-
-def _safe_uid(uid: str) -> str:
-    uid = (uid or "").strip()
-    if not uid or uid in {".", ".."} or "/" in uid or "\\" in uid or len(uid) > 200:
-        return ""
-    return uid
+# "My prompts" are per user and live in prompt_store (Postgres table
+# studio_prompts or PROJECTS_ROOT/.users/<owner>/prompts.json). The helpers below
+# keep the old whole-list interface for callers that still use it; the HTTP API
+# goes through prompt_store directly (owner-scoped queries, limits, locking).
 
 
 def prompt_scope() -> str | None:
-    """Who owns "My prompts" for the current request.
+    """Owner of "My prompts" for the current request; None = nothing to read or write."""
+    import prompt_store
 
-    - logged-in user → their user id (GitHub sessions resolve to ``gh-<id>``)
-    - no user and STUDIO_AUTH_REQUIRED=false (single-user self-host) → ``""``,
-      the legacy site-wide store, so local installs keep their prompts
-    - no user on an instance that requires login → ``None`` (nothing to read or write)
-    """
-    try:
-        from auth_context import current_user_id
-
-        uid = _safe_uid(current_user_id())
-    except Exception:  # noqa: BLE001
-        uid = ""
-    if uid:
-        return uid
-    return None if _auth_required() else ""
-
-
-def _scope_location(projects_root: Path, scope: str) -> tuple[str, Path]:
-    if not scope:
-        return LEGACY_PROMPTS_KEY, _prompts_path(projects_root)
-    return f"prompts:user:{scope}", Path(projects_root) / ".users" / scope / "prompts.json"
-
-
-def _read_prompt_blob(projects_root: Path, scope: str) -> dict[str, Any] | None:
-    """Raw stored payload for one scope, or None when nothing has been stored yet."""
-    key, path = _scope_location(projects_root, scope)
-    data: Any = None
-    try:
-        import pg_backend as _pg
-
-        if _pg.enabled():
-            hit = _pg.load_kv(key)
-            if isinstance(hit, dict):
-                data = hit
-            elif path.is_file():
-                # One-shot migrate disk → PG if row missing
-                disk = json.loads(path.read_text(encoding="utf-8"))
-                if isinstance(disk, dict):
-                    _pg.upsert_kv(key, disk)
-                    data = disk
-    except Exception:  # noqa: BLE001
-        data = None
-    if data is None and path.is_file():
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-        except Exception:  # noqa: BLE001
-            data = None
-    if data is None:
-        return None
-    if isinstance(data, list):
-        data = {"items": data}
-    return data if isinstance(data, dict) else None
-
-
-def _clean_items(data: dict[str, Any] | None) -> list[dict[str, Any]]:
-    items = (data or {}).get("items") or []
-    return [x for x in items if isinstance(x, dict) and str(x.get("text") or "").strip()]
+    return prompt_store.current_access().owner
 
 
 def load_legacy_prompts(projects_root: Path) -> list[dict[str, Any]]:
     """Owner-less prompts from the old shared store. Never shown to ordinary users."""
-    return _clean_items(_read_prompt_blob(projects_root, ""))
+    import prompt_store
+
+    return prompt_store.legacy_prompts(projects_root)
 
 
 def load_prompts(projects_root: Path, scope: str | None = ...) -> list[dict[str, Any]]:  # type: ignore[assignment]
+    import prompt_store
+
     if scope is ...:
         scope = prompt_scope()
-    if scope is None:
-        return []
-    data = _read_prompt_blob(projects_root, scope)
-    if data is None and scope and scope == _safe_uid(os.environ.get(LEGACY_OWNER_ENV, "")):
-        # Opt-in adoption: copy (not move) the legacy shared prompts to one owner.
-        legacy = load_legacy_prompts(projects_root)
-        if legacy:
-            save_prompts(projects_root, legacy, scope=scope)
-            return [dict(x) for x in legacy]
-    return _clean_items(data)
+    return prompt_store.load_all(projects_root, scope)
 
 
 def save_prompts(projects_root: Path, items: list[dict[str, Any]], scope: str | None = ...) -> None:  # type: ignore[assignment]
+    import prompt_store
+
     if scope is ...:
         scope = prompt_scope()
-    if scope is None:
-        raise PromptAccessError("login required")
-    key, path = _scope_location(projects_root, scope)
-    payload = {"items": items}
-    try:
-        import pg_backend as _pg
-
-        if _pg.enabled():
-            _pg.upsert_kv(key, payload)
-            return
-    except Exception as exc:  # noqa: BLE001
-        raise RuntimeError(f"保存 prompts 到 Postgres 失败: {exc}") from exc
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    prompt_store.replace_all(projects_root, scope, items)
 
 
 def list_prompts(

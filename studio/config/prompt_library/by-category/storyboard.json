@@ -1,0 +1,417 @@
+[
+  {
+    "id": "om-story-004",
+    "title": {
+      "zh": "九宫格分镜→视频",
+      "en": "3x3 storyboard grid to video"
+    },
+    "prompt_zh": "先生成一张 3×3 九宫格分镜图（同一角色、同一场景、按阅读顺序编号 1–9），再用该图作为参考，提示「按照参考图中 1 到 9 的顺序依次呈现画面，每格约 1 秒，人物与场景保持一致」。",
+    "prompt_en": "First generate a 3x3 storyboard grid (same character and setting, numbered 1-9 in reading order), then use it as a reference with: \"Present the panels from the reference in order 1 to 9, about one second each, keeping characters and setting consistent.\"",
+    "model": "Seedance",
+    "category": "storyboard",
+    "subcategory": "grid",
+    "stage": "storyboard",
+    "tags": [
+      "九宫格",
+      "分镜",
+      "图生视频",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-story-007",
+    "title": {
+      "zh": "分镜·时长分配原则",
+      "en": "Storyboard: allocating duration"
+    },
+    "prompt_zh": "竖屏短剧单镜头一般 1.5–3 秒；动作镜头 1–2 秒，情绪特写 2–3 秒，建立镜头不超过 2 秒。生成模型单次 5–10 秒时，拆成 2–4 个镜头比一个长镜头更稳定。",
+    "prompt_en": "In vertical shorts a single shot usually runs 1.5-3s: action shots 1-2s, emotional close-ups 2-3s, establishing shots no more than 2s. When the model generates 5-10s per run, splitting into two to four shots is steadier than one long take.",
+    "model": "generic",
+    "category": "storyboard",
+    "subcategory": "guide",
+    "stage": "storyboard",
+    "tags": [
+      "时长",
+      "节奏",
+      "要点",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-story-008",
+    "title": {
+      "zh": "分镜·连续性检查",
+      "en": "Storyboard: continuity check"
+    },
+    "prompt_zh": "每个镜头生成前检查：①人物左右位置是否和上一镜一致（不越轴）；②手里的道具是否还在同一只手；③服装、发型、天气、光线方向是否一致。在提示词里显式写出这些状态。",
+    "prompt_en": "Before each shot, check: (1) are characters on the same sides as the last shot (don't cross the line)? (2) is the prop still in the same hand? (3) are costume, hair, weather and light direction consistent? State these explicitly in the prompt.",
+    "model": "generic",
+    "category": "storyboard",
+    "subcategory": "guide",
+    "stage": "storyboard",
+    "tags": [
+      "连续性",
+      "穿帮",
+      "检查",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-story-009",
+    "title": {
+      "zh": "分镜·首尾帧控制",
+      "en": "Storyboard: first and last frame control"
+    },
+    "prompt_zh": "用首帧图（女主站在门口）+ 尾帧图（女主坐在沙发上），提示词只写中间过程：「她慢慢走进客厅，把包放在茶几上，疲惫地坐下」。首尾帧决定构图，提示词负责动作。",
+    "prompt_en": "Use a first-frame image (heroine at the door) and last-frame image (heroine on the sofa); the prompt only describes the transition: \"She walks slowly into the living room, sets her bag on the coffee table and sits down wearily.\" Keyframes fix the composition; the prompt drives the action.",
+    "model": "generic",
+    "category": "storyboard",
+    "subcategory": "keyframe",
+    "stage": "storyboard",
+    "tags": [
+      "首尾帧",
+      "图生视频",
+      "控制",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-story-012",
+    "title": {
+      "zh": "分镜·蒙太奇时间流逝",
+      "en": "Storyboard: time-passing montage"
+    },
+    "prompt_zh": "镜头1：她在出租屋熬夜画设计稿；镜头2：被客户退回的邮件；镜头3：街边摊吃泡面；镜头4：第一次拿到合同；镜头5：站在自己工作室的门口。每个镜头 1 秒，同一角色，季节从冬到夏变化。",
+    "prompt_en": "Shot 1: she works late on designs in a rented room. Shot 2: a client's rejection email. Shot 3: instant noodles at a street stall. Shot 4: her first signed contract. Shot 5: standing at the door of her own studio. One second each, same character, seasons shifting from winter to summer.",
+    "model": "Seedance",
+    "category": "storyboard",
+    "subcategory": "montage",
+    "stage": "edit",
+    "tags": [
+      "蒙太奇",
+      "成长",
+      "时间",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-story-010",
+    "title": {
+      "zh": "分镜·六格情绪弧线",
+      "en": "Storyboard: six-panel emotional arc"
+    },
+    "prompt_zh": "1 平静（全景日常）→ 2 打破（近景收到消息）→ 3 否认（中景摇头）→ 4 崩溃（特写落泪）→ 5 决定（近景擦泪抬头）→ 6 行动（全景起身出门）。同一角色、同一服装。",
+    "prompt_en": "1 calm (wide, daily routine) → 2 disruption (close, receives the news) → 3 denial (medium, shaking head) → 4 breakdown (close-up, tears) → 5 decision (close, wipes tears, looks up) → 6 action (wide, gets up and leaves). Same character, same outfit.",
+    "model": "generic",
+    "category": "storyboard",
+    "subcategory": "panel-template",
+    "stage": "storyboard",
+    "tags": [
+      "六格",
+      "情绪弧线",
+      "模板",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "promptschat-002",
+    "title": {
+      "zh": "六格分镜页·故事节拍",
+      "en": "6-panel storyboard page"
+    },
+    "prompt_zh": "扮演一名分镜师。你擅长绘制布局专业、精准的动漫风格分镜。你的任务是按以下故事节拍制作一页 6 格分镜：1.【开场镜头】：建立场景的大远景。2.【角色反应】：捕捉角色第一反应的中景。3.【动作/发现】：用有冲击力的角度表现关键动作或发现。4.【情绪特写】：突出角色情绪的特写。5.【转折点】：改变故事走向的戏剧性时刻。6.【结局】：收束叙事的最终揭示。要求：角色连贯——各格中脸、发型、服装、比例保持一致；风格——干净的动漫分镜、专业分格布局；约束——每格只有一个清晰动作、尽量少对白、背景不杂乱。这样分镜才有导演意图而不是随机拼凑，并保持焦点与连贯。",
+    "prompt_en": "Act as a storyboard artist. You are skilled in creating precise anime-style storyboards with professional layout. Your task is to create a 6-panel storyboard page with specific story beats:\n\n**Panels:**\n1. **${opening_shot}:** A wide establishing shot to set the scene.\n2. **${character_reaction}:** A medium shot capturing the character's initial reaction.\n3. **[Action/Discovery]:** A dynamic angle showing a key action or discovery.\n4. **[Emotional Close-Up]:** A close-up to highlight the character's emotions.\n5. **${turning_point}:** A dramatic moment that shifts the story.\n6. **${resolution}:** A final reveal that concludes the narrative.\n\n**Guidelines:**\n- **Character Continuity:** Maintain the same face, hair, outfit, proportions throughout the panels.\n- **Style:** Ensure a clean anime storyboard with a professional panel layout.\n- **Constraints:** One clear action per panel, minimal dialogue, and no background clutter.\n\nThis ensures the storyboard is well-directed and not random, maintaining focus and continuity.",
+    "model": "generic",
+    "category": "storyboard",
+    "subcategory": "panel-template",
+    "stage": "storyboard",
+    "tags": [
+      "分镜",
+      "六格",
+      "动漫"
+    ],
+    "preview": null,
+    "source": {
+      "name": "fka/prompts.chat",
+      "url": "https://huggingface.co/datasets/fka/prompts.chat",
+      "revision": "be0e61647a60dac415f7639453f351ce1b4ed585",
+      "ref": "prompts.csv › act='6-Panel Storyboard Mastery'"
+    },
+    "license": "CC0-1.0",
+    "license_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "attribution": "Prompt from fka/prompts.chat by prompts.chat contributors, licensed CC0-1.0; Chinese translation by OpenMontage (AI-assisted) (contributor: amvicioushecs)",
+    "lang_origin": "en",
+    "translated": "machine",
+    "modified": false
+  },
+  {
+    "id": "om-story-005",
+    "title": {
+      "zh": "分镜表格模板",
+      "en": "Storyboard table template"
+    },
+    "prompt_zh": "镜号｜时长｜景别｜运镜｜画面内容｜人物动作｜台词/音效｜转场。示例：3｜2秒｜近景｜缓推｜女主看手机｜手指停住、瞳孔放大｜手机震动声｜硬切。",
+    "prompt_en": "Shot # | duration | shot size | camera move | content | action | dialogue/SFX | transition. Example: 3 | 2s | close shot | slow push | heroine reads her phone | finger freezes, pupils widen | phone buzz | hard cut.",
+    "model": "generic",
+    "category": "storyboard",
+    "subcategory": "template",
+    "stage": "storyboard",
+    "tags": [
+      "分镜表",
+      "模板",
+      "剧本到镜头",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-story-001",
+    "title": {
+      "zh": "分镜时序·三镜头 5 秒",
+      "en": "Storyboard timing: three shots in 5s"
+    },
+    "prompt_zh": "镜头1（0-1.5秒）：【景别】【画面内容】；镜头2（1.5-3.5秒）：【景别】【动作】；镜头3（3.5-5秒）：【景别】【结果/反应】。每个镜头一个动作，镜头之间人物、服装、场景保持一致。",
+    "prompt_en": "Shot 1 (0-1.5s): [shot size] [content]; Shot 2 (1.5-3.5s): [shot size] [action]; Shot 3 (3.5-5s): [shot size] [result/reaction]. One action per shot; keep characters, costumes and setting consistent across shots.",
+    "model": "Seedance",
+    "category": "storyboard",
+    "subcategory": "timing",
+    "stage": "storyboard",
+    "tags": [
+      "时序",
+      "多镜头",
+      "模板",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-story-002",
+    "title": {
+      "zh": "分镜时序·正反打对话",
+      "en": "Storyboard timing: shot-reverse-shot"
+    },
+    "prompt_zh": "镜头1（0-2秒）：过肩镜头，女主说「你早就知道了？」；镜头2（2-4秒）：反打男主近景，他沉默地移开目光；镜头3（4-5秒）：女主近景，眼眶泛红。办公室，傍晚窗光。",
+    "prompt_en": "Shot 1 (0-2s): over-the-shoulder, she says, \"You knew all along?\" Shot 2 (2-4s): reverse close shot of him silently looking away. Shot 3 (4-5s): her close-up, eyes reddening. Office, late-afternoon window light.",
+    "model": "Seedance",
+    "category": "storyboard",
+    "subcategory": "timing",
+    "stage": "storyboard",
+    "tags": [
+      "正反打",
+      "对话",
+      "时序",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-story-003",
+    "title": {
+      "zh": "分镜时序·10 秒动作段落",
+      "en": "Storyboard timing: 10-second action sequence"
+    },
+    "prompt_zh": "镜头1（0-2秒）：全景，男主推开仓库大门；镜头2（2-4秒）：中景，三名打手转身围上；镜头3（4-7秒）：跟拍，男主连续格挡两人；镜头4（7-9秒）：慢动作，第三人被踢飞撞上纸箱；镜头5（9-10秒）：近景，男主整理袖口。",
+    "prompt_en": "Shot 1 (0-2s): wide, the lead pushes open the warehouse door. Shot 2 (2-4s): medium, three thugs turn and close in. Shot 3 (4-7s): tracking, he blocks two of them in succession. Shot 4 (7-9s): slow motion, the third is kicked into a stack of boxes. Shot 5 (9-10s): close-up, he straightens his cuffs.",
+    "model": "Seedance",
+    "category": "storyboard",
+    "subcategory": "timing",
+    "stage": "storyboard",
+    "tags": [
+      "动作",
+      "时序",
+      "10秒",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-story-006",
+    "title": {
+      "zh": "分镜·匹配剪辑转场",
+      "en": "Storyboard: match cut"
+    },
+    "prompt_zh": "镜头A：小女孩吹灭生日蜡烛的特写；镜头B：同样构图，成年后的她在空荡的公寓里吹灭一支蜡烛。两个镜头的构图、位置、动作完全对齐，用硬切连接，表现时间流逝。",
+    "prompt_en": "Shot A: close-up of a little girl blowing out birthday candles. Shot B: same framing, the grown woman blowing out a single candle in an empty apartment. Composition, position and action align exactly; join with a hard cut to show time passing.",
+    "model": "generic",
+    "category": "storyboard",
+    "subcategory": "transition",
+    "stage": "edit",
+    "tags": [
+      "匹配剪辑",
+      "转场",
+      "时间跳跃",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-story-011",
+    "title": {
+      "zh": "分镜·平行剪辑",
+      "en": "Storyboard: parallel editing"
+    },
+    "prompt_zh": "两条线交替：A 线女主在婚礼现场等待（镜头越来越近）；B 线男主在堵车的路上焦急看表（镜头越来越快）。每个镜头 1–2 秒交替，直到两条线在教堂门口汇合。",
+    "prompt_en": "Two lines intercut: line A, the heroine waiting at the wedding (shots getting tighter); line B, the hero stuck in traffic checking his watch (shots getting faster). Alternate every 1-2 seconds until both lines meet at the church doors.",
+    "model": "generic",
+    "category": "storyboard",
+    "subcategory": "transition",
+    "stage": "edit",
+    "tags": [
+      "平行剪辑",
+      "倒计时",
+      "紧张",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  }
+]

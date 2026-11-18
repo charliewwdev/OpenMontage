@@ -78,6 +78,7 @@ from platform_config import (  # noqa: E402
 import asset_library as assetlib  # noqa: E402
 from pinterest_feed import fetch_pins, fetch_remote_image  # noqa: E402
 import inspire_store  # noqa: E402
+import prompt_library  # noqa: E402
 from ui_messages import set_request_locale, ui_msg  # noqa: E402
 from providers import provider_status  # noqa: E402
 from settings_store import load_and_apply, public_status, save_secrets  # noqa: E402
@@ -1148,6 +1149,11 @@ def platform_prompts_delete(prompt_id: str) -> dict[str, Any]:
     if not ok:
         raise _http_error(404, "prompt not found")
     return {"ok": True, "deleted": prompt_id}
+
+
+# Read-only prompt library (提示词库) for the Assets page; GET is public via the
+# "/api/platform/prompts" prefix, saving reuses POST /api/platform/prompts.
+app.include_router(prompt_library.router)
 
 
 def _parse_skill_md(text: str, fallback_id: str) -> dict[str, Any]:

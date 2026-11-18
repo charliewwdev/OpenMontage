@@ -1,0 +1,34 @@
+{
+  "total": 447,
+  "rejected": 1,
+  "by_category": {
+    "actions": 219,
+    "genres": 37,
+    "hooks": 20,
+    "camera": 56,
+    "lighting": 26,
+    "character": 13,
+    "storyboard": 13,
+    "ecommerce": 29,
+    "platform": 11,
+    "sound": 11,
+    "negative": 12
+  },
+  "by_source": {
+    "OpenMontage": 272,
+    "Vchitect/VBench prompt suite": 134,
+    "Rapidata/text-2-video-human-preferences-veo3": 20,
+    "LichAmnesia/awesome-ad-video-prompts": 17,
+    "fka/prompts.chat": 4
+  },
+  "by_license": {
+    "CC-BY-4.0": 289,
+    "Apache-2.0": 154,
+    "CC0-1.0": 4
+  },
+  "by_model": {
+    "generic": 429,
+    "Seedance": 15,
+    "Veo": 3
+  }
+}

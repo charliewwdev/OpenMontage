@@ -30,7 +30,7 @@ export function CreateProjectPage({ config, entryMode = null, onBack, onCreated,
   const [briefHistory, setBriefHistory] = useState([]);
   const [form, setForm] = useState({
     title: "",
-    brief: "",
+    brief: typeof entryMode?.seedBrief === "string" ? entryMode.seedBrief : "",
     genre: preset.genre || defaults.genre || genres[0] || "",
     visualStyle: defaultStyle?.promptValue || defaultStyle?.generationPrompt || defaults.visualStyle || "",
     ratio: preset.ratio || defaults.ratio || ratios?.[0]?.value || "",

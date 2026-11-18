@@ -1,0 +1,172 @@
+# OpenMontage original prompts — 钩子与节拍 / 镜头与运镜 / 光影与调色. License: CC BY 4.0
+## om-hook-001 | 前3秒·一记耳光开场 | First 3s: open on a slap | generic | hooks/cold-open | storyboard | 冷开场,冲突,前3秒
+ZH: 第一帧就是动作：一只手扇过画面，女主的脸偏向一侧，头发甩起，耳环晃动；0.5 秒定格后她缓缓转回头，直视镜头。无任何铺垫，特写，硬光。
+EN: The first frame is the action: a hand swings through frame, the heroine's face snaps aside, hair flying, earring swinging; after a 0.5s freeze she slowly turns back and stares into the lens. No setup, close-up, hard light.
+## om-hook-002 | 前3秒·倒计时字幕感 | First 3s: countdown tension | generic | hooks/cold-open | storyboard | 冷开场,倒计时,悬念
+ZH: 黑屏中响起心跳声，画面亮起：一只手握着验孕棒/录取通知书/离婚协议（任选其一），手指在颤抖；镜头快速拉远，露出她身处的场景和门外逼近的脚步。
+EN: A heartbeat over black; the image fades up on a hand holding a pregnancy test / admission letter / divorce papers (pick one), fingers trembling. The camera pulls back fast to reveal where she is and footsteps approaching the door.
+## om-hook-003 | 前3秒·结局先行 | First 3s: show the ending first | generic | hooks/cold-open | storyboard | 倒叙,冷开场,结局
+ZH: 开场先给结局画面：女主坐在董事长位置上，昔日对手跪在面前；画面冻结，叠加文字「三个月前」，随即切回她被开除的那天。高反差调色。
+EN: Open on the ending: the heroine sits in the chairwoman's seat while her old rival kneels before her. Freeze frame, overlay "Three months earlier," then cut back to the day she was fired. High-contrast grade.
+## om-hook-004 | 前3秒·一句反常识台词 | First 3s: a counterintuitive line | Veo | hooks/cold-open | voice | 台词,钩子,对白
+ZH: 近景，女主对着镜头平静地说：「我嫁给他那天，就知道他会在第三年背叛我。」说完把一份文件推向镜头。口型同步，环境安静，仅有挂钟声。
+EN: Close shot; the heroine says calmly to camera, "The day I married him, I knew he'd betray me in year three," then slides a document toward the lens. Lip-synced, quiet room, only a ticking clock.
+## om-hook-005 | 前3秒·异常物体特写 | First 3s: close-up of something wrong | generic | hooks/cold-open | storyboard | 悬疑,特写,异常
+ZH: 大特写：生日蛋糕上的蜡烛整齐燃烧，一滴暗红色液体从画面上方滴落在奶油上；镜头上摇，一个空着的座位前摆着名牌。低饱和，悬疑氛围，不血腥。
+EN: Extreme close-up: candles burn neatly on a birthday cake as a drop of dark red liquid falls onto the frosting from above. Tilt up to an empty seat with a name card. Desaturated, suspenseful, no gore.
+## om-hook-006 | 集末悬念·门外的人 | Cliffhanger: who's at the door | generic | hooks/cliffhanger | storyboard | 集末,悬念,门
+ZH: 一集结尾：门铃响起，女主打开门，镜头停在她的脸上——表情从疑惑到震惊，嘴唇动了动叫出一个名字；画面不给门外的人，直接黑屏。
+EN: End of episode: the doorbell rings, the heroine opens the door and the camera stays on her face—confusion turning to shock as her lips form a name. We never see who's outside; cut to black.
+## om-hook-007 | 集末悬念·一条短信 | Cliffhanger: a single text message | generic | hooks/cliffhanger | storyboard | 集末,手机,反转
+ZH: 男主刚松一口气准备入睡，手机屏幕亮起，一条陌生号码的短信：「你以为她真的死了吗？」镜头推向屏幕，再切他瞪大的眼睛，黑屏。
+EN: Just as the lead relaxes for sleep, his phone lights up with a text from an unknown number: "Do you really think she's dead?" Push in on the screen, cut to his wide eyes, black.
+## om-hook-008 | 集末悬念·身份暴露 | Cliffhanger: identity exposed | generic | hooks/cliffhanger | storyboard | 身份,集末,特写
+ZH: 宴会上，女主的面纱被风吹落，在场所有人同时转头；镜头扫过一张张震惊的脸，最后停在主位上男人手中滑落的酒杯上。慢动作，酒杯落地前黑屏。
+EN: At the banquet, the wind blows the heroine's veil away and everyone turns at once. The camera sweeps across shocked faces and stops on the glass slipping from the hand of the man in the seat of honor. Slow motion, cut to black before it hits the floor.
+## om-hook-009 | 反转节拍·以为是…其实是 | Reversal beat: you thought… actually | generic | hooks/reversal | script | 反转,结构,节拍
+ZH: 节拍写法：先用 2 个镜头建立误导（男主深夜和陌生女人进酒店），第 3 个镜头揭示真相（女人是他请来的私家侦探，桌上摊着证据）。关键是误导镜头要真实可信，揭示镜头要一眼看懂。
+EN: Beat structure: two shots build the misdirection (the lead enters a hotel late at night with a strange woman); the third reveals the truth (she's the private investigator he hired, evidence spread on the table). The misdirection must feel real; the reveal must read in one glance.
+## om-hook-010 | 打脸节拍·三连升级 | Comeuppance beat: three-step escalation | generic | hooks/payoff | script | 打脸,爽点,节拍
+ZH: 爽点三连：①对手当众嘲讽（台词+众人哄笑）；②第三方身份揭晓（某人叫出女主真实身份）；③对手态度 180 度反转（鞠躬、道歉、手抖）。每一步间隔 5–8 秒，配反应镜头。
+EN: Triple payoff: (1) the rival mocks her publicly (line + crowd laughter); (2) a third party reveals her true identity; (3) the rival flips 180 degrees (bowing, apologizing, hands shaking). Five to eight seconds between steps, with reaction shots.
+## om-hook-011 | 对峙节拍·沉默三秒 | Standoff beat: three seconds of silence | generic | hooks/standoff | storyboard | 对峙,留白,张力
+ZH: 两人对视，正反打各一个近景，谁都不说话，只有环境声（钟表、雨声）；第三秒其中一人先移开目光或先开口，权力关系就此确定。不要配乐，靠停顿制造张力。
+EN: Two people lock eyes; one close-up each in shot-reverse-shot, no one speaks, only ambient sound (clock, rain). On the third second one looks away or speaks first, settling who holds power. No music—the pause creates the tension.
+## om-hook-012 | 雨夜告白节拍 | Rainy-night confession beat | generic | hooks/confession | storyboard | 告白,雨夜,情感高潮
+ZH: 雨夜街头，男主追上女主，拉住她的手腕（她回头）→ 他喘着气说出台词（近景）→ 她眼泪混着雨水（大特写）→ 她扑进他怀里或甩开手离开（远景）。四个镜头完成情绪高潮。
+EN: Rainy street at night: he catches up and takes her wrist (she turns) → breathless, he says his line (close shot) → her tears mix with rain (extreme close-up) → she falls into his arms or pulls away and leaves (wide). Four shots for the emotional peak.
+## om-hook-013 | 名场面·摘下眼镜 | Iconic moment: removing the glasses | generic | hooks/payoff | storyboard | 名场面,变身,慢动作
+ZH: 一直被轻视的女主缓缓摘下黑框眼镜，放下扎起的头发，抬眼看向对手；慢动作，背景人群虚化，轮廓光亮起。适合作为身份反转前的预示镜头。
+EN: The long-underestimated heroine slowly removes her thick-rimmed glasses, lets down her tied-up hair and lifts her eyes to her rival. Slow motion, crowd blurred, rim light blooming. Works as the setup shot before an identity reveal.
+## om-hook-014 | 开场钩子写法要点 | Writing an opening hook | generic | hooks/guide | script | 要点,钩子,前3秒
+ZH: 前 3 秒只做一件事：抛出一个问题让观众想知道答案。常用类型：冲突动作（耳光、摔东西）、异常画面（不该出现的东西）、结局先行、反常识台词。避免空镜和慢慢介绍人物。
+EN: The first three seconds do one job: raise a question viewers need answered. Common types: a conflict action (slap, smashing something), an anomaly (something that shouldn't be there), ending-first, a counterintuitive line. Avoid establishing shots and slow character intros.
+## om-hook-015 | 集末悬念写法要点 | Writing a cliffhanger | generic | hooks/guide | script | 要点,集末,悬念
+ZH: 集末悬念要「给反应、不给答案」：只拍人物看到某物/听到某话后的反应，不拍被看到的东西本身；在情绪最高点直接切黑，不要淡出。
+EN: A cliffhanger shows the reaction, not the answer: film the character reacting to what they see or hear, never the thing itself, and cut to black at the emotional peak—no fade.
+## om-hook-016 | 节拍·先抑后扬 | Beat: low before high | generic | hooks/payoff | script | 先抑后扬,节奏,情绪
+ZH: 爽点之前先压到最低：主角被误会、被夺走、被所有人背弃（10–20 秒），随后一个小动作翻盘（拿出证据、一个电话）。低谷越具体，翻盘越爽。
+EN: Before the payoff, push to the lowest point: misunderstood, robbed, abandoned by everyone (10-20s), then one small action flips it (producing evidence, a phone call). The more specific the low, the bigger the release.
+## om-hook-017 | 前3秒·跌落瞬间 | First 3s: the fall | generic | hooks/cold-open | storyboard | 冷开场,慢动作,惊险
+ZH: 第一帧：女主从楼梯顶端向后倒下，慢动作，裙摆和头发飘起，手里的文件散成一片；她的眼睛看向楼梯顶上站着的人。俯拍，冷色。
+EN: First frame: the heroine falls backward from the top of the stairs in slow motion, skirt and hair floating, papers scattering from her hands; her eyes are fixed on the person standing at the top. High angle, cool tones.
+## om-hook-018 | 节拍·反应镜头链 | Beat: chain of reactions | generic | hooks/payoff | edit | 反应镜头,剪辑,爽感
+ZH: 关键台词说出后，连续插入 3–4 个 1 秒左右的反应镜头：对手瞪眼、闺蜜捂嘴、长辈摔筷子、路人举手机。反应镜头决定爽感，比台词本身更重要。
+EN: After the key line, cut in three or four reaction shots of about one second each: the rival's widening eyes, the best friend covering her mouth, an elder slamming down chopsticks, a bystander raising a phone. Reactions sell the payoff more than the line itself.
+## om-hook-019 | 前3秒·价格/数字冲击 | First 3s: a shocking number | generic | hooks/cold-open | storyboard | 数字,冲击,开场
+ZH: 特写：一张支票被推到桌子中央，上面的数字后面跟着一长串零；一只手把支票推回去：「不够。」镜头上摇露出女主冷淡的脸。
+EN: Close-up: a cheque is pushed to the center of the table, a long string of zeros on it; a hand pushes it back: "Not enough." Tilt up to the heroine's indifferent face.
+## om-hook-020 | 节拍·误会-解释被打断 | Beat: the interrupted explanation | generic | hooks/reversal | script | 误会,虐心,节拍
+ZH: 女主撞见男主和别人拥抱 → 男主追上想解释，刚说「不是你想的——」→ 电话铃/车鸣/第三人出现打断 → 女主转身离开。经典虐心节拍，适合集中段。
+EN: She catches him hugging someone else → he runs after her to explain, gets out "It's not what you think—" → a phone ring / car horn / third person interrupts → she turns and leaves. A classic heartbreak beat for mid-episode.
+## om-cam-001 | 景别速查：从大远景到大特写 | Shot sizes: extreme wide to extreme close-up | generic | camera/shot-size | storyboard | 景别,词表,入门
+ZH: 大远景（交代环境，人很小）→ 远景（全身+环境）→ 全景（人物全身）→ 中景（膝盖以上）→ 近景（胸口以上）→ 特写（面部）→ 大特写（眼睛/嘴唇/手指）。短剧竖屏多用中景和近景，情绪点用特写。
+EN: Extreme wide (environment, tiny figure) → wide (full body plus setting) → full shot (head to toe) → medium (knees up) → medium close-up (chest up) → close-up (face) → extreme close-up (eyes, lips, fingers). Vertical shorts lean on medium and close shots; use close-ups for emotional beats.
+## om-cam-002 | 推镜头·情绪聚焦 | Push-in for emotional focus | generic | camera/push | storyboard | 推镜头,情绪,运镜
+ZH: 镜头从中景缓慢推进到女主的近景，她在听电话，随着推进表情从平静变为僵住。推镜用于「她意识到了什么」的时刻，速度要慢且匀速。
+EN: The camera slowly pushes from a medium shot to a close shot of the heroine on the phone; as it moves in, her expression shifts from calm to frozen. Use push-ins for "she realizes something" moments—slow and steady.
+## om-cam-003 | 拉镜头·揭示环境 | Pull-out to reveal | generic | camera/pull | storyboard | 拉镜头,揭示,孤独
+ZH: 从女主握着婚戒的手部特写开始，镜头缓慢后拉，露出她独自坐在空荡荡的婚礼会场中央，椅子都已收起。拉镜用于揭示处境和孤独感。
+EN: Start on a close-up of her hand holding a wedding ring and slowly pull back to reveal her sitting alone in the middle of an empty wedding venue, chairs already stacked. Pull-outs reveal circumstance and loneliness.
+## om-cam-004 | 摇镜头·视线引导 | Pan to follow the gaze | generic | camera/pan | storyboard | 摇镜头,视线,悬念
+ZH: 镜头先拍女主看向画面右侧的近景，随后水平向右摇，跟随她的视线停在门口站着的人身上。摇镜要有动机（视线、声音、动作）。
+EN: Begin on the heroine looking off to the right, then pan horizontally right along her eyeline to land on the person standing in the doorway. Every pan needs a motive—eyeline, sound or movement.
+## om-cam-005 | 跟拍·背后跟随 | Follow shot from behind | generic | camera/tracking | storyboard | 跟拍,代入感,走廊
+ZH: 镜头在男主身后一米处跟随，他穿过医院长走廊，两侧病房门依次掠过，走廊尽头的手术灯亮着。稳定器质感，速度与人物步伐一致。
+EN: The camera follows one meter behind him down a long hospital corridor, ward doors sliding past on both sides, the surgery light glowing at the end. Gimbal-smooth, matching his pace.
+## om-cam-006 | 环绕镜头·高光时刻 | Orbit for the hero moment | generic | camera/orbit | storyboard | 环绕,高光,气场
+ZH: 女主站在宴会厅中央，镜头以她为圆心匀速环绕 180 度，背景的宾客与灯光形成流动的虚化，她始终保持在画面中心并缓缓抬头。
+EN: The heroine stands at the center of the ballroom while the camera orbits her 180 degrees at a steady speed, guests and lights streaking into moving bokeh; she stays centered and slowly lifts her head.
+## om-cam-007 | 升降镜头·上帝视角 | Crane up to a god's-eye view | generic | camera/crane | storyboard | 升镜头,俯拍,渺小
+ZH: 镜头从女主跪在雨中的近景开始垂直上升，越升越高，直到她变成空旷广场中央的一个小点，四周是撑伞匆匆走过的人群。
+EN: Start close on the heroine kneeling in the rain and rise vertically, higher and higher, until she's a small dot in the middle of an empty plaza as people hurry past with umbrellas.
+## om-cam-008 | 手持晃动·纪实紧张 | Handheld for documentary tension | generic | camera/handheld | storyboard | 手持,紧张,纪实
+ZH: 手持摄影，轻微不规则晃动，镜头跟着争吵的两人来回切换焦点，偶尔被前景人物遮挡。适用于争吵、追逐、慌乱场景。不要用于甜宠和高级感场景。
+EN: Handheld with slight irregular shake, the camera swinging focus between two people arguing, occasionally blocked by a foreground figure. Use for arguments, chases and panic—not for sweet romance or premium looks.
+## om-cam-009 | 一镜到底·长镜头 | One continuous take | Seedance | camera/long-take | storyboard | 一镜到底,长镜头,沉浸
+ZH: 一镜到底，不切镜头：镜头从餐厅门口进入，穿过忙碌的服务员，绕过一桌客人，停在角落里独自吃饭的女主身后，再缓缓绕到她面前。运镜连续平滑。
+EN: One continuous take, no cuts: the camera enters at the restaurant door, weaves past busy waiters, circles a table of diners and stops behind the heroine eating alone in the corner, then slowly comes around to face her. Smooth continuous movement.
+## om-cam-010 | 希区柯克变焦·眩晕感 | Dolly zoom for vertigo | generic | camera/dolly-zoom | storyboard | 变焦,眩晕,震惊
+ZH: 希区柯克变焦：镜头后退的同时焦距推近，女主面部大小不变，背景走廊却在快速拉伸变形，表现她听到噩耗时的眩晕感。持续约 2 秒。
+EN: Dolly zoom: the camera tracks back while zooming in, so her face stays the same size while the corridor behind stretches and warps, conveying the vertigo of hearing terrible news. About two seconds.
+## om-cam-011 | 低角度仰拍·气场 | Low-angle shot for dominance | generic | camera/angle | storyboard | 仰拍,气场,霸总
+ZH: 摄影机贴近地面向上拍，男主从远处走来，身形逐渐占满画面，天花板的灯在他头顶形成光晕。仰拍让人物显得强大有压迫感。
+EN: Camera near the floor angled up; the lead walks in from a distance, his figure gradually filling the frame, ceiling lights haloing above his head. Low angles make a character powerful and imposing.
+## om-cam-012 | 高角度俯拍·弱势 | High-angle shot for vulnerability | generic | camera/angle | storyboard | 俯拍,弱势,孤立
+ZH: 从楼梯上方俯拍，女主独自坐在最下面一级台阶上，抱着膝盖，四周散落着被扔出来的东西。俯拍让人物显得渺小、无助。
+EN: Shot from the top of the stairs looking down: the heroine sits alone on the bottom step hugging her knees, belongings strewn around her. High angles make a character small and helpless.
+## om-cam-013 | 过肩镜头·对话 | Over-the-shoulder dialogue | generic | camera/ots | storyboard | 过肩,对话,正反打
+ZH: 过肩镜头：前景是男主虚化的肩膀和后脑，焦点在对面女主的脸上，她正在说话；下一镜反打，前景换成女主的肩膀。对话戏的标准写法。
+EN: Over-the-shoulder: his blurred shoulder and the back of his head in the foreground, focus on her face across from him as she speaks; the next shot reverses with her shoulder in the foreground. The standard dialogue setup.
+## om-cam-014 | 主观镜头·POV | POV shot | generic | camera/pov | storyboard | 主观,第一人称,代入
+ZH: 第一人称主观镜头：画面就是女主的视线，她推开房门，看到床上整齐摆着一件婚纱和一张字条；画面边缘轻微晃动，模拟眼睛扫视。
+EN: First-person POV: the frame is the heroine's view as she pushes open the bedroom door and sees a wedding dress laid neatly on the bed with a note; slight motion at the edges mimics scanning eyes.
+## om-cam-015 | 移焦·前后景切换 | Rack focus between planes | generic | camera/rack-focus | storyboard | 移焦,景深,揭示
+ZH: 前景是桌上的一部手机（清晰），背景是正在门口换鞋的男主（虚化）；手机亮起来电，焦点从手机缓慢移到男主身上，他停下动作看过来。
+EN: A phone on the table in sharp focus in the foreground, the lead changing shoes at the door blurred behind; the phone lights up with a call and focus slowly racks to him as he stops and looks over.
+## om-cam-016 | 甩镜·快速转场 | Whip pan transition | generic | camera/whip-pan | edit | 甩镜,转场,节奏
+ZH: 镜头从女主的脸快速甩向右侧，运动模糊中接到另一个场景（三年后的同一位置），同样的动作甩回到她的新造型。适合时间跳跃转场。
+EN: Whip from the heroine's face to the right; in the motion blur, cut to another scene (the same spot three years later) and whip back to reveal her new look. Good for time-jump transitions.
+## om-cam-017 | 子弹时间·定格环绕 | Bullet time freeze orbit | generic | camera/bullet-time | storyboard | 子弹时间,定格,特效
+ZH: 女主将一杯水泼向对方，水花飞出的瞬间时间静止，镜头围绕悬停在空中的水珠环绕 90 度，然后恢复正常速度，水泼到对方脸上。
+EN: The heroine throws a glass of water at her rival; as the splash leaves the glass, time freezes and the camera orbits 90 degrees around the droplets hanging in midair, then real time resumes and the water hits his face.
+## om-cam-018 | 荷兰角·失衡感 | Dutch angle for unease | generic | camera/angle | storyboard | 倾斜,不安,惊悚
+ZH: 画面倾斜 15–20 度，男主在昏暗的房间里来回踱步，自言自语，墙上的影子被拉长。荷兰角表现心理失衡、不安或危险。
+EN: Frame tilted 15-20 degrees; the lead paces a dim room muttering to himself, his shadow stretched on the wall. Dutch angles signal mental imbalance, unease or danger.
+## om-cam-019 | 航拍·城市开场 | Aerial city opener | generic | camera/aerial | scene | 航拍,开场,城市
+ZH: 无人机从高空俯瞰黄昏的城市，缓慢前推，穿过两栋摩天楼之间，最后下降对准一栋写字楼顶层亮着灯的窗户。用作每集开场的建立镜头。
+EN: A drone high over the city at dusk slowly pushes forward between two skyscrapers and descends to frame a lit top-floor window of an office tower. An establishing shot for each episode's opening.
+## om-cam-020 | 固定镜头·冷静观察 | Locked-off observation | generic | camera/static | storyboard | 固定镜头,留白,克制
+ZH: 固定机位，镜头不动，客厅里两人隔着一张沙发站着争吵，人物在画面中进进出出。固定镜头让观众像旁观者，适合克制的家庭戏。
+EN: Locked-off camera, no movement; two people argue across a sofa in the living room, moving in and out of frame. A static camera makes the audience a bystander—good for restrained family drama.
+## om-cam-021 | 运镜组合：推+环绕 | Combined move: push + orbit | Seedance | camera/combo | storyboard | 组合运镜,高级感,揭示
+ZH: 镜头先从远处推近站在天台边的女主（0-2秒），到达近景后开始绕她向右环绕 90 度（2-4秒），露出她身后整座城市的夜景。组合运镜要按时间分段写清楚。
+EN: The camera first pushes in toward the heroine at the rooftop edge (0-2s), then, at a close shot, orbits 90 degrees to the right (2-4s) to reveal the city at night behind her. Write combined moves as timed segments.
+## om-cam-022 | 运镜写法要点 | Camera movement checklist | generic | camera/guide | storyboard | 要点,运镜,稳定性
+ZH: 一个 5 秒镜头最多一种主运镜；写清方向（向左/向右/向前）、速度（缓慢/匀速/快速）和起止景别（「从中景推到特写」）。人物动作复杂时用固定镜头，镜头运动复杂时让人物动作简单。
+EN: One main camera move per five-second shot; specify direction (left/right/forward), speed (slow/steady/fast) and start and end framing ("push from medium to close-up"). If the action is complex, lock the camera; if the camera move is complex, keep the action simple.
+## om-light-001 | 伦勃朗光·人物质感 | Rembrandt lighting | generic | lighting/portrait | storyboard | 伦勃朗光,人像,质感
+ZH: 主光从人物左前上方 45 度打下，另一侧脸颊形成一个倒三角形光斑，暗部保留细节。适合有故事感的人物近景、反派或沉思时刻。
+EN: Key light from 45 degrees above and to the subject's left, leaving a small inverted triangle of light on the shadowed cheek with detail kept in the shadows. Good for storied close-ups, villains or contemplative moments.
+## om-light-002 | 轮廓光·分离背景 | Rim light to separate from background | generic | lighting/portrait | storyboard | 轮廓光,逆光,高级感
+ZH: 人物背后上方打一盏强光，头发和肩膀边缘亮起一圈金边，与深色背景分离；正面用柔和补光。适合登场、高光时刻。
+EN: A strong light behind and above the subject rims the hair and shoulders in gold, separating them from a dark background; soft fill from the front. Good for entrances and hero moments.
+## om-light-003 | 黄金时刻·温暖怀旧 | Golden hour warmth | generic | lighting/natural | storyboard | 黄金时刻,暖色,怀旧
+ZH: 日落前一小时，低角度暖橙色阳光从侧后方照来，人物带长长的影子，空气中漂浮着细尘，镜头有轻微光晕。适合回忆、初恋、离别。
+EN: An hour before sunset, low warm-orange sun from side-back, long shadows, dust floating in the air, slight lens flare. Good for memories, first love and farewells.
+## om-light-004 | 霓虹赛博·夜景 | Neon cyberpunk night | generic | lighting/stylized | storyboard | 霓虹,赛博朋克,雨夜
+ZH: 雨夜街道，品红和青蓝色霓虹招牌照在湿润的地面上形成倒影，人物一侧脸被红光照亮、另一侧被蓝光照亮，背景有雾气。
+EN: Rainy night street; magenta and cyan neon signs reflect on wet pavement, one side of the face lit red and the other blue, haze in the background.
+## om-light-005 | 青橙色调·电影感 | Teal and orange cinematic grade | generic | lighting/grade | edit | 调色,青橙,电影感
+ZH: 整体调色为青橙对比：肤色和暖光偏橙，阴影和背景偏青蓝，中等对比，略微压低饱和度。适合都市剧和动作戏。
+EN: Teal-and-orange grade: skin tones and warm lights toward orange, shadows and background toward teal, medium contrast, slightly reduced saturation. Good for urban drama and action.
+## om-light-006 | 低调光·悬疑压迫 | Low-key lighting for suspense | generic | lighting/mood | storyboard | 低调光,悬疑,暗部
+ZH: 画面 70% 处于黑暗中，只有一盏顶灯照亮桌面和人物的半张脸，阴影边缘锐利，背景完全看不清。适合审讯、密谋、惊悚场景。
+EN: Seventy percent of the frame in darkness; a single overhead lamp lights the table and half a face, hard-edged shadows, background invisible. Good for interrogations, conspiracies and thrillers.
+## om-light-007 | 高调光·甜宠明亮 | High-key lighting for sweet romance | generic | lighting/mood | storyboard | 高调光,甜宠,明亮
+ZH: 整体明亮、阴影很浅，大面积柔光从窗户进入，白色和浅粉色为主，人物皮肤通透。适合甜宠、校园、轻喜剧。
+EN: Bright overall with very light shadows, broad soft light through the windows, whites and pale pinks dominating, luminous skin. Good for sweet romance, campus and light comedy.
+## om-light-008 | 窗光·自然柔和 | Window light | generic | lighting/natural | storyboard | 窗光,自然光,文艺
+ZH: 人物坐在窗边，柔和的阴天窗光从侧面照来，脸部有自然的明暗过渡，背景室内略暗。文艺片质感，适合独白和情绪戏。
+EN: The subject sits by a window; soft overcast light from the side gives a natural gradient across the face, the room behind slightly darker. Art-house feel, good for monologues and emotional scenes.
+## om-light-009 | 烛光·古装夜戏 | Candlelight for period night scenes | generic | lighting/practical | storyboard | 烛光,古装,暖色
+ZH: 古装夜戏，桌上两支蜡烛是唯一光源，暖黄色光随火苗轻微摇曳，人物脸上光影跳动，远处背景沉入黑暗。
+EN: A period night scene lit only by two candles on the table; warm yellow light flickers with the flames, light dancing across the faces, the background sinking into darkness.
+## om-light-010 | 胶片颗粒·复古回忆 | Film grain for flashbacks | generic | lighting/grade | edit | 胶片,复古,回忆
+ZH: 回忆段落：低饱和、暖黄偏色，加入 35mm 胶片颗粒和轻微暗角，高光略微溢出。与现实段落的冷色调形成对比。
+EN: Flashback sections: low saturation, warm yellow cast, 35mm film grain and a light vignette, highlights slightly blooming—contrasting with the cool tones of the present.
+## om-light-011 | 冷蓝月光·夜戏 | Cool blue moonlight | generic | lighting/natural | storyboard | 月光,冷色,夜戏
+ZH: 夜晚室外，冷蓝色月光从高处照下，人物轮廓清晰，面部较暗，地面有树影斑驳。适合夜奔、私会、孤独时刻。
+EN: Exterior at night; cool blue moonlight from high above gives crisp outlines with a darker face and dappled tree shadows on the ground. Good for night escapes, secret meetings and lonely moments.
+## om-light-012 | 闪烁灯光·惊悚 | Flickering light for horror | generic | lighting/mood | storyboard | 闪烁,惊悚,不安
+ZH: 走廊日光灯不规则闪烁，画面在明暗之间跳动，每次变亮时人物的位置都离镜头更近一点。不要血腥，靠光制造恐惧。
+EN: A corridor fluorescent tube flickers irregularly, the frame jumping between light and dark; each time it brightens the figure is a little closer to the camera. No gore—fear comes from the light.
+## om-light-013 | 丁达尔光·神圣感 | God rays | generic | lighting/atmosphere | storyboard | 丁达尔,光束,氛围
+ZH: 阳光透过教堂高窗/树林缝隙形成一道道清晰光束，空气中有薄雾和浮尘，人物走进光束中，被照亮的瞬间抬头。
+EN: Sunlight through high church windows or forest gaps forms distinct beams, light haze and dust in the air; the character steps into a beam and looks up as it lights them.
+## om-light-014 | 黑白高反差 | High-contrast black and white | generic | lighting/grade | edit | 黑白,高反差,风格化
+ZH: 黑白画面，高反差，纯黑阴影与明亮高光，人物脸部只保留一半被光照亮。适合回忆中的创伤片段或风格化的片头。
+EN: Black and white, high contrast, pure black shadows and bright highlights, only half the face lit. Good for traumatic flashbacks or stylized title sequences.
+## om-light-015 | 光影写法要点 | Lighting prompt checklist | generic | lighting/guide | storyboard | 要点,光影,写法
+ZH: 光影写三件事：光源（窗光/台灯/霓虹/月光）、方向（侧光/逆光/顶光）、色温（暖黄/冷蓝）。再加一个情绪词（温暖、压抑、梦幻）。避免只写「好看的光」「电影感灯光」。
+EN: Specify three things: the source (window, desk lamp, neon, moonlight), direction (side, back, top) and color temperature (warm yellow, cool blue). Add one mood word (warm, oppressive, dreamy). Avoid vague "nice lighting" or "cinematic lighting."

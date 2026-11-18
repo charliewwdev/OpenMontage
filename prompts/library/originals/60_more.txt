@@ -1,0 +1,82 @@
+# OpenMontage original prompts — extra entries across categories. License: CC BY 4.0
+## om-script-001 | 剧本·一句话创意扩成分集大纲 | Script: one-line idea to episode outline | generic | genres/script-method | script | 剧本,大纲,LLM
+ZH: 你是竖屏短剧编剧。把下面这句创意扩展成 10 集分集大纲，每集 60–90 秒：每集写出【本集冲突】【爽点或反转】【集末悬念】三行；人物不超过 5 个；第 1 集前 3 秒必须是冲突画面。创意：【在此填写一句话创意】。
+EN: You are a vertical short-drama writer. Expand the idea below into a 10-episode outline, 60-90 seconds each: for every episode give three lines—[conflict], [payoff or reversal], [cliffhanger]; no more than five characters; episode 1 must open on a conflict within three seconds. Idea: [your one-line idea].
+## om-script-002 | 剧本·单集转分镜脚本 | Script: episode to shot list | generic | genres/script-method | script | 剧本,分镜,LLM
+ZH: 把下面这集剧本拆成分镜表，每个镜头一行：镜号｜时长（1.5–3秒）｜景别｜运镜｜画面与动作（一个镜头一个动作，写清身体部位）｜台词｜音效。总时长控制在 60 秒内，保持人物站位和服装连续。剧本：【粘贴剧本】。
+EN: Break the episode below into a shot list, one row per shot: # | duration (1.5-3s) | shot size | camera move | image and action (one action per shot, name the body part) | dialogue | SFX. Keep total under 60 seconds and maintain blocking and costume continuity. Script: [paste script].
+## om-script-003 | 剧本·台词口语化润色 | Script: make dialogue conversational | generic | genres/script-method | script | 台词,润色,LLM
+ZH: 把下面的台词改得更口语、更短：每句不超过 15 个字；删掉解释性的话，用动作代替；保留人物身份差异（霸总简短、闺蜜话多、长辈爱说教）。输出格式：人物（语气）：台词。台词：【粘贴台词】。
+EN: Rewrite the dialogue below to be shorter and more conversational: at most about 15 characters (Chinese) or 12 words per line; cut expository lines and replace them with actions; keep voices distinct (the CEO terse, the best friend chatty, elders preachy). Format: Character (tone): line. Dialogue: [paste].
+## om-script-004 | 剧本·人物小传生成 | Script: character bio | generic | genres/script-method | character | 人物小传,角色,LLM
+ZH: 为下面的角色写一份可用于生成画面的人物小传：外貌（年龄、身高、发型、标志性服装、一个显眼特征）、口头禅、标志性小动作 2 个、核心欲望、最大的秘密。外貌部分用逗号分隔的短语，方便直接复制进生图提示词。角色：【角色名与一句话设定】。
+EN: Write a production-ready character bio for the character below: appearance (age, height, hairstyle, signature outfit, one distinctive feature), a catchphrase, two signature gestures, core desire, biggest secret. Write appearance as comma-separated phrases to paste straight into an image prompt. Character: [name and one-line premise].
+## om-act-fight-012 | 武打·兵器对拼火花 | Weapons clash with sparks | generic | actions/fighting | storyboard | 兵器,火花,特写
+ZH: 夜色中两把长刀正面相撞，刀刃交叉处迸出一簇火星，两人角力僵持，刀身微微颤抖，镜头从刀刃交点特写拉到两人咬牙对视的中景。冷蓝月光，火星暖色。
+EN: Two long blades clash head-on at night, a burst of sparks at the crossing point; the fighters strain against each other, steel trembling, as the camera pulls from a close-up of the crossed edges to a medium shot of them glaring through gritted teeth. Cool blue moonlight, warm sparks.
+## om-act-fight-013 | 武打·借力翻身 | Using the wall to flip | generic | actions/fighting | storyboard | 借力,翻身,跑酷
+ZH: 被逼到墙角的女主右脚蹬墙两步向上跑，身体后空翻越过对手头顶，落在他身后，顺势一记手刀切向他颈侧，对手跪倒。慢动作用于翻越最高点，无血腥。
+EN: Cornered, the heroine runs two steps up the wall with her right foot, backflips over her opponent's head, lands behind him and follows with a knife-hand strike to the side of his neck; he drops to his knees. Slow motion at the top of the flip, no gore.
+## om-act-chase-009 | 追逐·人群中逆行 | Pushing against the crowd | generic | actions/chase | storyboard | 人群,逆行,俯拍
+ZH: 节日夜市人潮涌动，男主逆着人流挤向前方，不断侧身、抬手拨开行人，目光一直锁定前方戴红帽子的身影；俯拍能看到他在人群中划出一道逆向的轨迹。
+EN: A packed festival night market; the lead pushes against the flow of people, turning sideways and parting people with his hands, eyes fixed on a figure in a red hat ahead. From above, his path cuts a counter-current line through the crowd.
+## om-act-dance-009 | 舞蹈·镜面练习室 | Dance studio mirror practice | generic | actions/dance | storyboard | 练习室,镜子,坚持
+ZH: 深夜舞蹈练习室，只有她一个人，对着整面镜子一遍遍重复同一个转身动作，第三次落地不稳摔倒，她坐在地上喘气，看了镜子里的自己几秒，又站起来。镜子反射中的双重画面，冷白灯。
+EN: A dance studio late at night, just her, repeating the same turn over and over in front of the mirrored wall; on the third try she lands badly and falls, sits catching her breath, stares at her reflection for a few seconds and gets up again. Doubled image in the mirror, cool white light.
+## om-act-sport-011 | 运动·拳击场倒数 | Boxing ring count | generic | actions/sports | storyboard | 拳击,倒数,逆转
+ZH: 拳台上，主角倒在地上，裁判在头顶倒数「六、七」，主角视线模糊地看向台下的女儿，手撑地面一点点爬起，在「九」时站直举起双拳。低角度，声音模糊处理后恢复清晰。
+EN: In the ring, the hero is down while the referee counts above him, "six, seven"; blurry-eyed, he looks at his daughter in the crowd, pushes up inch by inch and stands with fists raised at "nine." Low angle, sound muffled then snapping back to clarity.
+## om-act-daily-013 | 日常·化妆变身 | Everyday: makeup transformation | generic | actions/everyday | storyboard | 化妆,变身,镜前
+ZH: 梳妆台镜前，女主拿起口红，对着镜子缓缓涂上正红色，抿一下嘴唇，再把散落的头发挽起；镜中她的眼神从疲惫变得锋利。镜面反打近景，暖色化妆灯。
+EN: At the vanity mirror, the heroine picks up a lipstick and slowly applies a true red, presses her lips together, then pins up her loose hair; in the mirror her eyes shift from tired to sharp. Mirror reverse close shot, warm vanity lights.
+## om-act-emo-015 | 情绪·强装镇定 | Forced composure | generic | actions/emotion | storyboard | 镇定,伪装,细节
+ZH: 她当着众人的面微笑着说「我没事」，镜头下移到桌子下面：她的手死死攥着裙摆，指甲掐进掌心。上下对比揭示真实情绪。
+EN: In front of everyone she smiles and says, "I'm fine"; the camera tilts down beneath the table: her hand clenches her skirt, nails digging into her palm. The contrast reveals what she really feels.
+## om-act-inter-010 | 多人·耳语传话 | Whispering down the line | generic | actions/interaction | storyboard | 八卦,耳语,群像
+ZH: 办公室工位间，一个同事凑到另一个耳边低语，对方瞪大眼睛又转头告诉下一个人，消息像波浪一样传遍整个办公区，最后所有人一起看向刚走进门的女主。横移长镜头。
+EN: Among office cubicles, one colleague whispers into another's ear; she widens her eyes and turns to tell the next person, and the news ripples across the floor until everyone turns at once to the heroine walking in. Lateral long take.
+## om-act-hand-011 | 手部·握笔犹豫 | Hands: the hesitant pen | generic | actions/hands-props | storyboard | 手部,犹豫,签字
+ZH: 特写：一只手握着笔悬在离婚协议签字栏上，笔尖在纸面上方轻轻抖动；另一只手伸过来覆在它上面，把笔慢慢拿走。逆光，纸面有阴影。
+EN: Close-up: a hand holds a pen above the signature line of divorce papers, the nib trembling slightly over the page; another hand reaches in, covers it, and slowly takes the pen away. Backlit, shadow on the paper.
+## om-act-rom-008 | 浪漫·雨中共撑一件外套 | Romance: sharing a jacket in the rain | generic | actions/romance | storyboard | 雨天,共撑,奔跑
+ZH: 突如其来的大雨，男主把外套撑开举过两人头顶，两人笑着一起跑过马路，躲进便利店的屋檐下，相视大笑，抖落身上的雨水。中景跟拍，夜晚街灯，衣着得体。
+EN: A sudden downpour; he holds his jacket open over both their heads and they run across the street laughing, ducking under a convenience store awning, cracking up and shaking off the rain. Medium tracking shot, night streetlights, modest clothing.
+## om-cam-023 | 镜头·门框构图 | Framing through a doorway | generic | camera/composition | storyboard | 构图,门框,窥视
+ZH: 镜头放在走廊里，透过半开的门缝拍摄房间内争吵的两人，门框形成画中画，人物在缝隙中时隐时现，营造偷看与隔阂感。
+EN: Camera in the hallway, shooting through a half-open door at two people arguing inside; the doorframe creates a frame within the frame and the figures slip in and out of the gap, creating a voyeuristic sense of distance.
+## om-cam-024 | 镜头·倒影构图 | Shooting the reflection | generic | camera/composition | storyboard | 倒影,构图,双重
+ZH: 雨后地面积水中映出男主的倒影，一滴雨落下，倒影被涟漪打碎，再慢慢恢复；镜头上摇到真实的他站在路灯下。适合表现人物内心分裂或身份双重。
+EN: The lead's reflection in a rain puddle; a drop falls and ripples shatter it before it slowly reforms; tilt up to the real him under a streetlight. Good for inner conflict or a double identity.
+## om-cam-025 | 镜头·前景遮挡 | Foreground occlusion | generic | camera/composition | storyboard | 前景,层次,偷拍感
+ZH: 镜头透过前景的绿植叶片拍摄咖啡馆里交谈的两人，叶片虚化占据画面一侧，焦点在人物上，像被人暗中观察。增加画面层次和悬疑感。
+EN: Shoot two people talking in a café through foreground plant leaves; the blurred leaves take up one side of the frame, focus on the subjects, as if someone is secretly watching. Adds depth and suspense.
+## om-light-016 | 光影·车灯扫过 | Passing headlights | generic | lighting/practical | storyboard | 车灯,夜戏,动态光
+ZH: 深夜卧室，窗外一辆车驶过，车灯的光从墙的一侧扫到另一侧，短暂照亮坐在床边一动不动的女主，随后房间重归黑暗。
+EN: A bedroom late at night; a car passes outside and its headlights sweep across the wall from one side to the other, briefly lighting the heroine sitting motionless on the bed before the room falls dark again.
+## om-light-017 | 光影·屏幕光照脸 | Screen glow on the face | generic | lighting/practical | storyboard | 屏幕光,冷色,孤独
+ZH: 漆黑房间里唯一的光来自手机屏幕，冷蓝色光从下往上照亮女主的脸，屏幕内容变化时光的亮度也随之闪动。
+EN: The only light in a pitch-dark room comes from a phone screen, cool blue light from below on the heroine's face, its brightness flickering as the screen content changes.
+## om-story-011 | 分镜·平行剪辑 | Storyboard: parallel editing | generic | storyboard/transition | edit | 平行剪辑,倒计时,紧张
+ZH: 两条线交替：A 线女主在婚礼现场等待（镜头越来越近）；B 线男主在堵车的路上焦急看表（镜头越来越快）。每个镜头 1–2 秒交替，直到两条线在教堂门口汇合。
+EN: Two lines intercut: line A, the heroine waiting at the wedding (shots getting tighter); line B, the hero stuck in traffic checking his watch (shots getting faster). Alternate every 1-2 seconds until both lines meet at the church doors.
+## om-story-012 | 分镜·蒙太奇时间流逝 | Storyboard: time-passing montage | Seedance | storyboard/montage | edit | 蒙太奇,成长,时间
+ZH: 镜头1：她在出租屋熬夜画设计稿；镜头2：被客户退回的邮件；镜头3：街边摊吃泡面；镜头4：第一次拿到合同；镜头5：站在自己工作室的门口。每个镜头 1 秒，同一角色，季节从冬到夏变化。
+EN: Shot 1: she works late on designs in a rented room. Shot 2: a client's rejection email. Shot 3: instant noodles at a street stall. Shot 4: her first signed contract. Shot 5: standing at the door of her own studio. One second each, same character, seasons shifting from winter to summer.
+## om-ecom-011 | 电商·饮品倒入慢动作 | E-commerce: slow-motion drink pour | generic | ecommerce/food-beverage | storyboard | 饮品,慢动作,冰块
+ZH: 透明玻璃杯装满冰块，[产品] 果汁从上方倒入，慢动作中液体冲击冰块溅起水花，气泡沿杯壁上升，杯壁凝结水珠；最后一片柠檬落在杯沿。逆光，背景虚化。
+EN: A clear glass full of ice; [product] juice pours in from above, and in slow motion the liquid crashes over the ice, splashing as bubbles rise along the glass and condensation beads on the outside; a lemon slice lands on the rim. Backlit, blurred background.
+## om-ecom-012 | 电商·开箱第一视角 | E-commerce: first-person unboxing | generic | ecommerce/unboxing-asmr | storyboard | 开箱,第一视角,ASMR
+ZH: 第一人称视角，双手放在木桌上的 [产品] 包装盒两侧，拇指推开盒盖，揭开保护膜，取出产品转动展示；纸张摩擦和撕膜声清晰。自然窗光，俯视角。
+EN: First-person view: both hands on either side of the [product] box on a wooden table, thumbs push the lid open, peel back the protective film, lift the product out and turn it; paper rustle and film peel are crisp. Natural window light, top-down angle.
+## om-plat-011 | 竖屏短剧·付费卡点设计 | Vertical drama: designing the paywall moment | generic | platform/series | script | 卡点,付费,连载
+ZH: 连载短剧的关键卡点放在第 8–12 集：主角的身份或秘密即将揭开的前一秒（对方张口要说出名字、信封正要拆开）。卡点前一集要把期待值拉满，卡点那一刻直接黑屏。
+EN: In serialized drama, put the key cliffhanger around episodes 8-12: the second before the protagonist's identity or secret is revealed (someone about to say the name, an envelope about to be opened). Build expectation in the prior episode and cut to black at that instant.
+## om-sound-011 | 声音·电话那头的声音 | Sound: the voice on the phone | generic | sound/dialogue | voice | 电话,音效处理,悬疑
+ZH: 电话里的声音做「电话滤波」处理：频率变窄、略带电流声；画面只拍接电话的人，对方声音冷静地说：「你女儿在我这里。」接电话的人手里的杯子滑落。
+EN: Process the caller's voice with a telephone filter—narrow frequency, a little line hiss; show only the person answering as the voice says calmly, "Your daughter is with me." The cup slips from the listener's hand.
+## om-neg-011 | 约束·竖屏构图 | Constraint: vertical framing | generic | negative/framing | storyboard | 约束词,竖屏,构图
+ZH: 9:16 竖屏构图，主体居中，头部不被裁切，下方留出字幕空间，不要横屏画面加黑边。
+EN: 9:16 vertical composition, subject centered, head not cropped, space below for captions, no letterboxed landscape footage.
+## om-neg-012 | 约束·古装不穿帮 | Constraint: no anachronisms in period pieces | generic | negative/period | storyboard | 约束词,古装,穿帮
+ZH: 古代场景，不出现现代物品（手机、电线、塑料、眼镜、手表、汽车），服装与发型符合古装设定。
+EN: Period setting, no modern objects (phones, power lines, plastic, eyeglasses, wristwatches, cars), costumes and hairstyles appropriate to the era.

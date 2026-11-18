@@ -1,0 +1,386 @@
+[
+  {
+    "id": "om-neg-002",
+    "title": {
+      "zh": "人体结构约束",
+      "en": "Anatomy constraints"
+    },
+    "prompt_zh": "人体结构正确，五指清晰，四肢完整，无多余手指，无多余肢体，无肢体融合，面部不变形。",
+    "prompt_en": "correct anatomy, five distinct fingers, complete limbs, no extra fingers, no extra limbs, no fused limbs, no facial distortion.",
+    "model": "generic",
+    "category": "negative",
+    "subcategory": "anatomy",
+    "stage": "storyboard",
+    "tags": [
+      "约束词",
+      "手部",
+      "肢体",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-neg-009",
+    "title": {
+      "zh": "镜头约束·不切镜",
+      "en": "Camera constraint: no cuts"
+    },
+    "prompt_zh": "单一连续镜头，不切换镜头，不跳切，机位保持稳定。适用于需要一镜到底或固定机位的生成。",
+    "prompt_en": "single continuous shot, no cuts, no jump cuts, stable camera position. For generations that need one take or a locked-off camera.",
+    "model": "generic",
+    "category": "negative",
+    "subcategory": "camera",
+    "stage": "storyboard",
+    "tags": [
+      "约束词",
+      "一镜到底",
+      "镜头",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-neg-003",
+    "title": {
+      "zh": "一致性约束",
+      "en": "Consistency constraints"
+    },
+    "prompt_zh": "人物面部、发型、服装在全片保持一致，不换脸，不突变，场景与道具位置保持不变。",
+    "prompt_en": "character face, hairstyle and outfit stay consistent throughout, no identity change, no sudden morphing, set and props stay in place.",
+    "model": "generic",
+    "category": "negative",
+    "subcategory": "consistency",
+    "stage": "storyboard",
+    "tags": [
+      "约束词",
+      "一致性",
+      "角色",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-neg-011",
+    "title": {
+      "zh": "约束·竖屏构图",
+      "en": "Constraint: vertical framing"
+    },
+    "prompt_zh": "9:16 竖屏构图，主体居中，头部不被裁切，下方留出字幕空间，不要横屏画面加黑边。",
+    "prompt_en": "9:16 vertical composition, subject centered, head not cropped, space below for captions, no letterboxed landscape footage.",
+    "model": "generic",
+    "category": "negative",
+    "subcategory": "framing",
+    "stage": "storyboard",
+    "tags": [
+      "约束词",
+      "竖屏",
+      "构图",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-neg-001",
+    "title": {
+      "zh": "通用约束词·画面干净",
+      "en": "Universal constraints: clean frame"
+    },
+    "prompt_zh": "无字幕，无文字，无水印，无 Logo，无边框，画面干净。",
+    "prompt_en": "no subtitles, no text, no watermark, no logo, no borders, clean frame.",
+    "model": "generic",
+    "category": "negative",
+    "subcategory": "general",
+    "stage": "storyboard",
+    "tags": [
+      "约束词",
+      "无字幕",
+      "无水印",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-neg-010",
+    "title": {
+      "zh": "约束词使用要点",
+      "en": "Using constraint words"
+    },
+    "prompt_zh": "不支持负面提示词输入框的模型，把约束直接写在提示词末尾，用肯定句更有效（「五指清晰」优于「不要多手指」）；约束不超过 5 条，太多反而稀释主体描述。",
+    "prompt_en": "For models without a negative-prompt field, put constraints at the end of the prompt; positive phrasing works better (\"five distinct fingers\" beats \"no extra fingers\"). Keep it to five constraints or fewer—too many dilute the main description.",
+    "model": "generic",
+    "category": "negative",
+    "subcategory": "guide",
+    "stage": "storyboard",
+    "tags": [
+      "要点",
+      "约束词",
+      "写法",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-neg-004",
+    "title": {
+      "zh": "运动稳定约束",
+      "en": "Motion stability constraints"
+    },
+    "prompt_zh": "动作连贯自然，无闪烁，无抖动跳帧，无画面撕裂，物体不凭空出现或消失，镜头运动平滑。",
+    "prompt_en": "smooth natural motion, no flicker, no jitter or dropped frames, no tearing, objects don't appear or vanish, smooth camera movement.",
+    "model": "generic",
+    "category": "negative",
+    "subcategory": "motion",
+    "stage": "storyboard",
+    "tags": [
+      "约束词",
+      "稳定",
+      "闪烁",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-neg-012",
+    "title": {
+      "zh": "约束·古装不穿帮",
+      "en": "Constraint: no anachronisms in period pieces"
+    },
+    "prompt_zh": "古代场景，不出现现代物品（手机、电线、塑料、眼镜、手表、汽车），服装与发型符合古装设定。",
+    "prompt_en": "Period setting, no modern objects (phones, power lines, plastic, eyeglasses, wristwatches, cars), costumes and hairstyles appropriate to the era.",
+    "model": "generic",
+    "category": "negative",
+    "subcategory": "period",
+    "stage": "storyboard",
+    "tags": [
+      "约束词",
+      "古装",
+      "穿帮",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-neg-006",
+    "title": {
+      "zh": "产品约束·电商",
+      "en": "Product constraints for ads"
+    },
+    "prompt_zh": "产品形状、比例、颜色和标签文字保持一致，不变形，不融化，标签文字不扭曲，不出现其他品牌标志。",
+    "prompt_en": "product shape, proportions, color and label text stay consistent, no deformation, no melting, no warped label text, no other brand logos.",
+    "model": "generic",
+    "category": "negative",
+    "subcategory": "product",
+    "stage": "storyboard",
+    "tags": [
+      "约束词",
+      "产品",
+      "电商",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-neg-008",
+    "title": {
+      "zh": "画质约束",
+      "en": "Image quality constraints"
+    },
+    "prompt_zh": "高清，细节清晰，无模糊，无噪点，无压缩伪影，无过曝，无欠曝。",
+    "prompt_en": "high definition, crisp detail, no blur, no noise, no compression artifacts, no overexposure, no underexposure.",
+    "model": "generic",
+    "category": "negative",
+    "subcategory": "quality",
+    "stage": "storyboard",
+    "tags": [
+      "约束词",
+      "画质",
+      "清晰",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-neg-007",
+    "title": {
+      "zh": "内容安全约束",
+      "en": "Content safety constraints"
+    },
+    "prompt_zh": "无血腥，无暴露，衣着得体，不出现真实名人，不出现武器特写（动作戏用拳脚或道具剑），符合平台内容规范。",
+    "prompt_en": "no gore, no nudity, modest clothing, no real celebrities, no close-ups of firearms (use fists or prop swords in action scenes), compliant with platform content rules.",
+    "model": "generic",
+    "category": "negative",
+    "subcategory": "safety",
+    "stage": "storyboard",
+    "tags": [
+      "约束词",
+      "安全",
+      "审核",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-neg-005",
+    "title": {
+      "zh": "风格约束·写实",
+      "en": "Style constraints: realism"
+    },
+    "prompt_zh": "写实风格，不要卡通，不要动漫，不要过度磨皮，不要塑料质感，不要过饱和。",
+    "prompt_en": "realistic style, not cartoon, not anime, no over-smoothed skin, no plastic look, not oversaturated.",
+    "model": "generic",
+    "category": "negative",
+    "subcategory": "style",
+    "stage": "storyboard",
+    "tags": [
+      "约束词",
+      "写实",
+      "质感",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  }
+]

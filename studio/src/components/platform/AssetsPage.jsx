@@ -20,6 +20,7 @@ import { toast } from "../../lib/toast";
 import { PageShell } from "./PageShell";
 import { Lightbox } from "../Lightbox";
 import { ModalOverlay } from "../ModalPortal";
+import { PromptLibraryTab } from "./PromptLibraryTab";
 
 import { tr, localized, useLocale } from "../../lib/i18n";
 
@@ -289,7 +290,7 @@ function SortLink({ active, children, onClick }) {
   );
 }
 
-export function AssetsPage({ onUsePrompt }) {
+export function AssetsPage({ onUsePrompt, onUseInNewProject, authed = false, onRequireAuth }) {
   useLocale();
   const [tab, setTab] = useState("assets");
   const [assets, setAssets] = useState([]);
@@ -505,7 +506,8 @@ export function AssetsPage({ onUsePrompt }) {
         <div className="flex min-w-0 items-center gap-2">
           <FolderOpen className="h-4 w-4 shrink-0 text-white/40" aria-hidden />
           <Chip active={tab === "assets"} onClick={() => setTab("assets")}>{tr("ui_assets_assets")}</Chip>
-          <Chip active={tab === "prompts"} onClick={() => setTab("prompts")}>{tr("ui_assets_prompts")}</Chip>
+          <Chip active={tab === "prompts"} onClick={() => setTab("prompts")}>{tr("ui_assets_my_prompts")}</Chip>
+          <Chip active={tab === "library"} onClick={() => setTab("library")}>{tr("ui_assets_prompt_library")}</Chip>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {tab === "assets" ? (
@@ -541,7 +543,7 @@ export function AssetsPage({ onUsePrompt }) {
                 {selectMode ? tr("ui_assets_cancel") : tr("ui_assets_select")}
               </button>
             </>
-          ) : (
+          ) : tab === "prompts" ? (
             <button
               type="button"
               className="btn-primary !min-h-9 !px-3"
@@ -554,7 +556,7 @@ export function AssetsPage({ onUsePrompt }) {
               }
             >
               <Plus className="h-3.5 w-3.5" />{" "}{tr("ui_assets_new")}</button>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -722,6 +724,8 @@ export function AssetsPage({ onUsePrompt }) {
             </div>
           ) : null}
         </>
+      ) : tab === "library" ? (
+        <PromptLibraryTab authed={authed} onRequireAuth={onRequireAuth} onUseInNewProject={onUseInNewProject} />
       ) : (
         <>
           <FilterRow scroll>
@@ -773,6 +777,12 @@ export function AssetsPage({ onUsePrompt }) {
                     </button>
                   </div>
                   <p className="mt-2 line-clamp-6 flex-1 text-sm leading-7 text-white/80">{item.text}</p>
+                  {item.origin?.attribution ? (
+                    <p className="mt-2 text-[10px] leading-5 text-white/40">
+                      {item.origin.license ? `${item.origin.license} · ` : ""}
+                      {item.origin.attribution}
+                    </p>
+                  ) : null}
                   <div className="mt-4 flex flex-wrap gap-2">
                     <button
                       type="button"

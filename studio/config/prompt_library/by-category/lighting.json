@@ -1,0 +1,825 @@
+[
+  {
+    "id": "om-light-013",
+    "title": {
+      "zh": "丁达尔光·神圣感",
+      "en": "God rays"
+    },
+    "prompt_zh": "阳光透过教堂高窗/树林缝隙形成一道道清晰光束，空气中有薄雾和浮尘，人物走进光束中，被照亮的瞬间抬头。",
+    "prompt_en": "Sunlight through high church windows or forest gaps forms distinct beams, light haze and dust in the air; the character steps into a beam and looks up as it lights them.",
+    "model": "generic",
+    "category": "lighting",
+    "subcategory": "atmosphere",
+    "stage": "storyboard",
+    "tags": [
+      "丁达尔",
+      "光束",
+      "氛围",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-light-005",
+    "title": {
+      "zh": "青橙色调·电影感",
+      "en": "Teal and orange cinematic grade"
+    },
+    "prompt_zh": "整体调色为青橙对比：肤色和暖光偏橙，阴影和背景偏青蓝，中等对比，略微压低饱和度。适合都市剧和动作戏。",
+    "prompt_en": "Teal-and-orange grade: skin tones and warm lights toward orange, shadows and background toward teal, medium contrast, slightly reduced saturation. Good for urban drama and action.",
+    "model": "generic",
+    "category": "lighting",
+    "subcategory": "grade",
+    "stage": "edit",
+    "tags": [
+      "调色",
+      "青橙",
+      "电影感",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-light-010",
+    "title": {
+      "zh": "胶片颗粒·复古回忆",
+      "en": "Film grain for flashbacks"
+    },
+    "prompt_zh": "回忆段落：低饱和、暖黄偏色，加入 35mm 胶片颗粒和轻微暗角，高光略微溢出。与现实段落的冷色调形成对比。",
+    "prompt_en": "Flashback sections: low saturation, warm yellow cast, 35mm film grain and a light vignette, highlights slightly blooming—contrasting with the cool tones of the present.",
+    "model": "generic",
+    "category": "lighting",
+    "subcategory": "grade",
+    "stage": "edit",
+    "tags": [
+      "胶片",
+      "复古",
+      "回忆",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-light-014",
+    "title": {
+      "zh": "黑白高反差",
+      "en": "High-contrast black and white"
+    },
+    "prompt_zh": "黑白画面，高反差，纯黑阴影与明亮高光，人物脸部只保留一半被光照亮。适合回忆中的创伤片段或风格化的片头。",
+    "prompt_en": "Black and white, high contrast, pure black shadows and bright highlights, only half the face lit. Good for traumatic flashbacks or stylized title sequences.",
+    "model": "generic",
+    "category": "lighting",
+    "subcategory": "grade",
+    "stage": "edit",
+    "tags": [
+      "黑白",
+      "高反差",
+      "风格化",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-light-015",
+    "title": {
+      "zh": "光影写法要点",
+      "en": "Lighting prompt checklist"
+    },
+    "prompt_zh": "光影写三件事：光源（窗光/台灯/霓虹/月光）、方向（侧光/逆光/顶光）、色温（暖黄/冷蓝）。再加一个情绪词（温暖、压抑、梦幻）。避免只写「好看的光」「电影感灯光」。",
+    "prompt_en": "Specify three things: the source (window, desk lamp, neon, moonlight), direction (side, back, top) and color temperature (warm yellow, cool blue). Add one mood word (warm, oppressive, dreamy). Avoid vague \"nice lighting\" or \"cinematic lighting.\"",
+    "model": "generic",
+    "category": "lighting",
+    "subcategory": "guide",
+    "stage": "storyboard",
+    "tags": [
+      "要点",
+      "光影",
+      "写法",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-light-006",
+    "title": {
+      "zh": "低调光·悬疑压迫",
+      "en": "Low-key lighting for suspense"
+    },
+    "prompt_zh": "画面 70% 处于黑暗中，只有一盏顶灯照亮桌面和人物的半张脸，阴影边缘锐利，背景完全看不清。适合审讯、密谋、惊悚场景。",
+    "prompt_en": "Seventy percent of the frame in darkness; a single overhead lamp lights the table and half a face, hard-edged shadows, background invisible. Good for interrogations, conspiracies and thrillers.",
+    "model": "generic",
+    "category": "lighting",
+    "subcategory": "mood",
+    "stage": "storyboard",
+    "tags": [
+      "低调光",
+      "悬疑",
+      "暗部",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-light-007",
+    "title": {
+      "zh": "高调光·甜宠明亮",
+      "en": "High-key lighting for sweet romance"
+    },
+    "prompt_zh": "整体明亮、阴影很浅，大面积柔光从窗户进入，白色和浅粉色为主，人物皮肤通透。适合甜宠、校园、轻喜剧。",
+    "prompt_en": "Bright overall with very light shadows, broad soft light through the windows, whites and pale pinks dominating, luminous skin. Good for sweet romance, campus and light comedy.",
+    "model": "generic",
+    "category": "lighting",
+    "subcategory": "mood",
+    "stage": "storyboard",
+    "tags": [
+      "高调光",
+      "甜宠",
+      "明亮",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-light-012",
+    "title": {
+      "zh": "闪烁灯光·惊悚",
+      "en": "Flickering light for horror"
+    },
+    "prompt_zh": "走廊日光灯不规则闪烁，画面在明暗之间跳动，每次变亮时人物的位置都离镜头更近一点。不要血腥，靠光制造恐惧。",
+    "prompt_en": "A corridor fluorescent tube flickers irregularly, the frame jumping between light and dark; each time it brightens the figure is a little closer to the camera. No gore—fear comes from the light.",
+    "model": "generic",
+    "category": "lighting",
+    "subcategory": "mood",
+    "stage": "storyboard",
+    "tags": [
+      "闪烁",
+      "惊悚",
+      "不安",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-light-003",
+    "title": {
+      "zh": "黄金时刻·温暖怀旧",
+      "en": "Golden hour warmth"
+    },
+    "prompt_zh": "日落前一小时，低角度暖橙色阳光从侧后方照来，人物带长长的影子，空气中漂浮着细尘，镜头有轻微光晕。适合回忆、初恋、离别。",
+    "prompt_en": "An hour before sunset, low warm-orange sun from side-back, long shadows, dust floating in the air, slight lens flare. Good for memories, first love and farewells.",
+    "model": "generic",
+    "category": "lighting",
+    "subcategory": "natural",
+    "stage": "storyboard",
+    "tags": [
+      "黄金时刻",
+      "暖色",
+      "怀旧",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-light-008",
+    "title": {
+      "zh": "窗光·自然柔和",
+      "en": "Window light"
+    },
+    "prompt_zh": "人物坐在窗边，柔和的阴天窗光从侧面照来，脸部有自然的明暗过渡，背景室内略暗。文艺片质感，适合独白和情绪戏。",
+    "prompt_en": "The subject sits by a window; soft overcast light from the side gives a natural gradient across the face, the room behind slightly darker. Art-house feel, good for monologues and emotional scenes.",
+    "model": "generic",
+    "category": "lighting",
+    "subcategory": "natural",
+    "stage": "storyboard",
+    "tags": [
+      "窗光",
+      "自然光",
+      "文艺",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-light-011",
+    "title": {
+      "zh": "冷蓝月光·夜戏",
+      "en": "Cool blue moonlight"
+    },
+    "prompt_zh": "夜晚室外，冷蓝色月光从高处照下，人物轮廓清晰，面部较暗，地面有树影斑驳。适合夜奔、私会、孤独时刻。",
+    "prompt_en": "Exterior at night; cool blue moonlight from high above gives crisp outlines with a darker face and dappled tree shadows on the ground. Good for night escapes, secret meetings and lonely moments.",
+    "model": "generic",
+    "category": "lighting",
+    "subcategory": "natural",
+    "stage": "storyboard",
+    "tags": [
+      "月光",
+      "冷色",
+      "夜戏",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-light-001",
+    "title": {
+      "zh": "伦勃朗光·人物质感",
+      "en": "Rembrandt lighting"
+    },
+    "prompt_zh": "主光从人物左前上方 45 度打下，另一侧脸颊形成一个倒三角形光斑，暗部保留细节。适合有故事感的人物近景、反派或沉思时刻。",
+    "prompt_en": "Key light from 45 degrees above and to the subject's left, leaving a small inverted triangle of light on the shadowed cheek with detail kept in the shadows. Good for storied close-ups, villains or contemplative moments.",
+    "model": "generic",
+    "category": "lighting",
+    "subcategory": "portrait",
+    "stage": "storyboard",
+    "tags": [
+      "伦勃朗光",
+      "人像",
+      "质感",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-light-002",
+    "title": {
+      "zh": "轮廓光·分离背景",
+      "en": "Rim light to separate from background"
+    },
+    "prompt_zh": "人物背后上方打一盏强光，头发和肩膀边缘亮起一圈金边，与深色背景分离；正面用柔和补光。适合登场、高光时刻。",
+    "prompt_en": "A strong light behind and above the subject rims the hair and shoulders in gold, separating them from a dark background; soft fill from the front. Good for entrances and hero moments.",
+    "model": "generic",
+    "category": "lighting",
+    "subcategory": "portrait",
+    "stage": "storyboard",
+    "tags": [
+      "轮廓光",
+      "逆光",
+      "高级感",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-light-009",
+    "title": {
+      "zh": "烛光·古装夜戏",
+      "en": "Candlelight for period night scenes"
+    },
+    "prompt_zh": "古装夜戏，桌上两支蜡烛是唯一光源，暖黄色光随火苗轻微摇曳，人物脸上光影跳动，远处背景沉入黑暗。",
+    "prompt_en": "A period night scene lit only by two candles on the table; warm yellow light flickers with the flames, light dancing across the faces, the background sinking into darkness.",
+    "model": "generic",
+    "category": "lighting",
+    "subcategory": "practical",
+    "stage": "storyboard",
+    "tags": [
+      "烛光",
+      "古装",
+      "暖色",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-light-016",
+    "title": {
+      "zh": "光影·车灯扫过",
+      "en": "Passing headlights"
+    },
+    "prompt_zh": "深夜卧室，窗外一辆车驶过，车灯的光从墙的一侧扫到另一侧，短暂照亮坐在床边一动不动的女主，随后房间重归黑暗。",
+    "prompt_en": "A bedroom late at night; a car passes outside and its headlights sweep across the wall from one side to the other, briefly lighting the heroine sitting motionless on the bed before the room falls dark again.",
+    "model": "generic",
+    "category": "lighting",
+    "subcategory": "practical",
+    "stage": "storyboard",
+    "tags": [
+      "车灯",
+      "夜戏",
+      "动态光",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-light-017",
+    "title": {
+      "zh": "光影·屏幕光照脸",
+      "en": "Screen glow on the face"
+    },
+    "prompt_zh": "漆黑房间里唯一的光来自手机屏幕，冷蓝色光从下往上照亮女主的脸，屏幕内容变化时光的亮度也随之闪动。",
+    "prompt_en": "The only light in a pitch-dark room comes from a phone screen, cool blue light from below on the heroine's face, its brightness flickering as the screen content changes.",
+    "model": "generic",
+    "category": "lighting",
+    "subcategory": "practical",
+    "stage": "storyboard",
+    "tags": [
+      "屏幕光",
+      "冷色",
+      "孤独",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-style-001",
+    "title": {
+      "zh": "风格对照·梵高风格（雨夜情侣）",
+      "en": "Style comparison: Van Gogh style (Couple in the rain)"
+    },
+    "prompt_zh": "一对身着正式晚装的夫妻在回家途中被大雨淋湿，手持雨伞，梵高风格",
+    "prompt_en": "A couple in formal evening wear going home get caught in a heavy downpour with umbrellas, Van Gogh style",
+    "model": "generic",
+    "category": "lighting",
+    "subcategory": "style",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "风格"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 557 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-style-002",
+    "title": {
+      "zh": "风格对照·油画（雨夜情侣）",
+      "en": "Style comparison: oil painting (Couple in the rain)"
+    },
+    "prompt_zh": "一对身着正式晚装的夫妻在回家途中被大雨淋湿，手持雨伞，油画",
+    "prompt_en": "A couple in formal evening wear going home get caught in a heavy downpour with umbrellas, oil painting",
+    "model": "generic",
+    "category": "lighting",
+    "subcategory": "style",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "风格"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 558 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-style-003",
+    "title": {
+      "zh": "风格对照·浮世绘风格（雨夜情侣）",
+      "en": "Style comparison: in the style of Ukiyo (Couple in the rain)"
+    },
+    "prompt_zh": "一对身着正式晚装的夫妻在回家途中被大雨淋湿，手持雨伞，由北斋创作，浮世绘风格",
+    "prompt_en": "A couple in formal evening wear going home get caught in a heavy downpour with umbrellas by Hokusai, in the style of Ukiyo",
+    "model": "generic",
+    "category": "lighting",
+    "subcategory": "style",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "风格"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 559 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-style-004",
+    "title": {
+      "zh": "风格对照·黑白（雨夜情侣）",
+      "en": "Style comparison: black and white (Couple in the rain)"
+    },
+    "prompt_zh": "一对身着正式晚装的夫妻在回家途中被大雨淋湿，手持雨伞，黑白",
+    "prompt_en": "A couple in formal evening wear going home get caught in a heavy downpour with umbrellas, black and white",
+    "model": "generic",
+    "category": "lighting",
+    "subcategory": "style",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "风格"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 560 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-style-005",
+    "title": {
+      "zh": "风格对照·像素艺术（雨夜情侣）",
+      "en": "Style comparison: pixel art (Couple in the rain)"
+    },
+    "prompt_zh": "一对身着正式晚装的夫妻在回家途中被大雨淋湿，手持雨伞，像素艺术",
+    "prompt_en": "A couple in formal evening wear going home get caught in a heavy downpour with umbrellas, pixel art",
+    "model": "generic",
+    "category": "lighting",
+    "subcategory": "style",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "风格"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 561 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-style-006",
+    "title": {
+      "zh": "风格对照·赛博朋克风格（雨夜情侣）",
+      "en": "Style comparison: in cyberpunk style (Couple in the rain)"
+    },
+    "prompt_zh": "一对身着正式晚装的夫妻在回家途中被大雨淋湿，手持雨伞，赛博朋克风格",
+    "prompt_en": "A couple in formal evening wear going home get caught in a heavy downpour with umbrellas, in cyberpunk style",
+    "model": "generic",
+    "category": "lighting",
+    "subcategory": "style",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "风格"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 562 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-style-007",
+    "title": {
+      "zh": "风格对照·动画风格（雨夜情侣）",
+      "en": "Style comparison: animated style (Couple in the rain)"
+    },
+    "prompt_zh": "一对身着正式晚装的夫妻在回家途中被大雨淋湿，手持雨伞，动画风格",
+    "prompt_en": "A couple in formal evening wear going home get caught in a heavy downpour with umbrellas, animated style",
+    "model": "generic",
+    "category": "lighting",
+    "subcategory": "style",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "风格"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 563 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-style-008",
+    "title": {
+      "zh": "风格对照·水彩画（雨夜情侣）",
+      "en": "Style comparison: watercolor painting (Couple in the rain)"
+    },
+    "prompt_zh": "一对身着正式晚装的夫妻在回家途中被大雨淋湿，手持雨伞，水彩画",
+    "prompt_en": "A couple in formal evening wear going home get caught in a heavy downpour with umbrellas, watercolor painting",
+    "model": "generic",
+    "category": "lighting",
+    "subcategory": "style",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "风格"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 564 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-style-009",
+    "title": {
+      "zh": "风格对照·超现实主义风格（雨夜情侣）",
+      "en": "Style comparison: surrealism style (Couple in the rain)"
+    },
+    "prompt_zh": "一对身着正式晚装的夫妻在回家途中被大雨淋湿，手持雨伞，超现实主义风格",
+    "prompt_en": "A couple in formal evening wear going home get caught in a heavy downpour with umbrellas, surrealism style",
+    "model": "generic",
+    "category": "lighting",
+    "subcategory": "style",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "风格"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 565 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-light-004",
+    "title": {
+      "zh": "霓虹赛博·夜景",
+      "en": "Neon cyberpunk night"
+    },
+    "prompt_zh": "雨夜街道，品红和青蓝色霓虹招牌照在湿润的地面上形成倒影，人物一侧脸被红光照亮、另一侧被蓝光照亮，背景有雾气。",
+    "prompt_en": "Rainy night street; magenta and cyan neon signs reflect on wet pavement, one side of the face lit red and the other blue, haze in the background.",
+    "model": "generic",
+    "category": "lighting",
+    "subcategory": "stylized",
+    "stage": "storyboard",
+    "tags": [
+      "霓虹",
+      "赛博朋克",
+      "雨夜",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  }
+]

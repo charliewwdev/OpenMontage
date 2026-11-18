@@ -1,0 +1,1763 @@
+[
+  {
+    "id": "om-cam-019",
+    "title": {
+      "zh": "航拍·城市开场",
+      "en": "Aerial city opener"
+    },
+    "prompt_zh": "无人机从高空俯瞰黄昏的城市，缓慢前推，穿过两栋摩天楼之间，最后下降对准一栋写字楼顶层亮着灯的窗户。用作每集开场的建立镜头。",
+    "prompt_en": "A drone high over the city at dusk slowly pushes forward between two skyscrapers and descends to frame a lit top-floor window of an office tower. An establishing shot for each episode's opening.",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "aerial",
+    "stage": "scene",
+    "tags": [
+      "航拍",
+      "开场",
+      "城市",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-cam-011",
+    "title": {
+      "zh": "低角度仰拍·气场",
+      "en": "Low-angle shot for dominance"
+    },
+    "prompt_zh": "摄影机贴近地面向上拍，男主从远处走来，身形逐渐占满画面，天花板的灯在他头顶形成光晕。仰拍让人物显得强大有压迫感。",
+    "prompt_en": "Camera near the floor angled up; the lead walks in from a distance, his figure gradually filling the frame, ceiling lights haloing above his head. Low angles make a character powerful and imposing.",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "angle",
+    "stage": "storyboard",
+    "tags": [
+      "仰拍",
+      "气场",
+      "霸总",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-cam-012",
+    "title": {
+      "zh": "高角度俯拍·弱势",
+      "en": "High-angle shot for vulnerability"
+    },
+    "prompt_zh": "从楼梯上方俯拍，女主独自坐在最下面一级台阶上，抱着膝盖，四周散落着被扔出来的东西。俯拍让人物显得渺小、无助。",
+    "prompt_en": "Shot from the top of the stairs looking down: the heroine sits alone on the bottom step hugging her knees, belongings strewn around her. High angles make a character small and helpless.",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "angle",
+    "stage": "storyboard",
+    "tags": [
+      "俯拍",
+      "弱势",
+      "孤立",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-cam-018",
+    "title": {
+      "zh": "荷兰角·失衡感",
+      "en": "Dutch angle for unease"
+    },
+    "prompt_zh": "画面倾斜 15–20 度，男主在昏暗的房间里来回踱步，自言自语，墙上的影子被拉长。荷兰角表现心理失衡、不安或危险。",
+    "prompt_en": "Frame tilted 15-20 degrees; the lead paces a dim room muttering to himself, his shadow stretched on the wall. Dutch angles signal mental imbalance, unease or danger.",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "angle",
+    "stage": "storyboard",
+    "tags": [
+      "倾斜",
+      "不安",
+      "惊悚",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-cam-017",
+    "title": {
+      "zh": "子弹时间·定格环绕",
+      "en": "Bullet time freeze orbit"
+    },
+    "prompt_zh": "女主将一杯水泼向对方，水花飞出的瞬间时间静止，镜头围绕悬停在空中的水珠环绕 90 度，然后恢复正常速度，水泼到对方脸上。",
+    "prompt_en": "The heroine throws a glass of water at her rival; as the splash leaves the glass, time freezes and the camera orbits 90 degrees around the droplets hanging in midair, then real time resumes and the water hits his face.",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "bullet-time",
+    "stage": "storyboard",
+    "tags": [
+      "子弹时间",
+      "定格",
+      "特效",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-cam-021",
+    "title": {
+      "zh": "运镜组合：推+环绕",
+      "en": "Combined move: push + orbit"
+    },
+    "prompt_zh": "镜头先从远处推近站在天台边的女主（0-2秒），到达近景后开始绕她向右环绕 90 度（2-4秒），露出她身后整座城市的夜景。组合运镜要按时间分段写清楚。",
+    "prompt_en": "The camera first pushes in toward the heroine at the rooftop edge (0-2s), then, at a close shot, orbits 90 degrees to the right (2-4s) to reveal the city at night behind her. Write combined moves as timed segments.",
+    "model": "Seedance",
+    "category": "camera",
+    "subcategory": "combo",
+    "stage": "storyboard",
+    "tags": [
+      "组合运镜",
+      "高级感",
+      "揭示",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-cam-023",
+    "title": {
+      "zh": "镜头·门框构图",
+      "en": "Framing through a doorway"
+    },
+    "prompt_zh": "镜头放在走廊里，透过半开的门缝拍摄房间内争吵的两人，门框形成画中画，人物在缝隙中时隐时现，营造偷看与隔阂感。",
+    "prompt_en": "Camera in the hallway, shooting through a half-open door at two people arguing inside; the doorframe creates a frame within the frame and the figures slip in and out of the gap, creating a voyeuristic sense of distance.",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "composition",
+    "stage": "storyboard",
+    "tags": [
+      "构图",
+      "门框",
+      "窥视",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-cam-024",
+    "title": {
+      "zh": "镜头·倒影构图",
+      "en": "Shooting the reflection"
+    },
+    "prompt_zh": "雨后地面积水中映出男主的倒影，一滴雨落下，倒影被涟漪打碎，再慢慢恢复；镜头上摇到真实的他站在路灯下。适合表现人物内心分裂或身份双重。",
+    "prompt_en": "The lead's reflection in a rain puddle; a drop falls and ripples shatter it before it slowly reforms; tilt up to the real him under a streetlight. Good for inner conflict or a double identity.",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "composition",
+    "stage": "storyboard",
+    "tags": [
+      "倒影",
+      "构图",
+      "双重",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-cam-025",
+    "title": {
+      "zh": "镜头·前景遮挡",
+      "en": "Foreground occlusion"
+    },
+    "prompt_zh": "镜头透过前景的绿植叶片拍摄咖啡馆里交谈的两人，叶片虚化占据画面一侧，焦点在人物上，像被人暗中观察。增加画面层次和悬疑感。",
+    "prompt_en": "Shoot two people talking in a café through foreground plant leaves; the blurred leaves take up one side of the frame, focus on the subjects, as if someone is secretly watching. Adds depth and suspense.",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "composition",
+    "stage": "storyboard",
+    "tags": [
+      "前景",
+      "层次",
+      "偷拍感",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-cam-007",
+    "title": {
+      "zh": "升降镜头·上帝视角",
+      "en": "Crane up to a god's-eye view"
+    },
+    "prompt_zh": "镜头从女主跪在雨中的近景开始垂直上升，越升越高，直到她变成空旷广场中央的一个小点，四周是撑伞匆匆走过的人群。",
+    "prompt_en": "Start close on the heroine kneeling in the rain and rise vertically, higher and higher, until she's a small dot in the middle of an empty plaza as people hurry past with umbrellas.",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "crane",
+    "stage": "storyboard",
+    "tags": [
+      "升镜头",
+      "俯拍",
+      "渺小",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-cam-010",
+    "title": {
+      "zh": "希区柯克变焦·眩晕感",
+      "en": "Dolly zoom for vertigo"
+    },
+    "prompt_zh": "希区柯克变焦：镜头后退的同时焦距推近，女主面部大小不变，背景走廊却在快速拉伸变形，表现她听到噩耗时的眩晕感。持续约 2 秒。",
+    "prompt_en": "Dolly zoom: the camera tracks back while zooming in, so her face stays the same size while the corridor behind stretches and warps, conveying the vertigo of hearing terrible news. About two seconds.",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "dolly-zoom",
+    "stage": "storyboard",
+    "tags": [
+      "变焦",
+      "眩晕",
+      "震惊",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-cam-022",
+    "title": {
+      "zh": "运镜写法要点",
+      "en": "Camera movement checklist"
+    },
+    "prompt_zh": "一个 5 秒镜头最多一种主运镜；写清方向（向左/向右/向前）、速度（缓慢/匀速/快速）和起止景别（「从中景推到特写」）。人物动作复杂时用固定镜头，镜头运动复杂时让人物动作简单。",
+    "prompt_en": "One main camera move per five-second shot; specify direction (left/right/forward), speed (slow/steady/fast) and start and end framing (\"push from medium to close-up\"). If the action is complex, lock the camera; if the camera move is complex, keep the action simple.",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "guide",
+    "stage": "storyboard",
+    "tags": [
+      "要点",
+      "运镜",
+      "稳定性",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-cam-008",
+    "title": {
+      "zh": "手持晃动·纪实紧张",
+      "en": "Handheld for documentary tension"
+    },
+    "prompt_zh": "手持摄影，轻微不规则晃动，镜头跟着争吵的两人来回切换焦点，偶尔被前景人物遮挡。适用于争吵、追逐、慌乱场景。不要用于甜宠和高级感场景。",
+    "prompt_en": "Handheld with slight irregular shake, the camera swinging focus between two people arguing, occasionally blocked by a foreground figure. Use for arguments, chases and panic—not for sweet romance or premium looks.",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "handheld",
+    "stage": "storyboard",
+    "tags": [
+      "手持",
+      "紧张",
+      "纪实",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-008",
+    "title": {
+      "zh": "基础运镜·剧烈抖动（春日海滩）",
+      "en": "Basic camera move: Intense shake (Spring beach)"
+    },
+    "prompt_zh": "春天的美丽海滨，波浪拍打着沙滩，镜头剧烈抖动",
+    "prompt_en": "A beautiful coastal beach in spring, waves lapping on sand, with an intense shaking effect",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "handheld",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "剧烈抖动"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 591 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-018",
+    "title": {
+      "zh": "基础运镜·剧烈抖动（上海外滩）",
+      "en": "Basic camera move: Intense shake (The Bund, Shanghai)"
+    },
+    "prompt_zh": "上海外滩，镜头剧烈抖动",
+    "prompt_en": "The bund Shanghai, with an intense shaking effect",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "handheld",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "剧烈抖动"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 601 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-028",
+    "title": {
+      "zh": "基础运镜·剧烈抖动（雨夜情侣）",
+      "en": "Basic camera move: Intense shake (Couple in the rain)"
+    },
+    "prompt_zh": "一对身着正式晚装的夫妻在回家途中被大雨淋湿，手持雨伞，镜头剧烈抖动",
+    "prompt_en": "A couple in formal evening wear going home get caught in a heavy downpour with umbrellas, with an intense shaking effect",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "handheld",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "剧烈抖动"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 661 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-cam-009",
+    "title": {
+      "zh": "一镜到底·长镜头",
+      "en": "One continuous take"
+    },
+    "prompt_zh": "一镜到底，不切镜头：镜头从餐厅门口进入，穿过忙碌的服务员，绕过一桌客人，停在角落里独自吃饭的女主身后，再缓缓绕到她面前。运镜连续平滑。",
+    "prompt_en": "One continuous take, no cuts: the camera enters at the restaurant door, weaves past busy waiters, circles a table of diners and stops behind the heroine eating alone in the corner, then slowly comes around to face her. Smooth continuous movement.",
+    "model": "Seedance",
+    "category": "camera",
+    "subcategory": "long-take",
+    "stage": "storyboard",
+    "tags": [
+      "一镜到底",
+      "长镜头",
+      "沉浸",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-cam-006",
+    "title": {
+      "zh": "环绕镜头·高光时刻",
+      "en": "Orbit for the hero moment"
+    },
+    "prompt_zh": "女主站在宴会厅中央，镜头以她为圆心匀速环绕 180 度，背景的宾客与灯光形成流动的虚化，她始终保持在画面中心并缓缓抬头。",
+    "prompt_en": "The heroine stands at the center of the ballroom while the camera orbits her 180 degrees at a steady speed, guests and lights streaking into moving bokeh; she stays centered and slowly lifts her head.",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "orbit",
+    "stage": "storyboard",
+    "tags": [
+      "环绕",
+      "高光",
+      "气场",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-cam-013",
+    "title": {
+      "zh": "过肩镜头·对话",
+      "en": "Over-the-shoulder dialogue"
+    },
+    "prompt_zh": "过肩镜头：前景是男主虚化的肩膀和后脑，焦点在对面女主的脸上，她正在说话；下一镜反打，前景换成女主的肩膀。对话戏的标准写法。",
+    "prompt_en": "Over-the-shoulder: his blurred shoulder and the back of his head in the foreground, focus on her face across from him as she speaks; the next shot reverses with her shoulder in the foreground. The standard dialogue setup.",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "ots",
+    "stage": "storyboard",
+    "tags": [
+      "过肩",
+      "对话",
+      "正反打",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-cam-004",
+    "title": {
+      "zh": "摇镜头·视线引导",
+      "en": "Pan to follow the gaze"
+    },
+    "prompt_zh": "镜头先拍女主看向画面右侧的近景，随后水平向右摇，跟随她的视线停在门口站着的人身上。摇镜要有动机（视线、声音、动作）。",
+    "prompt_en": "Begin on the heroine looking off to the right, then pan horizontally right along her eyeline to land on the person standing in the doorway. Every pan needs a motive—eyeline, sound or movement.",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "pan",
+    "stage": "storyboard",
+    "tags": [
+      "摇镜头",
+      "视线",
+      "悬念",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-004",
+    "title": {
+      "zh": "基础运镜·向左摇/移（春日海滩）",
+      "en": "Basic camera move: Pan left (Spring beach)"
+    },
+    "prompt_zh": "春天的美丽海滨，波浪拍打着沙滩，向左移镜头",
+    "prompt_en": "A beautiful coastal beach in spring, waves lapping on sand, pan left",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "pan",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "向左摇/移"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 587 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-005",
+    "title": {
+      "zh": "基础运镜·向右摇/移（春日海滩）",
+      "en": "Basic camera move: Pan right (Spring beach)"
+    },
+    "prompt_zh": "春天的美丽海滨，波浪拍打着沙滩，向右移镜头",
+    "prompt_en": "A beautiful coastal beach in spring, waves lapping on sand, pan right",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "pan",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "向右摇/移"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 588 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-014",
+    "title": {
+      "zh": "基础运镜·向左摇/移（上海外滩）",
+      "en": "Basic camera move: Pan left (The Bund, Shanghai)"
+    },
+    "prompt_zh": "上海外滩，向左移镜头",
+    "prompt_en": "The bund Shanghai, pan left",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "pan",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "向左摇/移"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 597 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-015",
+    "title": {
+      "zh": "基础运镜·向右摇/移（上海外滩）",
+      "en": "Basic camera move: Pan right (The Bund, Shanghai)"
+    },
+    "prompt_zh": "上海外滩，向右移镜头",
+    "prompt_en": "The bund Shanghai, pan right",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "pan",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "向右摇/移"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 598 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-024",
+    "title": {
+      "zh": "基础运镜·向左摇/移（雨夜情侣）",
+      "en": "Basic camera move: Pan left (Couple in the rain)"
+    },
+    "prompt_zh": "一对身着正式晚装的夫妻在回家途中被大雨淋湿，手持雨伞，向左移镜头",
+    "prompt_en": "A couple in formal evening wear going home get caught in a heavy downpour with umbrellas, pan left",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "pan",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "向左摇/移"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 657 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-025",
+    "title": {
+      "zh": "基础运镜·向右摇/移（雨夜情侣）",
+      "en": "Basic camera move: Pan right (Couple in the rain)"
+    },
+    "prompt_zh": "一对身着正式晚装的夫妻在回家途中被大雨淋湿，手持雨伞，向右移镜头",
+    "prompt_en": "A couple in formal evening wear going home get caught in a heavy downpour with umbrellas, pan right",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "pan",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "向右摇/移"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 658 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-cam-014",
+    "title": {
+      "zh": "主观镜头·POV",
+      "en": "POV shot"
+    },
+    "prompt_zh": "第一人称主观镜头：画面就是女主的视线，她推开房门，看到床上整齐摆着一件婚纱和一张字条；画面边缘轻微晃动，模拟眼睛扫视。",
+    "prompt_en": "First-person POV: the frame is the heroine's view as she pushes open the bedroom door and sees a wedding dress laid neatly on the bed with a note; slight motion at the edges mimics scanning eyes.",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "pov",
+    "stage": "storyboard",
+    "tags": [
+      "主观",
+      "第一人称",
+      "代入",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-cam-003",
+    "title": {
+      "zh": "拉镜头·揭示环境",
+      "en": "Pull-out to reveal"
+    },
+    "prompt_zh": "从女主握着婚戒的手部特写开始，镜头缓慢后拉，露出她独自坐在空荡荡的婚礼会场中央，椅子都已收起。拉镜用于揭示处境和孤独感。",
+    "prompt_en": "Start on a close-up of her hand holding a wedding ring and slowly pull back to reveal her sitting alone in the middle of an empty wedding venue, chairs already stacked. Pull-outs reveal circumstance and loneliness.",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "pull",
+    "stage": "storyboard",
+    "tags": [
+      "拉镜头",
+      "揭示",
+      "孤独",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-003",
+    "title": {
+      "zh": "基础运镜·拉镜头（春日海滩）",
+      "en": "Basic camera move: Zoom out (Spring beach)"
+    },
+    "prompt_zh": "春天的美丽海滨，波浪拍打着沙滩，拉镜头",
+    "prompt_en": "A beautiful coastal beach in spring, waves lapping on sand, zoom out",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "pull",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "拉镜头"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 586 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-013",
+    "title": {
+      "zh": "基础运镜·拉镜头（上海外滩）",
+      "en": "Basic camera move: Zoom out (The Bund, Shanghai)"
+    },
+    "prompt_zh": "上海外滩，拉镜头",
+    "prompt_en": "The bund Shanghai, zoom out",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "pull",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "拉镜头"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 596 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-023",
+    "title": {
+      "zh": "基础运镜·拉镜头（雨夜情侣）",
+      "en": "Basic camera move: Zoom out (Couple in the rain)"
+    },
+    "prompt_zh": "一对身着正式晚装的夫妻在回家途中被大雨淋湿，手持雨伞，拉镜头",
+    "prompt_en": "A couple in formal evening wear going home get caught in a heavy downpour with umbrellas, zoom out",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "pull",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "拉镜头"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 656 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-cam-002",
+    "title": {
+      "zh": "推镜头·情绪聚焦",
+      "en": "Push-in for emotional focus"
+    },
+    "prompt_zh": "镜头从中景缓慢推进到女主的近景，她在听电话，随着推进表情从平静变为僵住。推镜用于「她意识到了什么」的时刻，速度要慢且匀速。",
+    "prompt_en": "The camera slowly pushes from a medium shot to a close shot of the heroine on the phone; as it moves in, her expression shifts from calm to frozen. Use push-ins for \"she realizes something\" moments—slow and steady.",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "push",
+    "stage": "storyboard",
+    "tags": [
+      "推镜头",
+      "情绪",
+      "运镜",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-002",
+    "title": {
+      "zh": "基础运镜·推镜头（春日海滩）",
+      "en": "Basic camera move: Zoom in (Spring beach)"
+    },
+    "prompt_zh": "春天的美丽海滨，波浪拍打着沙滩，推镜头",
+    "prompt_en": "A beautiful coastal beach in spring, waves lapping on sand, zoom in",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "push",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "推镜头"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 585 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-012",
+    "title": {
+      "zh": "基础运镜·推镜头（上海外滩）",
+      "en": "Basic camera move: Zoom in (The Bund, Shanghai)"
+    },
+    "prompt_zh": "上海外滩，推镜头",
+    "prompt_en": "The bund Shanghai, zoom in",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "push",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "推镜头"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 595 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-022",
+    "title": {
+      "zh": "基础运镜·推镜头（雨夜情侣）",
+      "en": "Basic camera move: Zoom in (Couple in the rain)"
+    },
+    "prompt_zh": "一对身着正式晚装的夫妻在回家途中被大雨淋湿，手持雨伞，推镜头",
+    "prompt_en": "A couple in formal evening wear going home get caught in a heavy downpour with umbrellas, zoom in",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "push",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "推镜头"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 655 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-cam-015",
+    "title": {
+      "zh": "移焦·前后景切换",
+      "en": "Rack focus between planes"
+    },
+    "prompt_zh": "前景是桌上的一部手机（清晰），背景是正在门口换鞋的男主（虚化）；手机亮起来电，焦点从手机缓慢移到男主身上，他停下动作看过来。",
+    "prompt_en": "A phone on the table in sharp focus in the foreground, the lead changing shoes at the door blurred behind; the phone lights up with a call and focus slowly racks to him as he stops and looks over.",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "rack-focus",
+    "stage": "storyboard",
+    "tags": [
+      "移焦",
+      "景深",
+      "揭示",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-010",
+    "title": {
+      "zh": "基础运镜·移焦（春日海滩）",
+      "en": "Basic camera move: Rack focus (Spring beach)"
+    },
+    "prompt_zh": "春天的美丽海滨，波浪拍打着沙滩，焦点转移",
+    "prompt_en": "A beautiful coastal beach in spring, waves lapping on sand, racking focus",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "rack-focus",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "移焦"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 593 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-020",
+    "title": {
+      "zh": "基础运镜·移焦（上海外滩）",
+      "en": "Basic camera move: Rack focus (The Bund, Shanghai)"
+    },
+    "prompt_zh": "上海外滩，焦点转移",
+    "prompt_en": "The bund Shanghai, racking focus",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "rack-focus",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "移焦"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 603 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-030",
+    "title": {
+      "zh": "基础运镜·移焦（雨夜情侣）",
+      "en": "Basic camera move: Rack focus (Couple in the rain)"
+    },
+    "prompt_zh": "一对身着正式晚装的夫妻在回家途中被大雨淋湿，手持雨伞，焦点转移",
+    "prompt_en": "A couple in formal evening wear going home get caught in a heavy downpour with umbrellas, racking focus",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "rack-focus",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "移焦"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 663 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-cam-001",
+    "title": {
+      "zh": "景别速查：从大远景到大特写",
+      "en": "Shot sizes: extreme wide to extreme close-up"
+    },
+    "prompt_zh": "大远景（交代环境，人很小）→ 远景（全身+环境）→ 全景（人物全身）→ 中景（膝盖以上）→ 近景（胸口以上）→ 特写（面部）→ 大特写（眼睛/嘴唇/手指）。短剧竖屏多用中景和近景，情绪点用特写。",
+    "prompt_en": "Extreme wide (environment, tiny figure) → wide (full body plus setting) → full shot (head to toe) → medium (knees up) → medium close-up (chest up) → close-up (face) → extreme close-up (eyes, lips, fingers). Vertical shorts lean on medium and close shots; use close-ups for emotional beats.",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "shot-size",
+    "stage": "storyboard",
+    "tags": [
+      "景别",
+      "词表",
+      "入门",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-001",
+    "title": {
+      "zh": "基础运镜·超级慢动作（春日海滩）",
+      "en": "Basic camera move: Super slow motion (Spring beach)"
+    },
+    "prompt_zh": "春天的美丽海滨，波浪拍打着沙滩，慢速播放",
+    "prompt_en": "A beautiful coastal beach in spring, waves lapping on sand, in super slow motion",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "slow-motion",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "超级慢动作"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 584 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-011",
+    "title": {
+      "zh": "基础运镜·超级慢动作（上海外滩）",
+      "en": "Basic camera move: Super slow motion (The Bund, Shanghai)"
+    },
+    "prompt_zh": "上海外滩，慢速播放",
+    "prompt_en": "The bund Shanghai, in super slow motion",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "slow-motion",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "超级慢动作"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 594 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-021",
+    "title": {
+      "zh": "基础运镜·超级慢动作（雨夜情侣）",
+      "en": "Basic camera move: Super slow motion (Couple in the rain)"
+    },
+    "prompt_zh": "一对身着正式晚装的夫妻在回家途中被大雨淋湿，手持雨伞，慢速播放",
+    "prompt_en": "A couple in formal evening wear going home get caught in a heavy downpour with umbrellas, in super slow motion",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "slow-motion",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "超级慢动作"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 654 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-009",
+    "title": {
+      "zh": "基础运镜·稳定平滑（春日海滩）",
+      "en": "Basic camera move: Steady and smooth (Spring beach)"
+    },
+    "prompt_zh": "春天的美丽海滨，波浪拍打着沙滩，运镜稳定而平滑",
+    "prompt_en": "A beautiful coastal beach in spring, waves lapping on sand, featuring a steady and smooth perspective",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "stabilized",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "稳定平滑"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 592 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-019",
+    "title": {
+      "zh": "基础运镜·稳定平滑（上海外滩）",
+      "en": "Basic camera move: Steady and smooth (The Bund, Shanghai)"
+    },
+    "prompt_zh": "上海外滩，运镜稳定而平滑",
+    "prompt_en": "The bund Shanghai, featuring a steady and smooth perspective",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "stabilized",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "稳定平滑"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 602 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-029",
+    "title": {
+      "zh": "基础运镜·稳定平滑（雨夜情侣）",
+      "en": "Basic camera move: Steady and smooth (Couple in the rain)"
+    },
+    "prompt_zh": "一对身着正式晚装的夫妻在回家途中被大雨淋湿，手持雨伞，运镜稳定而平滑",
+    "prompt_en": "A couple in formal evening wear going home get caught in a heavy downpour with umbrellas, featuring a steady and smooth perspective",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "stabilized",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "稳定平滑"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 662 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-cam-020",
+    "title": {
+      "zh": "固定镜头·冷静观察",
+      "en": "Locked-off observation"
+    },
+    "prompt_zh": "固定机位，镜头不动，客厅里两人隔着一张沙发站着争吵，人物在画面中进进出出。固定镜头让观众像旁观者，适合克制的家庭戏。",
+    "prompt_en": "Locked-off camera, no movement; two people argue across a sofa in the living room, moving in and out of frame. A static camera makes the audience a bystander—good for restrained family drama.",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "static",
+    "stage": "storyboard",
+    "tags": [
+      "固定镜头",
+      "留白",
+      "克制",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-006",
+    "title": {
+      "zh": "基础运镜·上摇（春日海滩）",
+      "en": "Basic camera move: Tilt up (Spring beach)"
+    },
+    "prompt_zh": "春天的美丽海滨，波浪拍打着沙滩，向上移镜头",
+    "prompt_en": "A beautiful coastal beach in spring, waves lapping on sand, tilt up",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "tilt",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "上摇"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 589 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-007",
+    "title": {
+      "zh": "基础运镜·下摇（春日海滩）",
+      "en": "Basic camera move: Tilt down (Spring beach)"
+    },
+    "prompt_zh": "春天的美丽海滨，波浪拍打着沙滩，向下移镜头",
+    "prompt_en": "A beautiful coastal beach in spring, waves lapping on sand, tilt down",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "tilt",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "下摇"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 590 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-016",
+    "title": {
+      "zh": "基础运镜·上摇（上海外滩）",
+      "en": "Basic camera move: Tilt up (The Bund, Shanghai)"
+    },
+    "prompt_zh": "上海外滩，向上移镜头",
+    "prompt_en": "The bund Shanghai, tilt up",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "tilt",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "上摇"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 599 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-017",
+    "title": {
+      "zh": "基础运镜·下摇（上海外滩）",
+      "en": "Basic camera move: Tilt down (The Bund, Shanghai)"
+    },
+    "prompt_zh": "上海外滩，向下移镜头",
+    "prompt_en": "The bund Shanghai, tilt down",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "tilt",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "下摇"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 600 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-026",
+    "title": {
+      "zh": "基础运镜·上摇（雨夜情侣）",
+      "en": "Basic camera move: Tilt up (Couple in the rain)"
+    },
+    "prompt_zh": "一对身着正式晚装的夫妻在回家途中被大雨淋湿，手持雨伞，向上移镜头",
+    "prompt_en": "A couple in formal evening wear going home get caught in a heavy downpour with umbrellas, tilt up",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "tilt",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "上摇"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 659 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "vbench-cam-027",
+    "title": {
+      "zh": "基础运镜·下摇（雨夜情侣）",
+      "en": "Basic camera move: Tilt down (Couple in the rain)"
+    },
+    "prompt_zh": "一对身着正式晚装的夫妻在回家途中被大雨淋湿，手持雨伞，向下移镜头",
+    "prompt_en": "A couple in formal evening wear going home get caught in a heavy downpour with umbrellas, tilt down",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "tilt",
+    "stage": "storyboard",
+    "tags": [
+      "基础例句",
+      "VBench",
+      "下摇"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Vchitect/VBench prompt suite",
+      "url": "https://github.com/Vchitect/VBench/tree/master/prompts",
+      "revision": "fd18b3d055cb0fc6f066ca90fe2c3c8cbb698490",
+      "ref": "prompts/all_dimension.txt line 660 (+ all_dimension_cn.txt)"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Vchitect/VBench prompt suite by VBench authors (Vchitect), licensed Apache-2.0",
+    "lang_origin": "en",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-cam-005",
+    "title": {
+      "zh": "跟拍·背后跟随",
+      "en": "Follow shot from behind"
+    },
+    "prompt_zh": "镜头在男主身后一米处跟随，他穿过医院长走廊，两侧病房门依次掠过，走廊尽头的手术灯亮着。稳定器质感，速度与人物步伐一致。",
+    "prompt_en": "The camera follows one meter behind him down a long hospital corridor, ward doors sliding past on both sides, the surgery light glowing at the end. Gimbal-smooth, matching his pace.",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "tracking",
+    "stage": "storyboard",
+    "tags": [
+      "跟拍",
+      "代入感",
+      "走廊",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "rapidata-019",
+    "title": {
+      "zh": "雪豹·晨雾林间潜行跟拍",
+      "en": "Snow leopard prowling, tracking shot"
+    },
+    "prompt_zh": "黎明时分，一只雪豹在薄雾笼罩的高山森林中优雅潜行。镜头跟随它无声的步伐，阳光透过树林照亮它光滑的皮毛，它在一块岩石上停下，俯瞰宁静的风景。",
+    "prompt_en": "A snow leopard prowls gracefully through a misty alpine forest at dawn. The camera follows its silent stride, sunlight filtering through the trees and highlighting its sleek fur as it pauses atop a rocky ledge, surveying the serene landscape.",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "tracking",
+    "stage": "storyboard",
+    "tags": [
+      "跟拍",
+      "动物",
+      "晨雾"
+    ],
+    "preview": null,
+    "source": {
+      "name": "Rapidata/text-2-video-human-preferences-veo3",
+      "url": "https://huggingface.co/datasets/Rapidata/text-2-video-human-preferences-veo3",
+      "revision": "51fd4dfc8b7ca886328dfb0f95497bd8ec5a19e2",
+      "ref": "data/train-00000-of-00001.parquet › prompt"
+    },
+    "license": "Apache-2.0",
+    "license_url": "https://www.apache.org/licenses/LICENSE-2.0",
+    "attribution": "Prompt from Rapidata/text-2-video-human-preferences-veo3 by Rapidata, licensed Apache-2.0; Chinese translation by OpenMontage (AI-assisted)",
+    "lang_origin": "en",
+    "translated": "machine",
+    "modified": false
+  },
+  {
+    "id": "om-cam-016",
+    "title": {
+      "zh": "甩镜·快速转场",
+      "en": "Whip pan transition"
+    },
+    "prompt_zh": "镜头从女主的脸快速甩向右侧，运动模糊中接到另一个场景（三年后的同一位置），同样的动作甩回到她的新造型。适合时间跳跃转场。",
+    "prompt_en": "Whip from the heroine's face to the right; in the motion blur, cut to another scene (the same spot three years later) and whip back to reveal her new look. Good for time-jump transitions.",
+    "model": "generic",
+    "category": "camera",
+    "subcategory": "whip-pan",
+    "stage": "edit",
+    "tags": [
+      "甩镜",
+      "转场",
+      "节奏",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  }
+]

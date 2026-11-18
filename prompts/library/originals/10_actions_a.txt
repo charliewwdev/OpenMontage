@@ -1,0 +1,128 @@
+# OpenMontage original prompts — 动作写法 / How to write actions (part A). License: CC BY 4.0
+# Format: ## id | 中文标题 | English title | model | category/subcategory | stage | tags
+## om-act-formula-001 | 动作提示词万能公式 | Universal action prompt formula | generic | actions/formula | storyboard | 公式,模板,入门
+ZH: 【主体+外观】+【动作动词（具体到身体部位）】+【节奏/速度】+【力度与重心变化】+【与环境/道具的物理交互】+【镜头景别与运镜】+【时长分段】。示例：一名穿灰色连帽衫的年轻男子，右脚蹬地、身体前倾，三步加速冲向镜头，第三步时左肩撞开半掩的铁门，铁门反弹发出闷响；中景低机位跟拍，0-2秒加速，2-3秒撞门瞬间轻微慢放。
+EN: [Subject + look] + [action verb tied to a body part] + [tempo/speed] + [force and weight shift] + [physical interaction with environment/props] + [shot size and camera move] + [time segments]. Example: A young man in a grey hoodie pushes off with his right foot, leans forward and accelerates in three strides toward the camera; on the third stride his left shoulder bursts through a half-open steel door that rebounds with a dull clang. Medium low-angle tracking shot; 0-2s acceleration, 2-3s slight slow motion on the impact.
+## om-act-formula-002 | 一镜一动作原则 | One shot, one action | generic | actions/formula | storyboard | 原则,入门,稳定性
+ZH: 每个镜头只写一个主要动作，并写清起点和终点状态。错误：「她走进房间、坐下、打开电脑、哭了起来」。正确：镜头1（0-3秒）：她推门走进昏暗的房间，在门口停住；镜头2（3-6秒）：她坐在桌前，盯着屏幕，下唇轻轻发抖，一滴眼泪滑下。
+EN: Give each shot one main action and state its start and end pose. Weak: "She walks in, sits down, opens the laptop and starts crying." Better: Shot 1 (0-3s): she pushes the door open into a dim room and stops at the threshold. Shot 2 (3-6s): she sits at the desk staring at the screen, lower lip trembling, a single tear sliding down.
+## om-act-formula-003 | 节奏词速查：快慢与停顿 | Tempo words cheat sheet | generic | actions/formula | storyboard | 节奏,词表,速度
+ZH: 快：猛地、骤然、一把、疾步、甩、弹起、连续三下；慢：缓缓、一点点、迟疑地、慢动作、拖着脚步；停顿：动作停在半空、定格一拍、屏住呼吸、手悬在门把上方。写法示例：她猛地转身，抬起的手停在半空一拍，然后缓缓放下。
+EN: Fast: suddenly, snaps, whips, darts, springs up, three rapid strikes. Slow: slowly, inch by inch, hesitantly, slow motion, drags her feet. Pause: freezes mid-air, holds for a beat, breath held, hand hovering above the doorknob. Example: She spins around suddenly, her raised hand freezing mid-air for a beat before slowly lowering.
+## om-act-formula-004 | 写物理反馈让动作可信 | Add physical feedback | generic | actions/formula | storyboard | 物理,质感,可信度
+ZH: 动作后面接「环境的反应」，模型更容易生成可信的运动：脚步→水花溅起/落叶被踢散；挥拳→衣袖甩动、汗珠飞出；摔倒→桌上的杯子震倒、灰尘扬起；关门→门框震动、墙上相框轻晃。示例：他一拳砸在木桌上，桌面的茶杯跳起又落下，茶水溅出一圈。
+EN: Follow the action with the environment's reaction so the motion reads as real: footsteps → water splashes or leaves scatter; punch → sleeve whips, sweat flies; fall → a cup on the table tips over, dust rises; door slam → frame shudders, a picture frame rattles. Example: He slams his fist on the wooden table; the teacup jumps and lands, tea splashing in a ring.
+## om-act-formula-005 | 身体部位拆解法 | Break the action into body parts | generic | actions/formula | storyboard | 身体,细节,拆解
+ZH: 把一个笼统动作拆成「下肢→躯干→上肢→头部→眼神」的顺序。笼统：「他很生气地站起来」。拆解：他双手撑住桌沿，膝盖一挺站起，椅子向后滑开；肩膀耸起，下颌收紧，眼睛死死盯住对面的人。
+EN: Split a vague action into legs → torso → arms → head → eyes. Vague: "He stands up angrily." Broken down: He plants both hands on the table edge, straightens his knees and rises, chair skidding back; shoulders lift, jaw tightens, eyes locked on the person opposite.
+## om-act-fight-001 | 武打·格挡反击三连 | Martial arts: block, parry, counter | Seedance | actions/fighting | storyboard | 武打,格挡,三段式
+ZH: 古装武侠，竹林空地。镜头1（0-2秒）：黑衣刺客持刀从右侧劈下，白衣女侠左臂上抬格挡，刀背擦过护腕迸出火星；镜头2（2-4秒）：她顺势转腰卸力，右掌推向刺客胸口，刺客后退三步，脚下竹叶飞散；镜头3（4-5秒）：她收掌站定，衣摆缓缓落下。中景侧拍，动作清晰，无快速剪切。
+EN: Wuxia, bamboo-forest clearing. Shot 1 (0-2s): a black-clad assassin slashes down from the right; the swordswoman in white raises her left forearm to block, the blade's spine scraping her bracer in a spray of sparks. Shot 2 (2-4s): she twists her waist to redirect the force and drives her right palm into his chest; he staggers back three steps, bamboo leaves scattering. Shot 3 (4-5s): she withdraws her palm and settles; her robe hem drifts down. Medium side angle, clear readable choreography, no rapid cuts.
+## om-act-fight-002 | 拳击·刺拳加勾拳 | Boxing: jab-hook combo | generic | actions/fighting | storyboard | 拳击,慢动作,汗水
+ZH: 地下拳馆，顶光。拳手左脚前踏一步打出两记快速刺拳，紧接着转胯发力打出右勾拳，命中沙袋的瞬间切入 0.5 倍慢动作：沙袋凹陷、汗珠从拳套上甩出、链条摇晃。低机位中近景，轻微手持晃动。
+EN: Underground boxing gym, top light. The boxer steps in with the left foot and fires two quick jabs, then rotates the hips into a right hook; at impact on the heavy bag the shot drops to 0.5x slow motion: the bag dents, sweat flicks off the glove, the chain sways. Low-angle medium close-up, slight handheld shake.
+## om-act-fight-003 | 街头打斗·推搡升级 | Street scuffle: shove escalates | generic | actions/fighting | storyboard | 冲突,推搡,写实
+ZH: 雨夜小巷。穿皮夹克的男人用双手猛推对方胸口，对方踉跄后退撞上垃圾桶，桶盖哐当落地；他稳住身体，抹一把脸上的雨水，攥紧拳头向前一步。写实风格，无血腥，手持跟拍，霓虹反光。
+EN: Rainy alley at night. A man in a leather jacket shoves the other man hard in the chest with both hands; the other stumbles back into a trash bin, its lid clattering to the ground. He steadies himself, wipes rain from his face, clenches his fists and steps forward. Realistic, no gore, handheld follow, neon reflections.
+## om-act-fight-004 | 剑术·拔剑出鞘特写 | Swordplay: drawing the blade | generic | actions/fighting | storyboard | 拔剑,特写,仪式感
+ZH: 特写：右手拇指顶开剑格，剑身一寸寸滑出剑鞘，刃口反射出一道冷光扫过人物眼睛；切中景：他手腕一翻，剑尖斜指地面，衣袖被风吹起。慢节奏，金属摩擦声。
+EN: Close-up: the right thumb pushes the guard open and the blade slides out of the scabbard inch by inch, its edge throwing a cold glint across his eyes. Cut to medium: he flips his wrist, the tip angled toward the ground, sleeve lifting in the wind. Slow tempo, metallic scrape.
+## om-act-fight-005 | 擒拿·反手制服 | Grappling: arm lock takedown | generic | actions/fighting | storyboard | 擒拿,女主,反杀
+ZH: 办公室走廊。男人从背后抓住女主右肩，她立刻左手扣住他的手腕，转身下潜，右肘压住他的手肘关节，将他按到墙上；他脸贴墙面动弹不得。动作干净利落，全景接中景，无血腥。
+EN: Office corridor. A man grabs the heroine's right shoulder from behind; she clamps his wrist with her left hand, turns and ducks, presses her right elbow onto his elbow joint and pins him against the wall, his cheek flat on the surface. Clean, efficient choreography, wide to medium, no gore.
+## om-act-fight-006 | 飞踢·腾空侧踢 | Flying side kick | generic | actions/fighting | storyboard | 腾空,踢腿,慢动作
+ZH: 天台黄昏。武者助跑两步起跳，身体在空中横展，右腿侧踢而出，动作最高点慢放 1 秒，衣角猎猎作响；落地时单膝着地，地面积水溅起。侧面全景，逆光剪影。
+EN: Rooftop at dusk. The fighter takes two running steps and leaps, body extending horizontally in the air as the right leg shoots out in a side kick; at the apex the motion slows for one second, clothes snapping in the wind. He lands on one knee, puddle water splashing up. Wide side angle, backlit silhouette.
+## om-act-fight-007 | 群战·一对多走位 | One against many: blocking choreography | Seedance | actions/fighting | storyboard | 群战,走位,一镜到底
+ZH: 一镜到底，镜头环绕主角缓慢旋转。四名打手依次从前、左、后、右扑上：主角侧身躲过第一拳、肘击第二人、低扫第三人小腿、抓住第四人手臂借力摔出。每次攻击间隔约 1 秒，节奏清晰，人物位置不重叠，无血腥。
+EN: Single continuous take, camera slowly orbiting the hero. Four thugs attack in order from front, left, back and right: he sidesteps the first punch, elbows the second, sweeps the third's shin, grabs the fourth's arm and throws him using his momentum. About one second between attacks, clear rhythm, no overlapping bodies, no gore.
+## om-act-fight-008 | 太极推手·以柔克刚 | Tai chi push hands | generic | actions/fighting | storyboard | 太极,慢节奏,晨雾
+ZH: 清晨公园薄雾中，两位老人搭手推手：双掌相贴画圆，一推一化，重心在前后脚之间缓慢移动；年轻挑战者猛力一推，老人腰胯一转将力卸开，对方向前扑空两步。慢节奏，中景平视。
+EN: Misty park at dawn. Two elders practice push hands, palms touching and tracing circles, pushing and yielding as weight shifts slowly between front and back foot. A young challenger shoves hard; the elder turns his waist and hips to dissolve the force and the challenger lunges two steps into empty air. Slow tempo, medium eye-level.
+## om-act-fight-009 | 打脸名场面·抓住手腕 | Catching the slap mid-air | generic | actions/fighting | storyboard | 打脸,逆袭,定格
+ZH: 豪宅客厅。贵妇扬手扇向女主，女主头也不回地抬手在半空扣住她的手腕，动作停顿一拍；镜头推到贵妇震惊的脸，再切女主冷静抬眼。慢动作 0.5 倍用于扣腕瞬间，之后恢复正常速度。
+EN: Mansion living room. The rich matriarch swings a slap at the heroine, who without turning her head raises a hand and catches the wrist mid-air; the motion holds for a beat. Push in on the matriarch's shocked face, then cut to the heroine calmly lifting her gaze. 0.5x slow motion on the catch, normal speed after.
+## om-act-fight-010 | 兵器·长棍舞花 | Staff spinning flourish | generic | actions/fighting | storyboard | 长棍,舞花,运动模糊
+ZH: 寺院石阶。武僧双手握棍中段，在身前快速舞出 8 字花，棍梢带出运动模糊，最后一记竖劈砸在石阶上，碎石跳起；他收棍立于身侧，呼吸起伏。中景平视，晨光侧逆。
+EN: Temple stone steps. A warrior monk grips the staff at the middle and spins rapid figure-eights in front of him, the tips trailing motion blur; a final vertical strike cracks onto the step, chips leaping up. He brings the staff upright at his side, chest rising with breath. Medium eye-level, morning side-backlight.
+## om-act-fight-011 | 动作安全写法：受击不写伤口 | Hits without gore | generic | actions/fighting | storyboard | 安全,受击,审核友好
+ZH: 受击反应只写身体反馈，不写伤口和血：「被击中后身体向后弓起、踉跄两步、单手捂住肋侧、表情因疼痛扭曲」。这样既有冲击力，也更容易通过平台审核。
+EN: Describe hit reactions through body feedback, not wounds or blood: "after the hit his body arches back, he staggers two steps, clutches his ribs with one hand, face twisting in pain." It keeps the impact and passes platform moderation more easily.
+## om-act-chase-001 | 追逐·菜市场穿行 | Chase through a wet market | generic | actions/chase | storyboard | 追逐,跟拍,障碍
+ZH: 清晨菜市场，小偷抱着包狂奔，撞翻一筐橙子，橙子滚了一地；追赶的女警跳过滚动的橙子，侧身挤过两个摊位之间。手持跟拍从小偷背后推进，再横移到女警侧面，速度感强。
+EN: Morning wet market. A thief sprints clutching a bag and knocks over a crate of oranges that roll everywhere; the policewoman chasing him hops over the rolling fruit and squeezes sideways between two stalls. Handheld tracking pushes in behind the thief, then trucks to the policewoman's profile, strong sense of speed.
+## om-act-chase-002 | 追逐·楼梯间上下 | Stairwell chase | generic | actions/chase | storyboard | 楼梯,俯拍,紧张
+ZH: 旧楼楼梯间俯拍，镜头从螺旋楼梯中央向下看：主角一手撑扶手两级两级往下跳，追兵在上面三层探头张望；切近景，主角喘着气背贴墙，听到脚步声逼近。
+EN: Overhead in an old building's stairwell, looking down the spiral: the hero vaults down two steps at a time with one hand on the rail while pursuers peer over three floors above. Cut to close-up: he presses his back to the wall, panting, as footsteps close in.
+## om-act-chase-003 | 天台跑酷·跨楼跳跃 | Rooftop parkour gap jump | generic | actions/chase | storyboard | 跑酷,跳跃,航拍
+ZH: 城中村天台。跑者助跑翻过矮墙，在楼边起跳跃过两米宽的楼缝，落地前滚翻卸力后继续奔跑。航拍侧跟，起跳瞬间切到楼缝下方仰拍。
+EN: Urban-village rooftops. The runner vaults a low wall, launches off the edge across a two-meter gap between buildings, rolls on landing to absorb the impact and keeps running. Aerial side tracking; at takeoff cut to an upward shot from inside the gap.
+## om-act-chase-004 | 雨夜追车 | Rainy night car chase | generic | actions/chase | storyboard | 追车,雨夜,车灯
+ZH: 雨夜高架，黑色轿车急打方向变道，轮胎碾过积水溅起扇形水幕；后车紧追，车灯在挡风玻璃的雨刷间闪烁。车内近景：司机双手紧握方向盘，指节发白。
+EN: Elevated highway on a rainy night. A black sedan swerves into another lane, tires slicing through standing water in a fan-shaped spray; the pursuing car closes in, headlights flickering between wiper sweeps. Interior close-up: the driver grips the wheel, knuckles white.
+## om-act-chase-005 | 古装·屋顶轻功追逐 | Rooftop qinggong pursuit | generic | actions/chase | storyboard | 轻功,古装,月夜
+ZH: 月夜古城，两名侠客在青瓦屋顶上一前一后飞掠，每一步踩碎一片瓦，瓦片滑落；前者回身甩出三枚暗器，后者侧翻躲过。远景航拍横移，人物剪影清晰。
+EN: Ancient city under the moon. Two martial artists dash across grey-tiled rooftops one behind the other, each step cracking a tile that slides off; the leader spins and flicks three darts, the pursuer flips sideways to dodge. Wide aerial truck, crisp silhouettes.
+## om-act-chase-006 | 被追·回头看一眼 | Glancing back while fleeing | generic | actions/chase | storyboard | 逃跑,回头,情绪
+ZH: 树林里女孩奔跑，裙摆被树枝勾住扯破一角，她踉跄一下没停，边跑边回头看了一眼，眼神惊恐；镜头在她前方后退拍摄，背景模糊中隐约有手电光晃动。
+EN: A girl runs through the woods; a branch snags and tears the corner of her skirt. She stumbles but keeps going, glancing back once with terrified eyes. Camera retreats in front of her; blurred flashlight beams sway in the background.
+## om-act-chase-007 | 地铁车门追赶 | Catching the closing train doors | generic | actions/chase | storyboard | 地铁,倒计时,紧张
+ZH: 地铁站台，提示音响起，车门开始关闭；男主冲下最后几级台阶，侧身从门缝挤进车厢，背包被夹住一瞬后抽出。车门合上，他扶着扶手大口喘气，抬头正好对上一个熟悉的眼神。
+EN: Subway platform, the chime sounds and the doors start closing; the lead dashes down the last few steps and squeezes sideways through the gap, his backpack caught for an instant before he yanks it loose. The doors shut; he grabs the pole, gasping, and looks up straight into a familiar pair of eyes.
+## om-act-chase-008 | 追逐镜头写法要点 | Chase shot checklist | generic | actions/chase | storyboard | 要点,运镜,方向
+ZH: 写追逐时固定三件事：①方向（从画面左向右跑，全程不反向，避免越轴）；②障碍物（每 2 秒一个：人群、箱子、门、栏杆）；③距离变化（追兵从远到近，或主角拉开距离）。示例：两人始终从左向右奔跑，追兵每过一个障碍就近一步。
+EN: Lock three things in a chase: (1) direction—run left to right throughout, never reverse, to avoid crossing the line; (2) obstacles—one every two seconds: crowd, crates, a door, a railing; (3) changing distance—pursuer closing in, or the hero pulling away. Example: both always run left to right; the pursuer gains a step at each obstacle.
+## om-act-dance-001 | 街舞·定点卡点 | Street dance: hitting the beats | generic | actions/dance | storyboard | 街舞,卡点,竖屏
+ZH: 地下停车场，9:16 竖屏。舞者在节拍上连续做出四个定格：抬肘、甩头、侧踢、胸口 wave，每个定格保持半拍；最后一拍原地转身面向镜头摊手。固定机位全身，顶灯硬光，地面有反光。
+EN: Underground car park, 9:16. The dancer hits four freezes on the beat—elbow raise, head snap, side kick, chest wave—each held for half a beat; on the final beat he spins in place to face the camera with open palms. Locked-off full-body framing, hard overhead light, reflective floor.
+## om-act-dance-002 | 古典舞·水袖翻飞 | Classical dance: water sleeves | generic | actions/dance | storyboard | 古典舞,水袖,慢动作
+ZH: 空旷的木地板舞台，一束顶光。舞者双臂向后一甩，长长的白色水袖在空中划出两道弧线，随后旋转三圈，水袖随身体缠绕又散开；慢动作 0.6 倍，布料飘动柔顺。
+EN: Empty wooden stage with a single top light. The dancer flings both arms back and her long white water sleeves trace two arcs in the air, then she spins three times as the sleeves wrap around her and unfurl. 0.6x slow motion, soft fluid fabric.
+## om-act-dance-003 | 双人舞·托举 | Partner dance: the lift | generic | actions/dance | storyboard | 双人舞,托举,浪漫
+ZH: 黄昏海边，男女双人舞。男舞者双手扶住女舞者腰侧，她轻跳借力，被稳稳托举过头顶，双臂舒展；镜头从低角度绕他们半圈，夕阳在两人之间形成光晕。动作稳定，衣着得体。
+EN: Beach at dusk, a male-female dance duet. He holds her waist, she springs lightly and is lifted steadily overhead, arms extended; the camera circles half around them from a low angle, the setting sun flaring between them. Steady motion, modest costumes.
+## om-act-dance-004 | 广场舞·群体同步 | Square dance: group in sync | generic | actions/dance | storyboard | 群舞,同步,生活化
+ZH: 傍晚小区广场，二十位阿姨排成四排，随音乐整齐地向左跨步、拍手、转身，前排领舞手持红扇；航拍缓慢上升，队形整齐，人物动作同步不错位。
+EN: Neighborhood plaza at dusk. Twenty middle-aged women in four rows step left, clap and turn in unison to the music, the leader in front holding a red fan. Slow rising aerial, neat formation, movements in sync with no drift.
+## om-act-dance-005 | 现代舞·情绪外化 | Contemporary dance as emotion | generic | actions/dance | storyboard | 现代舞,情绪,地面动作
+ZH: 白色空房间。舞者从地面蜷缩开始，身体一节节展开站起，双手像要推开看不见的墙，随后突然松力倒向一侧被自己接住。表达挣扎与释放，长镜头，柔光。
+EN: White empty room. The dancer starts curled on the floor and unfolds segment by segment to standing, hands pushing at an invisible wall, then suddenly releases and falls to one side, catching herself. Expresses struggle and release, long take, soft light.
+## om-act-dance-006 | 民族舞·转裙 | Folk dance: skirt spin | generic | actions/dance | storyboard | 民族舞,旋转,色彩
+ZH: 草原上，身穿彩色长裙的舞者原地快速旋转，裙摆张开成一个完整的圆，彩带随之飞扬；俯拍正上方，画面像一朵绽开的花。
+EN: On the grassland, a dancer in a colorful long skirt spins rapidly in place, the hem opening into a full circle with ribbons flying. Top-down overhead shot, the frame blooming like a flower.
+## om-act-dance-007 | 舞蹈提示词要点 | Dance prompt checklist | generic | actions/dance | storyboard | 要点,舞蹈,稳定性
+ZH: 舞蹈最容易崩的是手脚数量和节奏。写法：①给出舞种和节拍（「每拍一个动作，共 8 拍」）；②动作用名词化的定格（抬腿、转身、摊手）；③机位尽量固定或缓慢移动；④加约束「四肢完整、动作连贯、不多手不多脚」。
+EN: Dance breaks most often on limb count and rhythm. (1) Name the style and the count ("one move per beat, 8 counts"); (2) describe moves as clear poses (leg lift, turn, open palms); (3) keep the camera locked or slow; (4) add constraints: "complete limbs, continuous motion, no extra hands or feet."
+## om-act-dance-008 | 校园舞台·齐舞开场 | School stage: group opening | generic | actions/dance | storyboard | 校园,群舞,舞台灯
+ZH: 学校礼堂舞台，追光亮起。六名学生背对观众站成一排，鼓点一响同时转身，第一个八拍做整齐的手臂波浪，台下同学举起手机。中景正面，舞台彩光。
+EN: School auditorium stage, a follow spot snaps on. Six students stand in a row with their backs to the audience; on the first drum hit they turn together and perform a synchronized arm wave for the first eight-count while classmates raise their phones. Medium frontal, colored stage lights.
+## om-act-sport-001 | 篮球·变向突破上篮 | Basketball: crossover and layup | generic | actions/sports | storyboard | 篮球,变向,慢动作
+ZH: 室外球场黄昏。持球者胯下运球一次、左右变向晃开防守，两步上篮，球擦板入网；上篮最高点慢放，球网晃动。低角度跟拍。
+EN: Outdoor court at dusk. The ball handler dribbles once between his legs, crosses over to shake the defender and takes two steps into a layup, banking it in off the glass; slow motion at the apex, net swaying. Low-angle tracking.
+## om-act-sport-002 | 足球·凌空抽射 | Soccer: volley strike | generic | actions/sports | storyboard | 足球,射门,定格
+ZH: 雨中球场，传中球飞来，前锋侧身倒地凌空抽射，脚背击球瞬间水珠四溅、定格半秒，球直挂球门死角。侧面中景接球门后方视角。
+EN: Rain-soaked pitch. A cross sails in; the striker falls sideways into a volley, water spraying at the moment of contact with a half-second freeze, the ball flying into the top corner. Side medium shot, then a view from behind the goal.
+## om-act-sport-003 | 游泳·出发入水 | Swimming: dive start | generic | actions/sports | storyboard | 游泳,水下,入水
+ZH: 泳池出发台，哨声响起，运动员蹬台跃出，身体在空中拉成直线，指尖先入水几乎不溅水花；镜头切到水下，气泡沿身体拖出一条白线。
+EN: Starting block, the whistle sounds; the swimmer springs off, body stretched straight in the air, fingertips entering the water with barely a splash. Cut underwater: bubbles trail along the body in a white line.
+## om-act-sport-004 | 羽毛球·跳杀 | Badminton: jump smash | generic | actions/sports | storyboard | 羽毛球,跳杀,环绕
+ZH: 体育馆，运动员后撤两步起跳，身体反弓蓄力，挥拍跳杀，拍面击球瞬间镜头 180 度快速环绕，羽毛球拖出一道白线落地。
+EN: Indoor arena. The player steps back twice and jumps, arching the body to load power, then swings into a jump smash; at contact the camera whips 180 degrees around her, the shuttle trailing a white line to the floor.
+## om-act-sport-005 | 跑步·晨跑冲刺 | Morning run sprint | generic | actions/sports | storyboard | 跑步,晨光,呼吸
+ZH: 江边晨跑，跑者从慢跑逐渐加速到冲刺，手臂摆动幅度变大，呼出的白气一团团散开；最后冲过一根灯柱后双手撑膝喘气。侧面跟拍，逆光。
+EN: Riverside morning run. The runner builds from a jog into a sprint, arm swing widening, breath puffing out in white clouds; after passing a lamppost he stops, hands on knees, gasping. Side tracking, backlit.
+## om-act-sport-006 | 滑雪·转弯扬雪 | Skiing: carving turn with spray | generic | actions/sports | storyboard | 滑雪,扬雪,航拍
+ZH: 雪山陡坡，滑雪者压低重心一个急转，雪板切出弧线，扬起一道雪墙在阳光下闪亮；无人机从侧上方跟随后拉。
+EN: Steep snowy slope. The skier drops low into a sharp carve, skis slicing an arc and throwing up a wall of snow that glitters in the sun; a drone follows from above and to the side, then pulls back.
+## om-act-sport-007 | 攀岩·关键一抓 | Climbing: the crucial reach | generic | actions/sports | storyboard | 攀岩,紧张,特写
+ZH: 岩壁特写：攀岩者右手指尖够向上方的小岩点，前臂青筋绷起，镁粉从指缝飘落；她左脚蹬实，一跃抓住，身体在空中晃了一下后稳住。
+EN: Rock wall close-up: the climber's right fingertips stretch toward a small hold above, forearm veins taut, chalk drifting from between her fingers; she pushes off with her left foot, lunges and grabs it, body swinging once before steadying.
+## om-act-sport-008 | 射箭·开弓放箭 | Archery: draw and release | generic | actions/sports | storyboard | 射箭,专注,慢动作
+ZH: 秋日草地，弓箭手侧身站定，缓缓开弓至嘴角，呼吸停住一拍，手指松弦，弓弦震颤，箭矢飞出；镜头跟随箭飞行后命中靶心，靶纸震动。
+EN: Autumn meadow. The archer stands side-on, slowly draws the string to the corner of her mouth, holds her breath for a beat and releases; the string vibrates and the arrow flies. The camera follows it into the bullseye, the target paper shuddering.
+## om-act-sport-009 | 乒乓球·多拍相持 | Table tennis rally | generic | actions/sports | storyboard | 乒乓球,节奏,俯拍
+ZH: 俯拍球台，两名选手快速对攻，小球在台面上划出连续折线，第六拍正手爆冲得分，得分者握拳低吼。镜头固定，节奏清晰。
+EN: Overhead view of the table. Two players trade fast attacks, the ball tracing a zigzag across the table; on the sixth shot a forehand loop wins the point and the winner pumps a fist with a low shout. Locked camera, clear rhythm.
+## om-act-sport-010 | 骑行·下坡过弯 | Cycling: downhill bend | generic | actions/sports | storyboard | 骑行,速度,山路
+ZH: 盘山公路，骑手俯身压车过弯，车身倾斜，膝盖几乎贴地，路边树影快速掠过；车后低机位跟拍，轮胎碾过落叶。
+EN: Winding mountain road. The cyclist tucks low and leans into the bend, bike tilted, knee nearly brushing the asphalt as roadside shadows flash past. Low chase camera behind, tires crunching fallen leaves.

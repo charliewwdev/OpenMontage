@@ -1,0 +1,354 @@
+[
+  {
+    "id": "om-sound-004",
+    "title": {
+      "zh": "声音·无声的力量",
+      "en": "Sound: the power of silence"
+    },
+    "prompt_zh": "情绪最高点把所有音乐和环境声抽掉，只留一个细小的声音（心跳、钟表、呼吸）2–3 秒，然后音乐重新进入。比一直铺满音乐更有冲击力。",
+    "prompt_en": "At the emotional peak, strip out all music and ambience and leave one small sound (heartbeat, clock, breath) for two to three seconds before the music returns. More impact than wall-to-wall score.",
+    "model": "generic",
+    "category": "sound",
+    "subcategory": "design",
+    "stage": "edit",
+    "tags": [
+      "静音",
+      "留白",
+      "情绪",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-sound-007",
+    "title": {
+      "zh": "声音转场·声音先行",
+      "en": "Sound bridge: audio leads"
+    },
+    "prompt_zh": "下一场的声音提前 1 秒进入（J-cut）：画面还是女主在办公室发呆，已经听到婚礼进行曲，随后切到婚礼现场。让转场更流畅、更有悬念。",
+    "prompt_en": "Bring the next scene's sound in one second early (J-cut): we're still on the heroine zoning out at the office when the wedding march begins, then cut to the wedding. Smoother, more suspenseful transitions.",
+    "model": "generic",
+    "category": "sound",
+    "subcategory": "design",
+    "stage": "edit",
+    "tags": [
+      "声音转场",
+      "J-cut",
+      "剪辑",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-sound-001",
+    "title": {
+      "zh": "对白·口型同步写法",
+      "en": "Dialogue: writing for lip sync"
+    },
+    "prompt_zh": "台词用引号单独写出，并注明说话人和语气：女主（压低声音，带着颤抖）说：「你骗了我整整三年。」一个镜头只放一句短台词，长度控制在 3 秒内，口型更容易对上。",
+    "prompt_en": "Put dialogue in quotes and name the speaker and tone: the heroine (low, trembling voice) says, \"You lied to me for three whole years.\" One short line per shot, under three seconds, for better lip sync.",
+    "model": "Veo",
+    "category": "sound",
+    "subcategory": "dialogue",
+    "stage": "voice",
+    "tags": [
+      "对白",
+      "口型",
+      "台词",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-sound-008",
+    "title": {
+      "zh": "台词语气标注词表",
+      "en": "Dialogue tone tags"
+    },
+    "prompt_zh": "常用语气标注：冷笑着、咬牙切齿、哽咽、轻描淡写、压低声音、几乎是喊出来、带着笑意、一字一顿、不耐烦地、颤抖着。配音或口型生成时把标注放在台词前面。",
+    "prompt_en": "Useful tone tags: with a cold laugh, through gritted teeth, choking up, offhandedly, in a low voice, almost shouting, smiling, word by word, impatiently, trembling. Put the tag before the line for voice or lip-sync generation.",
+    "model": "generic",
+    "category": "sound",
+    "subcategory": "dialogue",
+    "stage": "voice",
+    "tags": [
+      "语气",
+      "台词",
+      "配音",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-sound-011",
+    "title": {
+      "zh": "声音·电话那头的声音",
+      "en": "Sound: the voice on the phone"
+    },
+    "prompt_zh": "电话里的声音做「电话滤波」处理：频率变窄、略带电流声；画面只拍接电话的人，对方声音冷静地说：「你女儿在我这里。」接电话的人手里的杯子滑落。",
+    "prompt_en": "Process the caller's voice with a telephone filter—narrow frequency, a little line hiss; show only the person answering as the voice says calmly, \"Your daughter is with me.\" The cup slips from the listener's hand.",
+    "model": "generic",
+    "category": "sound",
+    "subcategory": "dialogue",
+    "stage": "voice",
+    "tags": [
+      "电话",
+      "音效处理",
+      "悬疑",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-sound-010",
+    "title": {
+      "zh": "声音写法要点",
+      "en": "Sound prompt checklist"
+    },
+    "prompt_zh": "支持音视频联合生成的模型（如 Seedance 2.x、Veo 3）可以在提示词末尾单独写一段「声音：」，包括对白、音效、环境声和音乐；不支持的模型就把声音留给配音和剪辑阶段处理，避免干扰画面生成。",
+    "prompt_en": "For models that generate audio with video (e.g., Seedance 2.x, Veo 3), add a separate \"Sound:\" section at the end covering dialogue, SFX, ambience and music. For models without audio, leave sound to the voice and edit stages so it doesn't distract the image generation.",
+    "model": "generic",
+    "category": "sound",
+    "subcategory": "guide",
+    "stage": "voice",
+    "tags": [
+      "要点",
+      "声音",
+      "写法",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-sound-003",
+    "title": {
+      "zh": "配乐·情绪关键词",
+      "en": "Music: mood keywords"
+    },
+    "prompt_zh": "配乐用「情绪+乐器+节奏」描述：紧张——低音弦乐持续音、渐强鼓点；甜宠——轻快钢琴、拨弦、口哨；悲伤——慢速大提琴独奏；爽点——电子鼓点骤起、重低音落点。",
+    "prompt_en": "Describe music as mood + instruments + tempo: tension—sustained low strings, building drums; sweet romance—light piano, pizzicato, whistling; sadness—slow solo cello; payoff—sudden electronic beat, heavy bass drop.",
+    "model": "generic",
+    "category": "sound",
+    "subcategory": "music",
+    "stage": "edit",
+    "tags": [
+      "配乐",
+      "情绪",
+      "词表",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-sound-009",
+    "title": {
+      "zh": "音画同步·关键动作卡点",
+      "en": "Sync key actions to the beat"
+    },
+    "prompt_zh": "把关键动作（摔门、耳光、转身、抬眼）放在音乐重拍上；生成时在提示词里写「动作发生在第 2 秒和第 4 秒」，剪辑时对齐鼓点。",
+    "prompt_en": "Land key actions (door slam, slap, turn, eyes lifting) on the music's downbeats; prompt \"the action happens at second 2 and second 4,\" then align to the drum hits in the edit.",
+    "model": "generic",
+    "category": "sound",
+    "subcategory": "music",
+    "stage": "edit",
+    "tags": [
+      "卡点",
+      "节奏",
+      "剪辑",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-sound-002",
+    "title": {
+      "zh": "音效·环境声分层",
+      "en": "SFX: layering ambience"
+    },
+    "prompt_zh": "环境声分三层写：底层（雨声、城市低鸣）、中层（脚步、关门、杯碟）、点缀（远处狗叫、一声汽车喇叭）。示例：雨夜小巷，持续的雨声，积水中的脚步声，远处偶尔一声警笛。",
+    "prompt_en": "Layer ambience in three: bed (rain, city hum), mid (footsteps, doors, dishes), accents (a distant dog, one car horn). Example: rainy alley at night—steady rain, footsteps in puddles, an occasional distant siren.",
+    "model": "generic",
+    "category": "sound",
+    "subcategory": "sfx",
+    "stage": "voice",
+    "tags": [
+      "音效",
+      "环境声",
+      "氛围",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-sound-006",
+    "title": {
+      "zh": "音效·打斗拟音",
+      "en": "SFX: fight foley"
+    },
+    "prompt_zh": "打斗音效按动作写：出拳——短促破风声；命中——闷响加衣料摩擦；格挡——手臂相撞的硬响；倒地——身体撞地加尘土声；武器——金属碰撞的清脆回响。",
+    "prompt_en": "Write fight SFX per action: punch—short whoosh; hit—dull thud plus cloth rustle; block—hard clack of forearms; fall—body hitting the floor with dust; weapons—bright metallic ring.",
+    "model": "generic",
+    "category": "sound",
+    "subcategory": "sfx",
+    "stage": "voice",
+    "tags": [
+      "拟音",
+      "打斗",
+      "音效",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-sound-005",
+    "title": {
+      "zh": "旁白·第一人称内心独白",
+      "en": "Voice-over: first-person monologue"
+    },
+    "prompt_zh": "旁白语气平静、语速偏慢、贴近麦克风的气声：「那天我才知道，原来他口中的『出差』，是去见另一个人。」画面配女主独自坐在车里的近景。",
+    "prompt_en": "Calm, slightly slow, close-mic breathy voice-over: \"That day I finally learned his 'business trips' meant seeing someone else.\" Paired with a close shot of the heroine alone in her car.",
+    "model": "generic",
+    "category": "sound",
+    "subcategory": "voiceover",
+    "stage": "voice",
+    "tags": [
+      "旁白",
+      "独白",
+      "内心",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  }
+]

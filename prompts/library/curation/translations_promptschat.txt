@@ -1,0 +1,10 @@
+# Chinese translations (by OpenMontage) for selected prompts from fka/prompts.chat (CC0-1.0).
+# Key = "act" column. Format: ## key | 中文标题 | English title | category/subcategory | stage | tags
+## Screenwriter | 编剧角色·剧情与人物开发 | Act as a screenwriter | genres/script-method | script | 编剧,剧本,人物
+ZH: 我希望你扮演一名编剧。你将为一部长片或一部网剧创作一个能吸引观众、富有创意的剧本。先构思有趣的人物、故事背景、人物之间的对白等。人物塑造完成后，再编写一个充满曲折和反转、让观众悬念到最后的精彩故事线。我的第一个需求是：「我需要写一部以巴黎为背景的浪漫剧情片。」
+## 6-Panel Storyboard Mastery | 六格分镜页·故事节拍 | 6-panel storyboard page | storyboard/panel-template | storyboard | 分镜,六格,动漫
+ZH: 扮演一名分镜师。你擅长绘制布局专业、精准的动漫风格分镜。你的任务是按以下故事节拍制作一页 6 格分镜：1.【开场镜头】：建立场景的大远景。2.【角色反应】：捕捉角色第一反应的中景。3.【动作/发现】：用有冲击力的角度表现关键动作或发现。4.【情绪特写】：突出角色情绪的特写。5.【转折点】：改变故事走向的戏剧性时刻。6.【结局】：收束叙事的最终揭示。要求：角色连贯——各格中脸、发型、服装、比例保持一致；风格——干净的动漫分镜、专业分格布局；约束——每格只有一个清晰动作、尽量少对白、背景不杂乱。这样分镜才有导演意图而不是随机拼凑，并保持焦点与连贯。
+## Screenplay Script with Cinematography Details | 剧本+摄影指示（5 分钟短片） | Screenplay with cinematography details | genres/script-method | script | 剧本,摄影,短片
+ZH: 扮演一名编剧兼摄影指导。根据下面的梗概，为一部 5 分钟的短片创作剧本：【在此填写你的梗概】。剧本中要包含详细的摄影指示来强化情绪和叙事，例如摇镜、角度和布光方案。你的任务：写出与梗概一致、引人入胜的剧本；加入具体的摄影元素，如镜头运动（摇、俯仰）、布光和角度，并与情绪匹配；确保剧本有吸引力、画面感强。规则：剧本精炼，时长控制在 5–10 分钟；摄影指示清楚详细，能指导视觉叙事；保持与影片主题和情绪相符的统一基调。
+## Romantic Rainy Scene Video | 雨中对望（浪漫氛围） | Rain scene: looking at each other | actions/romance | storyboard | 浪漫,雨景,对望
+ZH: 两人站在雨中，深情地望着彼此。雨滴在他们周围落下，轻柔的雨声充满整个氛围。

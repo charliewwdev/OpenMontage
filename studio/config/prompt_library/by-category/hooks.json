@@ -1,0 +1,642 @@
+[
+  {
+    "id": "om-hook-006",
+    "title": {
+      "zh": "集末悬念·门外的人",
+      "en": "Cliffhanger: who's at the door"
+    },
+    "prompt_zh": "一集结尾：门铃响起，女主打开门，镜头停在她的脸上——表情从疑惑到震惊，嘴唇动了动叫出一个名字；画面不给门外的人，直接黑屏。",
+    "prompt_en": "End of episode: the doorbell rings, the heroine opens the door and the camera stays on her face—confusion turning to shock as her lips form a name. We never see who's outside; cut to black.",
+    "model": "generic",
+    "category": "hooks",
+    "subcategory": "cliffhanger",
+    "stage": "storyboard",
+    "tags": [
+      "集末",
+      "悬念",
+      "门",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-hook-007",
+    "title": {
+      "zh": "集末悬念·一条短信",
+      "en": "Cliffhanger: a single text message"
+    },
+    "prompt_zh": "男主刚松一口气准备入睡，手机屏幕亮起，一条陌生号码的短信：「你以为她真的死了吗？」镜头推向屏幕，再切他瞪大的眼睛，黑屏。",
+    "prompt_en": "Just as the lead relaxes for sleep, his phone lights up with a text from an unknown number: \"Do you really think she's dead?\" Push in on the screen, cut to his wide eyes, black.",
+    "model": "generic",
+    "category": "hooks",
+    "subcategory": "cliffhanger",
+    "stage": "storyboard",
+    "tags": [
+      "集末",
+      "手机",
+      "反转",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-hook-008",
+    "title": {
+      "zh": "集末悬念·身份暴露",
+      "en": "Cliffhanger: identity exposed"
+    },
+    "prompt_zh": "宴会上，女主的面纱被风吹落，在场所有人同时转头；镜头扫过一张张震惊的脸，最后停在主位上男人手中滑落的酒杯上。慢动作，酒杯落地前黑屏。",
+    "prompt_en": "At the banquet, the wind blows the heroine's veil away and everyone turns at once. The camera sweeps across shocked faces and stops on the glass slipping from the hand of the man in the seat of honor. Slow motion, cut to black before it hits the floor.",
+    "model": "generic",
+    "category": "hooks",
+    "subcategory": "cliffhanger",
+    "stage": "storyboard",
+    "tags": [
+      "身份",
+      "集末",
+      "特写",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-hook-001",
+    "title": {
+      "zh": "前3秒·一记耳光开场",
+      "en": "First 3s: open on a slap"
+    },
+    "prompt_zh": "第一帧就是动作：一只手扇过画面，女主的脸偏向一侧，头发甩起，耳环晃动；0.5 秒定格后她缓缓转回头，直视镜头。无任何铺垫，特写，硬光。",
+    "prompt_en": "The first frame is the action: a hand swings through frame, the heroine's face snaps aside, hair flying, earring swinging; after a 0.5s freeze she slowly turns back and stares into the lens. No setup, close-up, hard light.",
+    "model": "generic",
+    "category": "hooks",
+    "subcategory": "cold-open",
+    "stage": "storyboard",
+    "tags": [
+      "冷开场",
+      "冲突",
+      "前3秒",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-hook-002",
+    "title": {
+      "zh": "前3秒·倒计时字幕感",
+      "en": "First 3s: countdown tension"
+    },
+    "prompt_zh": "黑屏中响起心跳声，画面亮起：一只手握着验孕棒/录取通知书/离婚协议（任选其一），手指在颤抖；镜头快速拉远，露出她身处的场景和门外逼近的脚步。",
+    "prompt_en": "A heartbeat over black; the image fades up on a hand holding a pregnancy test / admission letter / divorce papers (pick one), fingers trembling. The camera pulls back fast to reveal where she is and footsteps approaching the door.",
+    "model": "generic",
+    "category": "hooks",
+    "subcategory": "cold-open",
+    "stage": "storyboard",
+    "tags": [
+      "冷开场",
+      "倒计时",
+      "悬念",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-hook-003",
+    "title": {
+      "zh": "前3秒·结局先行",
+      "en": "First 3s: show the ending first"
+    },
+    "prompt_zh": "开场先给结局画面：女主坐在董事长位置上，昔日对手跪在面前；画面冻结，叠加文字「三个月前」，随即切回她被开除的那天。高反差调色。",
+    "prompt_en": "Open on the ending: the heroine sits in the chairwoman's seat while her old rival kneels before her. Freeze frame, overlay \"Three months earlier,\" then cut back to the day she was fired. High-contrast grade.",
+    "model": "generic",
+    "category": "hooks",
+    "subcategory": "cold-open",
+    "stage": "storyboard",
+    "tags": [
+      "倒叙",
+      "冷开场",
+      "结局",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-hook-004",
+    "title": {
+      "zh": "前3秒·一句反常识台词",
+      "en": "First 3s: a counterintuitive line"
+    },
+    "prompt_zh": "近景，女主对着镜头平静地说：「我嫁给他那天，就知道他会在第三年背叛我。」说完把一份文件推向镜头。口型同步，环境安静，仅有挂钟声。",
+    "prompt_en": "Close shot; the heroine says calmly to camera, \"The day I married him, I knew he'd betray me in year three,\" then slides a document toward the lens. Lip-synced, quiet room, only a ticking clock.",
+    "model": "Veo",
+    "category": "hooks",
+    "subcategory": "cold-open",
+    "stage": "voice",
+    "tags": [
+      "台词",
+      "钩子",
+      "对白",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-hook-005",
+    "title": {
+      "zh": "前3秒·异常物体特写",
+      "en": "First 3s: close-up of something wrong"
+    },
+    "prompt_zh": "大特写：生日蛋糕上的蜡烛整齐燃烧，一滴暗红色液体从画面上方滴落在奶油上；镜头上摇，一个空着的座位前摆着名牌。低饱和，悬疑氛围，不血腥。",
+    "prompt_en": "Extreme close-up: candles burn neatly on a birthday cake as a drop of dark red liquid falls onto the frosting from above. Tilt up to an empty seat with a name card. Desaturated, suspenseful, no gore.",
+    "model": "generic",
+    "category": "hooks",
+    "subcategory": "cold-open",
+    "stage": "storyboard",
+    "tags": [
+      "悬疑",
+      "特写",
+      "异常",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-hook-017",
+    "title": {
+      "zh": "前3秒·跌落瞬间",
+      "en": "First 3s: the fall"
+    },
+    "prompt_zh": "第一帧：女主从楼梯顶端向后倒下，慢动作，裙摆和头发飘起，手里的文件散成一片；她的眼睛看向楼梯顶上站着的人。俯拍，冷色。",
+    "prompt_en": "First frame: the heroine falls backward from the top of the stairs in slow motion, skirt and hair floating, papers scattering from her hands; her eyes are fixed on the person standing at the top. High angle, cool tones.",
+    "model": "generic",
+    "category": "hooks",
+    "subcategory": "cold-open",
+    "stage": "storyboard",
+    "tags": [
+      "冷开场",
+      "慢动作",
+      "惊险",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-hook-019",
+    "title": {
+      "zh": "前3秒·价格/数字冲击",
+      "en": "First 3s: a shocking number"
+    },
+    "prompt_zh": "特写：一张支票被推到桌子中央，上面的数字后面跟着一长串零；一只手把支票推回去：「不够。」镜头上摇露出女主冷淡的脸。",
+    "prompt_en": "Close-up: a cheque is pushed to the center of the table, a long string of zeros on it; a hand pushes it back: \"Not enough.\" Tilt up to the heroine's indifferent face.",
+    "model": "generic",
+    "category": "hooks",
+    "subcategory": "cold-open",
+    "stage": "storyboard",
+    "tags": [
+      "数字",
+      "冲击",
+      "开场",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-hook-012",
+    "title": {
+      "zh": "雨夜告白节拍",
+      "en": "Rainy-night confession beat"
+    },
+    "prompt_zh": "雨夜街头，男主追上女主，拉住她的手腕（她回头）→ 他喘着气说出台词（近景）→ 她眼泪混着雨水（大特写）→ 她扑进他怀里或甩开手离开（远景）。四个镜头完成情绪高潮。",
+    "prompt_en": "Rainy street at night: he catches up and takes her wrist (she turns) → breathless, he says his line (close shot) → her tears mix with rain (extreme close-up) → she falls into his arms or pulls away and leaves (wide). Four shots for the emotional peak.",
+    "model": "generic",
+    "category": "hooks",
+    "subcategory": "confession",
+    "stage": "storyboard",
+    "tags": [
+      "告白",
+      "雨夜",
+      "情感高潮",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-hook-014",
+    "title": {
+      "zh": "开场钩子写法要点",
+      "en": "Writing an opening hook"
+    },
+    "prompt_zh": "前 3 秒只做一件事：抛出一个问题让观众想知道答案。常用类型：冲突动作（耳光、摔东西）、异常画面（不该出现的东西）、结局先行、反常识台词。避免空镜和慢慢介绍人物。",
+    "prompt_en": "The first three seconds do one job: raise a question viewers need answered. Common types: a conflict action (slap, smashing something), an anomaly (something that shouldn't be there), ending-first, a counterintuitive line. Avoid establishing shots and slow character intros.",
+    "model": "generic",
+    "category": "hooks",
+    "subcategory": "guide",
+    "stage": "script",
+    "tags": [
+      "要点",
+      "钩子",
+      "前3秒",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-hook-015",
+    "title": {
+      "zh": "集末悬念写法要点",
+      "en": "Writing a cliffhanger"
+    },
+    "prompt_zh": "集末悬念要「给反应、不给答案」：只拍人物看到某物/听到某话后的反应，不拍被看到的东西本身；在情绪最高点直接切黑，不要淡出。",
+    "prompt_en": "A cliffhanger shows the reaction, not the answer: film the character reacting to what they see or hear, never the thing itself, and cut to black at the emotional peak—no fade.",
+    "model": "generic",
+    "category": "hooks",
+    "subcategory": "guide",
+    "stage": "script",
+    "tags": [
+      "要点",
+      "集末",
+      "悬念",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-hook-010",
+    "title": {
+      "zh": "打脸节拍·三连升级",
+      "en": "Comeuppance beat: three-step escalation"
+    },
+    "prompt_zh": "爽点三连：①对手当众嘲讽（台词+众人哄笑）；②第三方身份揭晓（某人叫出女主真实身份）；③对手态度 180 度反转（鞠躬、道歉、手抖）。每一步间隔 5–8 秒，配反应镜头。",
+    "prompt_en": "Triple payoff: (1) the rival mocks her publicly (line + crowd laughter); (2) a third party reveals her true identity; (3) the rival flips 180 degrees (bowing, apologizing, hands shaking). Five to eight seconds between steps, with reaction shots.",
+    "model": "generic",
+    "category": "hooks",
+    "subcategory": "payoff",
+    "stage": "script",
+    "tags": [
+      "打脸",
+      "爽点",
+      "节拍",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-hook-013",
+    "title": {
+      "zh": "名场面·摘下眼镜",
+      "en": "Iconic moment: removing the glasses"
+    },
+    "prompt_zh": "一直被轻视的女主缓缓摘下黑框眼镜，放下扎起的头发，抬眼看向对手；慢动作，背景人群虚化，轮廓光亮起。适合作为身份反转前的预示镜头。",
+    "prompt_en": "The long-underestimated heroine slowly removes her thick-rimmed glasses, lets down her tied-up hair and lifts her eyes to her rival. Slow motion, crowd blurred, rim light blooming. Works as the setup shot before an identity reveal.",
+    "model": "generic",
+    "category": "hooks",
+    "subcategory": "payoff",
+    "stage": "storyboard",
+    "tags": [
+      "名场面",
+      "变身",
+      "慢动作",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-hook-016",
+    "title": {
+      "zh": "节拍·先抑后扬",
+      "en": "Beat: low before high"
+    },
+    "prompt_zh": "爽点之前先压到最低：主角被误会、被夺走、被所有人背弃（10–20 秒），随后一个小动作翻盘（拿出证据、一个电话）。低谷越具体，翻盘越爽。",
+    "prompt_en": "Before the payoff, push to the lowest point: misunderstood, robbed, abandoned by everyone (10-20s), then one small action flips it (producing evidence, a phone call). The more specific the low, the bigger the release.",
+    "model": "generic",
+    "category": "hooks",
+    "subcategory": "payoff",
+    "stage": "script",
+    "tags": [
+      "先抑后扬",
+      "节奏",
+      "情绪",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-hook-018",
+    "title": {
+      "zh": "节拍·反应镜头链",
+      "en": "Beat: chain of reactions"
+    },
+    "prompt_zh": "关键台词说出后，连续插入 3–4 个 1 秒左右的反应镜头：对手瞪眼、闺蜜捂嘴、长辈摔筷子、路人举手机。反应镜头决定爽感，比台词本身更重要。",
+    "prompt_en": "After the key line, cut in three or four reaction shots of about one second each: the rival's widening eyes, the best friend covering her mouth, an elder slamming down chopsticks, a bystander raising a phone. Reactions sell the payoff more than the line itself.",
+    "model": "generic",
+    "category": "hooks",
+    "subcategory": "payoff",
+    "stage": "edit",
+    "tags": [
+      "反应镜头",
+      "剪辑",
+      "爽感",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-hook-009",
+    "title": {
+      "zh": "反转节拍·以为是…其实是",
+      "en": "Reversal beat: you thought… actually"
+    },
+    "prompt_zh": "节拍写法：先用 2 个镜头建立误导（男主深夜和陌生女人进酒店），第 3 个镜头揭示真相（女人是他请来的私家侦探，桌上摊着证据）。关键是误导镜头要真实可信，揭示镜头要一眼看懂。",
+    "prompt_en": "Beat structure: two shots build the misdirection (the lead enters a hotel late at night with a strange woman); the third reveals the truth (she's the private investigator he hired, evidence spread on the table). The misdirection must feel real; the reveal must read in one glance.",
+    "model": "generic",
+    "category": "hooks",
+    "subcategory": "reversal",
+    "stage": "script",
+    "tags": [
+      "反转",
+      "结构",
+      "节拍",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-hook-020",
+    "title": {
+      "zh": "节拍·误会-解释被打断",
+      "en": "Beat: the interrupted explanation"
+    },
+    "prompt_zh": "女主撞见男主和别人拥抱 → 男主追上想解释，刚说「不是你想的——」→ 电话铃/车鸣/第三人出现打断 → 女主转身离开。经典虐心节拍，适合集中段。",
+    "prompt_en": "She catches him hugging someone else → he runs after her to explain, gets out \"It's not what you think—\" → a phone ring / car horn / third person interrupts → she turns and leaves. A classic heartbreak beat for mid-episode.",
+    "model": "generic",
+    "category": "hooks",
+    "subcategory": "reversal",
+    "stage": "script",
+    "tags": [
+      "误会",
+      "虐心",
+      "节拍",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  },
+  {
+    "id": "om-hook-011",
+    "title": {
+      "zh": "对峙节拍·沉默三秒",
+      "en": "Standoff beat: three seconds of silence"
+    },
+    "prompt_zh": "两人对视，正反打各一个近景，谁都不说话，只有环境声（钟表、雨声）；第三秒其中一人先移开目光或先开口，权力关系就此确定。不要配乐，靠停顿制造张力。",
+    "prompt_en": "Two people lock eyes; one close-up each in shot-reverse-shot, no one speaks, only ambient sound (clock, rain). On the third second one looks away or speaks first, settling who holds power. No music—the pause creates the tension.",
+    "model": "generic",
+    "category": "hooks",
+    "subcategory": "standoff",
+    "stage": "storyboard",
+    "tags": [
+      "对峙",
+      "留白",
+      "张力",
+      "原创"
+    ],
+    "preview": null,
+    "source": {
+      "name": "OpenMontage",
+      "url": "https://github.com/charliewwdev/OpenMontage",
+      "revision": null,
+      "ref": null
+    },
+    "license": "CC-BY-4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "attribution": "© OpenMontage, CC BY 4.0",
+    "lang_origin": "zh",
+    "translated": "none",
+    "modified": false
+  }
+]

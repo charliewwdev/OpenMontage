@@ -46,17 +46,23 @@ export async function api(path, options = {}) {
       err.code = data.code;
       err.blockers = data.blockers;
       err.forceHint = data.forceHint;
-      err.starUrl = data.starUrl;
+      err.quota = data.quota;
     }
-    if (err.code === "star_required" || err.code === "not_starred") {
-      try {
-        window.dispatchEvent(
-          new CustomEvent("om:star-required", {
-            detail: { path, message: msg, starUrl: err.starUrl || data?.starUrl },
-          }),
-        );
-      } catch {
-        /* ignore */
+    // Hosted GitHub login gate / daily quota (server/github_gate.py).
+    const gateEvents = {
+      github_login_required: ["om:github-required", "ui_github_login_required_toast"],
+      quota_exceeded: ["om:quota-exceeded", "ui_github_quota_toast"],
+      github_oauth_not_configured: ["", "ui_github_oauth_not_configured"],
+    };
+    const gate = gateEvents[err.code];
+    if (gate) {
+      err.message = tr(gate[1], { used: err.quota?.used ?? "", limit: err.quota?.limit ?? "" });
+      if (gate[0]) {
+        try {
+          window.dispatchEvent(new CustomEvent(gate[0], { detail: { path, message: err.message } }));
+        } catch {
+          /* ignore */
+        }
       }
     }
     throw err;

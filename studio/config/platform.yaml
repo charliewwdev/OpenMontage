@@ -301,9 +301,6 @@ nav:
   - id: refer
     label: 推荐计划
     icon: Gift
-  - id: users
-    label: 用户列表
-    icon: Users
 
 tools:
   - id: script

@@ -816,6 +816,10 @@ def start_entity_image_job(
             fresh = False
         if fresh:
             raise RuntimeError(f"「{ent.get('name') or entity_id}」正在出图")
+    # Hosted GitHub gate: refuse before the entity is marked as generating.
+    from github_gate import ensure_can_queue
+
+    ensure_can_queue("image")
     ent["imageStatus"] = "generating"
     ent["imageError"] = None
     ent.pop("qaFailed", None)
@@ -3254,6 +3258,10 @@ def start_shot_video(
     if idlock and backend != "comfyui":
         raise RuntimeError("写真对标首尾帧身份锁需要 ComfyUI · MiniMax H3，请在顶部切换出片后端。")
 
+    # Hosted GitHub gate: refuse before the shot is marked generating / a paid task is created.
+    from github_gate import ensure_can_queue
+
+    ensure_can_queue("video")
     shot["status"] = "generating"
     shot["providerTaskId"] = None
     shot["error"] = None

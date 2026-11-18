@@ -18,7 +18,7 @@ from urllib.parse import unquote
 
 from fastapi import FastAPI, File, HTTPException, Query, Request, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.websockets import WebSocketState
@@ -67,6 +67,7 @@ from drama_service import (  # noqa: E402
 )
 import auth_proxy  # noqa: E402
 import demo_auth  # noqa: E402
+import github_gate  # noqa: E402
 from export_mp4 import ffmpeg_available  # noqa: E402
 from platform_config import (  # noqa: E402
     default_genre,
@@ -91,7 +92,7 @@ from credits_store import (  # noqa: E402
 )
 from script_parse import dialogue_from_episode, dialogue_lines_for_episode, extract_text, guess_title  # noqa: E402
 from audio_tts import generate_bgm_mp3, synthesize_dialogue_mp3, synthesize_mp3  # noqa: E402
-from auth_context import current_user_id, set_current_user  # noqa: E402
+from auth_context import current_user_id, get_current_user, set_current_user, set_in_request  # noqa: E402
 from auto_produce import (  # noqa: E402
     cancel_auto_produce,
     ensure_auto_produce_worker,
@@ -131,8 +132,7 @@ AUTH_PUBLIC_GET_PREFIXES = (
     "/api/platform/exports",
     "/api/projects",
     "/api/settings/keys",  # public status only; POST still gated for anon writes
-    "/api/settings/github-star",  # star gate status (verify POST still needs login)
-    "/api/community/",  # public star user roster
+    "/api/settings/github-gate",  # GitHub login / daily quota status
     "/api/settings/usage",  # browse usage charts anonymously
     "/api/settings/credits",  # browse credit packages; mutations still gated
 )
@@ -265,6 +265,8 @@ def _resolve_user(token: str) -> dict[str, Any] | None:
         if status == 200 and isinstance(result.get("data"), dict):
             return result["data"]
         return None
+    if github_gate.is_session_token(token):
+        return github_gate.session_user(token)
     status, result = auth_proxy.me(token)
     if status == 200 and isinstance(result.get("data"), dict):
         data = result["data"]
@@ -293,6 +295,7 @@ def _path_is_public(path: str, method: str = "GET") -> bool:
 class AuthContextMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         set_current_user(None)
+        set_in_request(True)
         set_request_locale(request.headers.get("x-studio-locale"))
         path = request.url.path or "/"
         method = request.method.upper()
@@ -371,23 +374,16 @@ async def bad_request_handler(_: Request, exc: ValueError) -> JSONResponse:
     return JSONResponse(status_code=400, content={"error": str(exc)})
 
 
+@app.exception_handler(github_gate.GitHubGateError)
+async def github_gate_handler(_: Request, exc: github_gate.GitHubGateError) -> JSONResponse:
+    return JSONResponse(
+        status_code=int(exc.status or 403),
+        content={"error": str(exc), "code": exc.code, **exc.extra},
+    )
+
+
 @app.exception_handler(Exception)
 async def unhandled_handler(_: Request, exc: Exception) -> JSONResponse:
-    try:
-        from github_star import GitHubStarError
-
-        if isinstance(exc, GitHubStarError):
-            status = 401 if exc.code == "login_required" else 403
-            return JSONResponse(
-                status_code=status,
-                content={
-                    "error": str(exc),
-                    "code": exc.code or "star_required",
-                    "starUrl": f"https://github.com/{(os.environ.get('GITHUB_STAR_REPO') or 'charliewwdev/OpenMontage').strip()}",
-                },
-            )
-    except Exception:
-        pass
     return JSONResponse(status_code=500, content={"error": str(exc)})
 
 
@@ -482,37 +478,23 @@ def get_keys(probe: int = 0) -> dict[str, Any]:
     return {"keys": keys_payload, "capabilities": _providers_payload()}
 
 
-def _require_github_star(*, allow_ops: bool = False, request: Request | None = None) -> None:
+def _require_github_gate(*, allow_ops: bool = False, request: Request | None = None) -> None:
     if allow_ops and request is not None and _ops_token_ok(request):
         return
-    from github_star import assert_github_star_or_raise
-
-    assert_github_star_or_raise()
+    github_gate.assert_generation_allowed(None)
 
 
-@app.get("/api/settings/github-star")
-def get_github_star() -> dict[str, Any]:
-    from github_star import status_for_current_user
-
-    return {"githubStar": status_for_current_user()}
+@app.get("/api/settings/github-gate")
+def get_github_gate() -> dict[str, Any]:
+    return {"githubGate": github_gate.status_for_current_user()}
 
 
-@app.get("/api/community/users")
-def get_community_users(limit: int = 200) -> dict[str, Any]:
-    """Public list of verified GitHub Star users — no login required."""
-    from github_star import list_public_starrers
-
-    return list_public_starrers(limit=limit)
-
-
-@app.post("/api/settings/github-star/verify")
-async def post_github_star_verify(request: Request) -> dict[str, Any]:
-    from github_star import verify_and_bind
-
-    body = await request.json()
-    payload = body if isinstance(body, dict) else {}
-    status = verify_and_bind(str(payload.get("login") or payload.get("username") or ""))
-    return {"ok": True, "githubStar": status, "keys": public_status(), "capabilities": _providers_payload()}
+@app.post("/api/settings/github/unlink")
+def post_github_unlink() -> dict[str, Any]:
+    if not current_user_id():
+        raise _http_error(401, "login required")
+    github_gate.unlink_current()
+    return {"ok": True, "githubGate": github_gate.status_for_current_user()}
 
 
 @app.post("/api/settings/keys")
@@ -520,7 +502,7 @@ async def post_keys(request: Request) -> dict[str, Any]:
     body = await request.json()
     payload = body if isinstance(body, dict) else {}
     # Coolify/ops restore writes shared secrets so all users can fall back before BYOK.
-    # Star gate applies to generation, not to saving BYOK keys.
+    # The GitHub login gate applies to generation, not to saving BYOK keys.
     if _ops_token_ok(request) and not current_user_id():
         status = save_secrets(PROJECTS_ROOT, payload, user_id="")
     else:
@@ -632,8 +614,8 @@ def ops_migrate_disk_to_pg(request: Request) -> dict[str, Any]:
 
 @app.post("/api/settings/keys/test")
 async def test_keys() -> dict[str, Any]:
-    # Live ping burns provider quota — same star gate as generation.
-    _require_github_star()
+    # Live ping burns provider quota — same GitHub login gate as generation.
+    _require_github_gate()
     results: dict[str, Any] = {
         "llm": None,
         "deepseek": None,
@@ -1536,6 +1518,55 @@ async def auth_send_code(request: Request) -> JSONResponse:
     return _auth_json(status, result)
 
 
+def _request_base_url(request: Request) -> str:
+    return str(request.base_url).rstrip("/")
+
+
+@app.post("/api/auth/github/start")
+async def auth_github_start(request: Request) -> JSONResponse:
+    """Return the GitHub authorize URL. Sets a short-lived nonce cookie (CSRF)."""
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    return_to = str((body or {}).get("returnTo") or "/") if isinstance(body, dict) else "/"
+    started = github_gate.start(
+        current_user=get_current_user(),
+        return_to=return_to,
+        request_base_url=_request_base_url(request),
+    )
+    resp = JSONResponse({"ok": True, "url": started["url"], "mode": started["mode"]})
+    resp.set_cookie(
+        github_gate.STATE_COOKIE,
+        started["nonce"],
+        max_age=github_gate.STATE_TTL_SECONDS,
+        httponly=True,
+        samesite="lax",
+        secure=request.url.scheme == "https",
+        path="/api/auth/github",
+    )
+    return resp
+
+
+@app.get("/api/auth/github/callback")
+def auth_github_callback(request: Request, code: str = Query(""), state: str = Query(""), error: str = Query("")) -> Response:
+    if error:
+        resp = RedirectResponse("/?github_error=access_denied", status_code=302)
+    else:
+        try:
+            done = github_gate.complete(
+                code=code,
+                state=state,
+                cookie_nonce=request.cookies.get(github_gate.STATE_COOKIE, ""),
+                request_base_url=_request_base_url(request),
+            )
+            resp = RedirectResponse(done["redirect"], status_code=302)
+        except github_gate.GitHubGateError as exc:
+            resp = RedirectResponse(f"/?github_error={exc.code}", status_code=302)
+    resp.delete_cookie(github_gate.STATE_COOKIE, path="/api/auth/github")
+    return resp
+
+
 @app.get("/api/auth/me")
 def auth_me(request: Request) -> JSONResponse:
     token = _bearer_token(request)
@@ -1543,6 +1574,9 @@ def auth_me(request: Request) -> JSONResponse:
         return _auth_json(401, {"ok": False, "error": "missing token"})
     if demo_auth.is_demo_token(token):
         status, result = demo_auth.demo_me(token)
+        return _auth_json(status, result)
+    if github_gate.is_session_token(token):
+        status, result = github_gate.session_me(token)
         return _auth_json(status, result)
     status, result = auth_proxy.me(token)
     return _auth_json(status, result)
@@ -1553,9 +1587,8 @@ def auth_logout(request: Request) -> JSONResponse:
     token = _bearer_token(request)
     if not token:
         return _auth_json(200, {"ok": True, "data": None})
-    if demo_auth.is_demo_token(token):
-        status, result = demo_auth.demo_logout(token)
-        return _auth_json(status, result)
+    if demo_auth.is_demo_token(token) or github_gate.is_session_token(token):
+        return _auth_json(200, {"ok": True, "data": None, "msg": "ok"})
     status, result = auth_proxy.logout(token)
     return _auth_json(status, result)
 
@@ -1572,6 +1605,9 @@ def auth_refresh(request: Request) -> JSONResponse:
             user_id=str(demo_cfg.get("userId") or "demo"),
             username=str(demo_cfg.get("displayName") or demo_cfg.get("username") or "Demo"),
         )
+        return _auth_json(status, result)
+    if github_gate.is_session_token(token):
+        status, result = github_gate.session_refresh(token)
         return _auth_json(status, result)
     status, result = auth_proxy.refresh_token(token)
     return _auth_json(status, result)

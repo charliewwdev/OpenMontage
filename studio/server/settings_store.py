@@ -809,9 +809,9 @@ def public_status() -> dict[str, Any]:
         ),
     }
     try:
-        from github_star import attach_star_status
+        from github_gate import attach_gate_status
 
-        return attach_star_status(out)
+        return attach_gate_status(out)
     except Exception:
         return out
 

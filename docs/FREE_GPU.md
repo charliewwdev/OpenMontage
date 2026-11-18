@@ -2,11 +2,11 @@
 
 Use these when you want Drama Studio generation without renting a ComfyUI box or paying Volcengine. Quotas change; verify on each vendor’s dashboard.
 
-## Hosted studio: GitHub Star gate
+## Hosted studio: GitHub sign-in + daily quota
 
-On https://openmontage.dtok.io (and any deploy with `STUDIO_REQUIRE_GITHUB_STAR=1`), users must **Star** [`charliewwdev/OpenMontage`](https://github.com/charliewwdev/OpenMontage) and verify their GitHub username **before generating** (script / stills / audio / video / one-click produce). A modal appears at generate actions. Model keys remain configurable without starring (BYOK).
-
-Self-hosted / local: keep `STUDIO_REQUIRE_GITHUB_STAR=0` (see `studio/.env.example`). Optional `GITHUB_TOKEN` raises GitHub API rate limits for verification.
+Public instances can require a GitHub sign-in before generating and cap images / video shots per GitHub account per day
+(`GITHUB_OAUTH_CLIENT_ID` / `GITHUB_OAUTH_CLIENT_SECRET`, `STUDIO_DAILY_GENERATION_QUOTA`, `STUDIO_DAILY_VIDEO_QUOTA`).
+Self-hosted / local setups leave these empty and are not gated. Details: [`SELF_HOSTING.md`](SELF_HOSTING.md#optional-github-sign-in--daily-quota-public-instances).
 
 | Provider | What you get for free | Studio wiring | Sign up |
 |:---|:---|:---|:---|

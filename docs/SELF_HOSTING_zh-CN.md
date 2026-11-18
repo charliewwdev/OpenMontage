@@ -119,6 +119,32 @@ docker compose -f docker-compose.studio.yml up --build
 | 自有账号 API | 自建兼容 `/auth/*` 的 `API_BASE_URL` | 否（走你的 API） |
 | 开放门禁 | `STUDIO_AUTH_REQUIRED=false` | 否 |
 
+### 可选：GitHub 登录 + 每日额度（公开站点用）
+
+如果你用自己的模型 Key 开放一个公开站点，可以要求访客先用 GitHub 登录再生成，并限制每个 GitHub 账号每天的生成次数。不设置这些变量的自部署不受影响。
+
+1. 在 <https://github.com/settings/developers> → **OAuth Apps** → **New OAuth App** 新建 OAuth App：
+   - **Homepage URL**：`https://your-studio.example`
+   - **Authorization callback URL**：`https://your-studio.example/api/auth/github/callback`
+2. 设置环境变量（Compose 的 `.env`、Coolify、Heroku 等）：
+
+| 变量 | 默认值 | 说明 |
+|:---|:---|:---|
+| `GITHUB_OAUTH_CLIENT_ID` / `GITHUB_OAUTH_CLIENT_SECRET` | 空 | OAuth App 凭据。不申请任何权限，只读取公开的 id、用户名和头像。 |
+| `GITHUB_OAUTH_CALLBACK_URL` | `${STUDIO_PUBLIC_URL}/api/auth/github/callback` | 必须和 OAuth App 里填的完全一致。 |
+| `STUDIO_REQUIRE_GITHUB_LOGIN` | `auto` | `auto`：配置了 OAuth App 才开启；`1`：始终开启（没配 OAuth 时拒绝生成）；`0`：关闭。 |
+| `STUDIO_DAILY_GENERATION_QUOTA` | `20` | 每个 GitHub 账号每个 UTC 日可生成的图片 + 视频镜头总数，`0` 为不限。 |
+| `STUDIO_DAILY_VIDEO_QUOTA` | `5` | 其中视频镜头的上限，`0` 为不限。 |
+| `STUDIO_SESSION_SECRET` | 同 `STUDIO_DEMO_SECRET` | GitHub 会话令牌和 OAuth state 的签名密钥，请设成足够长的随机值。 |
+
+行为说明：
+
+- 未登录访客和共享的 **Demo** 账号用 GitHub 登录后，进入各自独立的工作区（`gh-<GitHub id>`）；已用其他方式（密码 / Google）登录的用户则把 GitHub 关联到当前账号。
+- 文本（大模型）和配音步骤需要 GitHub 登录，但不计次；每张图片、每个视频镜头在 worker 开始生成时计一次。额度用完时接口返回 `429 quota_exceeded`，界面会提示重置时间（UTC 0 点）。
+- 计数存在 Postgres（`studio_kv`，键 `github_quota:<日期>`），没有 Postgres 时存在 `$PROJECTS_ROOT/.github_quota/`。
+
+实现：`studio/server/github_gate.py`，路由 `POST /api/auth/github/start`、`GET /api/auth/github/callback`、`GET /api/settings/github-gate`。
+
 ---
 
 ## 一键部署：Heroku / DigitalOcean
@@ -132,7 +158,7 @@ README 徽章从公开 GitHub 仓库一键拉起：
 
 说明：
 
-- 默认开启 **Demo 鉴权**（`STUDIO_DEMO_ENABLED=true`，`STUDIO_REQUIRE_GITHUB_STAR=0`），打开站点点 **Demo** 即可。
+- 默认开启 **Demo 鉴权**（`STUDIO_DEMO_ENABLED=true`；不设置 `GITHUB_OAUTH_CLIENT_ID` / `GITHUB_OAUTH_CLIENT_SECRET` 时不启用 GitHub 登录门槛），打开站点点 **Demo** 即可。
 - **模型密钥**创建时可空，之后在平台环境变量或「模型配置」里补。
 - **DigitalOcean** 按钮只支持一个 Dev Database，故不带 Redis，媒体队列回退到进程内线程池；以后要多副本再加托管 Redis。
 - **MinIO** 不会随 PaaS 一键带上；试用可走 Postgres / 临时盘，生产请接 S3 兼容存储（`MINIO_*`）。

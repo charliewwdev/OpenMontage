@@ -251,7 +251,18 @@ def auth_payload() -> dict[str, Any]:
         "apiBaseUrl": (os.environ.get("API_BASE_URL") or "https://api-app.dtok.io/api/v1").rstrip("/"),
         "demo": demo_auth_config(),
         "google": google_auth_config(),
+        "github": github_auth_config(),
     }
+
+
+def github_auth_config() -> dict[str, Any]:
+    """Public flags for the GitHub OAuth sign-in button (no secrets)."""
+    try:
+        import github_gate
+
+        return {"enabled": github_gate.oauth_configured(), "required": github_gate.required()}
+    except Exception:
+        return {"enabled": False, "required": False}
 
 
 def pinterest_payload() -> dict[str, Any]:
@@ -297,7 +308,7 @@ def public_platform_payload() -> dict[str, Any]:
     github_url = str(
         links.get("github")
         or os.environ.get("STUDIO_GITHUB_URL")
-        or f"https://github.com/{(os.environ.get('GITHUB_STAR_REPO') or 'charliewwdev/OpenMontage').strip()}"
+        or f"https://github.com/{(os.environ.get('STUDIO_GITHUB_REPO') or 'charliewwdev/OpenMontage').strip()}"
     ).strip()
     x_url = str(links.get("x") or links.get("twitter") or os.environ.get("STUDIO_X_URL") or "").strip()
     return {

@@ -17,11 +17,11 @@ import {
 } from "lucide-react";
 import { api } from "../../api";
 import { getToken } from "../../lib/auth";
+import { ConfirmDialog } from "../ConfirmDialog";
 import { toast } from "../../lib/toast";
 import { PageShell } from "./PageShell";
 import { Lightbox } from "../Lightbox";
 import { ModalOverlay } from "../ModalPortal";
-import { ConfirmDialog } from "../ConfirmDialog";
 
 import { tr, localized, useLocale } from "../../lib/i18n";
 

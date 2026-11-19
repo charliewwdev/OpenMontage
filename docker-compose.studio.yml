@@ -88,6 +88,8 @@ services:
       STUDIO_DEMO_SECRET: ${STUDIO_DEMO_SECRET:-}
       STUDIO_OPS_TOKEN: ${STUDIO_OPS_TOKEN:-}
       STUDIO_GOOGLE_ENABLED: ${STUDIO_GOOGLE_ENABLED:-false}
+      # Cloudflare Web Analytics beacon token (empty = disabled)
+      STUDIO_CF_WEB_ANALYTICS_TOKEN: ${STUDIO_CF_WEB_ANALYTICS_TOKEN:-}
       # Optional generation keys (same names as repo .env.example / dtok-style secrets)
       FAL_KEY: ${FAL_KEY:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}

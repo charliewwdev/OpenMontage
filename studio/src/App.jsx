@@ -6,6 +6,7 @@ import { MaintenancePage } from "./components/MaintenancePage";
 import { clearSession, getStoredUser, getToken, setSession } from "./lib/auth";
 import { LocaleProvider, tr, useLocale } from "./lib/i18n";
 import { localizeConfig } from "./lib/configI18n";
+import { installCfWebAnalytics } from "./lib/cfWebAnalytics";
 import { toast } from "./lib/toast";
 import { Library } from "./components/Library";
 import { CreateProjectPage } from "./components/CreateProjectPage";
@@ -135,6 +136,7 @@ export default function App() {
   const refreshConfig = useCallback(async () => {
     try {
       const data = await api("/api/config");
+      installCfWebAnalytics(data?.cfWebAnalyticsToken);
       setConfig(data);
       setApiDown(false);
       return data;

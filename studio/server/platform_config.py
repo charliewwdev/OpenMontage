@@ -351,4 +351,6 @@ def public_platform_payload() -> dict[str, Any]:
         "auth": auth_payload(),
         "i18n": i18n_payload(),
         "pinterest": pinterest_payload(),
+        # Public Cloudflare Web Analytics site token (empty = disabled). Not a secret API key.
+        "cfWebAnalyticsToken": (os.environ.get("STUDIO_CF_WEB_ANALYTICS_TOKEN") or "").strip(),
     }
